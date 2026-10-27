@@ -14,8 +14,68 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr">
-      <body>
+    <html lang="fr" suppressHydrationWarning>
+      <body suppressHydrationWarning>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  function sanitize(el) {
+                    if (!el || el.nodeType !== 1) return;
+                    var attrs = el.attributes;
+                    if (!attrs) return;
+                    for (var i = attrs.length - 1; i >= 0; i--) {
+                      var n = attrs[i].name;
+                      if (
+                        n === 'bis_skin_checked' ||
+                        n === 'bis_register' ||
+                        n === 'cz-shortcut-listen' ||
+                        n.indexOf('bis_') === 0 ||
+                        n.indexOf('__processed_') === 0
+                      ) {
+                        el.removeAttribute(n);
+                      }
+                    }
+                  }
+
+                  var origSet = Element.prototype.setAttribute;
+                  Element.prototype.setAttribute = function(name, val) {
+                    if (
+                      name === 'bis_skin_checked' ||
+                      name === 'bis_register' ||
+                      name === 'cz-shortcut-listen' ||
+                      (typeof name === 'string' && (name.indexOf('bis_') === 0 || name.indexOf('__processed_') === 0))
+                    ) {
+                      return;
+                    }
+                    return origSet.apply(this, arguments);
+                  };
+
+                  if (typeof MutationObserver !== 'undefined') {
+                    var observer = new MutationObserver(function(mutations) {
+                      for (var i = 0; i < mutations.length; i++) {
+                        var m = mutations[i];
+                        if (m.type === 'attributes') {
+                          sanitize(m.target);
+                        } else if (m.type === 'childList') {
+                          for (var j = 0; j < m.addedNodes.length; j++) {
+                            sanitize(m.addedNodes[j]);
+                          }
+                        }
+                      }
+                    });
+                    observer.observe(document.documentElement, {
+                      attributes: true,
+                      childList: true,
+                      subtree: true,
+                    });
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
         {/* Navigation Bar */}
         <header
           style={{
