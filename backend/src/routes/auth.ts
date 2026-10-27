@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { SUPER_ADMIN_ROLE_ID } from "@roum/shared";
+import { SUPER_ADMIN_ROLE_ID } from "../shared";
 import { verifyPassword, signJwt, verifyJwt } from "../crypto";
 import type { Env, UserSession } from "../types";
 

@@ -12,7 +12,7 @@ import {
   Calculator,
   MessageCircle,
 } from "lucide-react";
-import { normalizeTrackingNumber, buildWhatsAppUrl } from "@roum/shared";
+import { normalizeTrackingNumber, buildWhatsAppUrl } from "@/shared";
 
 export default function HomePage() {
   const router = useRouter();

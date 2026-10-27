@@ -8,7 +8,7 @@ import {
   generateTrackingNumber,
   phoneSchema,
   type TransportType,
-} from "@roum/shared";
+} from "../shared";
 import { hashPassword, verifyJwt } from "../crypto";
 import type { Env, UserSession } from "../types";
 

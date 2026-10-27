@@ -6,7 +6,7 @@ import {
   buildWhatsAppUrl,
   generateQuoteReference,
   phoneSchema,
-} from "@roum/shared";
+} from "../shared";
 import type { Env } from "../types";
 
 export const publicRouter = new Hono<{ Bindings: Env }>();
