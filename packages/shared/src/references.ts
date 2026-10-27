@@ -25,7 +25,7 @@ export type RandomBytesSource = (length: number) => Uint8Array;
 
 const cryptoRandomBytes: RandomBytesSource = (length) => {
   const bytes = new Uint8Array(length);
-  globalThis.crypto.getRandomValues(bytes);
+  crypto.getRandomValues(bytes);
   return bytes;
 };
 

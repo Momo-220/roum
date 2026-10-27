@@ -1,0 +1,27 @@
+{
+  "name": "@roum/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "API Cloudflare Workers + Hono + D1 SQLite pour ROUM_TRANSIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "typecheck": "tsc -p tsconfig.json",
+    "d1:local:migrate": "wrangler d1 migrations apply roum-db --local",
+    "d1:local:list": "wrangler d1 migrations list roum-db --local",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "0.9.1",
+    "@roum/shared": "*",
+    "hono": "4.13.14",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261027.1",
+    "typescript": "6.0.3",
+    "vitest": "4.1.12",
+    "wrangler": "4.154.0"
+  }
+}

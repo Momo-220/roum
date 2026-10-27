@@ -1,0 +1,14 @@
+name = "roum-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-27"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "roum-db"
+database_id = "local-roum-db"
+migrations_dir = "migrations"
+
+[vars]
+ENVIRONMENT = "development"
+APP_NAME = "ROUM_TRANSIT_API"
