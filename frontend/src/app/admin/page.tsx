@@ -167,7 +167,6 @@ export default function AdminPage() {
     estimated_days_max: 7,
   });
 
-  // Vérification de session au chargement
   useEffect(() => {
     const savedToken = localStorage.getItem("roum_admin_token");
     if (!savedToken) {
@@ -224,7 +223,7 @@ export default function AdminPage() {
       setUser(data.user);
       loadDashboardData(data.token);
     } catch {
-      setLoginError("Erreur de connexion au serveur.");
+      setLoginError("Erreur de communication avec le serveur.");
     } finally {
       setLoginLoading(false);
     }
@@ -241,31 +240,26 @@ export default function AdminPage() {
     const headers = { Authorization: `Bearer ${jwtToken}` };
 
     try {
-      // 1. Stats
       fetch("/api/admin/stats", { headers })
         .then((r) => r.json())
         .then((d) => d.stats && setStats(d.stats))
         .catch(() => {});
 
-      // 2. Expéditions
       fetch("/api/admin/shipments", { headers })
         .then((r) => r.json())
         .then((d) => d.shipments && setShipments(d.shipments))
         .catch(() => {});
 
-      // 3. Demandes reçues
       fetch("/api/admin/requests", { headers })
         .then((r) => r.json())
         .then((d) => d.requests && setRequestsList(d.requests))
         .catch(() => {});
 
-      // 4. Clients
       fetch("/api/admin/clients", { headers })
         .then((r) => r.json())
         .then((d) => d.clients && setClientsList(d.clients))
         .catch(() => {});
 
-      // 5. Tarifs & Routes
       fetch("/api/admin/tariffs", { headers })
         .then((r) => r.json())
         .then((d) => d.tariffs && setTariffsList(d.tariffs))
@@ -279,19 +273,16 @@ export default function AdminPage() {
         .then((d) => d.modes && setModesList(d.modes))
         .catch(() => {});
 
-      // 6. Finances & Paiements
       fetch("/api/admin/payments", { headers })
         .then((r) => r.json())
         .then((d) => d.payments && setPaymentsList(d.payments))
         .catch(() => {});
 
-      // 7. Tâches
       fetch("/api/admin/tasks", { headers })
         .then((r) => r.json())
         .then((d) => d.tasks && setTasksList(d.tasks))
         .catch(() => {});
 
-      // 8. Rôles & Statuts & Utilisateurs
       fetch("/api/admin/roles", { headers })
         .then((r) => r.json())
         .then((d) => d.roles && setRoles(d.roles))
@@ -309,7 +300,6 @@ export default function AdminPage() {
         .then((d) => d.users && setUsersList(d.users))
         .catch(() => {});
 
-      // 9. Paramètres & Audit
       fetch("/api/admin/settings", { headers })
         .then((r) => r.json())
         .then((d) => d.settings && setCompanySettings(d.settings))
@@ -323,7 +313,6 @@ export default function AdminPage() {
     }
   };
 
-  // Création d'expédition
   const handleCreateShipment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
@@ -366,7 +355,6 @@ export default function AdminPage() {
     }
   };
 
-  // Mise à jour de statut
   const handleUpdateStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !showStatusModal) return;
@@ -393,7 +381,6 @@ export default function AdminPage() {
     }
   };
 
-  // Consigner un paiement
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !newPayment.client_id) return;
@@ -429,7 +416,6 @@ export default function AdminPage() {
     }
   };
 
-  // Création de client
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
@@ -456,7 +442,6 @@ export default function AdminPage() {
     }
   };
 
-  // Création de tâche
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
@@ -484,7 +469,6 @@ export default function AdminPage() {
     }
   };
 
-  // Basculer le statut d'une tâche
   const handleToggleTaskStatus = async (taskId: string, currentStatus: string) => {
     if (!token) return;
     const nextStatus = currentStatus === "DONE" ? "TODO" : "DONE";
@@ -506,7 +490,6 @@ export default function AdminPage() {
     }
   };
 
-  // Création de rôle
   const handleCreateRole = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
@@ -533,7 +516,6 @@ export default function AdminPage() {
     }
   };
 
-  // Création d'utilisateur
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
@@ -560,7 +542,6 @@ export default function AdminPage() {
     }
   };
 
-  // Création de tarif
   const handleCreateTariff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
@@ -595,7 +576,6 @@ export default function AdminPage() {
     }
   };
 
-  // Mise à jour du statut d'une demande client
   const handleUpdateRequestStatus = async (requestId: string, newStatus: string) => {
     if (!token) return;
     try {
@@ -617,13 +597,13 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <RefreshCw size={36} className="spin" color="var(--gold)" />
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-app)" }}>
+        <RefreshCw size={28} className="spin" color="var(--brown-dark)" />
       </div>
     );
   }
 
-  // ÉCRAN 1 : CONNEXION STRICTEMENT VERROUILLÉE
+  // ÉCRAN 1 : CONNEXION SOBRE & ÉPURÉE
   if (!token || !user) {
     return (
       <div
@@ -633,69 +613,66 @@ export default function AdminPage() {
           alignItems: "center",
           justifyContent: "center",
           padding: "24px",
-          background: "radial-gradient(circle at center, #231c18 0%, #171412 100%)",
+          background: "var(--bg-app)",
         }}
       >
         <div
-          className="glass-card"
+          className="card-clean"
           style={{
-            maxWidth: "440px",
+            maxWidth: "400px",
             width: "100%",
-            padding: "44px 36px",
-            border: "1px solid var(--border-active)",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.8)",
+            padding: "36px 32px",
           }}
         >
-          <div style={{ textAlign: "center", marginBottom: "32px" }}>
+          <div style={{ textAlign: "center", marginBottom: "28px" }}>
             <div
               style={{
-                width: "56px",
-                height: "56px",
-                borderRadius: "16px",
-                background: "linear-gradient(135deg, #d4af37 0%, #4A2C20 100%)",
+                width: "44px",
+                height: "44px",
+                borderRadius: "var(--radius-sm)",
+                background: "var(--brown-dark)",
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#FAF7F2",
+                color: "#FAF8F5",
                 fontWeight: "800",
-                fontSize: "1.5rem",
-                marginBottom: "16px",
-                boxShadow: "0 8px 24px rgba(212, 175, 55, 0.35)",
+                fontSize: "1.2rem",
+                marginBottom: "14px",
               }}
             >
               RT
             </div>
-            <h1 style={{ fontSize: "1.45rem", fontWeight: "800", marginBottom: "6px" }}>
-              Portail d&apos;Administration
+            <h1 style={{ fontSize: "1.3rem", fontWeight: "800", marginBottom: "4px" }}>
+              ROUM TRANSIT
             </h1>
-            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-              Accès strictement restreint au personnel habilité de ROUM TRANSIT.
+            <p style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>
+              Panneau d&apos;administration réservé au personnel.
             </p>
           </div>
 
           {loginError && (
             <div
               style={{
-                padding: "12px 16px",
-                background: "rgba(224, 86, 86, 0.15)",
-                border: "1px solid rgba(224, 86, 86, 0.4)",
+                padding: "10px 14px",
+                background: "var(--state-danger-bg)",
+                border: "1px solid var(--state-danger-border)",
                 borderRadius: "var(--radius-sm)",
-                color: "#fb7185",
-                fontSize: "0.85rem",
-                marginBottom: "20px",
+                color: "var(--state-danger-text)",
+                fontSize: "0.82rem",
+                marginBottom: "18px",
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
               }}
             >
-              <AlertCircle size={18} />
+              <AlertCircle size={16} />
               {loginError}
             </div>
           )}
 
-          <form onSubmit={handleLogin} style={{ display: "grid", gap: "18px" }}>
+          <form onSubmit={handleLogin} style={{ display: "grid", gap: "16px" }}>
             <div>
-              <label style={{ display: "block", fontSize: "0.82rem", color: "var(--text-dim)", marginBottom: "6px" }}>
+              <label style={{ display: "block", fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "5px", fontWeight: "600" }}>
                 Identifiant / Email
               </label>
               <input
@@ -703,21 +680,21 @@ export default function AdminPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-field"
-                placeholder="prenom@roumtransit.com"
+                className="input-clean"
+                placeholder="admin@roumtransit.com"
               />
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: "0.82rem", color: "var(--text-dim)", marginBottom: "6px" }}>
-                Mot de Passe Sécurisé
+              <label style={{ display: "block", fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "5px", fontWeight: "600" }}>
+                Mot de Passe
               </label>
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-field"
+                className="input-clean"
                 placeholder="••••••••••••"
               />
             </div>
@@ -726,16 +703,16 @@ export default function AdminPage() {
               type="submit"
               disabled={loginLoading}
               className="btn btn-primary"
-              style={{ width: "100%", padding: "14px", marginTop: "8px" }}
+              style={{ width: "100%", padding: "11px", marginTop: "6px" }}
             >
               {loginLoading ? (
                 <>
-                  <RefreshCw size={18} className="spin" />
-                  Authentification en cours...
+                  <RefreshCw size={16} className="spin" />
+                  Connexion...
                 </>
               ) : (
                 <>
-                  <Lock size={18} />
+                  <Lock size={16} />
                   Se Connecter
                 </>
               )}
@@ -746,110 +723,110 @@ export default function AdminPage() {
             style={{
               marginTop: "24px",
               paddingTop: "16px",
-              borderTop: "1px solid var(--border-subtle)",
+              borderTop: "1px solid var(--border-light)",
               textAlign: "center",
-              fontSize: "0.78rem",
+              fontSize: "0.75rem",
               color: "var(--text-dim)",
             }}
           >
-            🔒 Chiffrement PBKDF2 & JWT · Traçabilité IP & Audit Actifs
+            Session sécurisée par jeton chiffré & contrôle d&apos;accès temps réel.
           </div>
         </div>
       </div>
     );
   }
 
-  // ÉCRAN 2 : TABLEAU DE BORD COMPLET DU PANNEAU D'ADMINISTRATION
+  // ÉCRAN 2 : INTERFACE SOBRE, MINIMALISTE ET ÉLÉGANTE DU DASHBOARD
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-primary)" }}>
-      {/* SIDEBAR DE NAVIGATION */}
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-app)" }}>
+      {/* SIDEBAR DISCRÈTE */}
       <aside
         style={{
-          width: "270px",
-          background: "var(--bg-secondary)",
-          borderRight: "1px solid var(--border-subtle)",
-          padding: "24px 16px",
+          width: "250px",
+          background: "var(--bg-surface)",
+          borderRight: "1px solid var(--border-light)",
+          padding: "20px 14px",
           display: "flex",
           flexDirection: "column",
-          gap: "24px",
+          gap: "20px",
           position: "sticky",
           top: 0,
           height: "100vh",
           overflowY: "auto",
         }}
       >
-        {/* En-tête Marque */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "0 8px" }}>
+        {/* Marque */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "4px 8px" }}>
           <div
             style={{
-              width: "38px",
-              height: "38px",
-              borderRadius: "10px",
-              background: "linear-gradient(135deg, #d4af37 0%, #4A2C20 100%)",
+              width: "34px",
+              height: "34px",
+              borderRadius: "var(--radius-sm)",
+              background: "var(--brown-dark)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#FAF7F2",
+              color: "#FAF8F5",
               fontWeight: "800",
-              fontSize: "1.1rem",
+              fontSize: "1rem",
             }}
           >
             RT
           </div>
           <div>
-            <div style={{ fontWeight: "800", fontSize: "1.05rem", color: "var(--text-main)", lineHeight: "1.2" }}>
+            <div style={{ fontWeight: "800", fontSize: "0.98rem", color: "var(--text-main)", lineHeight: "1.1" }}>
               ROUM TRANSIT
             </div>
-            <div style={{ fontSize: "0.68rem", fontWeight: "700", color: "var(--gold)", letterSpacing: "0.1em" }}>
-              PANEL OPÉRATIONNEL
+            <div style={{ fontSize: "0.64rem", fontWeight: "700", color: "var(--brown-light)", letterSpacing: "0.08em" }}>
+              GESTION INTERNE
             </div>
           </div>
         </div>
 
-        {/* Profil Utilisateur Actif */}
+        {/* Profil Collaborateur */}
         <div
           style={{
-            padding: "12px",
-            background: "rgba(242, 230, 213, 0.04)",
-            borderRadius: "var(--radius-md)",
-            border: "1px solid var(--border-subtle)",
+            padding: "10px 12px",
+            background: "var(--bg-subtle)",
+            borderRadius: "var(--radius-sm)",
+            border: "1px solid var(--border-light)",
           }}
         >
-          <div style={{ fontWeight: "700", fontSize: "0.9rem", color: "var(--text-main)" }}>
+          <div style={{ fontWeight: "700", fontSize: "0.85rem", color: "var(--text-main)" }}>
             {user.fullName}
           </div>
-          <div style={{ fontSize: "0.75rem", color: "var(--gold)", marginTop: "2px" }}>
-            {user.roleName} {user.isSuperAdmin && "★ Super Admin"}
+          <div style={{ fontSize: "0.72rem", color: "var(--brown-light)", marginTop: "1px" }}>
+            {user.roleName} {user.isSuperAdmin && "(Super Admin)"}
           </div>
           {user.hubLocation && (
-            <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "4px" }}>
-              📍 {user.hubLocation}
+            <div style={{ fontSize: "0.7rem", color: "var(--text-dim)", marginTop: "3px" }}>
+              {user.hubLocation}
             </div>
           )}
         </div>
 
-        {/* Menu Principal */}
-        <nav style={{ display: "flex", flexDirection: "column", gap: "4px", flex: 1 }}>
+        {/* Navigation Sidebar */}
+        <nav style={{ display: "flex", flexDirection: "column", gap: "2px", flex: 1 }}>
           <button
             type="button"
             onClick={() => setActiveTab("dashboard")}
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "10px",
-              padding: "10px 14px",
+              gap: "9px",
+              padding: "8px 12px",
               borderRadius: "var(--radius-sm)",
               border: "none",
-              background: activeTab === "dashboard" ? "rgba(212, 175, 55, 0.15)" : "transparent",
-              color: activeTab === "dashboard" ? "var(--gold)" : "var(--text-muted)",
+              background: activeTab === "dashboard" ? "var(--bg-subtle)" : "transparent",
+              color: activeTab === "dashboard" ? "var(--brown-dark)" : "var(--text-secondary)",
               fontWeight: activeTab === "dashboard" ? "700" : "500",
               cursor: "pointer",
               textAlign: "left",
-              fontSize: "0.9rem",
-              transition: "all 0.15s ease",
+              fontSize: "0.86rem",
+              borderLeft: activeTab === "dashboard" ? "3px solid var(--brown-dark)" : "3px solid transparent",
             }}
           >
-            <LayoutDashboard size={18} />
+            <LayoutDashboard size={16} />
             Tableau de Bord
           </button>
 
@@ -860,28 +837,29 @@ export default function AdminPage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              padding: "10px 14px",
+              padding: "8px 12px",
               borderRadius: "var(--radius-sm)",
               border: "none",
-              background: activeTab === "requests" ? "rgba(212, 175, 55, 0.15)" : "transparent",
-              color: activeTab === "requests" ? "var(--gold)" : "var(--text-muted)",
+              background: activeTab === "requests" ? "var(--bg-subtle)" : "transparent",
+              color: activeTab === "requests" ? "var(--brown-dark)" : "var(--text-secondary)",
               fontWeight: activeTab === "requests" ? "700" : "500",
               cursor: "pointer",
-              fontSize: "0.9rem",
+              fontSize: "0.86rem",
+              borderLeft: activeTab === "requests" ? "3px solid var(--brown-dark)" : "3px solid transparent",
             }}
           >
-            <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <Inbox size={18} />
+            <span style={{ display: "flex", alignItems: "center", gap: "9px" }}>
+              <Inbox size={16} />
               Demandes reçues
             </span>
             {stats?.pending_requests > 0 && (
               <span
                 style={{
-                  background: "var(--rose)",
-                  color: "#fff",
-                  fontSize: "0.7rem",
-                  padding: "2px 6px",
-                  borderRadius: "10px",
+                  background: "var(--brown-dark)",
+                  color: "#FAF8F5",
+                  fontSize: "0.68rem",
+                  padding: "1px 6px",
+                  borderRadius: "var(--radius-full)",
                   fontWeight: "700",
                 }}
               >
@@ -896,19 +874,20 @@ export default function AdminPage() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "10px",
-              padding: "10px 14px",
+              gap: "9px",
+              padding: "8px 12px",
               borderRadius: "var(--radius-sm)",
               border: "none",
-              background: activeTab === "shipments" ? "rgba(212, 175, 55, 0.15)" : "transparent",
-              color: activeTab === "shipments" ? "var(--gold)" : "var(--text-muted)",
+              background: activeTab === "shipments" ? "var(--bg-subtle)" : "transparent",
+              color: activeTab === "shipments" ? "var(--brown-dark)" : "var(--text-secondary)",
               fontWeight: activeTab === "shipments" ? "700" : "500",
               cursor: "pointer",
               textAlign: "left",
-              fontSize: "0.9rem",
+              fontSize: "0.86rem",
+              borderLeft: activeTab === "shipments" ? "3px solid var(--brown-dark)" : "3px solid transparent",
             }}
           >
-            <Package size={18} />
+            <Package size={16} />
             Expéditions & Colis
           </button>
 
@@ -918,19 +897,20 @@ export default function AdminPage() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "10px",
-              padding: "10px 14px",
+              gap: "9px",
+              padding: "8px 12px",
               borderRadius: "var(--radius-sm)",
               border: "none",
-              background: activeTab === "clients" ? "rgba(212, 175, 55, 0.15)" : "transparent",
-              color: activeTab === "clients" ? "var(--gold)" : "var(--text-muted)",
+              background: activeTab === "clients" ? "var(--bg-subtle)" : "transparent",
+              color: activeTab === "clients" ? "var(--brown-dark)" : "var(--text-secondary)",
               fontWeight: activeTab === "clients" ? "700" : "500",
               cursor: "pointer",
               textAlign: "left",
-              fontSize: "0.9rem",
+              fontSize: "0.86rem",
+              borderLeft: activeTab === "clients" ? "3px solid var(--brown-dark)" : "3px solid transparent",
             }}
           >
-            <Users size={18} />
+            <Users size={16} />
             Clients
           </button>
 
@@ -940,19 +920,20 @@ export default function AdminPage() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "10px",
-              padding: "10px 14px",
+              gap: "9px",
+              padding: "8px 12px",
               borderRadius: "var(--radius-sm)",
               border: "none",
-              background: activeTab === "tariffs" ? "rgba(212, 175, 55, 0.15)" : "transparent",
-              color: activeTab === "tariffs" ? "var(--gold)" : "var(--text-muted)",
+              background: activeTab === "tariffs" ? "var(--bg-subtle)" : "transparent",
+              color: activeTab === "tariffs" ? "var(--brown-dark)" : "var(--text-secondary)",
               fontWeight: activeTab === "tariffs" ? "700" : "500",
               cursor: "pointer",
               textAlign: "left",
-              fontSize: "0.9rem",
+              fontSize: "0.86rem",
+              borderLeft: activeTab === "tariffs" ? "3px solid var(--brown-dark)" : "3px solid transparent",
             }}
           >
-            <Truck size={18} />
+            <Truck size={16} />
             Tarifs & Routes
           </button>
 
@@ -962,20 +943,21 @@ export default function AdminPage() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "10px",
-              padding: "10px 14px",
+              gap: "9px",
+              padding: "8px 12px",
               borderRadius: "var(--radius-sm)",
               border: "none",
-              background: activeTab === "finances" ? "rgba(212, 175, 55, 0.15)" : "transparent",
-              color: activeTab === "finances" ? "var(--gold)" : "var(--text-muted)",
+              background: activeTab === "finances" ? "var(--bg-subtle)" : "transparent",
+              color: activeTab === "finances" ? "var(--brown-dark)" : "var(--text-secondary)",
               fontWeight: activeTab === "finances" ? "700" : "500",
               cursor: "pointer",
               textAlign: "left",
-              fontSize: "0.9rem",
+              fontSize: "0.86rem",
+              borderLeft: activeTab === "finances" ? "3px solid var(--brown-dark)" : "3px solid transparent",
             }}
           >
-            <DollarSign size={18} />
-            Paiements & Finances
+            <DollarSign size={16} />
+            Finances & Paiements
           </button>
 
           <button
@@ -985,28 +967,30 @@ export default function AdminPage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              padding: "10px 14px",
+              padding: "8px 12px",
               borderRadius: "var(--radius-sm)",
               border: "none",
-              background: activeTab === "tasks" ? "rgba(212, 175, 55, 0.15)" : "transparent",
-              color: activeTab === "tasks" ? "var(--gold)" : "var(--text-muted)",
+              background: activeTab === "tasks" ? "var(--bg-subtle)" : "transparent",
+              color: activeTab === "tasks" ? "var(--brown-dark)" : "var(--text-secondary)",
               fontWeight: activeTab === "tasks" ? "700" : "500",
               cursor: "pointer",
-              fontSize: "0.9rem",
+              fontSize: "0.86rem",
+              borderLeft: activeTab === "tasks" ? "3px solid var(--brown-dark)" : "3px solid transparent",
             }}
           >
-            <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <CheckSquare size={18} />
-              Tâches d&apos;Équipe
+            <span style={{ display: "flex", alignItems: "center", gap: "9px" }}>
+              <CheckSquare size={16} />
+              Tâches
             </span>
             {stats?.pending_tasks > 0 && (
               <span
                 style={{
-                  background: "var(--caramel)",
-                  color: "#171412",
-                  fontSize: "0.7rem",
-                  padding: "2px 6px",
-                  borderRadius: "10px",
+                  background: "var(--bg-subtle)",
+                  color: "var(--text-secondary)",
+                  border: "1px solid var(--border-light)",
+                  fontSize: "0.68rem",
+                  padding: "1px 6px",
+                  borderRadius: "var(--radius-full)",
                   fontWeight: "700",
                 }}
               >
@@ -1015,20 +999,19 @@ export default function AdminPage() {
             )}
           </button>
 
-          {/* Rôles & Employés (Super Admin Uniquement) */}
           {user.isSuperAdmin && (
             <>
               <div
                 style={{
-                  fontSize: "0.68rem",
+                  fontSize: "0.65rem",
                   fontWeight: "700",
                   color: "var(--text-dim)",
                   textTransform: "uppercase",
-                  padding: "16px 14px 6px 14px",
-                  letterSpacing: "0.1em",
+                  padding: "14px 12px 4px 12px",
+                  letterSpacing: "0.06em",
                 }}
               >
-                Administration Système
+                Système
               </div>
 
               <button
@@ -1037,20 +1020,21 @@ export default function AdminPage() {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "10px",
-                  padding: "10px 14px",
+                  gap: "9px",
+                  padding: "8px 12px",
                   borderRadius: "var(--radius-sm)",
                   border: "none",
-                  background: activeTab === "roles" ? "rgba(212, 175, 55, 0.15)" : "transparent",
-                  color: activeTab === "roles" ? "var(--gold)" : "var(--text-muted)",
+                  background: activeTab === "roles" ? "var(--bg-subtle)" : "transparent",
+                  color: activeTab === "roles" ? "var(--brown-dark)" : "var(--text-secondary)",
                   fontWeight: activeTab === "roles" ? "700" : "500",
                   cursor: "pointer",
                   textAlign: "left",
-                  fontSize: "0.9rem",
+                  fontSize: "0.86rem",
+                  borderLeft: activeTab === "roles" ? "3px solid var(--brown-dark)" : "3px solid transparent",
                 }}
               >
-                <Sliders size={18} />
-                Rôles & Permissions
+                <Sliders size={16} />
+                Rôles & Droits
               </button>
 
               <button
@@ -1059,19 +1043,20 @@ export default function AdminPage() {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "10px",
-                  padding: "10px 14px",
+                  gap: "9px",
+                  padding: "8px 12px",
                   borderRadius: "var(--radius-sm)",
                   border: "none",
-                  background: activeTab === "users" ? "rgba(212, 175, 55, 0.15)" : "transparent",
-                  color: activeTab === "users" ? "var(--gold)" : "var(--text-muted)",
+                  background: activeTab === "users" ? "var(--bg-subtle)" : "transparent",
+                  color: activeTab === "users" ? "var(--brown-dark)" : "var(--text-secondary)",
                   fontWeight: activeTab === "users" ? "700" : "500",
                   cursor: "pointer",
                   textAlign: "left",
-                  fontSize: "0.9rem",
+                  fontSize: "0.86rem",
+                  borderLeft: activeTab === "users" ? "3px solid var(--brown-dark)" : "3px solid transparent",
                 }}
               >
-                <Building2 size={18} />
+                <Building2 size={16} />
                 Collaborateurs
               </button>
             </>
@@ -1083,76 +1068,77 @@ export default function AdminPage() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "10px",
-              padding: "10px 14px",
+              gap: "9px",
+              padding: "8px 12px",
               borderRadius: "var(--radius-sm)",
               border: "none",
-              background: activeTab === "settings" ? "rgba(212, 175, 55, 0.15)" : "transparent",
-              color: activeTab === "settings" ? "var(--gold)" : "var(--text-muted)",
+              background: activeTab === "settings" ? "var(--bg-subtle)" : "transparent",
+              color: activeTab === "settings" ? "var(--brown-dark)" : "var(--text-secondary)",
               fontWeight: activeTab === "settings" ? "700" : "500",
               cursor: "pointer",
               textAlign: "left",
-              fontSize: "0.9rem",
+              fontSize: "0.86rem",
               marginTop: "auto",
+              borderLeft: activeTab === "settings" ? "3px solid var(--brown-dark)" : "3px solid transparent",
             }}
           >
-            <Settings size={18} />
+            <Settings size={16} />
             Paramètres & Audit
           </button>
         </nav>
 
-        {/* Déconnexion */}
+        {/* Bouton Déconnexion discret */}
         <button
           type="button"
           onClick={handleLogout}
           className="btn btn-secondary"
-          style={{ width: "100%", justifyContent: "center", gap: "8px", fontSize: "0.85rem", padding: "10px" }}
+          style={{ width: "100%", justifyContent: "center", gap: "6px", fontSize: "0.82rem", padding: "8px" }}
         >
-          <LogOut size={16} />
+          <LogOut size={14} />
           Déconnexion
         </button>
       </aside>
 
-      {/* CONTENU PRINCIPAL DE L'ONGLET */}
-      <main style={{ flex: 1, padding: "36px 40px", overflowY: "auto", maxHeight: "100vh" }}>
-        {/* BARRE SUPÉRIEURE D'ACTIONS RAPIDES */}
+      {/* ZONE CENTRALE DE TRAVAIL ÉPURÉE */}
+      <main style={{ flex: 1, padding: "28px 36px", overflowY: "auto", maxHeight: "100vh" }}>
+        {/* En-tête de page sobre */}
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: "32px",
+            marginBottom: "24px",
             flexWrap: "wrap",
-            gap: "16px",
+            gap: "14px",
           }}
         >
           <div>
-            <h2 style={{ fontSize: "1.7rem", fontWeight: "800", color: "var(--text-main)" }}>
-              {activeTab === "dashboard" && "Tableau de Bord & Activité"}
-              {activeTab === "requests" && "Demandes & Sourcing Reçus"}
-              {activeTab === "shipments" && "Gestion des Expéditions & Colis"}
-              {activeTab === "clients" && "Répertoire des Clients"}
-              {activeTab === "tariffs" && "Grilles Tarifaires & Liaisons"}
+            <h2 style={{ fontSize: "1.45rem", fontWeight: "800", color: "var(--text-main)" }}>
+              {activeTab === "dashboard" && "Tableau de Bord"}
+              {activeTab === "requests" && "Demandes & Sourcing"}
+              {activeTab === "shipments" && "Expéditions & Colis"}
+              {activeTab === "clients" && "Répertoire Clients"}
+              {activeTab === "tariffs" && "Grilles Tarifaires"}
               {activeTab === "finances" && "Paiements & Encaissements"}
-              {activeTab === "tasks" && "Suivi des Tâches Opérationnelles"}
-              {activeTab === "roles" && "Rôles Dynamiques & Permissions"}
-              {activeTab === "users" && "Gestion des Comptes Collaborateurs"}
-              {activeTab === "settings" && "Paramètres Généraux & Journal d'Audit"}
+              {activeTab === "tasks" && "Tâches Opérationnelles"}
+              {activeTab === "roles" && "Rôles Dynamiques (RBAC)"}
+              {activeTab === "users" && "Comptes Collaborateurs"}
+              {activeTab === "settings" && "Paramètres & Audit"}
             </h2>
-            <p style={{ color: "var(--text-muted)", fontSize: "0.88rem", marginTop: "4px" }}>
-              ROUM TRANSIT · Espace de gestion sécurisé
+            <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", marginTop: "2px" }}>
+              ROUM TRANSIT · Administration générale
             </p>
           </div>
 
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <button
               type="button"
               onClick={() => token && loadDashboardData(token)}
               className="btn btn-secondary"
-              style={{ padding: "10px 14px" }}
-              title="Actualiser les données"
+              style={{ padding: "8px 12px" }}
+              title="Actualiser"
             >
-              <RefreshCw size={16} className={isRefreshing ? "spin" : ""} />
+              <RefreshCw size={14} className={isRefreshing ? "spin" : ""} />
             </button>
 
             {activeTab === "shipments" && (
@@ -1160,18 +1146,18 @@ export default function AdminPage() {
                 <a
                   href="/api/admin/exports/shipments.csv"
                   className="btn btn-secondary"
-                  style={{ padding: "10px 16px", fontSize: "0.85rem", gap: "6px" }}
+                  style={{ padding: "8px 14px", fontSize: "0.82rem", gap: "6px" }}
                 >
-                  <Download size={16} />
+                  <Download size={14} />
                   Export CSV
                 </a>
                 <button
                   type="button"
                   onClick={() => setShowCreateShipmentModal(true)}
                   className="btn btn-primary"
-                  style={{ padding: "10px 18px", fontSize: "0.85rem", gap: "6px" }}
+                  style={{ padding: "8px 16px", fontSize: "0.82rem", gap: "6px" }}
                 >
-                  <Plus size={16} />
+                  <Plus size={14} />
                   Nouvelle Expédition
                 </button>
               </>
@@ -1182,9 +1168,9 @@ export default function AdminPage() {
                 type="button"
                 onClick={() => setShowCreateClientModal(true)}
                 className="btn btn-primary"
-                style={{ padding: "10px 18px", fontSize: "0.85rem", gap: "6px" }}
+                style={{ padding: "8px 16px", fontSize: "0.82rem", gap: "6px" }}
               >
-                <Plus size={16} />
+                <Plus size={14} />
                 Nouveau Client
               </button>
             )}
@@ -1194,10 +1180,10 @@ export default function AdminPage() {
                 type="button"
                 onClick={() => setShowRecordPaymentModal({})}
                 className="btn btn-primary"
-                style={{ padding: "10px 18px", fontSize: "0.85rem", gap: "6px" }}
+                style={{ padding: "8px 16px", fontSize: "0.82rem", gap: "6px" }}
               >
-                <Plus size={16} />
-                Consigner un Paiement
+                <Plus size={14} />
+                Consigner Paiement
               </button>
             )}
 
@@ -1206,9 +1192,9 @@ export default function AdminPage() {
                 type="button"
                 onClick={() => setShowCreateTaskModal(true)}
                 className="btn btn-primary"
-                style={{ padding: "10px 18px", fontSize: "0.85rem", gap: "6px" }}
+                style={{ padding: "8px 16px", fontSize: "0.82rem", gap: "6px" }}
               >
-                <Plus size={16} />
+                <Plus size={14} />
                 Nouvelle Tâche
               </button>
             )}
@@ -1218,9 +1204,9 @@ export default function AdminPage() {
                 type="button"
                 onClick={() => setShowCreateTariffModal(true)}
                 className="btn btn-primary"
-                style={{ padding: "10px 18px", fontSize: "0.85rem", gap: "6px" }}
+                style={{ padding: "8px 16px", fontSize: "0.82rem", gap: "6px" }}
               >
-                <Plus size={16} />
+                <Plus size={14} />
                 Nouveau Tarif
               </button>
             )}
@@ -1230,9 +1216,9 @@ export default function AdminPage() {
                 type="button"
                 onClick={() => setShowCreateRoleModal(true)}
                 className="btn btn-primary"
-                style={{ padding: "10px 18px", fontSize: "0.85rem", gap: "6px" }}
+                style={{ padding: "8px 16px", fontSize: "0.82rem", gap: "6px" }}
               >
-                <Plus size={16} />
+                <Plus size={14} />
                 Créer un Rôle
               </button>
             )}
@@ -1242,96 +1228,95 @@ export default function AdminPage() {
                 type="button"
                 onClick={() => setShowCreateUserModal(true)}
                 className="btn btn-primary"
-                style={{ padding: "10px 18px", fontSize: "0.85rem", gap: "6px" }}
+                style={{ padding: "8px 16px", fontSize: "0.82rem", gap: "6px" }}
               >
-                <Plus size={16} />
+                <Plus size={14} />
                 Nouveau Compte
               </button>
             )}
           </div>
         </div>
 
-        {/* 1. ONGLET : TABLEAU DE BORD (STATS & KPIS) */}
+        {/* 1. TABLEAU DE BORD : STATS SOBRES */}
         {activeTab === "dashboard" && (
           <div>
-            {/* Grille de KPIs */}
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-                gap: "18px",
-                marginBottom: "36px",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                gap: "14px",
+                marginBottom: "24px",
               }}
             >
-              <div className="glass-card" style={{ padding: "24px" }}>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "8px" }}>
-                  Expéditions Actives
+              <div className="card-clean" style={{ padding: "18px 20px" }}>
+                <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginBottom: "4px" }}>
+                  Expéditions en cours
                 </div>
-                <div style={{ fontSize: "2.2rem", fontWeight: "800", color: "var(--gold)" }}>
+                <div style={{ fontSize: "1.8rem", fontWeight: "800", color: "var(--text-main)" }}>
                   {stats?.active_shipments || 0}
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "4px" }}>
-                  Sur {stats?.total_shipments || 0} expéditions totales
+                <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "2px" }}>
+                  Sur {stats?.total_shipments || 0} dossiers totaux
                 </div>
               </div>
 
-              <div className="glass-card" style={{ padding: "24px" }}>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "8px" }}>
-                  Demandes en Attente
+              <div className="card-clean" style={{ padding: "18px 20px" }}>
+                <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginBottom: "4px" }}>
+                  Demandes à traiter
                 </div>
-                <div style={{ fontSize: "2.2rem", fontWeight: "800", color: "var(--rose)" }}>
+                <div style={{ fontSize: "1.8rem", fontWeight: "800", color: "var(--brown-dark)" }}>
                   {stats?.pending_requests || 0}
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "4px" }}>
-                  Alibaba & transit à traiter
+                <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "2px" }}>
+                  Alibaba & transit récents
                 </div>
               </div>
 
-              <div className="glass-card" style={{ padding: "24px" }}>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "8px" }}>
-                  Clients Enregistrés
+              <div className="card-clean" style={{ padding: "18px 20px" }}>
+                <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginBottom: "4px" }}>
+                  Clients enregistrés
                 </div>
-                <div style={{ fontSize: "2.2rem", fontWeight: "800", color: "var(--caramel)" }}>
+                <div style={{ fontSize: "1.8rem", fontWeight: "800", color: "var(--text-main)" }}>
                   {stats?.total_clients || 0}
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "4px" }}>
-                  Répertoire vérifié
+                <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "2px" }}>
+                  Base clients vérifiée
                 </div>
               </div>
 
-              <div className="glass-card" style={{ padding: "24px" }}>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "8px" }}>
-                  Paiements Encaissés
+              <div className="card-clean" style={{ padding: "18px 20px" }}>
+                <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginBottom: "4px" }}>
+                  Total Encaissé
                 </div>
-                <div style={{ fontSize: "2.2rem", fontWeight: "800", color: "var(--emerald)" }}>
+                <div style={{ fontSize: "1.8rem", fontWeight: "800", color: "var(--state-success-text)" }}>
                   ${((stats?.total_payments_minor || 0) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })}
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "4px" }}>
-                  Total consigné en caisse
+                <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "2px" }}>
+                  En caisse / mobile money
                 </div>
               </div>
             </div>
 
-            {/* Deux colonnes : Expéditions récentes + Tâches urgentes */}
-            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "24px" }}>
-              <div className="glass-card" style={{ padding: "28px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                  <h3 style={{ fontSize: "1.1rem" }}>Dernières Expéditions</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "18px" }}>
+              <div className="card-clean" style={{ padding: "20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                  <h3 style={{ fontSize: "0.98rem" }}>Dernières Expéditions</h3>
                   <button
                     type="button"
                     onClick={() => setActiveTab("shipments")}
-                    style={{ background: "none", border: "none", color: "var(--gold)", cursor: "pointer", fontSize: "0.85rem" }}
+                    style={{ background: "none", border: "none", color: "var(--brown-light)", cursor: "pointer", fontSize: "0.8rem", fontWeight: "600" }}
                   >
                     Voir tout →
                   </button>
                 </div>
-                <div style={{ display: "grid", gap: "12px" }}>
+                <div style={{ display: "grid", gap: "8px" }}>
                   {shipments.slice(0, 5).map((s) => (
                     <div
                       key={s.id}
                       style={{
-                        padding: "12px",
-                        background: "rgba(242, 230, 213, 0.03)",
+                        padding: "10px 12px",
+                        background: "var(--bg-app)",
+                        border: "1px solid var(--border-light)",
                         borderRadius: "var(--radius-sm)",
                         display: "flex",
                         justifyContent: "space-between",
@@ -1339,37 +1324,43 @@ export default function AdminPage() {
                       }}
                     >
                       <div>
-                        <strong style={{ color: "var(--gold)" }}>{s.tracking_number}</strong>
-                        <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                        <strong style={{ color: "var(--brown-dark)", fontSize: "0.88rem" }}>{s.tracking_number}</strong>
+                        <div style={{ fontSize: "0.76rem", color: "var(--text-secondary)", marginTop: "2px" }}>
                           {s.client_name} · {s.origin_country} → {s.destination_country}
                         </div>
                       </div>
-                      <span className={`status-badge status-${s.current_status.toLowerCase().includes("transit") ? "transit" : "hub"}`}>
+                      <span className="badge-clean badge-transit">
                         {s.status_label || s.current_status}
                       </span>
                     </div>
                   ))}
+                  {shipments.length === 0 && (
+                    <div style={{ color: "var(--text-dim)", fontSize: "0.8rem", padding: "16px 0", textAlign: "center" }}>
+                      Aucune expédition enregistrée.
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="glass-card" style={{ padding: "28px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                  <h3 style={{ fontSize: "1.1rem" }}>Tâches Prioritaires</h3>
+              <div className="card-clean" style={{ padding: "20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                  <h3 style={{ fontSize: "0.98rem" }}>Tâches Prioritaires</h3>
                   <button
                     type="button"
                     onClick={() => setActiveTab("tasks")}
-                    style={{ background: "none", border: "none", color: "var(--gold)", cursor: "pointer", fontSize: "0.85rem" }}
+                    style={{ background: "none", border: "none", color: "var(--brown-light)", cursor: "pointer", fontSize: "0.8rem", fontWeight: "600" }}
                   >
                     Gérer ({tasksList.length}) →
                   </button>
                 </div>
-                <div style={{ display: "grid", gap: "10px" }}>
+                <div style={{ display: "grid", gap: "8px" }}>
                   {tasksList.slice(0, 5).map((t) => (
                     <div
                       key={t.id}
                       style={{
-                        padding: "12px",
-                        background: "rgba(242, 230, 213, 0.03)",
+                        padding: "10px 12px",
+                        background: "var(--bg-app)",
+                        border: "1px solid var(--border-light)",
                         borderRadius: "var(--radius-sm)",
                         display: "flex",
                         alignItems: "center",
@@ -1380,26 +1371,27 @@ export default function AdminPage() {
                         type="checkbox"
                         checked={t.status === "DONE"}
                         onChange={() => handleToggleTaskStatus(t.id, t.status)}
-                        style={{ cursor: "pointer", accentColor: "var(--gold)" }}
+                        style={{ cursor: "pointer", accentColor: "var(--brown-dark)" }}
                       />
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: "0.88rem", textDecoration: t.status === "DONE" ? "line-through" : "none" }}>
+                        <div style={{ fontSize: "0.84rem", textDecoration: t.status === "DONE" ? "line-through" : "none", color: "var(--text-main)" }}>
                           {t.title}
                         </div>
                         {t.due_date && (
-                          <div style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>
+                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "2px" }}>
                             Échéance : {t.due_date}
                           </div>
                         )}
                       </div>
                       <span
                         style={{
-                          fontSize: "0.7rem",
+                          fontSize: "0.68rem",
                           fontWeight: "700",
                           padding: "2px 6px",
                           borderRadius: "4px",
-                          background: t.priority === "URGENT" ? "rgba(224, 86, 86, 0.2)" : "rgba(242, 230, 213, 0.08)",
-                          color: t.priority === "URGENT" ? "var(--rose)" : "var(--text-muted)",
+                          background: t.priority === "URGENT" ? "var(--state-danger-bg)" : "var(--bg-subtle)",
+                          color: t.priority === "URGENT" ? "var(--state-danger-text)" : "var(--text-secondary)",
+                          border: `1px solid ${t.priority === "URGENT" ? "var(--state-danger-border)" : "var(--border-light)"}`,
                         }}
                       >
                         {t.priority}
@@ -1407,8 +1399,8 @@ export default function AdminPage() {
                     </div>
                   ))}
                   {tasksList.length === 0 && (
-                    <div style={{ color: "var(--text-dim)", fontSize: "0.85rem", textAlign: "center", padding: "20px 0" }}>
-                      Aucune tâche en attente.
+                    <div style={{ color: "var(--text-dim)", fontSize: "0.8rem", textAlign: "center", padding: "16px 0" }}>
+                      Toutes les tâches sont terminées.
                     </div>
                   )}
                 </div>
@@ -1417,31 +1409,31 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 2. ONGLET : DEMANDES REÇUES (ALIBABA, TRANSIT, COLIS) */}
+        {/* 2. DEMANDES REÇUES */}
         {activeTab === "requests" && (
-          <div className="glass-card" style={{ padding: "28px" }}>
-            <div style={{ marginBottom: "20px" }}>
+          <div className="card-clean" style={{ padding: "20px" }}>
+            <div style={{ marginBottom: "16px" }}>
               <input
                 type="text"
-                placeholder="Rechercher par référence, nom client, téléphone..."
+                placeholder="Rechercher par référence, client, téléphone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field"
-                style={{ maxWidth: "450px" }}
+                className="input-clean"
+                style={{ maxWidth: "380px" }}
               />
             </div>
 
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
                 <thead>
-                  <tr style={{ borderBottom: "1px solid var(--border-subtle)", textAlign: "left", color: "var(--text-dim)" }}>
-                    <th style={{ padding: "12px 8px" }}>Réf. Demande</th>
-                    <th style={{ padding: "12px 8px" }}>Type</th>
-                    <th style={{ padding: "12px 8px" }}>Client</th>
-                    <th style={{ padding: "12px 8px" }}>Origine → Dest.</th>
-                    <th style={{ padding: "12px 8px" }}>Détails / Poids</th>
-                    <th style={{ padding: "12px 8px" }}>Statut</th>
-                    <th style={{ padding: "12px 8px" }}>Actions</th>
+                  <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-secondary)" }}>
+                    <th style={{ padding: "10px 12px" }}>Référence</th>
+                    <th style={{ padding: "10px 12px" }}>Type</th>
+                    <th style={{ padding: "10px 12px" }}>Client</th>
+                    <th style={{ padding: "10px 12px" }}>Trajet</th>
+                    <th style={{ padding: "10px 12px" }}>Poids/Infos</th>
+                    <th style={{ padding: "10px 12px" }}>Statut</th>
+                    <th style={{ padding: "10px 12px" }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1453,46 +1445,36 @@ export default function AdminPage() {
                       r.client_phone?.includes(searchTerm)
                     )
                     .map((r) => (
-                      <tr key={r.id} style={{ borderBottom: "1px solid rgba(242, 230, 213, 0.05)" }}>
-                        <td style={{ padding: "14px 8px", fontWeight: "700", color: "var(--gold)" }}>
+                      <tr key={r.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
+                        <td style={{ padding: "12px", fontWeight: "700", color: "var(--brown-dark)" }}>
                           {r.reference}
                         </td>
-                        <td style={{ padding: "14px 8px" }}>
-                          <span
-                            style={{
-                              fontSize: "0.75rem",
-                              fontWeight: "700",
-                              padding: "4px 8px",
-                              borderRadius: "6px",
-                              background: r.request_type === "ALIBABA" ? "rgba(212, 175, 55, 0.15)" : "rgba(166, 124, 82, 0.15)",
-                              color: r.request_type === "ALIBABA" ? "var(--gold)" : "var(--light-brown)",
-                            }}
-                          >
+                        <td style={{ padding: "12px" }}>
+                          <span className="badge-clean badge-draft">
                             {r.request_type === "ALIBABA" ? "Achat Alibaba" : r.request_type}
                           </span>
                         </td>
-                        <td style={{ padding: "14px 8px" }}>
+                        <td style={{ padding: "12px" }}>
                           <div style={{ fontWeight: "600", color: "var(--text-main)" }}>{r.client_name}</div>
-                          <div style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>{r.client_phone}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{r.client_phone}</div>
                         </td>
-                        <td style={{ padding: "14px 8px" }}>
+                        <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
                           {r.origin_country || "Chine"} → {r.destination_country || "Afrique"}
                         </td>
-                        <td style={{ padding: "14px 8px", fontSize: "0.85rem" }}>
-                          {r.estimated_weight_kg ? `${r.estimated_weight_kg} kg` : "Non spécifié"}
-                          {r.description && <div style={{ color: "var(--text-dim)", fontSize: "0.78rem" }}>{r.description.slice(0, 35)}...</div>}
+                        <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
+                          {r.estimated_weight_kg ? `${r.estimated_weight_kg} kg` : "—"}
                         </td>
-                        <td style={{ padding: "14px 8px" }}>
+                        <td style={{ padding: "12px" }}>
                           <select
                             value={r.status}
                             onChange={(e) => handleUpdateRequestStatus(r.id, e.target.value)}
                             style={{
-                              padding: "6px 10px",
-                              borderRadius: "6px",
-                              background: "rgba(23, 20, 18, 0.8)",
+                              padding: "4px 8px",
+                              borderRadius: "var(--radius-sm)",
+                              border: "1px solid var(--border-light)",
+                              background: "#FFFFFF",
                               color: "var(--text-main)",
-                              border: "1px solid var(--border-subtle)",
-                              fontSize: "0.82rem",
+                              fontSize: "0.8rem",
                               cursor: "pointer",
                             }}
                           >
@@ -1504,25 +1486,25 @@ export default function AdminPage() {
                             <option value="CANCELLED">ANNULÉ</option>
                           </select>
                         </td>
-                        <td style={{ padding: "14px 8px" }}>
+                        <td style={{ padding: "12px" }}>
                           <a
                             href={`https://wa.me/${r.client_phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
                               `Bonjour ${r.client_name}, concernant votre demande ${r.reference} chez ROUM TRANSIT :`
                             )}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="btn btn-whatsapp"
-                            style={{ padding: "6px 12px", fontSize: "0.78rem", gap: "4px" }}
+                            className="btn btn-secondary"
+                            style={{ padding: "5px 10px", fontSize: "0.76rem", gap: "4px" }}
                           >
-                            <Phone size={14} /> WhatsApp
+                            <Phone size={12} color="#25D366" /> WhatsApp
                           </a>
                         </td>
                       </tr>
                     ))}
                   {requestsList.length === 0 && (
                     <tr>
-                      <td colSpan={7} style={{ textAlign: "center", padding: "30px", color: "var(--text-dim)" }}>
-                        Aucune demande client enregistrée pour l&apos;instant.
+                      <td colSpan={7} style={{ textAlign: "center", padding: "24px", color: "var(--text-dim)" }}>
+                        Aucune demande client reçue.
                       </td>
                     </tr>
                   )}
@@ -1532,23 +1514,23 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 3. ONGLET : EXPÉDITIONS & COLIS */}
+        {/* 3. EXPÉDITIONS & COLIS */}
         {activeTab === "shipments" && (
-          <div className="glass-card" style={{ padding: "28px" }}>
-            <div style={{ display: "flex", gap: "16px", marginBottom: "24px", flexWrap: "wrap" }}>
+          <div className="card-clean" style={{ padding: "20px" }}>
+            <div style={{ display: "flex", gap: "12px", marginBottom: "18px", flexWrap: "wrap" }}>
               <input
                 type="text"
                 placeholder="Rechercher par n° suivi, client, téléphone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field"
-                style={{ maxWidth: "400px" }}
+                className="input-clean"
+                style={{ maxWidth: "340px" }}
               />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="input-field"
-                style={{ maxWidth: "220px" }}
+                className="input-clean"
+                style={{ maxWidth: "200px" }}
               >
                 <option value="">Tous les statuts</option>
                 {allStatuses.map((st) => (
@@ -1560,17 +1542,17 @@ export default function AdminPage() {
             </div>
 
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
                 <thead>
-                  <tr style={{ borderBottom: "1px solid var(--border-subtle)", textAlign: "left", color: "var(--text-dim)" }}>
-                    <th style={{ padding: "12px 8px" }}>N° Suivi</th>
-                    <th style={{ padding: "12px 8px" }}>Client</th>
-                    <th style={{ padding: "12px 8px" }}>Liaison</th>
-                    <th style={{ padding: "12px 8px" }}>Mode</th>
-                    <th style={{ padding: "12px 8px" }}>Colis / Poids</th>
-                    <th style={{ padding: "12px 8px" }}>Statut Actuel</th>
-                    <th style={{ padding: "12px 8px" }}>Paiement</th>
-                    <th style={{ padding: "12px 8px" }}>Actions</th>
+                  <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-secondary)" }}>
+                    <th style={{ padding: "10px 12px" }}>N° Suivi</th>
+                    <th style={{ padding: "10px 12px" }}>Client</th>
+                    <th style={{ padding: "10px 12px" }}>Liaison</th>
+                    <th style={{ padding: "10px 12px" }}>Mode</th>
+                    <th style={{ padding: "10px 12px" }}>Colis / Poids</th>
+                    <th style={{ padding: "10px 12px" }}>Statut</th>
+                    <th style={{ padding: "10px 12px" }}>Paiement</th>
+                    <th style={{ padding: "10px 12px" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1588,74 +1570,62 @@ export default function AdminPage() {
                       return true;
                     })
                     .map((s) => (
-                      <tr key={s.id} style={{ borderBottom: "1px solid rgba(242, 230, 213, 0.05)" }}>
-                        <td style={{ padding: "14px 8px" }}>
+                      <tr key={s.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
+                        <td style={{ padding: "12px" }}>
                           <Link
                             href={`/tracking/${s.tracking_number}`}
                             target="_blank"
-                            style={{ fontWeight: "700", color: "var(--gold)", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                            style={{ fontWeight: "700", color: "var(--brown-dark)", display: "inline-flex", alignItems: "center", gap: "4px" }}
                           >
                             {s.tracking_number}
-                            <ExternalLink size={12} />
+                            <ExternalLink size={11} />
                           </Link>
-                          <div style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>
+                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
                             {new Date(s.created_at).toLocaleDateString("fr-FR")}
                           </div>
                         </td>
-                        <td style={{ padding: "14px 8px" }}>
+                        <td style={{ padding: "12px" }}>
                           <div style={{ fontWeight: "600", color: "var(--text-main)" }}>{s.client_name}</div>
-                          <div style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>{s.client_phone}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{s.client_phone}</div>
                         </td>
-                        <td style={{ padding: "14px 8px" }}>
+                        <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
                           {s.origin_country} → {s.destination_country}
                         </td>
-                        <td style={{ padding: "14px 8px" }}>
-                          <span style={{ fontSize: "0.82rem", color: "var(--caramel)", fontWeight: "600" }}>
-                            {s.shipping_mode_name}
-                          </span>
+                        <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
+                          {s.shipping_mode_name}
                         </td>
-                        <td style={{ padding: "14px 8px" }}>
+                        <td style={{ padding: "12px" }}>
                           <div>{s.total_parcels_count} colis</div>
-                          <div style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>{s.total_weight_kg} kg</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{s.total_weight_kg} kg</div>
                         </td>
-                        <td style={{ padding: "14px 8px" }}>
-                          <span className={`status-badge status-${s.current_status.toLowerCase().includes("transit") ? "transit" : "hub"}`}>
+                        <td style={{ padding: "12px" }}>
+                          <span className="badge-clean badge-transit">
                             {s.status_label || s.current_status}
                           </span>
                         </td>
-                        <td style={{ padding: "14px 8px" }}>
-                          <span
-                            style={{
-                              fontSize: "0.75rem",
-                              fontWeight: "700",
-                              padding: "4px 8px",
-                              borderRadius: "6px",
-                              background: s.payment_status === "PAID" ? "rgba(16, 185, 129, 0.15)" : "rgba(242, 230, 213, 0.08)",
-                              color: s.payment_status === "PAID" ? "var(--emerald)" : "var(--text-muted)",
-                            }}
-                          >
+                        <td style={{ padding: "12px" }}>
+                          <span className={`badge-clean ${s.payment_status === "PAID" ? "badge-delivered" : "badge-draft"}`}>
                             {s.payment_status}
                           </span>
                         </td>
-                        <td style={{ padding: "14px 8px" }}>
+                        <td style={{ padding: "12px" }}>
                           <div style={{ display: "flex", gap: "6px" }}>
                             <button
                               type="button"
                               onClick={() => setShowStatusModal(s)}
                               className="btn btn-secondary"
-                              style={{ padding: "6px 10px", fontSize: "0.78rem" }}
-                              title="Changer statut"
+                              style={{ padding: "4px 8px", fontSize: "0.75rem" }}
                             >
-                              Changer statut
+                              Statut
                             </button>
                             <button
                               type="button"
                               onClick={() => setShowPrintLabelModal(s)}
                               className="btn btn-secondary"
-                              style={{ padding: "6px 10px", fontSize: "0.78rem" }}
-                              title="Imprimer étiquette / bordereau"
+                              style={{ padding: "4px 8px", fontSize: "0.75rem" }}
+                              title="Bordereau"
                             >
-                              <Printer size={14} />
+                              <Printer size={13} />
                             </button>
                           </div>
                         </td>
@@ -1663,7 +1633,7 @@ export default function AdminPage() {
                     ))}
                   {shipments.length === 0 && (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: "center", padding: "30px", color: "var(--text-dim)" }}>
+                      <td colSpan={8} style={{ textAlign: "center", padding: "24px", color: "var(--text-dim)" }}>
                         Aucune expédition enregistrée.
                       </td>
                     </tr>
@@ -1674,30 +1644,30 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 4. ONGLET : RÉPERTOIRE DES CLIENTS */}
+        {/* 4. RÉPERTOIRE DES CLIENTS */}
         {activeTab === "clients" && (
-          <div className="glass-card" style={{ padding: "28px" }}>
-            <div style={{ marginBottom: "20px" }}>
+          <div className="card-clean" style={{ padding: "20px" }}>
+            <div style={{ marginBottom: "16px" }}>
               <input
                 type="text"
-                placeholder="Rechercher un client par nom, WhatsApp, pays..."
+                placeholder="Rechercher par nom, téléphone, pays..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field"
-                style={{ maxWidth: "450px" }}
+                className="input-clean"
+                style={{ maxWidth: "380px" }}
               />
             </div>
 
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
                 <thead>
-                  <tr style={{ borderBottom: "1px solid var(--border-subtle)", textAlign: "left", color: "var(--text-dim)" }}>
-                    <th style={{ padding: "12px 8px" }}>Client</th>
-                    <th style={{ padding: "12px 8px" }}>WhatsApp / Téléphone</th>
-                    <th style={{ padding: "12px 8px" }}>Email</th>
-                    <th style={{ padding: "12px 8px" }}>Pays / Ville</th>
-                    <th style={{ padding: "12px 8px" }}>Dossiers</th>
-                    <th style={{ padding: "12px 8px" }}>Action Directe</th>
+                  <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-secondary)" }}>
+                    <th style={{ padding: "10px 12px" }}>Nom du Client</th>
+                    <th style={{ padding: "10px 12px" }}>WhatsApp / Téléphone</th>
+                    <th style={{ padding: "10px 12px" }}>Email</th>
+                    <th style={{ padding: "10px 12px" }}>Localisation</th>
+                    <th style={{ padding: "10px 12px" }}>Dossiers</th>
+                    <th style={{ padding: "10px 12px" }}>Contact Direct</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1709,35 +1679,35 @@ export default function AdminPage() {
                       c.country?.toLowerCase().includes(searchTerm.toLowerCase())
                     )
                     .map((c) => (
-                      <tr key={c.id} style={{ borderBottom: "1px solid rgba(242, 230, 213, 0.05)" }}>
-                        <td style={{ padding: "14px 8px", fontWeight: "700", color: "var(--text-main)" }}>
+                      <tr key={c.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
+                        <td style={{ padding: "12px", fontWeight: "700", color: "var(--text-main)" }}>
                           {c.full_name}
                         </td>
-                        <td style={{ padding: "14px 8px", color: "var(--gold)" }}>
+                        <td style={{ padding: "12px", color: "var(--brown-dark)", fontWeight: "600" }}>
                           {c.phone_whatsapp}
                         </td>
-                        <td style={{ padding: "14px 8px", color: "var(--text-muted)" }}>
+                        <td style={{ padding: "12px", color: "var(--text-muted)" }}>
                           {c.email || "—"}
                         </td>
-                        <td style={{ padding: "14px 8px" }}>
+                        <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
                           {c.city ? `${c.city}, ` : ""}{c.country}
                         </td>
-                        <td style={{ padding: "14px 8px" }}>
-                          <span style={{ fontWeight: "600", color: "var(--caramel)" }}>
-                            {c.shipments_count || 0} colis
+                        <td style={{ padding: "12px" }}>
+                          <span style={{ fontWeight: "600", color: "var(--text-secondary)" }}>
+                            {c.shipments_count || 0} expédition(s)
                           </span>
                         </td>
-                        <td style={{ padding: "14px 8px" }}>
+                        <td style={{ padding: "12px" }}>
                           <a
                             href={`https://wa.me/${c.phone_whatsapp.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
                               `Bonjour ${c.full_name}, nous vous contactons depuis ROUM TRANSIT :`
                             )}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="btn btn-whatsapp"
-                            style={{ padding: "6px 12px", fontSize: "0.78rem", gap: "4px" }}
+                            className="btn btn-secondary"
+                            style={{ padding: "5px 10px", fontSize: "0.76rem", gap: "4px" }}
                           >
-                            <Phone size={14} /> Discuter
+                            <Phone size={12} color="#25D366" /> Discuter
                           </a>
                         </td>
                       </tr>
@@ -1748,42 +1718,42 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 5. ONGLET : TARIFS & ROUTES */}
+        {/* 5. TARIFS & ROUTES */}
         {activeTab === "tariffs" && (
-          <div className="glass-card" style={{ padding: "28px" }}>
-            <h3 style={{ fontSize: "1.2rem", marginBottom: "20px" }}>Grilles Tarifaires Actives</h3>
+          <div className="card-clean" style={{ padding: "20px" }}>
+            <h3 style={{ fontSize: "1.05rem", marginBottom: "14px" }}>Grilles Tarifaires Actives</h3>
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
                 <thead>
-                  <tr style={{ borderBottom: "1px solid var(--border-subtle)", textAlign: "left", color: "var(--text-dim)" }}>
-                    <th style={{ padding: "12px 8px" }}>Origine → Destination</th>
-                    <th style={{ padding: "12px 8px" }}>Mode de Transport</th>
-                    <th style={{ padding: "12px 8px" }}>Prix Unitaire</th>
-                    <th style={{ padding: "12px 8px" }}>Base de Calcul</th>
-                    <th style={{ padding: "12px 8px" }}>Min. Facturation</th>
-                    <th style={{ padding: "12px 8px" }}>Délais Estimés</th>
+                  <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-secondary)" }}>
+                    <th style={{ padding: "10px 12px" }}>Liaison</th>
+                    <th style={{ padding: "10px 12px" }}>Mode</th>
+                    <th style={{ padding: "10px 12px" }}>Prix Unitaire</th>
+                    <th style={{ padding: "10px 12px" }}>Base</th>
+                    <th style={{ padding: "10px 12px" }}>Min. Facturé</th>
+                    <th style={{ padding: "10px 12px" }}>Délais Indicatifs</th>
                   </tr>
                 </thead>
                 <tbody>
                   {tariffsList.map((t) => (
-                    <tr key={t.id} style={{ borderBottom: "1px solid rgba(242, 230, 213, 0.05)" }}>
-                      <td style={{ padding: "14px 8px", fontWeight: "700", color: "var(--text-main)" }}>
+                    <tr key={t.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
+                      <td style={{ padding: "12px", fontWeight: "700", color: "var(--text-main)" }}>
                         {t.origin_city ? `${t.origin_city} (${t.origin_country})` : t.origin_country} →{" "}
                         {t.destination_city ? `${t.destination_city} (${t.destination_country})` : t.destination_country}
                       </td>
-                      <td style={{ padding: "14px 8px", color: "var(--gold)" }}>
+                      <td style={{ padding: "12px", color: "var(--brown-dark)", fontWeight: "600" }}>
                         {t.shipping_mode_name}
                       </td>
-                      <td style={{ padding: "14px 8px", fontWeight: "700", color: "var(--emerald)" }}>
+                      <td style={{ padding: "12px", fontWeight: "700", color: "var(--state-success-text)" }}>
                         ${(t.price_per_unit_minor / 100).toFixed(2)} / {t.pricing_basis === "PER_KG" ? "kg" : "m³"}
                       </td>
-                      <td style={{ padding: "14px 8px", color: "var(--text-muted)" }}>
+                      <td style={{ padding: "12px", color: "var(--text-muted)" }}>
                         {t.pricing_basis}
                       </td>
-                      <td style={{ padding: "14px 8px", color: "var(--text-dim)" }}>
+                      <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
                         ${(t.minimum_charge_minor / 100).toFixed(2)}
                       </td>
-                      <td style={{ padding: "14px 8px" }}>
+                      <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
                         {t.estimated_days_min} à {t.estimated_days_max} jours ouvrés
                       </td>
                     </tr>
@@ -1794,74 +1764,65 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 6. ONGLET : FINANCES & PAIEMENTS */}
+        {/* 6. FINANCES & PAIEMENTS */}
         {activeTab === "finances" && (
-          <div className="glass-card" style={{ padding: "28px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <h3 style={{ fontSize: "1.2rem" }}>Historique des Paiements Consignés</h3>
-              <div style={{ fontSize: "0.9rem", color: "var(--emerald)", fontWeight: "700" }}>
+          <div className="card-clean" style={{ padding: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ fontSize: "1.05rem" }}>Journal des Paiements</h3>
+              <div style={{ fontSize: "0.88rem", color: "var(--state-success-text)", fontWeight: "700" }}>
                 Total : ${((stats?.total_payments_minor || 0) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })}
               </div>
             </div>
 
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
                 <thead>
-                  <tr style={{ borderBottom: "1px solid var(--border-subtle)", textAlign: "left", color: "var(--text-dim)" }}>
-                    <th style={{ padding: "12px 8px" }}>Date</th>
-                    <th style={{ padding: "12px 8px" }}>Client</th>
-                    <th style={{ padding: "12px 8px" }}>Dossier</th>
-                    <th style={{ padding: "12px 8px" }}>Montant</th>
-                    <th style={{ padding: "12px 8px" }}>Méthode</th>
-                    <th style={{ padding: "12px 8px" }}>Type</th>
-                    <th style={{ padding: "12px 8px" }}>Réf / Reçu</th>
-                    <th style={{ padding: "12px 8px" }}>Enregistré par</th>
+                  <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-secondary)" }}>
+                    <th style={{ padding: "10px 12px" }}>Date</th>
+                    <th style={{ padding: "10px 12px" }}>Client</th>
+                    <th style={{ padding: "10px 12px" }}>Dossier</th>
+                    <th style={{ padding: "10px 12px" }}>Montant</th>
+                    <th style={{ padding: "10px 12px" }}>Méthode</th>
+                    <th style={{ padding: "10px 12px" }}>Type</th>
+                    <th style={{ padding: "10px 12px" }}>Réf Transaction</th>
+                    <th style={{ padding: "10px 12px" }}>Opérateur</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paymentsList.map((p) => (
-                    <tr key={p.id} style={{ borderBottom: "1px solid rgba(242, 230, 213, 0.05)" }}>
-                      <td style={{ padding: "14px 8px", color: "var(--text-dim)" }}>
+                    <tr key={p.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
+                      <td style={{ padding: "12px", color: "var(--text-muted)" }}>
                         {new Date(p.recorded_at).toLocaleDateString("fr-FR")}
                       </td>
-                      <td style={{ padding: "14px 8px", fontWeight: "600", color: "var(--text-main)" }}>
+                      <td style={{ padding: "12px", fontWeight: "600", color: "var(--text-main)" }}>
                         {p.client_name}
                       </td>
-                      <td style={{ padding: "14px 8px", color: "var(--gold)" }}>
+                      <td style={{ padding: "12px", color: "var(--brown-dark)", fontWeight: "600" }}>
                         {p.tracking_number || "—"}
                       </td>
-                      <td style={{ padding: "14px 8px", fontWeight: "800", color: "var(--emerald)" }}>
+                      <td style={{ padding: "12px", fontWeight: "800", color: "var(--state-success-text)" }}>
                         ${(p.amount_minor / 100).toFixed(2)}
                       </td>
-                      <td style={{ padding: "14px 8px" }}>
-                        <span
-                          style={{
-                            fontSize: "0.75rem",
-                            fontWeight: "700",
-                            padding: "4px 8px",
-                            borderRadius: "6px",
-                            background: "rgba(212, 175, 55, 0.15)",
-                            color: "var(--gold)",
-                          }}
-                        >
+                      <td style={{ padding: "12px" }}>
+                        <span className="badge-clean badge-draft">
                           {p.payment_method}
                         </span>
                       </td>
-                      <td style={{ padding: "14px 8px", color: "var(--text-muted)" }}>
+                      <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
                         {p.payment_type}
                       </td>
-                      <td style={{ padding: "14px 8px", fontSize: "0.82rem", color: "var(--text-dim)" }}>
+                      <td style={{ padding: "12px", fontSize: "0.78rem", color: "var(--text-muted)" }}>
                         {p.reference_code || "Manuel"}
                       </td>
-                      <td style={{ padding: "14px 8px", color: "var(--text-dim)" }}>
+                      <td style={{ padding: "12px", color: "var(--text-muted)" }}>
                         {p.recorded_by_name}
                       </td>
                     </tr>
                   ))}
                   {paymentsList.length === 0 && (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: "center", padding: "30px", color: "var(--text-dim)" }}>
-                        Aucun paiement consigné pour le moment.
+                      <td colSpan={8} style={{ textAlign: "center", padding: "24px", color: "var(--text-dim)" }}>
+                        Aucun paiement consigné.
                       </td>
                     </tr>
                   )}
@@ -1871,36 +1832,36 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 7. ONGLET : TÂCHES D'ÉQUIPE */}
+        {/* 7. TÂCHES D'ÉQUIPE */}
         {activeTab === "tasks" && (
-          <div className="glass-card" style={{ padding: "28px" }}>
-            <div style={{ display: "grid", gap: "14px" }}>
+          <div className="card-clean" style={{ padding: "20px" }}>
+            <div style={{ display: "grid", gap: "10px" }}>
               {tasksList.map((t) => (
                 <div
                   key={t.id}
                   style={{
-                    padding: "16px 20px",
-                    background: "rgba(242, 230, 213, 0.03)",
-                    border: "1px solid var(--border-subtle)",
-                    borderRadius: "var(--radius-md)",
+                    padding: "12px 16px",
+                    background: "var(--bg-app)",
+                    border: "1px solid var(--border-light)",
+                    borderRadius: "var(--radius-sm)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    gap: "16px",
+                    gap: "12px",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     <input
                       type="checkbox"
                       checked={t.status === "DONE"}
                       onChange={() => handleToggleTaskStatus(t.id, t.status)}
-                      style={{ width: "20px", height: "20px", cursor: "pointer", accentColor: "var(--gold)" }}
+                      style={{ cursor: "pointer", accentColor: "var(--brown-dark)" }}
                     />
                     <div>
                       <div
                         style={{
-                          fontSize: "1rem",
-                          fontWeight: "700",
+                          fontSize: "0.9rem",
+                          fontWeight: "600",
                           color: t.status === "DONE" ? "var(--text-dim)" : "var(--text-main)",
                           textDecoration: t.status === "DONE" ? "line-through" : "none",
                         }}
@@ -1908,26 +1869,26 @@ export default function AdminPage() {
                         {t.title}
                       </div>
                       {t.description && (
-                        <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                        <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "2px" }}>
                           {t.description}
                         </div>
                       )}
-                      <div style={{ display: "flex", gap: "12px", fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "6px" }}>
+                      <div style={{ display: "flex", gap: "10px", fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "4px" }}>
                         <span>Catégorie : {t.category}</span>
-                        {t.due_date && <span>📅 Échéance : {t.due_date}</span>}
-                        {t.assigned_to_name && <span>👤 Assigné à : {t.assigned_to_name}</span>}
+                        {t.due_date && <span>Échéance : {t.due_date}</span>}
                       </div>
                     </div>
                   </div>
 
                   <span
                     style={{
-                      fontSize: "0.75rem",
+                      fontSize: "0.7rem",
                       fontWeight: "700",
-                      padding: "4px 10px",
-                      borderRadius: "6px",
-                      background: t.priority === "URGENT" ? "rgba(224, 86, 86, 0.2)" : "rgba(242, 230, 213, 0.08)",
-                      color: t.priority === "URGENT" ? "var(--rose)" : "var(--gold)",
+                      padding: "2px 8px",
+                      borderRadius: "4px",
+                      background: t.priority === "URGENT" ? "var(--state-danger-bg)" : "var(--bg-subtle)",
+                      color: t.priority === "URGENT" ? "var(--state-danger-text)" : "var(--text-secondary)",
+                      border: `1px solid ${t.priority === "URGENT" ? "var(--state-danger-border)" : "var(--border-light)"}`,
                     }}
                   >
                     {t.priority}
@@ -1935,108 +1896,55 @@ export default function AdminPage() {
                 </div>
               ))}
               {tasksList.length === 0 && (
-                <div style={{ textAlign: "center", padding: "40px", color: "var(--text-dim)" }}>
-                  Toutes les tâches sont terminées ! Cliquez sur &apos;Nouvelle Tâche&apos; pour en créer une.
+                <div style={{ textAlign: "center", padding: "24px", color: "var(--text-dim)" }}>
+                  Aucune tâche en attente.
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* 8. ONGLET : RÔLES & PERMISSIONS DYNAMIQUES (Super Admin) */}
+        {/* 8. RÔLES DYNAMIQUES */}
         {activeTab === "roles" && (
-          <div className="glass-card" style={{ padding: "28px" }}>
-            <div style={{ display: "grid", gap: "20px" }}>
+          <div className="card-clean" style={{ padding: "20px" }}>
+            <div style={{ display: "grid", gap: "14px" }}>
               {roles.map((r) => (
                 <div
                   key={r.id}
                   style={{
-                    padding: "20px",
-                    background: "rgba(242, 230, 213, 0.03)",
-                    border: "1px solid var(--border-subtle)",
-                    borderRadius: "var(--radius-md)",
+                    padding: "16px",
+                    background: "var(--bg-app)",
+                    border: "1px solid var(--border-light)",
+                    borderRadius: "var(--radius-sm)",
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <strong style={{ fontSize: "1.1rem", color: "var(--gold)" }}>{r.name}</strong>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <strong style={{ fontSize: "0.96rem", color: "var(--brown-dark)" }}>{r.name}</strong>
                       {r.is_system === 1 && (
-                        <span
-                          style={{
-                            fontSize: "0.7rem",
-                            padding: "2px 6px",
-                            borderRadius: "4px",
-                            background: "rgba(212, 175, 55, 0.2)",
-                            color: "var(--gold)",
-                            fontWeight: "700",
-                          }}
-                        >
-                          Système (Protégé)
+                        <span style={{ fontSize: "0.68rem", padding: "1px 6px", borderRadius: "4px", background: "var(--bg-subtle)", color: "var(--text-secondary)", border: "1px solid var(--border-light)" }}>
+                          Système
                         </span>
                       )}
                     </div>
-                    <span style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
+                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                       {r.users_count || 0} collaborateur(s)
                     </span>
                   </div>
-                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: "14px" }}>
-                    {r.description || "Aucune description fournie."}
+                  <p style={{ color: "var(--text-secondary)", fontSize: "0.82rem", marginBottom: "10px" }}>
+                    {r.description || "Aucune description."}
                   </p>
 
-                  <div style={{ marginBottom: "12px" }}>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: "6px" }}>
-                      Permissions ({r.permissions?.length || 0})
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                      {r.id === "SUPER_ADMIN" ? (
-                        <span style={{ fontSize: "0.78rem", color: "var(--emerald)", fontWeight: "700" }}>
-                          Accès total sans restriction (*)
+                  <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                    {r.id === "SUPER_ADMIN" ? (
+                      <span style={{ fontWeight: "700", color: "var(--state-success-text)" }}>Accès total sans restriction (*)</span>
+                    ) : (
+                      r.permissions?.map((p: string) => (
+                        <span key={p} style={{ background: "#FFFFFF", border: "1px solid var(--border-light)", padding: "2px 6px", borderRadius: "3px" }}>
+                          {p}
                         </span>
-                      ) : (
-                        r.permissions?.map((p: string) => (
-                          <span
-                            key={p}
-                            style={{
-                              fontSize: "0.72rem",
-                              padding: "3px 8px",
-                              borderRadius: "4px",
-                              background: "rgba(242, 230, 213, 0.08)",
-                              color: "var(--text-muted)",
-                            }}
-                          >
-                            {p}
-                          </span>
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", textTransform: "uppercase", marginBottom: "6px" }}>
-                      Statuts d&apos;expédition autorisés ({r.allowed_statuses?.length || 0})
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                      {r.id === "SUPER_ADMIN" ? (
-                        <span style={{ fontSize: "0.78rem", color: "var(--emerald)", fontWeight: "700" }}>
-                          Tous les statuts (*)
-                        </span>
-                      ) : (
-                        r.allowed_statuses?.map((st: string) => (
-                          <span
-                            key={st}
-                            style={{
-                              fontSize: "0.72rem",
-                              padding: "3px 8px",
-                              borderRadius: "4px",
-                              background: "rgba(166, 124, 82, 0.15)",
-                              color: "var(--light-brown)",
-                            }}
-                          >
-                            {st}
-                          </span>
-                        ))
-                      )}
-                    </div>
+                      ))
+                    )}
                   </div>
                 </div>
               ))}
@@ -2044,62 +1952,42 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 9. ONGLET : COLLABORATEURS (Super Admin) */}
+        {/* 9. COLLABORATEURS */}
         {activeTab === "users" && (
-          <div className="glass-card" style={{ padding: "28px" }}>
+          <div className="card-clean" style={{ padding: "20px" }}>
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
                 <thead>
-                  <tr style={{ borderBottom: "1px solid var(--border-subtle)", textAlign: "left", color: "var(--text-dim)" }}>
-                    <th style={{ padding: "12px 8px" }}>Nom Collaborateur</th>
-                    <th style={{ padding: "12px 8px" }}>Email</th>
-                    <th style={{ padding: "12px 8px" }}>Rôle Attribué</th>
-                    <th style={{ padding: "12px 8px" }}>Hub / Localisation</th>
-                    <th style={{ padding: "12px 8px" }}>Statut Compte</th>
-                    <th style={{ padding: "12px 8px" }}>Créé le</th>
+                  <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-secondary)" }}>
+                    <th style={{ padding: "10px 12px" }}>Nom</th>
+                    <th style={{ padding: "10px 12px" }}>Email</th>
+                    <th style={{ padding: "10px 12px" }}>Rôle</th>
+                    <th style={{ padding: "10px 12px" }}>Hub</th>
+                    <th style={{ padding: "10px 12px" }}>Statut</th>
+                    <th style={{ padding: "10px 12px" }}>Créé le</th>
                   </tr>
                 </thead>
                 <tbody>
                   {usersList.map((u) => (
-                    <tr key={u.id} style={{ borderBottom: "1px solid rgba(242, 230, 213, 0.05)" }}>
-                      <td style={{ padding: "14px 8px", fontWeight: "700", color: "var(--text-main)" }}>
+                    <tr key={u.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
+                      <td style={{ padding: "12px", fontWeight: "700", color: "var(--text-main)" }}>
                         {u.full_name}
                       </td>
-                      <td style={{ padding: "14px 8px", color: "var(--gold)" }}>
+                      <td style={{ padding: "12px", color: "var(--brown-dark)" }}>
                         {u.email}
                       </td>
-                      <td style={{ padding: "14px 8px" }}>
-                        <span
-                          style={{
-                            fontSize: "0.75rem",
-                            fontWeight: "700",
-                            padding: "4px 8px",
-                            borderRadius: "6px",
-                            background: "rgba(212, 175, 55, 0.15)",
-                            color: "var(--gold)",
-                          }}
-                        >
-                          {u.role_name}
-                        </span>
+                      <td style={{ padding: "12px" }}>
+                        <span className="badge-clean badge-draft">{u.role_name}</span>
                       </td>
-                      <td style={{ padding: "14px 8px", color: "var(--text-muted)" }}>
-                        {u.hub_location || "Non assigné"}
+                      <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
+                        {u.hub_location || "—"}
                       </td>
-                      <td style={{ padding: "14px 8px" }}>
-                        <span
-                          style={{
-                            fontSize: "0.75rem",
-                            fontWeight: "700",
-                            padding: "4px 8px",
-                            borderRadius: "6px",
-                            background: u.is_active === 1 ? "rgba(16, 185, 129, 0.15)" : "rgba(224, 86, 86, 0.15)",
-                            color: u.is_active === 1 ? "var(--emerald)" : "var(--rose)",
-                          }}
-                        >
+                      <td style={{ padding: "12px" }}>
+                        <span className={`badge-clean ${u.is_active === 1 ? "badge-delivered" : "badge-incident"}`}>
                           {u.is_active === 1 ? "ACTIF" : "DÉSACTIVÉ"}
                         </span>
                       </td>
-                      <td style={{ padding: "14px 8px", color: "var(--text-dim)" }}>
+                      <td style={{ padding: "12px", color: "var(--text-muted)" }}>
                         {new Date(u.created_at).toLocaleDateString("fr-FR")}
                       </td>
                     </tr>
@@ -2110,54 +1998,54 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 10. ONGLET : PARAMÈTRES & JOURNAL D'AUDIT */}
+        {/* 10. PARAMÈTRES & AUDIT */}
         {activeTab === "settings" && (
-          <div style={{ display: "grid", gap: "28px" }}>
-            <div className="glass-card" style={{ padding: "28px" }}>
-              <h3 style={{ fontSize: "1.2rem", marginBottom: "16px" }}>Paramètres Opérationnels ROUM TRANSIT</h3>
-              <div style={{ display: "grid", gap: "16px", maxWidth: "600px" }}>
+          <div style={{ display: "grid", gap: "20px" }}>
+            <div className="card-clean" style={{ padding: "20px" }}>
+              <h3 style={{ fontSize: "1.05rem", marginBottom: "14px" }}>Paramètres Opérationnels</h3>
+              <div style={{ display: "grid", gap: "12px", maxWidth: "550px" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.82rem", color: "var(--text-dim)", marginBottom: "6px" }}>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: "600" }}>
                     Nom Entreprise
                   </label>
                   <input
                     type="text"
                     value={companySettings.company_name || ""}
                     onChange={(e) => setCompanySettings({ ...companySettings, company_name: e.target.value })}
-                    className="input-field"
+                    className="input-clean"
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.82rem", color: "var(--text-dim)", marginBottom: "6px" }}>
-                    Adresse Entrepôt Chine (Guangzhou)
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: "600" }}>
+                    Adresse Entrepôt Guangzhou
                   </label>
                   <textarea
                     rows={2}
                     value={companySettings.warehouse_china_address || ""}
                     onChange={(e) => setCompanySettings({ ...companySettings, warehouse_china_address: e.target.value })}
-                    className="input-field"
+                    className="input-clean"
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.82rem", color: "var(--text-dim)", marginBottom: "6px" }}>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: "600" }}>
                     Shipping Mark Modèle
                   </label>
                   <input
                     type="text"
                     value={companySettings.warehouse_china_shipping_mark || ""}
                     onChange={(e) => setCompanySettings({ ...companySettings, warehouse_china_shipping_mark: e.target.value })}
-                    className="input-field"
+                    className="input-clean"
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.82rem", color: "var(--text-dim)", marginBottom: "6px" }}>
+                  <label style={{ display: "block", fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: "600" }}>
                     Numéro WhatsApp Officiel
                   </label>
                   <input
                     type="text"
                     value={companySettings.whatsapp_official_number || ""}
                     onChange={(e) => setCompanySettings({ ...companySettings, whatsapp_official_number: e.target.value })}
-                    className="input-field"
+                    className="input-clean"
                   />
                 </div>
                 <button
@@ -2169,56 +2057,41 @@ export default function AdminPage() {
                       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                       body: JSON.stringify(companySettings),
                     });
-                    alert("Paramètres enregistrés avec succès !");
+                    alert("Paramètres enregistrés.");
                   }}
                   className="btn btn-primary"
-                  style={{ width: "fit-content", padding: "10px 24px" }}
+                  style={{ width: "fit-content", padding: "8px 18px", marginTop: "4px" }}
                 >
-                  Enregistrer les Paramètres
+                  Enregistrer Paramètres
                 </button>
               </div>
             </div>
 
-            <div className="glass-card" style={{ padding: "28px" }}>
-              <h3 style={{ fontSize: "1.2rem", marginBottom: "16px" }}>Journal d&apos;Audit Sécurisé</h3>
+            <div className="card-clean" style={{ padding: "20px" }}>
+              <h3 style={{ fontSize: "1.05rem", marginBottom: "14px" }}>Journal d&apos;Audit</h3>
               <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
                   <thead>
-                    <tr style={{ borderBottom: "1px solid var(--border-subtle)", textAlign: "left", color: "var(--text-dim)" }}>
-                      <th style={{ padding: "10px 8px" }}>Date</th>
-                      <th style={{ padding: "10px 8px" }}>Opérateur</th>
-                      <th style={{ padding: "10px 8px" }}>Action</th>
-                      <th style={{ padding: "10px 8px" }}>Entité</th>
-                      <th style={{ padding: "10px 8px" }}>Détails</th>
+                    <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-secondary)" }}>
+                      <th style={{ padding: "8px 10px" }}>Date</th>
+                      <th style={{ padding: "8px 10px" }}>Auteur</th>
+                      <th style={{ padding: "8px 10px" }}>Action</th>
+                      <th style={{ padding: "8px 10px" }}>Entité</th>
+                      <th style={{ padding: "8px 10px" }}>Détails</th>
                     </tr>
                   </thead>
                   <tbody>
                     {auditLogs.map((l) => (
-                      <tr key={l.id} style={{ borderBottom: "1px solid rgba(242, 230, 213, 0.05)" }}>
-                        <td style={{ padding: "12px 8px", color: "var(--text-dim)" }}>
+                      <tr key={l.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
+                        <td style={{ padding: "10px", color: "var(--text-muted)" }}>
                           {new Date(l.created_at).toLocaleString("fr-FR")}
                         </td>
-                        <td style={{ padding: "12px 8px", fontWeight: "600", color: "var(--text-main)" }}>
-                          {l.user_name || "Système"}
-                        </td>
-                        <td style={{ padding: "12px 8px", color: "var(--gold)" }}>
-                          {l.action}
-                        </td>
-                        <td style={{ padding: "12px 8px" }}>
-                          {l.entity_type} {l.entity_id ? `(${l.entity_id.slice(0, 8)})` : ""}
-                        </td>
-                        <td style={{ padding: "12px 8px", color: "var(--text-muted)" }}>
-                          {l.details_json || "—"}
-                        </td>
+                        <td style={{ padding: "10px", fontWeight: "600" }}>{l.user_name || "Système"}</td>
+                        <td style={{ padding: "10px", color: "var(--brown-dark)", fontWeight: "600" }}>{l.action}</td>
+                        <td style={{ padding: "10px", color: "var(--text-secondary)" }}>{l.entity_type}</td>
+                        <td style={{ padding: "10px", color: "var(--text-muted)" }}>{l.details_json || "—"}</td>
                       </tr>
                     ))}
-                    {auditLogs.length === 0 && (
-                      <tr>
-                        <td colSpan={5} style={{ textAlign: "center", padding: "24px", color: "var(--text-dim)" }}>
-                          Aucun log d&apos;audit pour l&apos;instant.
-                        </td>
-                      </tr>
-                    )}
                   </tbody>
                 </table>
               </div>
@@ -2227,327 +2100,155 @@ export default function AdminPage() {
         )}
       </main>
 
-      {/* MODALE : CRÉATION D'EXPÉDITION */}
+      {/* MODALES SOBRES ET MINIMALISTES */}
       {showCreateShipmentModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.8)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "20px",
-          }}
-        >
-          <div
-            className="glass-card"
-            style={{
-              maxWidth: "600px",
-              width: "100%",
-              padding: "36px",
-              maxHeight: "90vh",
-              overflowY: "auto",
-            }}
-          >
-            <h3 style={{ fontSize: "1.3rem", marginBottom: "20px" }}>Nouvelle Expédition & Colis</h3>
-            <form onSubmit={handleCreateShipment} style={{ display: "grid", gap: "16px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+          <div className="card-clean" style={{ maxWidth: "560px", width: "100%", padding: "28px" }}>
+            <h3 style={{ fontSize: "1.15rem", marginBottom: "16px" }}>Nouvelle Expédition</h3>
+            <form onSubmit={handleCreateShipment} style={{ display: "grid", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Nom Client
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newShipment.client_name}
-                    onChange={(e) => setNewShipment({ ...newShipment, client_name: e.target.value })}
-                    className="input-field"
-                    placeholder="Moussa Traoré"
-                  />
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Nom Client</label>
+                  <input type="text" required value={newShipment.client_name} onChange={(e) => setNewShipment({ ...newShipment, client_name: e.target.value })} className="input-clean" placeholder="Moussa Traoré" />
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Téléphone WhatsApp
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newShipment.client_phone}
-                    onChange={(e) => setNewShipment({ ...newShipment, client_phone: e.target.value })}
-                    className="input-field"
-                    placeholder="+22370000000"
-                  />
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Téléphone WhatsApp</label>
+                  <input type="text" required value={newShipment.client_phone} onChange={(e) => setNewShipment({ ...newShipment, client_phone: e.target.value })} className="input-clean" placeholder="+22370000000" />
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Liaison / Route
-                  </label>
-                  <select
-                    value={newShipment.route_id}
-                    onChange={(e) => setNewShipment({ ...newShipment, route_id: e.target.value })}
-                    className="input-field"
-                  >
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Liaison</label>
+                  <select value={newShipment.route_id} onChange={(e) => setNewShipment({ ...newShipment, route_id: e.target.value })} className="input-clean">
                     {routesList.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.origin_country} → {r.destination_country}
-                      </option>
+                      <option key={r.id} value={r.id}>{r.origin_country} → {r.destination_country}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Mode de Transport
-                  </label>
-                  <select
-                    value={newShipment.shipping_mode_id}
-                    onChange={(e) => setNewShipment({ ...newShipment, shipping_mode_id: e.target.value })}
-                    className="input-field"
-                  >
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Mode</label>
+                  <select value={newShipment.shipping_mode_id} onChange={(e) => setNewShipment({ ...newShipment, shipping_mode_id: e.target.value })} className="input-clean">
                     {modesList.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
+                      <option key={m.id} value={m.id}>{m.name}</option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "10px" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Libellé / Étiquette Colis
-                  </label>
-                  <input
-                    type="text"
-                    value={newShipment.package_label}
-                    onChange={(e) => setNewShipment({ ...newShipment, package_label: e.target.value })}
-                    className="input-field"
-                  />
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Libellé Colis</label>
+                  <input type="text" value={newShipment.package_label} onChange={(e) => setNewShipment({ ...newShipment, package_label: e.target.value })} className="input-clean" />
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Poids (kg)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    required
-                    value={newShipment.weight_kg}
-                    onChange={(e) => setNewShipment({ ...newShipment, weight_kg: Number(e.target.value) })}
-                    className="input-field"
-                  />
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Poids (kg)</label>
+                  <input type="number" step="0.1" min="0.1" required value={newShipment.weight_kg} onChange={(e) => setNewShipment({ ...newShipment, weight_kg: Number(e.target.value) })} className="input-clean" />
                 </div>
               </div>
 
               <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                  Description de la Marchandise
-                </label>
-                <input
-                  type="text"
-                  value={newShipment.description}
-                  onChange={(e) => setNewShipment({ ...newShipment, description: e.target.value })}
-                  className="input-field"
-                  placeholder="Ex : Chaussures, tissus, pièces auto..."
-                />
+                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Description</label>
+                <input type="text" value={newShipment.description} onChange={(e) => setNewShipment({ ...newShipment, description: e.target.value })} className="input-clean" placeholder="Vêtements, pièces auto..." />
               </div>
 
-              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateShipmentModal(false)}
-                  className="btn btn-secondary"
-                >
-                  Annuler
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Créer et Générer Suivi
-                </button>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
+                <button type="button" onClick={() => setShowCreateShipmentModal(false)} className="btn btn-secondary">Annuler</button>
+                <button type="submit" className="btn btn-primary">Créer Expédition</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODALE : CHANGEMENT DE STATUT GUIDÉ */}
+      {/* MODALE : CHANGEMENT STATUT */}
       {showStatusModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.8)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "20px",
-          }}
-        >
-          <div className="glass-card" style={{ maxWidth: "500px", width: "100%", padding: "32px" }}>
-            <h3 style={{ fontSize: "1.25rem", marginBottom: "8px" }}>
-              Mise à jour statut : {showStatusModal.tracking_number}
-            </h3>
-            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: "20px" }}>
-              Statut actuel : <strong style={{ color: "var(--gold)" }}>{showStatusModal.status_label || showStatusModal.current_status}</strong>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+          <div className="card-clean" style={{ maxWidth: "460px", width: "100%", padding: "26px" }}>
+            <h3 style={{ fontSize: "1.15rem", marginBottom: "6px" }}>Mise à jour : {showStatusModal.tracking_number}</h3>
+            <p style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginBottom: "14px" }}>
+              Statut actuel : <strong style={{ color: "var(--brown-dark)" }}>{showStatusModal.status_label || showStatusModal.current_status}</strong>
             </p>
 
-            <form onSubmit={handleUpdateStatus} style={{ display: "grid", gap: "16px" }}>
+            <form onSubmit={handleUpdateStatus} style={{ display: "grid", gap: "12px" }}>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                  Nouveau Statut
-                </label>
-                <select
-                  value={statusUpdate.new_status}
-                  onChange={(e) => setStatusUpdate({ ...statusUpdate, new_status: e.target.value })}
-                  className="input-field"
-                >
+                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Nouveau Statut</label>
+                <select value={statusUpdate.new_status} onChange={(e) => setStatusUpdate({ ...statusUpdate, new_status: e.target.value })} className="input-clean">
                   {allStatuses
-                    .filter(
-                      (st) =>
-                        user.isSuperAdmin ||
-                        user.allowedStatuses.includes("*") ||
-                        user.allowedStatuses.includes(st.code)
-                    )
+                    .filter((st) => user.isSuperAdmin || user.allowedStatuses.includes("*") || user.allowedStatuses.includes(st.code))
                     .map((st) => (
-                      <option key={st.code} value={st.code}>
-                        {st.label_public} ({st.code})
-                      </option>
+                      <option key={st.code} value={st.code}>{st.label_public} ({st.code})</option>
                     ))}
                 </select>
               </div>
 
               <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                  Localisation Actuelle du Colis
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={statusUpdate.location}
-                  onChange={(e) => setStatusUpdate({ ...statusUpdate, location: e.target.value })}
-                  className="input-field"
-                  placeholder="Ex : Port de Casablanca, Hub Guangzhou..."
-                />
+                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Lieu Actuel</label>
+                <input type="text" required value={statusUpdate.location} onChange={(e) => setStatusUpdate({ ...statusUpdate, location: e.target.value })} className="input-clean" />
               </div>
 
               <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                  Commentaire Visible par le Client (Optionnel)
-                </label>
-                <input
-                  type="text"
-                  value={statusUpdate.comment}
-                  onChange={(e) => setStatusUpdate({ ...statusUpdate, comment: e.target.value })}
-                  className="input-field"
-                  placeholder="Ex : Chargement conteneur effectué sans anomalie"
-                />
+                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Commentaire Client (Optionnel)</label>
+                <input type="text" value={statusUpdate.comment} onChange={(e) => setStatusUpdate({ ...statusUpdate, comment: e.target.value })} className="input-clean" />
               </div>
 
-              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowStatusModal(null)}
-                  className="btn btn-secondary"
-                >
-                  Annuler
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Valider et Enregistrer
-                </button>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
+                <button type="button" onClick={() => setShowStatusModal(null)} className="btn btn-secondary">Annuler</button>
+                <button type="submit" className="btn btn-primary">Enregistrer Statut</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODALE : ÉTIQUETTE / BORDEREAU DE COLIS IMPRIMABLE */}
+      {/* MODALE : IMPRESSION BORDEREAU */}
       {showPrintLabelModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.8)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "20px",
-          }}
-        >
-          <div
-            className="glass-card"
-            style={{
-              maxWidth: "520px",
-              width: "100%",
-              padding: "36px",
-              background: "#fff",
-              color: "#000",
-              borderRadius: "16px",
-            }}
-          >
-            <div style={{ borderBottom: "2px solid #000", paddingBottom: "12px", marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+          <div className="card-clean" style={{ maxWidth: "480px", width: "100%", padding: "30px", background: "#FFFFFF", color: "#1C1815" }}>
+            <div style={{ borderBottom: "1px solid #E8E2D8", paddingBottom: "10px", marginBottom: "14px", display: "flex", justifyContent: "space-between" }}>
               <div>
-                <div style={{ fontWeight: "900", fontSize: "1.3rem" }}>ROUM TRANSIT</div>
-                <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "#666" }}>WHOLESALE & BOUTIQUE</div>
+                <div style={{ fontWeight: "800", fontSize: "1.15rem" }}>ROUM TRANSIT</div>
+                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>BORDEREAU D&apos;EXPÉDITION</div>
               </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: "0.8rem", fontWeight: "700" }}>BORDEREAU D&apos;EXPÉDITION</div>
-                <div style={{ fontSize: "0.75rem", color: "#666" }}>{new Date().toLocaleDateString("fr-FR")}</div>
+              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "right" }}>
+                {new Date().toLocaleDateString("fr-FR")}
               </div>
             </div>
 
-            <div style={{ background: "#f5f5f5", padding: "16px", borderRadius: "8px", marginBottom: "16px", textAlign: "center" }}>
-              <div style={{ fontSize: "0.75rem", color: "#666", marginBottom: "4px" }}>CODE DE SUIVI UNIQUE</div>
-              <div style={{ fontSize: "1.6rem", fontWeight: "900", letterSpacing: "1px" }}>
+            <div style={{ background: "var(--bg-subtle)", padding: "14px", borderRadius: "var(--radius-sm)", marginBottom: "14px", textAlign: "center" }}>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "2px" }}>NUMÉRO DE SUIVI</div>
+              <div style={{ fontSize: "1.45rem", fontWeight: "800", letterSpacing: "1px", color: "var(--brown-dark)" }}>
                 {showPrintLabelModal.tracking_number}
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px", fontSize: "0.85rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "0.82rem", marginBottom: "14px" }}>
               <div>
-                <strong style={{ color: "#666", display: "block", fontSize: "0.75rem" }}>DESTINATAIRE</strong>
-                <div style={{ fontWeight: "800", fontSize: "1rem" }}>{showPrintLabelModal.client_name}</div>
+                <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.72rem" }}>DESTINATAIRE</span>
+                <strong>{showPrintLabelModal.client_name}</strong>
                 <div>{showPrintLabelModal.client_phone}</div>
               </div>
               <div>
-                <strong style={{ color: "#666", display: "block", fontSize: "0.75rem" }}>LIAISON</strong>
-                <div style={{ fontWeight: "800" }}>{showPrintLabelModal.origin_country} → {showPrintLabelModal.destination_country}</div>
-                <div>Mode : {showPrintLabelModal.shipping_mode_name}</div>
+                <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.72rem" }}>LIAISON</span>
+                <strong>{showPrintLabelModal.origin_country} → {showPrintLabelModal.destination_country}</strong>
+                <div>{showPrintLabelModal.shipping_mode_name}</div>
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "20px", fontSize: "0.85rem", borderTop: "1px dashed #ccc", paddingTop: "12px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "0.82rem", borderTop: "1px dashed #E8E2D8", paddingTop: "10px", marginBottom: "18px" }}>
               <div>
-                <strong style={{ color: "#666", display: "block", fontSize: "0.75rem" }}>POIDS BRUT</strong>
-                <div style={{ fontWeight: "800" }}>{showPrintLabelModal.total_weight_kg} KG</div>
+                <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.72rem" }}>POIDS BRUT</span>
+                <strong>{showPrintLabelModal.total_weight_kg} KG</strong>
               </div>
               <div>
-                <strong style={{ color: "#666", display: "block", fontSize: "0.75rem" }}>NOMBRE DE COLIS</strong>
-                <div style={{ fontWeight: "800" }}>{showPrintLabelModal.total_parcels_count} COLIS</div>
+                <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.72rem" }}>COLIS</span>
+                <strong>{showPrintLabelModal.total_parcels_count} COLIS</strong>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                onClick={() => setShowPrintLabelModal(null)}
-                style={{ padding: "8px 16px", borderRadius: "8px", border: "1px solid #ccc", background: "#f5f5f5", cursor: "pointer" }}
-              >
-                Fermer
-              </button>
-              <button
-                type="button"
-                onClick={() => window.print()}
-                style={{ padding: "8px 20px", borderRadius: "8px", border: "none", background: "#000", color: "#fff", fontWeight: "700", cursor: "pointer" }}
-              >
-                Imprimer
-              </button>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button type="button" onClick={() => setShowPrintLabelModal(null)} className="btn btn-secondary">Fermer</button>
+              <button type="button" onClick={() => window.print()} className="btn btn-primary">Imprimer</button>
             </div>
           </div>
         </div>
@@ -2555,163 +2256,61 @@ export default function AdminPage() {
 
       {/* MODALE : NOUVEAU CLIENT */}
       {showCreateClientModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.8)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "20px",
-          }}
-        >
-          <div className="glass-card" style={{ maxWidth: "500px", width: "100%", padding: "32px" }}>
-            <h3 style={{ fontSize: "1.3rem", marginBottom: "20px" }}>Ajouter un Client</h3>
-            <form onSubmit={handleCreateClient} style={{ display: "grid", gap: "14px" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+          <div className="card-clean" style={{ maxWidth: "460px", width: "100%", padding: "26px" }}>
+            <h3 style={{ fontSize: "1.15rem", marginBottom: "14px" }}>Nouveau Client</h3>
+            <form onSubmit={handleCreateClient} style={{ display: "grid", gap: "12px" }}>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                  Nom Complet
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newClient.full_name}
-                  onChange={(e) => setNewClient({ ...newClient, full_name: e.target.value })}
-                  className="input-field"
-                  placeholder="Ex : Fatoumata Coulibaly"
-                />
+                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Nom Complet</label>
+                <input type="text" required value={newClient.full_name} onChange={(e) => setNewClient({ ...newClient, full_name: e.target.value })} className="input-clean" placeholder="Awa Diarra" />
               </div>
-
               <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                  WhatsApp / Téléphone
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newClient.phone_whatsapp}
-                  onChange={(e) => setNewClient({ ...newClient, phone_whatsapp: e.target.value })}
-                  className="input-field"
-                  placeholder="+22370000000"
-                />
+                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>WhatsApp / Téléphone</label>
+                <input type="text" required value={newClient.phone_whatsapp} onChange={(e) => setNewClient({ ...newClient, phone_whatsapp: e.target.value })} className="input-clean" placeholder="+22370000000" />
               </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Pays
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newClient.country}
-                    onChange={(e) => setNewClient({ ...newClient, country: e.target.value })}
-                    className="input-field"
-                    placeholder="Mali"
-                  />
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Pays</label>
+                  <input type="text" required value={newClient.country} onChange={(e) => setNewClient({ ...newClient, country: e.target.value })} className="input-clean" placeholder="Mali" />
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Ville
-                  </label>
-                  <input
-                    type="text"
-                    value={newClient.city}
-                    onChange={(e) => setNewClient({ ...newClient, city: e.target.value })}
-                    className="input-field"
-                    placeholder="Bamako"
-                  />
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Ville</label>
+                  <input type="text" value={newClient.city} onChange={(e) => setNewClient({ ...newClient, city: e.target.value })} className="input-clean" placeholder="Bamako" />
                 </div>
               </div>
-
-              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateClientModal(false)}
-                  className="btn btn-secondary"
-                >
-                  Annuler
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Enregistrer Client
-                </button>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
+                <button type="button" onClick={() => setShowCreateClientModal(false)} className="btn btn-secondary">Annuler</button>
+                <button type="submit" className="btn btn-primary">Enregistrer Client</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODALE : CONSIGNER UN PAIEMENT */}
+      {/* MODALE : CONSIGNER PAIEMENT */}
       {showRecordPaymentModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.8)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "20px",
-          }}
-        >
-          <div className="glass-card" style={{ maxWidth: "520px", width: "100%", padding: "32px" }}>
-            <h3 style={{ fontSize: "1.3rem", marginBottom: "20px" }}>Consigner un Paiement</h3>
-            <form onSubmit={handleRecordPayment} style={{ display: "grid", gap: "14px" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+          <div className="card-clean" style={{ maxWidth: "460px", width: "100%", padding: "26px" }}>
+            <h3 style={{ fontSize: "1.15rem", marginBottom: "14px" }}>Consigner un Paiement</h3>
+            <form onSubmit={handleRecordPayment} style={{ display: "grid", gap: "12px" }}>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                  Client Bénéficiaire
-                </label>
-                <select
-                  required
-                  value={newPayment.client_id}
-                  onChange={(e) => setNewPayment({ ...newPayment, client_id: e.target.value })}
-                  className="input-field"
-                >
+                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Client</label>
+                <select required value={newPayment.client_id} onChange={(e) => setNewPayment({ ...newPayment, client_id: e.target.value })} className="input-clean">
                   <option value="">Sélectionner un client</option>
                   {clientsList.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.full_name} ({c.phone_whatsapp})
-                    </option>
+                    <option key={c.id} value={c.id}>{c.full_name} ({c.phone_whatsapp})</option>
                   ))}
                 </select>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Montant Encaissé ($)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    step="0.01"
-                    required
-                    value={newPayment.amount}
-                    onChange={(e) => setNewPayment({ ...newPayment, amount: Number(e.target.value) })}
-                    className="input-field"
-                  />
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Montant ($)</label>
+                  <input type="number" min="1" step="0.01" required value={newPayment.amount} onChange={(e) => setNewPayment({ ...newPayment, amount: Number(e.target.value) })} className="input-clean" />
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Devise
-                  </label>
-                  <input type="text" disabled value="USD" className="input-field" />
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Méthode
-                  </label>
-                  <select
-                    value={newPayment.payment_method}
-                    onChange={(e) => setNewPayment({ ...newPayment, payment_method: e.target.value })}
-                    className="input-field"
-                  >
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Méthode</label>
+                  <select value={newPayment.payment_method} onChange={(e) => setNewPayment({ ...newPayment, payment_method: e.target.value })} className="input-clean">
                     <option value="WAVE">Wave</option>
                     <option value="ORANGE_MONEY">Orange Money</option>
                     <option value="CASH">Espèces</option>
@@ -2719,46 +2318,16 @@ export default function AdminPage() {
                     <option value="OTHER">Autre</option>
                   </select>
                 </div>
-                <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Type de Règlement
-                  </label>
-                  <select
-                    value={newPayment.payment_type}
-                    onChange={(e) => setNewPayment({ ...newPayment, payment_type: e.target.value })}
-                    className="input-field"
-                  >
-                    <option value="ADVANCE">Acompte</option>
-                    <option value="BALANCE">Solde</option>
-                    <option value="FULL">Paiement Intégral</option>
-                  </select>
-                </div>
               </div>
 
               <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                  Référence Transaction Mobile / Banque
-                </label>
-                <input
-                  type="text"
-                  value={newPayment.reference_code}
-                  onChange={(e) => setNewPayment({ ...newPayment, reference_code: e.target.value })}
-                  className="input-field"
-                  placeholder="Ex : TXN-8392019"
-                />
+                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Réf Transaction</label>
+                <input type="text" value={newPayment.reference_code} onChange={(e) => setNewPayment({ ...newPayment, reference_code: e.target.value })} className="input-clean" placeholder="TXN-12345" />
               </div>
 
-              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowRecordPaymentModal(null)}
-                  className="btn btn-secondary"
-                >
-                  Annuler
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Valider l&apos;Encaissement
-                </button>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
+                <button type="button" onClick={() => setShowRecordPaymentModal(null)} className="btn btn-secondary">Annuler</button>
+                <button type="submit" className="btn btn-primary">Enregistrer Paiement</button>
               </div>
             </form>
           </div>
@@ -2767,57 +2336,18 @@ export default function AdminPage() {
 
       {/* MODALE : NOUVELLE TÂCHE */}
       {showCreateTaskModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.8)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "20px",
-          }}
-        >
-          <div className="glass-card" style={{ maxWidth: "500px", width: "100%", padding: "32px" }}>
-            <h3 style={{ fontSize: "1.3rem", marginBottom: "20px" }}>Créer une Tâche d&apos;Équipe</h3>
-            <form onSubmit={handleCreateTask} style={{ display: "grid", gap: "14px" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+          <div className="card-clean" style={{ maxWidth: "460px", width: "100%", padding: "26px" }}>
+            <h3 style={{ fontSize: "1.15rem", marginBottom: "14px" }}>Nouvelle Tâche</h3>
+            <form onSubmit={handleCreateTask} style={{ display: "grid", gap: "12px" }}>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                  Titre de la Tâche
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newTask.title}
-                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                  className="input-field"
-                  placeholder="Ex : Vérifier colis fournisseur Alibaba"
-                />
+                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Titre</label>
+                <input type="text" required value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} className="input-clean" placeholder="Vérifier colis entrepôt..." />
               </div>
-
-              <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                  Description / Consignes
-                </label>
-                <textarea
-                  rows={2}
-                  value={newTask.description}
-                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Priorité
-                  </label>
-                  <select
-                    value={newTask.priority}
-                    onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-                    className="input-field"
-                  >
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Priorité</label>
+                  <select value={newTask.priority} onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })} className="input-clean">
                     <option value="LOW">Basse</option>
                     <option value="MEDIUM">Normale</option>
                     <option value="HIGH">Haute</option>
@@ -2825,410 +2355,138 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Échéance
-                  </label>
-                  <input
-                    type="date"
-                    value={newTask.due_date}
-                    onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
-                    className="input-field"
-                  />
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Échéance</label>
+                  <input type="date" value={newTask.due_date} onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })} className="input-clean" />
                 </div>
               </div>
-
-              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateTaskModal(false)}
-                  className="btn btn-secondary"
-                >
-                  Annuler
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Créer la Tâche
-                </button>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
+                <button type="button" onClick={() => setShowCreateTaskModal(false)} className="btn btn-secondary">Annuler</button>
+                <button type="submit" className="btn btn-primary">Créer Tâche</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODALE : CRÉATION DE RÔLE DYNAMIQUE */}
+      {/* MODALE : CRÉATION RÔLE */}
       {showCreateRoleModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.85)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "20px",
-          }}
-        >
-          <div
-            className="glass-card"
-            style={{
-              maxWidth: "680px",
-              width: "100%",
-              padding: "36px",
-              maxHeight: "90vh",
-              overflowY: "auto",
-            }}
-          >
-            <h3 style={{ fontSize: "1.3rem", marginBottom: "16px" }}>Créer un Rôle Dynamique (RBAC)</h3>
-            <form onSubmit={handleCreateRole} style={{ display: "grid", gap: "16px" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+          <div className="card-clean" style={{ maxWidth: "560px", width: "100%", padding: "28px", maxHeight: "90vh", overflowY: "auto" }}>
+            <h3 style={{ fontSize: "1.15rem", marginBottom: "14px" }}>Créer un Rôle Dynamique</h3>
+            <form onSubmit={handleCreateRole} style={{ display: "grid", gap: "12px" }}>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                  Nom du Rôle
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newRole.name}
-                  onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
-                  className="input-field"
-                  placeholder="Ex : Agent Entrepôt Guangzhou, Commercial Sourcing..."
-                />
+                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Nom du Rôle</label>
+                <input type="text" required value={newRole.name} onChange={(e) => setNewRole({ ...newRole, name: e.target.value })} className="input-clean" placeholder="Ex: Agent Guangzhou" />
               </div>
-
               <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                  Description de la mission
-                </label>
-                <input
-                  type="text"
-                  value={newRole.description}
-                  onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
-                  className="input-field"
-                />
+                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Description</label>
+                <input type="text" value={newRole.description} onChange={(e) => setNewRole({ ...newRole, description: e.target.value })} className="input-clean" />
               </div>
-
               <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "6px" }}>
-                  Permissions Accordées
-                </label>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "8px",
-                    maxHeight: "180px",
-                    overflowY: "auto",
-                    padding: "10px",
-                    background: "rgba(23, 20, 18, 0.8)",
-                    borderRadius: "var(--radius-sm)",
-                    border: "1px solid var(--border-subtle)",
-                  }}
-                >
-                  {allPermissions.map((p) => {
-                    const checked = newRole.permissions.includes(p.code);
-                    return (
-                      <label key={p.code} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.8rem", cursor: "pointer" }}>
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setNewRole({ ...newRole, permissions: [...newRole.permissions, p.code] });
-                            } else {
-                              setNewRole({ ...newRole, permissions: newRole.permissions.filter((code) => code !== p.code) });
-                            }
-                          }}
-                        />
-                        <span>{p.label}</span>
-                      </label>
-                    );
-                  })}
+                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "6px", fontWeight: "600" }}>Permissions</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", maxHeight: "150px", overflowY: "auto", padding: "8px", background: "var(--bg-app)", border: "1px solid var(--border-light)", borderRadius: "var(--radius-sm)" }}>
+                  {allPermissions.map((p) => (
+                    <label key={p.code} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.76rem", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={newRole.permissions.includes(p.code)}
+                        onChange={(e) => {
+                          if (e.target.checked) setNewRole({ ...newRole, permissions: [...newRole.permissions, p.code] });
+                          else setNewRole({ ...newRole, permissions: newRole.permissions.filter((c) => c !== p.code) });
+                        }}
+                      />
+                      <span>{p.label}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
-
-              <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "6px" }}>
-                  Statuts d&apos;expédition autorisés
-                </label>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "8px",
-                    maxHeight: "140px",
-                    overflowY: "auto",
-                    padding: "10px",
-                    background: "rgba(23, 20, 18, 0.8)",
-                    borderRadius: "var(--radius-sm)",
-                    border: "1px solid var(--border-subtle)",
-                  }}
-                >
-                  {allStatuses.map((st) => {
-                    const checked = newRole.allowed_statuses.includes(st.code);
-                    return (
-                      <label key={st.code} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.8rem", cursor: "pointer" }}>
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setNewRole({ ...newRole, allowed_statuses: [...newRole.allowed_statuses, st.code] });
-                            } else {
-                              setNewRole({ ...newRole, allowed_statuses: newRole.allowed_statuses.filter((c) => c !== st.code) });
-                            }
-                          }}
-                        />
-                        <span>{st.label_public}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateRoleModal(false)}
-                  className="btn btn-secondary"
-                >
-                  Annuler
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Créer et Enregistrer le Rôle
-                </button>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
+                <button type="button" onClick={() => setShowCreateRoleModal(false)} className="btn btn-secondary">Annuler</button>
+                <button type="submit" className="btn btn-primary">Enregistrer Rôle</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODALE : CRÉATION D'UTILISATEUR */}
+      {/* MODALE : CRÉATION UTILISATEUR */}
       {showCreateUserModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.85)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "20px",
-          }}
-        >
-          <div className="glass-card" style={{ maxWidth: "500px", width: "100%", padding: "32px" }}>
-            <h3 style={{ fontSize: "1.3rem", marginBottom: "20px" }}>Nouveau Compte Collaborateur</h3>
-            <form onSubmit={handleCreateUser} style={{ display: "grid", gap: "14px" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+          <div className="card-clean" style={{ maxWidth: "460px", width: "100%", padding: "26px" }}>
+            <h3 style={{ fontSize: "1.15rem", marginBottom: "14px" }}>Nouveau Collaborateur</h3>
+            <form onSubmit={handleCreateUser} style={{ display: "grid", gap: "12px" }}>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                  Nom Complet
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newUser.full_name}
-                  onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
-                  className="input-field"
-                  placeholder="Ex : Oumar Diallo"
-                />
+                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Nom Complet</label>
+                <input type="text" required value={newUser.full_name} onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })} className="input-clean" placeholder="Oumar Diallo" />
               </div>
-
               <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                  Email Professionnel
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  className="input-field"
-                  placeholder="oumar@roumtransit.com"
-                />
+                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Email</label>
+                <input type="email" required value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} className="input-clean" placeholder="oumar@roumtransit.com" />
               </div>
-
               <div>
-                <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                  Mot de Passe Provisoire
-                </label>
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                  className="input-field"
-                  placeholder="Minimum 8 caractères"
-                />
+                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Mot de Passe (min 8 car.)</label>
+                <input type="password" required minLength={8} value={newUser.password} onChange={(e) => setNewUser({ ...newUser, password: e.target.value })} className="input-clean" />
               </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Rôle Attribué
-                  </label>
-                  <select
-                    value={newUser.role_id}
-                    onChange={(e) => setNewUser({ ...newUser, role_id: e.target.value })}
-                    className="input-field"
-                  >
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Rôle</label>
+                  <select value={newUser.role_id} onChange={(e) => setNewUser({ ...newUser, role_id: e.target.value })} className="input-clean">
                     {roles.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                      </option>
+                      <option key={r.id} value={r.id}>{r.name}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Hub / Ville
-                  </label>
-                  <input
-                    type="text"
-                    value={newUser.hub_location}
-                    onChange={(e) => setNewUser({ ...newUser, hub_location: e.target.value })}
-                    className="input-field"
-                    placeholder="Guangzhou, Bamako..."
-                  />
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Hub</label>
+                  <input type="text" value={newUser.hub_location} onChange={(e) => setNewUser({ ...newUser, hub_location: e.target.value })} className="input-clean" placeholder="Guangzhou" />
                 </div>
               </div>
-
-              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateUserModal(false)}
-                  className="btn btn-secondary"
-                >
-                  Annuler
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Créer le Compte
-                </button>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
+                <button type="button" onClick={() => setShowCreateUserModal(false)} className="btn btn-secondary">Annuler</button>
+                <button type="submit" className="btn btn-primary">Créer Compte</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODALE : CRÉATION DE TARIF */}
+      {/* MODALE : NOUVEAU TARIF */}
       {showCreateTariffModal && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.85)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "20px",
-          }}
-        >
-          <div className="glass-card" style={{ maxWidth: "520px", width: "100%", padding: "32px" }}>
-            <h3 style={{ fontSize: "1.3rem", marginBottom: "20px" }}>Ajouter une Règle Tarifaire</h3>
-            <form onSubmit={handleCreateTariff} style={{ display: "grid", gap: "14px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+          <div className="card-clean" style={{ maxWidth: "460px", width: "100%", padding: "26px" }}>
+            <h3 style={{ fontSize: "1.15rem", marginBottom: "14px" }}>Nouveau Tarif</h3>
+            <form onSubmit={handleCreateTariff} style={{ display: "grid", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Route / Liaison
-                  </label>
-                  <select
-                    value={newTariff.route_id}
-                    onChange={(e) => setNewTariff({ ...newTariff, route_id: e.target.value })}
-                    className="input-field"
-                  >
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Route</label>
+                  <select value={newTariff.route_id} onChange={(e) => setNewTariff({ ...newTariff, route_id: e.target.value })} className="input-clean">
                     {routesList.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.origin_country} → {r.destination_country}
-                      </option>
+                      <option key={r.id} value={r.id}>{r.origin_country} → {r.destination_country}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Mode de Transport
-                  </label>
-                  <select
-                    value={newTariff.shipping_mode_id}
-                    onChange={(e) => setNewTariff({ ...newTariff, shipping_mode_id: e.target.value })}
-                    className="input-field"
-                  >
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Mode</label>
+                  <select value={newTariff.shipping_mode_id} onChange={(e) => setNewTariff({ ...newTariff, shipping_mode_id: e.target.value })} className="input-clean">
                     {modesList.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
+                      <option key={m.id} value={m.id}>{m.name}</option>
                     ))}
                   </select>
                 </div>
               </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Prix Unitaire ($)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.1"
-                    required
-                    value={newTariff.price_per_unit}
-                    onChange={(e) => setNewTariff({ ...newTariff, price_per_unit: Number(e.target.value) })}
-                    className="input-field"
-                  />
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Prix Unitaire ($)</label>
+                  <input type="number" step="0.01" min="0.1" required value={newTariff.price_per_unit} onChange={(e) => setNewTariff({ ...newTariff, price_per_unit: Number(e.target.value) })} className="input-clean" />
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Minimum Facturé ($)
-                  </label>
-                  <input
-                    type="number"
-                    step="1"
-                    min="0"
-                    value={newTariff.minimum_charge}
-                    onChange={(e) => setNewTariff({ ...newTariff, minimum_charge: Number(e.target.value) })}
-                    className="input-field"
-                  />
+                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Min. Facturé ($)</label>
+                  <input type="number" min="0" value={newTariff.minimum_charge} onChange={(e) => setNewTariff({ ...newTariff, minimum_charge: Number(e.target.value) })} className="input-clean" />
                 </div>
               </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Délai Min (jours)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={newTariff.estimated_days_min}
-                    onChange={(e) => setNewTariff({ ...newTariff, estimated_days_min: Number(e.target.value) })}
-                    className="input-field"
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: "0.8rem", color: "var(--text-dim)", display: "block", marginBottom: "4px" }}>
-                    Délai Max (jours)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={newTariff.estimated_days_max}
-                    onChange={(e) => setNewTariff({ ...newTariff, estimated_days_max: Number(e.target.value) })}
-                    className="input-field"
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateTariffModal(false)}
-                  className="btn btn-secondary"
-                >
-                  Annuler
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Enregistrer Tarif
-                </button>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
+                <button type="button" onClick={() => setShowCreateTariffModal(false)} className="btn btn-secondary">Annuler</button>
+                <button type="submit" className="btn btn-primary">Enregistrer Tarif</button>
               </div>
             </form>
           </div>

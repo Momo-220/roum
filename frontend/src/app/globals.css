@@ -1,49 +1,51 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;400;500;600;700;800&display=swap');
 
 :root {
-  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Space Grotesk', var(--font-sans);
+  --font-sans: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Bricolage Grotesque', var(--font-sans);
 
-  /* Couleurs de base - Charte ROUM TRANSIT (Marron, Marron clair, Beige, Noir) */
-  --bg-primary: #171412;        /* Noir chaleureux / Dark Espresso */
-  --bg-secondary: #231c18;      /* Brun sombre profond */
-  --bg-card: rgba(45, 34, 28, 0.78); /* Marron riche glassmorphism */
-  --bg-card-hover: rgba(62, 47, 39, 0.88);
-  --bg-glass: rgba(242, 230, 213, 0.05);
+  /* Fond très clair beige / blanc cassé (Identité sobre ROUM TRANSIT) */
+  --bg-app: #FAF8F5;          /* Fond beige très clair */
+  --bg-surface: #FFFFFF;      /* Fond blanc pur pour cartes, sidebar et tables */
+  --bg-subtle: #F3EEE7;       /* Beige doux pour hover et en-têtes */
+  --bg-muted: #EBE4DA;        /* Beige d'accentuation discret */
 
-  /* Bordures */
-  --border-subtle: rgba(242, 230, 213, 0.12);
-  --border-active: rgba(212, 175, 55, 0.5);
-  --border-glow: rgba(166, 124, 82, 0.4);
+  /* Marron (utilisé avec parcimonie pour les actions clés) */
+  --brown-dark: #3B2218;      /* Marron foncé (boutons primaires, sélection active) */
+  --brown-deep: #4A2C20;      /* Marron signature de marque */
+  --brown-light: #8D6346;     /* Marron clair sobre */
+  --brown-accent: #A67C52;    /* Accents et bordures */
 
-  /* Marque & Accents Chauds */
-  --deep-brown: #4A2C20;
-  --light-brown: #A67C52;
-  --beige: #F2E6D5;
-  --near-black: #171412;
-  --off-white: #FAF7F2;
+  /* Textes & Contraste net */
+  --text-main: #1C1815;       /* Noir doux charbon, lisibilité maximale */
+  --text-secondary: #5C524A;  /* Brun-gris lisible pour sous-titres et données */
+  --text-muted: #8A7E74;      /* Brun clair pour descriptions et métadonnées */
+  --text-dim: #AEA297;        /* Discret pour labels secondaires */
 
-  --gold: #d4af37;
-  --gold-glow: rgba(212, 175, 55, 0.28);
-  --gold-dark: #a67c52;
-  --caramel: #c4925e;
-  --emerald: #10b981;
-  --rose: #e05656;
-  --amber: #f59e0b;
+  /* Bordures fines & Ombres très légères */
+  --border-light: #E8E2D8;    /* Bordure fine standard */
+  --border-hover: #D5CBBF;
+  --border-focus: #3B2218;    /* Bordure marron foncé sur focus */
+  --shadow-subtle: 0 1px 3px rgba(35, 25, 20, 0.04), 0 1px 2px rgba(35, 25, 20, 0.02);
+  --shadow-card: 0 2px 6px rgba(35, 25, 20, 0.03);
 
-  /* Textes */
-  --text-main: #FAF7F2;
-  --text-muted: #d8cbbe;
-  --text-dim: #9e8d7f;
+  /* Statuts discrets */
+  --state-success-bg: #EEF7F2;
+  --state-success-text: #22663E;
+  --state-success-border: #C8E6D3;
 
-  /* Rayons & Ombres */
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
+  --state-warning-bg: #FDF6EC;
+  --state-warning-text: #8F5511;
+  --state-warning-border: #F5DEC2;
+
+  --state-danger-bg: #FDF2F2;
+  --state-danger-text: #9E2B2B;
+  --state-danger-border: #F7D0D0;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
   --radius-full: 9999px;
-  --shadow-card: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
-  --shadow-glow-gold: 0 0 25px rgba(212, 175, 55, 0.35);
-  --shadow-glow-brown: 0 0 25px rgba(166, 124, 82, 0.3);
 }
 
 * {
@@ -55,215 +57,163 @@
 html,
 body {
   font-family: var(--font-sans);
-  background-color: var(--bg-primary);
+  background-color: var(--bg-app);
   color: var(--text-main);
   min-height: 100vh;
-  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Arrière-plan chaleureux avec auras ambrées et marron */
-body::before {
-  content: '';
-  position: fixed;
-  top: -20vh;
-  left: 20vw;
-  width: 60vw;
-  height: 60vh;
-  background: radial-gradient(circle, rgba(166, 124, 82, 0.12) 0%, rgba(74, 44, 32, 0.08) 50%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-  filter: blur(80px);
-}
-
-body::after {
-  content: '';
-  position: fixed;
-  bottom: -20vh;
-  right: 10vw;
-  width: 50vw;
-  height: 50vh;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.08) 0%, rgba(23, 20, 18, 0) 70%);
-  pointer-events: none;
-  z-index: 0;
-  filter: blur(90px);
-}
-
-/* Typographie & Titres */
-h1, h2, h3, h4, .brand-font {
+/* Typographie sobre et nette */
+h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  color: var(--text-main);
+  letter-spacing: -0.015em;
 }
 
 /* Liens */
 a {
   color: inherit;
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: opacity 0.15s ease;
 }
 
-/* Boutons & Micro-interactions */
+/* Boutons & Micro-interactions sobres */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 12px 24px;
+  gap: 8px;
+  padding: 9px 18px;
+  font-family: var(--font-sans);
   font-weight: 600;
-  font-size: 0.95rem;
-  border-radius: var(--radius-full);
+  font-size: 0.88rem;
+  border-radius: var(--radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.15s ease;
   text-decoration: none;
-  position: relative;
-  overflow: hidden;
 }
 
 .btn:active {
-  transform: scale(0.98);
+  transform: scale(0.99);
 }
 
+/* Bouton primaire : Marron foncé sobre avec texte blanc cassé */
 .btn-primary {
-  background: linear-gradient(135deg, #d4af37 0%, #a67c52 100%);
-  color: #171412;
-  font-weight: 700;
-  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.35);
+  background: var(--brown-dark);
+  color: #FAF8F5;
+  border: 1px solid var(--brown-dark);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #e5be48 0%, #b88b5d 100%);
-  box-shadow: var(--shadow-glow-gold);
-  transform: translateY(-2px);
+  background: var(--brown-deep);
+  border-color: var(--brown-deep);
 }
 
-.btn-whatsapp {
-  background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-  color: #fff;
-  box-shadow: 0 4px 20px rgba(37, 211, 102, 0.3);
-}
-
-.btn-whatsapp:hover {
-  box-shadow: 0 0 25px rgba(37, 211, 102, 0.5);
-  transform: translateY(-2px);
-}
-
+/* Bouton secondaire : Fond blanc, bordure fine beige */
 .btn-secondary {
-  background: var(--bg-glass);
+  background: #FFFFFF;
   color: var(--text-main);
-  border: 1px solid var(--border-subtle);
-  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-light);
 }
 
 .btn-secondary:hover {
-  background: rgba(242, 230, 213, 0.12);
-  border-color: rgba(242, 230, 213, 0.25);
-  transform: translateY(-2px);
+  background: var(--bg-subtle);
+  border-color: var(--border-hover);
 }
 
-/* Cartes Glassmorphism */
-.glass-card {
-  background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
+/* Bouton WhatsApp sobre */
+.btn-whatsapp {
+  background: #25D366;
+  color: #FFFFFF;
+  border: 1px solid #20BA5A;
 }
 
-.glass-card:hover {
-  border-color: rgba(212, 175, 55, 0.3);
+.btn-whatsapp:hover {
+  background: #20BA5A;
 }
 
-/* Badges de Statut */
-.status-badge {
+/* Cartes sobres et minimalistes */
+.card-clean {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-subtle);
+}
+
+/* Badges de Statut sobres */
+.badge-clean {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
+  gap: 5px;
+  padding: 3px 10px;
   border-radius: var(--radius-full);
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
-.status-draft {
-  background: rgba(158, 141, 127, 0.18);
-  color: #dfcfb9;
-  border: 1px solid rgba(158, 141, 127, 0.35);
+.badge-draft {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
 }
 
-.status-hub {
-  background: rgba(166, 124, 82, 0.2);
-  color: #F2E6D5;
-  border: 1px solid rgba(166, 124, 82, 0.45);
+.badge-transit {
+  background: var(--state-warning-bg);
+  color: var(--state-warning-text);
+  border: 1px solid var(--state-warning-border);
 }
 
-.status-transit {
-  background: rgba(212, 175, 55, 0.2);
-  color: #d4af37;
-  border: 1px solid rgba(212, 175, 55, 0.45);
+.badge-delivered {
+  background: var(--state-success-bg);
+  color: var(--state-success-text);
+  border: 1px solid var(--state-success-border);
 }
 
-.status-delivered {
-  background: rgba(16, 185, 129, 0.18);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.35);
+.badge-incident {
+  background: var(--state-danger-bg);
+  color: var(--state-danger-text);
+  border: 1px solid var(--state-danger-border);
 }
 
-.status-incident {
-  background: rgba(224, 86, 86, 0.18);
-  color: #fb7185;
-  border: 1px solid rgba(224, 86, 86, 0.35);
-}
-
-/* Champs de formulaires */
-.input-field {
+/* Champs de formulaires épurés */
+.input-clean {
   width: 100%;
-  padding: 14px 18px;
-  background: rgba(23, 20, 18, 0.85);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
   color: var(--text-main);
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-family: inherit;
-  transition: all 0.2s ease;
   outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.input-field:focus {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.18);
+.input-clean:focus {
+  border-color: var(--brown-dark);
+  box-shadow: 0 0 0 3px rgba(59, 34, 24, 0.08);
 }
 
-.input-field::placeholder {
+.input-clean::placeholder {
   color: var(--text-dim);
 }
 
-/* Navigation & Layout */
+/* Layout Container */
 .container {
-  max-width: 1200px;
+  max-width: 1180px;
   margin: 0 auto;
   padding: 0 24px;
-  position: relative;
-  z-index: 1;
 }
 
-/* Animations douces */
-@keyframes pulseGlow {
-  0%, 100% {
-    box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(212, 175, 55, 0.45);
-  }
+/* Spinner discret */
+.spin {
+  animation: spin 1s linear infinite;
 }
 
-.pulse-glow {
-  animation: pulseGlow 3s infinite ease-in-out;
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

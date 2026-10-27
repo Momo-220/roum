@@ -78,12 +78,12 @@ export default function HomePage() {
       {/* 1. HERO SECTION */}
       <section
         style={{
-          padding: "80px 0 60px 0",
+          padding: "70px 0 50px 0",
           textAlign: "center",
           position: "relative",
         }}
       >
-        <div className="container" style={{ maxWidth: "900px" }}>
+        <div className="container" style={{ maxWidth: "860px" }}>
           {/* Badge Top */}
           <div
             style={{
@@ -92,26 +92,25 @@ export default function HomePage() {
               gap: "8px",
               padding: "6px 16px",
               borderRadius: "var(--radius-full)",
-              background: "rgba(245, 166, 35, 0.12)",
-              border: "1px solid rgba(245, 166, 35, 0.3)",
-              color: "var(--gold)",
-              fontSize: "0.85rem",
+              background: "var(--bg-subtle)",
+              border: "1px solid var(--border-light)",
+              color: "var(--brown-dark)",
+              fontSize: "0.82rem",
               fontWeight: "600",
               marginBottom: "24px",
             }}
           >
-            <ShieldCheck size={16} />
+            <ShieldCheck size={16} color="var(--brown-light)" />
             Transport International & Sourcing Sécurisé
           </div>
 
           <h1
             style={{
-              fontSize: "clamp(2.4rem, 5vw, 4rem)",
-              lineHeight: "1.1",
-              marginBottom: "24px",
-              background: "linear-gradient(180deg, #FFFFFF 30%, #94a3b8 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
+              fontSize: "clamp(2.2rem, 4.5vw, 3.4rem)",
+              lineHeight: "1.15",
+              marginBottom: "20px",
+              color: "var(--text-main)",
+              letterSpacing: "-0.02em",
             }}
           >
             Expédiez depuis la Chine, Dubaï et le Maroc vers l&apos;Afrique
@@ -119,12 +118,12 @@ export default function HomePage() {
 
           <p
             style={{
-              fontSize: "1.15rem",
-              color: "var(--text-muted)",
+              fontSize: "1.1rem",
+              color: "var(--text-secondary)",
               lineHeight: "1.6",
-              marginBottom: "40px",
-              maxWidth: "700px",
-              margin: "0 auto 40px auto",
+              marginBottom: "36px",
+              maxWidth: "680px",
+              margin: "0 auto 36px auto",
             }}
           >
             Suivi transparent de vos colis en temps réel, tarifs négociés au kilo ou au m³,
@@ -134,9 +133,9 @@ export default function HomePage() {
           {/* Formulaire de Suivi Direct (Tracking) */}
           <div
             id="tracking"
-            className="glass-card pulse-glow"
+            className="card-clean"
             style={{
-              padding: "24px",
+              padding: "26px",
               maxWidth: "680px",
               margin: "0 auto",
               textAlign: "left",
@@ -144,18 +143,18 @@ export default function HomePage() {
           >
             <div
               style={{
-                fontSize: "0.9rem",
+                fontSize: "0.85rem",
                 fontWeight: "700",
-                color: "var(--gold)",
+                color: "var(--brown-dark)",
                 textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                marginBottom: "12px",
+                letterSpacing: "0.06em",
+                marginBottom: "14px",
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
               }}
             >
-              <Search size={18} />
+              <Search size={18} color="var(--brown-light)" />
               Suivre un Colis en Direct
             </div>
 
@@ -169,23 +168,22 @@ export default function HomePage() {
             >
               <input
                 type="text"
-                className="input-field"
+                className="input-clean"
                 placeholder="Ex : RM-AIR-2610-K8P9Q2 ou numéro reçu par SMS/WhatsApp"
                 value={trackingInput}
                 onChange={(e) => setTrackingInput(e.target.value)}
                 style={{
                   flex: "1 1 300px",
-                  fontSize: "1.05rem",
-                  letterSpacing: "0.02em",
+                  fontSize: "0.95rem",
                 }}
               />
               <button
                 type="submit"
                 className="btn btn-primary"
-                style={{ flex: "0 0 auto" }}
+                style={{ flex: "0 0 auto", padding: "10px 22px" }}
               >
                 Localiser mon Colis
-                <ArrowRight size={18} />
+                <ArrowRight size={17} />
               </button>
             </form>
 
@@ -193,8 +191,12 @@ export default function HomePage() {
               <div
                 style={{
                   marginTop: "12px",
-                  color: "var(--rose)",
-                  fontSize: "0.85rem",
+                  color: "var(--state-danger-text)",
+                  background: "var(--state-danger-bg)",
+                  border: "1px solid var(--state-danger-border)",
+                  padding: "8px 12px",
+                  borderRadius: "var(--radius-sm)",
+                  fontSize: "0.82rem",
                   fontWeight: "500",
                 }}
               >
@@ -206,9 +208,9 @@ export default function HomePage() {
               style={{
                 marginTop: "16px",
                 paddingTop: "12px",
-                borderTop: "1px solid rgba(255, 255, 255, 0.05)",
+                borderTop: "1px solid var(--border-light)",
                 fontSize: "0.82rem",
-                color: "var(--text-dim)",
+                color: "var(--text-muted)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -217,20 +219,22 @@ export default function HomePage() {
               }}
             >
               <span>Accès direct sans mot de passe requis.</span>
-              <span style={{ color: "var(--text-muted)" }}>
-                Exemples de test :{" "}
+              <span>
+                Exemple de test :{" "}
                 <button
                   type="button"
                   onClick={() => setTrackingInput("RM-AIR-2610-K8P9Q2")}
                   style={{
                     background: "none",
                     border: "none",
-                    color: "var(--caramel)",
+                    color: "var(--brown-light)",
                     cursor: "pointer",
                     textDecoration: "underline",
+                    fontWeight: "600",
+                    fontFamily: "inherit",
                   }}
                 >
-                  Aérien Express
+                  RM-AIR-2610-K8P9Q2
                 </button>
               </span>
             </div>
@@ -239,22 +243,22 @@ export default function HomePage() {
       </section>
 
       {/* 2. SERVICES SECTION */}
-      <section id="services" style={{ padding: "80px 0" }}>
+      <section id="services" style={{ padding: "60px 0" }}>
         <div className="container">
-          <div style={{ textAlign: "center", marginBottom: "50px" }}>
+          <div style={{ textAlign: "center", marginBottom: "40px" }}>
             <div
               style={{
-                color: "var(--gold)",
+                color: "var(--brown-light)",
                 fontWeight: "700",
-                fontSize: "0.85rem",
+                fontSize: "0.82rem",
                 textTransform: "uppercase",
-                letterSpacing: "0.15em",
+                letterSpacing: "0.12em",
                 marginBottom: "8px",
               }}
             >
               Nos Solutions Logistiques
             </div>
-            <h2 style={{ fontSize: "2.2rem" }}>
+            <h2 style={{ fontSize: "2rem", color: "var(--text-main)" }}>
               Du petit colis e-commerce au conteneur complet
             </h2>
           </div>
@@ -262,94 +266,97 @@ export default function HomePage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
               gap: "24px",
             }}
           >
             {/* Service 1 : Aérien */}
-            <div className="glass-card" style={{ padding: "32px" }}>
+            <div className="card-clean" style={{ padding: "28px" }}>
               <div
                 style={{
-                  width: "52px",
-                  height: "52px",
-                  borderRadius: "14px",
-                  background: "rgba(166, 124, 82, 0.2)",
-                  color: "var(--light-brown)",
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "var(--radius-sm)",
+                  background: "var(--bg-subtle)",
+                  border: "1px solid var(--border-light)",
+                  color: "var(--brown-dark)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  marginBottom: "20px",
+                  marginBottom: "18px",
                 }}
               >
-                <Plane size={28} />
+                <Plane size={24} />
               </div>
-              <h3 style={{ fontSize: "1.3rem", marginBottom: "12px" }}>
+              <h3 style={{ fontSize: "1.2rem", marginBottom: "10px", color: "var(--text-main)" }}>
                 Fret Aérien Express & Standard
               </h3>
-              <p style={{ color: "var(--text-muted)", fontSize: "0.95rem", lineHeight: "1.6", marginBottom: "20px" }}>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: "1.6", marginBottom: "16px" }}>
                 Vols réguliers au départ de Guangzhou, Yiwu et Dubaï. Idéal pour les échantillons,
                 l&apos;électronique, les vêtements urgents et pièces détachées.
               </p>
-              <div style={{ color: "var(--gold)", fontWeight: "600", fontSize: "0.9rem" }}>
-                ⚡ Délais : 3 à 7 jours ouvrés
+              <div style={{ color: "var(--brown-dark)", fontWeight: "600", fontSize: "0.85rem" }}>
+                Délais indicatifs : 3 à 7 jours ouvrés
               </div>
             </div>
 
             {/* Service 2 : Maritime */}
-            <div className="glass-card" style={{ padding: "32px" }}>
+            <div className="card-clean" style={{ padding: "28px" }}>
               <div
                 style={{
-                  width: "52px",
-                  height: "52px",
-                  borderRadius: "14px",
-                  background: "rgba(245, 166, 35, 0.15)",
-                  color: "var(--gold)",
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "var(--radius-sm)",
+                  background: "var(--bg-subtle)",
+                  border: "1px solid var(--border-light)",
+                  color: "var(--brown-dark)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  marginBottom: "20px",
+                  marginBottom: "18px",
                 }}
               >
-                <Ship size={28} />
+                <Ship size={24} />
               </div>
-              <h3 style={{ fontSize: "1.3rem", marginBottom: "12px" }}>
+              <h3 style={{ fontSize: "1.2rem", marginBottom: "10px", color: "var(--text-main)" }}>
                 Maritime Groupage (LCL) & FCL
               </h3>
-              <p style={{ color: "var(--text-muted)", fontSize: "0.95rem", lineHeight: "1.6", marginBottom: "20px" }}>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: "1.6", marginBottom: "16px" }}>
                 Optimisez vos coûts pour les gros volumes. Vous ne payez que le volume (CBM) réellement
                 occupé dans nos conteneurs sécurisés avec dédouanement inclus.
               </p>
-              <div style={{ color: "var(--caramel)", fontWeight: "600", fontSize: "0.9rem" }}>
-                🚢 Tarification avantageuse au m³ (CBM)
+              <div style={{ color: "var(--brown-dark)", fontWeight: "600", fontSize: "0.85rem" }}>
+                Tarification avantageuse au m³ (CBM)
               </div>
             </div>
 
             {/* Service 3 : Achat & Sourcing */}
-            <div className="glass-card" style={{ padding: "32px" }}>
+            <div className="card-clean" style={{ padding: "28px" }}>
               <div
                 style={{
-                  width: "52px",
-                  height: "52px",
-                  borderRadius: "14px",
-                  background: "rgba(16, 185, 129, 0.15)",
-                  color: "var(--emerald)",
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "var(--radius-sm)",
+                  background: "var(--bg-subtle)",
+                  border: "1px solid var(--border-light)",
+                  color: "var(--brown-dark)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  marginBottom: "20px",
+                  marginBottom: "18px",
                 }}
               >
-                <ShoppingBag size={28} />
+                <ShoppingBag size={24} />
               </div>
-              <h3 style={{ fontSize: "1.3rem", marginBottom: "12px" }}>
+              <h3 style={{ fontSize: "1.2rem", marginBottom: "10px", color: "var(--text-main)" }}>
                 Achats & Sourcing Usines
               </h3>
-              <p style={{ color: "var(--text-muted)", fontSize: "0.95rem", lineHeight: "1.6", marginBottom: "20px" }}>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: "1.6", marginBottom: "16px" }}>
                 Accompagnement sur les marchés de gros (1688, Taobao, marchés de Dubaï). Nous réglons
                 vos fournisseurs en devises locales et inspectons la marchandise avant expédition.
               </p>
-              <div style={{ color: "var(--emerald)", fontWeight: "600", fontSize: "0.9rem" }}>
-                🤝 Zéro arnaque fournisseur
+              <div style={{ color: "var(--brown-dark)", fontWeight: "600", fontSize: "0.85rem" }}>
+                Paiement sécurisé des fournisseurs
               </div>
             </div>
           </div>
@@ -360,24 +367,21 @@ export default function HomePage() {
       <section
         id="tariffs"
         style={{
-          padding: "80px 0",
-          background: "linear-gradient(180deg, transparent 0%, rgba(13, 22, 41, 0.6) 100%)",
+          padding: "60px 0",
         }}
       >
         <div className="container">
           <div
-            className="glass-card"
+            className="card-clean"
             style={{
-              padding: "48px 36px",
-              border: "1px solid rgba(245, 166, 35, 0.3)",
-              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.6)",
+              padding: "40px 32px",
             }}
           >
             <div
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-                gap: "40px",
+                gap: "36px",
                 alignItems: "center",
               }}
             >
@@ -385,75 +389,75 @@ export default function HomePage() {
               <div>
                 <div
                   style={{
-                    color: "var(--gold)",
+                    color: "var(--brown-light)",
                     fontWeight: "700",
-                    fontSize: "0.85rem",
+                    fontSize: "0.82rem",
                     textTransform: "uppercase",
-                    letterSpacing: "0.15em",
+                    letterSpacing: "0.12em",
                     marginBottom: "8px",
                     display: "flex",
                     alignItems: "center",
                     gap: "8px",
                   }}
                 >
-                  <Calculator size={18} />
+                  <Calculator size={17} />
                   Simulateur Tarifaire Gratuit
                 </div>
-                <h2 style={{ fontSize: "2rem", marginBottom: "20px" }}>
+                <h2 style={{ fontSize: "1.8rem", marginBottom: "16px", color: "var(--text-main)" }}>
                   Estimez le coût de votre expédition en 3 clics
                 </h2>
 
-                <div style={{ display: "grid", gap: "18px" }}>
+                <div style={{ display: "grid", gap: "16px" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                     <div>
-                      <label style={{ fontSize: "0.85rem", color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>
+                      <label style={{ fontSize: "0.82rem", color: "var(--text-secondary)", display: "block", marginBottom: "5px", fontWeight: "600" }}>
                         Pays d&apos;Origine
                       </label>
                       <select
-                        className="input-field"
+                        className="input-clean"
                         value={simOrigin}
                         onChange={(e) => setSimOrigin(e.target.value)}
                       >
-                        <option value="Chine">🇨🇳 Chine (Guangzhou/Yiwu)</option>
-                        <option value="Dubaï">🇦🇪 Dubaï</option>
-                        <option value="Maroc">🇲🇦 Maroc (Casablanca)</option>
+                        <option value="Chine">Chine (Guangzhou / Yiwu)</option>
+                        <option value="Dubaï">Dubaï (Émirats)</option>
+                        <option value="Maroc">Maroc (Casablanca)</option>
                       </select>
                     </div>
 
                     <div>
-                      <label style={{ fontSize: "0.85rem", color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>
+                      <label style={{ fontSize: "0.82rem", color: "var(--text-secondary)", display: "block", marginBottom: "5px", fontWeight: "600" }}>
                         Destination (Afrique)
                       </label>
                       <select
-                        className="input-field"
+                        className="input-clean"
                         value={simDest}
                         onChange={(e) => setSimDest(e.target.value)}
                       >
-                        <option value="Mali">🇲🇱 Mali (Bamako)</option>
-                        <option value="Côte d'Ivoire">🇨🇮 Côte d&apos;Ivoire (Abidjan)</option>
-                        <option value="Sénégal">🇸🇳 Sénégal (Dakar)</option>
-                        <option value="Guinée">🇬🇳 Guinée (Conakry)</option>
+                        <option value="Mali">Mali (Bamako)</option>
+                        <option value="Côte d'Ivoire">Côte d&apos;Ivoire (Abidjan)</option>
+                        <option value="Sénégal">Sénégal (Dakar)</option>
+                        <option value="Guinée">Guinée (Conakry)</option>
                       </select>
                     </div>
                   </div>
 
                   <div>
-                    <label style={{ fontSize: "0.85rem", color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>
+                    <label style={{ fontSize: "0.82rem", color: "var(--text-secondary)", display: "block", marginBottom: "5px", fontWeight: "600" }}>
                       Mode de Transport
                     </label>
-                    <div style={{ display: "flex", gap: "12px" }}>
+                    <div style={{ display: "flex", gap: "10px" }}>
                       <button
                         type="button"
                         onClick={() => setSimMode("AIR")}
                         className="btn"
                         style={{
                           flex: 1,
-                          background: simMode === "AIR" ? "var(--caramel)" : "var(--bg-glass)",
-                          color: simMode === "AIR" ? "#171412" : "var(--text-main)",
-                          border: "1px solid var(--border-subtle)",
+                          background: simMode === "AIR" ? "var(--brown-dark)" : "#FFFFFF",
+                          color: simMode === "AIR" ? "#FAF8F5" : "var(--text-main)",
+                          border: `1px solid ${simMode === "AIR" ? "var(--brown-dark)" : "var(--border-light)"}`,
                         }}
                       >
-                        <Plane size={18} />
+                        <Plane size={17} />
                         Fret Aérien (kg)
                       </button>
                       <button
@@ -462,12 +466,12 @@ export default function HomePage() {
                         className="btn"
                         style={{
                           flex: 1,
-                          background: simMode === "SEA" ? "var(--gold)" : "var(--bg-glass)",
-                          color: simMode === "SEA" ? "#000" : "var(--text-main)",
-                          border: "1px solid var(--border-subtle)",
+                          background: simMode === "SEA" ? "var(--brown-dark)" : "#FFFFFF",
+                          color: simMode === "SEA" ? "#FAF8F5" : "var(--text-main)",
+                          border: `1px solid ${simMode === "SEA" ? "var(--brown-dark)" : "var(--border-light)"}`,
                         }}
                       >
-                        <Ship size={18} />
+                        <Ship size={17} />
                         Maritime LCL (m³)
                       </button>
                     </div>
@@ -476,8 +480,8 @@ export default function HomePage() {
                   {simMode === "AIR" ? (
                     <div>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.85rem" }}>
-                        <span style={{ color: "var(--text-muted)" }}>Poids estimé (kg)</span>
-                        <strong style={{ color: "var(--caramel)" }}>{simWeight} kg</strong>
+                        <span style={{ color: "var(--text-secondary)" }}>Poids estimé (kg)</span>
+                        <strong style={{ color: "var(--brown-dark)" }}>{simWeight} kg</strong>
                       </div>
                       <input
                         type="range"
@@ -485,14 +489,14 @@ export default function HomePage() {
                         max="200"
                         value={simWeight}
                         onChange={(e) => setSimWeight(Number(e.target.value))}
-                        style={{ width: "100%", accentColor: "var(--caramel)", cursor: "pointer" }}
+                        style={{ width: "100%", accentColor: "var(--brown-dark)", cursor: "pointer" }}
                       />
                     </div>
                   ) : (
                     <div>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.85rem" }}>
-                        <span style={{ color: "var(--text-muted)" }}>Volume estimé (m³ / CBM)</span>
-                        <strong style={{ color: "var(--gold)" }}>{simCbm} m³</strong>
+                        <span style={{ color: "var(--text-secondary)" }}>Volume estimé (m³ / CBM)</span>
+                        <strong style={{ color: "var(--brown-dark)" }}>{simCbm} m³</strong>
                       </div>
                       <input
                         type="range"
@@ -501,7 +505,7 @@ export default function HomePage() {
                         step="0.1"
                         value={simCbm}
                         onChange={(e) => setSimCbm(Number(e.target.value))}
-                        style={{ width: "100%", accentColor: "var(--gold)", cursor: "pointer" }}
+                        style={{ width: "100%", accentColor: "var(--brown-dark)", cursor: "pointer" }}
                       />
                     </div>
                   )}
@@ -511,44 +515,45 @@ export default function HomePage() {
               {/* Résultat visuel & Action WhatsApp */}
               <div
                 style={{
-                  background: "rgba(7, 12, 24, 0.95)",
-                  padding: "36px",
-                  borderRadius: "var(--radius-lg)",
-                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-subtle)",
+                  padding: "32px 28px",
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--border-light)",
                   textAlign: "center",
                 }}
               >
-                <div style={{ color: "var(--text-muted)", fontSize: "0.9rem", marginBottom: "8px" }}>
+                <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "6px" }}>
                   Coût estimé indicatif
                 </div>
                 <div
                   style={{
-                    fontSize: "3.2rem",
+                    fontSize: "3rem",
                     fontWeight: "800",
-                    color: "var(--gold)",
+                    color: "var(--brown-dark)",
                     lineHeight: "1",
                     marginBottom: "8px",
                   }}
                 >
                   ~{estimate.amount}{" "}
-                  <span style={{ fontSize: "1.5rem", color: "var(--text-main)" }}>{estimate.currency}</span>
+                  <span style={{ fontSize: "1.3rem", color: "var(--text-secondary)" }}>{estimate.currency}</span>
                 </div>
-                <div style={{ fontSize: "0.85rem", color: "var(--text-dim)", marginBottom: "20px" }}>
+                <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: "18px" }}>
                   Base tarifaire : {estimate.unit} • Délai indicatif : {estimate.duration}
                 </div>
 
                 <div
                   style={{
-                    padding: "12px",
-                    background: "rgba(255, 255, 255, 0.04)",
-                    borderRadius: "var(--radius-md)",
-                    fontSize: "0.82rem",
+                    padding: "10px 14px",
+                    background: "#FFFFFF",
+                    border: "1px solid var(--border-light)",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "0.78rem",
                     color: "var(--text-muted)",
-                    marginBottom: "24px",
+                    marginBottom: "20px",
                     lineHeight: "1.4",
                   }}
                 >
-                  ℹ️ Les tarifs finaux dépendent de la nature exacte de la marchandise et sont confirmés
+                  Les tarifs finaux dépendent de la nature exacte de la marchandise et sont confirmés
                   après pesée en agence.
                 </div>
 
@@ -557,9 +562,9 @@ export default function HomePage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-whatsapp"
-                  style={{ width: "100%", padding: "14px" }}
+                  style={{ width: "100%", padding: "12px", fontSize: "0.9rem" }}
                 >
-                  <MessageCircle size={20} />
+                  <MessageCircle size={18} />
                   Valider ce Devis sur WhatsApp
                 </a>
               </div>
@@ -569,13 +574,13 @@ export default function HomePage() {
       </section>
 
       {/* 4. NOTRE PARCOURS EN 4 ÉTAPES */}
-      <section style={{ padding: "80px 0" }}>
+      <section style={{ padding: "60px 0 80px 0" }}>
         <div className="container">
-          <div style={{ textAlign: "center", marginBottom: "50px" }}>
-            <h2 style={{ fontSize: "2.2rem", marginBottom: "12px" }}>
+          <div style={{ textAlign: "center", marginBottom: "40px" }}>
+            <h2 style={{ fontSize: "2rem", marginBottom: "10px", color: "var(--text-main)" }}>
               Comment fonctionne votre expédition ?
             </h2>
-            <p style={{ color: "var(--text-muted)" }}>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem" }}>
               Un processus simple, tracé et sécurisé de bout en bout.
             </p>
           </div>
@@ -584,7 +589,7 @@ export default function HomePage() {
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "24px",
+              gap: "20px",
             }}
           >
             {[
@@ -609,20 +614,19 @@ export default function HomePage() {
                 desc: "Retrait dans nos agences locales en Afrique ou livraison directe à votre boutique ou domicile.",
               },
             ].map((s) => (
-              <div key={s.step} className="glass-card" style={{ padding: "28px" }}>
+              <div key={s.step} className="card-clean" style={{ padding: "24px" }}>
                 <div
                   style={{
-                    fontSize: "2rem",
+                    fontSize: "1.6rem",
                     fontWeight: "800",
-                    color: "var(--gold)",
-                    opacity: 0.6,
-                    marginBottom: "12px",
+                    color: "var(--brown-light)",
+                    marginBottom: "10px",
                   }}
                 >
                   {s.step}
                 </div>
-                <h4 style={{ fontSize: "1.15rem", marginBottom: "8px" }}>{s.title}</h4>
-                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", lineHeight: "1.5" }}>
+                <h4 style={{ fontSize: "1.05rem", marginBottom: "6px", color: "var(--text-main)" }}>{s.title}</h4>
+                <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", lineHeight: "1.5" }}>
                   {s.desc}
                 </p>
               </div>

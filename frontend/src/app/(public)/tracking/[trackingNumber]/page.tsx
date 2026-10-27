@@ -95,19 +95,19 @@ export default function TrackingResultPage() {
   const getStatusBadgeClass = (code: string) => {
     switch (code) {
       case "DELIVERED":
-        return "status-delivered";
+        return "badge-delivered";
       case "IN_TRANSIT":
       case "PACKED_READY":
-        return "status-transit";
+        return "badge-transit";
       case "RECEIVED_AT_HUB":
       case "READY_FOR_PICKUP":
       case "ARRIVED_DESTINATION":
-        return "status-hub";
+        return "badge-draft";
       case "INCIDENT":
       case "CUSTOMS_HOLD":
-        return "status-incident";
+        return "badge-incident";
       default:
-        return "status-draft";
+        return "badge-draft";
     }
   };
 
@@ -121,8 +121,9 @@ export default function TrackingResultPage() {
             display: "inline-flex",
             alignItems: "center",
             gap: "8px",
-            color: "var(--text-muted)",
-            fontSize: "0.9rem",
+            color: "var(--text-secondary)",
+            fontSize: "0.88rem",
+            fontWeight: "500",
             marginBottom: "24px",
           }}
         >
@@ -132,30 +133,34 @@ export default function TrackingResultPage() {
 
         {loading && (
           <div
-            className="glass-card"
+            className="card-clean"
             style={{ padding: "60px", textAlign: "center" }}
           >
             <RefreshCw
-              size={36}
-              className="pulse-glow"
-              style={{ animation: "spin 1.5s linear infinite", color: "var(--gold)", margin: "0 auto 16px auto" }}
+              size={32}
+              className="spin"
+              style={{ color: "var(--brown-dark)", margin: "0 auto 16px auto" }}
             />
-            <p style={{ color: "var(--text-muted)" }}>Recherche du colis en cours...</p>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem" }}>
+              Recherche du dossier logistique en cours...
+            </p>
           </div>
         )}
 
         {error && (
           <div
-            className="glass-card"
+            className="card-clean"
             style={{
               padding: "48px 32px",
               textAlign: "center",
-              borderColor: "rgba(244, 63, 94, 0.4)",
+              borderColor: "var(--state-danger-border)",
             }}
           >
-            <AlertCircle size={44} color="var(--rose)" style={{ margin: "0 auto 16px auto" }} />
-            <h2 style={{ fontSize: "1.6rem", marginBottom: "8px" }}>Numéro Introuvable</h2>
-            <p style={{ color: "var(--text-muted)", marginBottom: "24px", maxWidth: "480px", margin: "0 auto 24px auto" }}>
+            <AlertCircle size={40} color="var(--state-danger-text)" style={{ margin: "0 auto 14px auto" }} />
+            <h2 style={{ fontSize: "1.5rem", marginBottom: "8px", color: "var(--text-main)" }}>
+              Numéro Introuvable
+            </h2>
+            <p style={{ color: "var(--text-secondary)", marginBottom: "20px", maxWidth: "460px", margin: "0 auto 20px auto", fontSize: "0.9rem" }}>
               {error}
             </p>
             <Link href="/#tracking" className="btn btn-secondary">
@@ -165,9 +170,9 @@ export default function TrackingResultPage() {
         )}
 
         {data && (
-          <div style={{ display: "grid", gap: "24px" }}>
+          <div style={{ display: "grid", gap: "20px" }}>
             {/* 1. Carte En-tête : Référence & Statut Global */}
-            <div className="glass-card" style={{ padding: "32px" }}>
+            <div className="card-clean" style={{ padding: "28px" }}>
               <div
                 style={{
                   display: "flex",
@@ -179,7 +184,7 @@ export default function TrackingResultPage() {
                 }}
               >
                 <div>
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                     Dossier d&apos;expédition
                   </div>
                   <div
@@ -190,87 +195,79 @@ export default function TrackingResultPage() {
                       marginTop: "4px",
                     }}
                   >
-                    <h1 style={{ fontSize: "clamp(1.4rem, 4vw, 2rem)", color: "var(--text-main)" }}>
+                    <h1 style={{ fontSize: "clamp(1.4rem, 4vw, 1.8rem)", color: "var(--text-main)" }}>
                       {data.tracking_number}
                     </h1>
                     <button
                       type="button"
                       onClick={handleCopy}
                       className="btn btn-secondary"
-                      style={{ padding: "6px 10px", fontSize: "0.8rem" }}
-                      title="Copier le numéro"
+                      style={{ padding: "5px 10px", fontSize: "0.78rem" }}
+                      title="Copier la référence"
                     >
-                      {copied ? <Check size={14} color="var(--emerald)" /> : <Copy size={14} />}
+                      {copied ? (
+                        <>
+                          <Check size={14} color="var(--state-success-text)" />
+                          Copié
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={14} />
+                          Copier
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
 
-                <div className={`status-badge ${getStatusBadgeClass(data.status.code)}`}>
+                <div className={`badge-clean ${getStatusBadgeClass(data.status.code)}`} style={{ fontSize: "0.85rem", padding: "6px 14px" }}>
                   {data.status.label}
                 </div>
               </div>
 
-              {/* Trajet & Mode */}
+              {/* Trajet & Caractéristiques */}
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                  gap: "16px",
-                  padding: "20px",
-                  background: "rgba(7, 12, 24, 0.6)",
-                  borderRadius: "var(--radius-md)",
-                  border: "1px solid var(--border-subtle)",
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>Origine</div>
-                  <div style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "1.05rem" }}>
-                    {data.route.origin}
-                  </div>
-                </div>
-
-                <div>
-                  <div style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>Destination</div>
-                  <div style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "1.05rem" }}>
-                    {data.route.destination}
-                  </div>
-                </div>
-
-                <div>
-                  <div style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>Mode de Transport</div>
-                  <div style={{ fontWeight: "600", color: "var(--caramel)", fontSize: "0.95rem" }}>
-                    {data.shipping_mode}
-                  </div>
-                </div>
-              </div>
-
-              {/* Métriques Clés */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
                   gap: "12px",
-                  marginTop: "20px",
-                  textAlign: "center",
+                  padding: "16px",
+                  background: "var(--bg-subtle)",
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--border-light)",
                 }}
               >
-                <div style={{ padding: "12px", background: "rgba(255, 255, 255, 0.02)", borderRadius: "var(--radius-sm)" }}>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>Nombre de Colis</div>
-                  <div style={{ fontSize: "1.25rem", fontWeight: "800", color: "var(--text-main)" }}>
+                <div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Itinéraire</div>
+                  <div style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "0.95rem" }}>
+                    {data.route.origin} → {data.route.destination}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Mode</div>
+                  <div style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "0.95rem" }}>
+                    {data.shipping_mode === "AIR" ? "Fret Aérien Express" : "Fret Maritime Groupage"}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Nombre de Colis</div>
+                  <div style={{ fontWeight: "700", color: "var(--brown-dark)", fontSize: "1.1rem" }}>
                     {data.summary.total_parcels}
                   </div>
                 </div>
 
-                <div style={{ padding: "12px", background: "rgba(255, 255, 255, 0.02)", borderRadius: "var(--radius-sm)" }}>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>Poids Total</div>
-                  <div style={{ fontSize: "1.25rem", fontWeight: "800", color: "var(--caramel)" }}>
+                <div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Poids Total</div>
+                  <div style={{ fontWeight: "700", color: "var(--brown-dark)", fontSize: "1.1rem" }}>
                     {data.summary.total_weight_kg} kg
                   </div>
                 </div>
 
-                <div style={{ padding: "12px", background: "rgba(255, 255, 255, 0.02)", borderRadius: "var(--radius-sm)" }}>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>Volume Estimé</div>
-                  <div style={{ fontSize: "1.25rem", fontWeight: "800", color: "var(--gold)" }}>
+                <div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Volume Total</div>
+                  <div style={{ fontWeight: "700", color: "var(--brown-dark)", fontSize: "1.1rem" }}>
                     {data.summary.total_volume_cbm > 0 ? `${data.summary.total_volume_cbm} m³` : "—"}
                   </div>
                 </div>
@@ -278,14 +275,14 @@ export default function TrackingResultPage() {
             </div>
 
             {/* 2. Timeline d'acheminement (Historique des étapes) */}
-            <div className="glass-card" style={{ padding: "32px" }}>
-              <h3 style={{ fontSize: "1.25rem", marginBottom: "24px", display: "flex", alignItems: "center", gap: "8px" }}>
-                <Clock size={20} color="var(--gold)" />
+            <div className="card-clean" style={{ padding: "28px" }}>
+              <h3 style={{ fontSize: "1.15rem", marginBottom: "20px", display: "flex", alignItems: "center", gap: "8px", color: "var(--text-main)" }}>
+                <Clock size={18} color="var(--brown-dark)" />
                 Historique d&apos;Acheminement
               </h3>
 
               {data.timeline.length === 0 ? (
-                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+                <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>
                   En attente des premières étapes logistiques.
                 </p>
               ) : (
@@ -298,7 +295,7 @@ export default function TrackingResultPage() {
                       top: "8px",
                       bottom: "8px",
                       width: "2px",
-                      background: "rgba(255, 255, 255, 0.1)",
+                      background: "var(--border-light)",
                     }}
                   />
 
@@ -309,7 +306,7 @@ export default function TrackingResultPage() {
                         key={idx}
                         style={{
                           position: "relative",
-                          marginBottom: idx === data.timeline.length - 1 ? 0 : "28px",
+                          marginBottom: idx === data.timeline.length - 1 ? 0 : "24px",
                         }}
                       >
                         {/* Point sur la ligne */}
@@ -317,21 +314,20 @@ export default function TrackingResultPage() {
                           style={{
                             position: "absolute",
                             left: "-24px",
-                            top: "3px",
+                            top: "4px",
                             width: "16px",
                             height: "16px",
                             borderRadius: "50%",
-                            background: isLatest ? "var(--gold)" : "var(--bg-secondary)",
-                            border: `3px solid ${isLatest ? "var(--bg-primary)" : "rgba(255, 255, 255, 0.3)"}`,
-                            boxShadow: isLatest ? "0 0 12px var(--gold)" : "none",
+                            background: isLatest ? "var(--brown-dark)" : "#FFFFFF",
+                            border: `3px solid ${isLatest ? "var(--bg-app)" : "var(--border-light)"}`,
                           }}
                         />
 
                         <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "6px" }}>
-                          <strong style={{ color: isLatest ? "var(--gold)" : "var(--text-main)", fontSize: "1rem" }}>
+                          <strong style={{ color: isLatest ? "var(--brown-dark)" : "var(--text-main)", fontSize: "0.95rem" }}>
                             {step.status_label}
                           </strong>
-                          <span style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
+                          <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
                             {new Date(step.event_timestamp).toLocaleString("fr-FR", {
                               day: "numeric",
                               month: "short",
@@ -346,22 +342,22 @@ export default function TrackingResultPage() {
                           style={{
                             display: "flex",
                             alignItems: "center",
-                            gap: "6px",
-                            fontSize: "0.85rem",
-                            color: "var(--caramel)",
+                            gap: "5px",
+                            fontSize: "0.82rem",
+                            color: "var(--brown-light)",
                             marginTop: "2px",
                           }}
                         >
-                          <MapPin size={14} />
+                          <MapPin size={13} />
                           {step.location}
                         </div>
 
                         {step.comment && (
                           <div
                             style={{
-                              fontSize: "0.85rem",
-                              color: "var(--text-muted)",
-                              marginTop: "6px",
+                              fontSize: "0.82rem",
+                              color: "var(--text-secondary)",
+                              marginTop: "4px",
                               fontStyle: "italic",
                             }}
                           >
@@ -377,16 +373,16 @@ export default function TrackingResultPage() {
 
             {/* 3. Détail des Colis */}
             {data.parcels.length > 0 && (
-              <div className="glass-card" style={{ padding: "32px" }}>
-                <h3 style={{ fontSize: "1.25rem", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Package size={20} color="var(--caramel)" />
+              <div className="card-clean" style={{ padding: "28px" }}>
+                <h3 style={{ fontSize: "1.15rem", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px", color: "var(--text-main)" }}>
+                  <Package size={18} color="var(--brown-dark)" />
                   Contenu détaillé ({data.parcels.length} colis)
                 </h3>
 
                 <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
                     <thead>
-                      <tr style={{ borderBottom: "1px solid var(--border-subtle)", textAlign: "left", color: "var(--text-dim)" }}>
+                      <tr style={{ borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-muted)" }}>
                         <th style={{ padding: "10px 8px" }}>#</th>
                         <th style={{ padding: "10px 8px" }}>Étiquette / Description</th>
                         <th style={{ padding: "10px 8px" }}>Poids</th>
@@ -395,8 +391,8 @@ export default function TrackingResultPage() {
                     </thead>
                     <tbody>
                       {data.parcels.map((p) => (
-                        <tr key={p.parcel_index} style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.04)" }}>
-                          <td style={{ padding: "12px 8px", color: "var(--gold)", fontWeight: "700" }}>
+                        <tr key={p.parcel_index} style={{ borderBottom: "1px solid var(--border-light)" }}>
+                          <td style={{ padding: "12px 8px", color: "var(--brown-dark)", fontWeight: "700" }}>
                             {p.parcel_index}
                           </td>
                           <td style={{ padding: "12px 8px" }}>
@@ -404,12 +400,12 @@ export default function TrackingResultPage() {
                               {p.package_label}
                             </div>
                             {p.description && (
-                              <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                              <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
                                 {p.description}
                               </div>
                             )}
                           </td>
-                          <td style={{ padding: "12px 8px", color: "var(--caramel)", fontWeight: "600" }}>
+                          <td style={{ padding: "12px 8px", color: "var(--text-secondary)", fontWeight: "600" }}>
                             {p.weight_kg} kg
                           </td>
                           <td style={{ padding: "12px 8px", color: "var(--text-muted)" }}>
@@ -425,22 +421,21 @@ export default function TrackingResultPage() {
 
             {/* 4. Contact WhatsApp contextualisé */}
             <div
-              className="glass-card"
+              className="card-clean"
               style={{
-                padding: "28px",
+                padding: "24px",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
                 flexWrap: "wrap",
-                gap: "20px",
-                border: "1px solid rgba(37, 211, 102, 0.3)",
+                gap: "16px",
               }}
             >
               <div>
-                <h4 style={{ fontSize: "1.15rem", marginBottom: "6px" }}>
+                <h4 style={{ fontSize: "1.05rem", marginBottom: "4px", color: "var(--text-main)" }}>
                   Une question sur ce colis ?
                 </h4>
-                <p style={{ color: "var(--text-muted)", fontSize: "0.88rem" }}>
+                <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>
                   Votre message arrivera pré-rempli avec votre référence ({data.tracking_number}).
                 </p>
               </div>
@@ -450,10 +445,10 @@ export default function TrackingResultPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-whatsapp"
-                style={{ padding: "12px 24px" }}
+                style={{ padding: "10px 18px", fontSize: "0.86rem" }}
               >
-                <Phone size={18} />
-                Échanger avec un conseiller
+                <Phone size={16} />
+                Contacter sur WhatsApp
               </a>
             </div>
           </div>
