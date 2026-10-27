@@ -23,6 +23,7 @@ import {
   Building2,
   AlertCircle,
 } from "lucide-react";
+import RouteGlobe from "@/components/RouteGlobe";
 
 interface UserSession {
   userId: string;
@@ -1237,64 +1238,75 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* 1. TABLEAU DE BORD : STATS SOBRES */}
+        {/* 1. TABLEAU DE BORD : STATS SOBRES EN UN SEUL DIV (Audio 2) & GLOBE 3D AVEC PAYS RÉELS (Audio 1) */}
         {activeTab === "dashboard" && (
           <div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                gap: "14px",
-                marginBottom: "24px",
-              }}
-            >
-              <div className="card-clean" style={{ padding: "18px 20px" }}>
-                <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginBottom: "4px" }}>
+            {/* BARRE KPI UNIFIÉE DANS UN SEUL DIV AVEC SÉPARATEURS PAR LIGNES */}
+            <div className="kpi-unified-bar" style={{ marginBottom: "24px" }}>
+              <div className="kpi-item">
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "4px" }}>
                   Expéditions en cours
                 </div>
-                <div style={{ fontSize: "1.8rem", fontWeight: "800", color: "var(--text-main)" }}>
+                <div style={{ fontSize: "1.75rem", fontWeight: "800", color: "var(--text-main)", lineHeight: "1.1" }}>
                   {stats?.active_shipments || 0}
                 </div>
-                <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "2px" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--brown-light)", marginTop: "3px" }}>
                   Sur {stats?.total_shipments || 0} dossiers totaux
                 </div>
               </div>
 
-              <div className="card-clean" style={{ padding: "18px 20px" }}>
-                <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginBottom: "4px" }}>
-                  Demandes à traiter
+              <div className="kpi-item">
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "4px" }}>
+                  Demandes reçues
                 </div>
-                <div style={{ fontSize: "1.8rem", fontWeight: "800", color: "var(--brown-dark)" }}>
+                <div style={{ fontSize: "1.75rem", fontWeight: "800", color: "var(--brown-dark)", lineHeight: "1.1" }}>
                   {stats?.pending_requests || 0}
                 </div>
-                <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "2px" }}>
-                  Alibaba & transit récents
+                <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "3px" }}>
+                  Alibaba & transit à qualifier
                 </div>
               </div>
 
-              <div className="card-clean" style={{ padding: "18px 20px" }}>
-                <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginBottom: "4px" }}>
+              <div className="kpi-item">
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "4px" }}>
+                  Colis Livrés
+                </div>
+                <div style={{ fontSize: "1.75rem", fontWeight: "800", color: "var(--state-success-text)", lineHeight: "1.1" }}>
+                  {stats?.delivered_shipments || shipments.filter((s) => s.current_status === "DELIVERED").length || 0}
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "3px" }}>
+                  Zéro perte ni litige
+                </div>
+              </div>
+
+              <div className="kpi-item">
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "4px" }}>
                   Clients enregistrés
                 </div>
-                <div style={{ fontSize: "1.8rem", fontWeight: "800", color: "var(--text-main)" }}>
+                <div style={{ fontSize: "1.75rem", fontWeight: "800", color: "var(--text-main)", lineHeight: "1.1" }}>
                   {stats?.total_clients || 0}
                 </div>
-                <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "2px" }}>
-                  Base clients vérifiée
+                <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "3px" }}>
+                  Répertoire vérifié
                 </div>
               </div>
 
-              <div className="card-clean" style={{ padding: "18px 20px" }}>
-                <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginBottom: "4px" }}>
+              <div className="kpi-item">
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "4px" }}>
                   Total Encaissé
                 </div>
-                <div style={{ fontSize: "1.8rem", fontWeight: "800", color: "var(--state-success-text)" }}>
+                <div style={{ fontSize: "1.75rem", fontWeight: "800", color: "var(--brown-dark)", lineHeight: "1.1" }}>
                   ${((stats?.total_payments_minor || 0) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2 })}
                 </div>
-                <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "2px" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--state-success-text)", marginTop: "3px" }}>
                   En caisse / mobile money
                 </div>
               </div>
+            </div>
+
+            {/* GLOBE 3D INTERACTIF DES EXPÉDITIONS (Demande explicite Audio 1) */}
+            <div style={{ marginBottom: "24px" }}>
+              <RouteGlobe shipments={shipments} />
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "18px" }}>
@@ -1517,28 +1529,65 @@ export default function AdminPage() {
         {/* 3. EXPÉDITIONS & COLIS */}
         {activeTab === "shipments" && (
           <div className="card-clean" style={{ padding: "20px" }}>
-            <div style={{ display: "flex", gap: "12px", marginBottom: "18px", flexWrap: "wrap" }}>
-              <input
-                type="text"
-                placeholder="Rechercher par n° suivi, client, téléphone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-clean"
-                style={{ maxWidth: "340px" }}
-              />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="input-clean"
-                style={{ maxWidth: "200px" }}
-              >
-                <option value="">Tous les statuts</option>
-                {allStatuses.map((st) => (
-                  <option key={st.code} value={st.code}>
-                    {st.label_public}
-                  </option>
-                ))}
-              </select>
+            <div style={{ display: "flex", gap: "12px", marginBottom: "18px", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", flex: 1 }}>
+                <input
+                  type="text"
+                  placeholder="Rechercher par n° suivi, client, téléphone..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="input-clean"
+                  style={{ maxWidth: "320px" }}
+                />
+
+                {/* SÉLECTEUR EN PILLS SOBRE & ÉPURÉ (Demande Audio 2) */}
+                <div className="pill-selector">
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("")}
+                    className={`pill-option ${statusFilter === "" ? "pill-option-active" : ""}`}
+                  >
+                    Tous ({shipments.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("IN_TRANSIT")}
+                    className={`pill-option ${statusFilter === "IN_TRANSIT" ? "pill-option-active" : ""}`}
+                  >
+                    En transit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("DELIVERED")}
+                    className={`pill-option ${statusFilter === "DELIVERED" ? "pill-option-active" : ""}`}
+                  >
+                    Livrés
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("RECEIVED_AT_HUB")}
+                    className={`pill-option ${statusFilter === "RECEIVED_AT_HUB" ? "pill-option-active" : ""}`}
+                  >
+                    Au Hub
+                  </button>
+                </div>
+              </div>
+
+              {allStatuses.length > 0 && (
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="input-clean"
+                  style={{ maxWidth: "180px", fontSize: "0.8rem", padding: "6px 10px" }}
+                >
+                  <option value="">Filtre précis...</option>
+                  {allStatuses.map((st) => (
+                    <option key={st.code} value={st.code}>
+                      {st.label_public}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div style={{ overflowX: "auto" }}>

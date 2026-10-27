@@ -78,17 +78,17 @@ a {
   transition: opacity 0.15s ease;
 }
 
-/* Boutons & Micro-interactions sobres */
+/* Boutons & Micro-interactions sobres en PILLS (Demande explicite Audio 2) */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 9px 18px;
+  padding: 8px 18px;
   font-family: var(--font-sans);
   font-weight: 600;
-  font-size: 0.88rem;
-  border-radius: var(--radius-sm);
+  font-size: 0.86rem;
+  border-radius: var(--radius-full); /* Pills partout */
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -97,6 +97,16 @@ a {
 
 .btn:active {
   transform: scale(0.99);
+}
+
+.btn-pill {
+  border-radius: var(--radius-full) !important;
+}
+
+.btn-pill-sm {
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  border-radius: var(--radius-full);
 }
 
 /* Bouton primaire : Marron foncé sobre avec texte blanc cassé */
@@ -132,6 +142,84 @@ a {
 
 .btn-whatsapp:hover {
   background: #20BA5A;
+}
+
+/* Sélecteur / Filtre Segmenté Ultra-Sobre en Pill (Demande Audio 2) */
+.pill-selector {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  padding: 3px;
+  gap: 2px;
+}
+
+.pill-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.pill-option:hover {
+  color: var(--text-main);
+}
+
+.pill-option-active {
+  background: #FFFFFF;
+  color: var(--brown-dark);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(35, 25, 20, 0.08);
+}
+
+/* Barre KPI Unifiée dans UN SEUL DIV séparée par des lignes (Demande Audio 2) */
+.kpi-unified-bar {
+  display: flex;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-subtle);
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.kpi-item {
+  flex: 1;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  justifyContent: center;
+  border-right: 1px solid var(--border-light);
+  transition: background 0.15s ease;
+  min-width: 140px;
+}
+
+.kpi-item:last-child {
+  border-right: none;
+}
+
+.kpi-item:hover {
+  background: #FAF8F5;
+}
+
+@media (max-width: 900px) {
+  .kpi-unified-bar {
+    flex-wrap: wrap;
+  }
+  .kpi-item {
+    flex: 1 1 45%;
+    border-bottom: 1px solid var(--border-light);
+  }
 }
 
 /* Cartes sobres et minimalistes */
