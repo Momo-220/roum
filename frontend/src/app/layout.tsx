@@ -25,15 +25,32 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
-        {/* Anti-extension Sanitizer & Hydration Shield (Bitdefender / Chrome extensions) */}
+        {/* Anti-extension Shield (Bitdefender / Chrome extensions error boundary protection) */}
         <script
-          id="anti-extension-sanitizer"
+          id="anti-extension-shield"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
-                  // 1. Filtrer console.error & console.warn pour neutraliser les erreurs d'hydratation causées par les extensions
-                  function shouldFilter(args) {
+                  // Vérificateur universel d'erreurs provenant d'extensions de navigateur
+                  function isExtensionError(text) {
+                    if (!text || typeof text !== "string") return false;
+                    return (
+                      text.indexOf("chrome-extension:") !== -1 ||
+                      text.indexOf("moz-extension:") !== -1 ||
+                      text.indexOf("safari-extension:") !== -1 ||
+                      text.indexOf("eppiocemhmnlbhjplcgkofciiegomcon") !== -1 ||
+                      text.indexOf("M_ID") !== -1 ||
+                      text.indexOf("bis_skin_checked") !== -1 ||
+                      text.indexOf("bis_register") !== -1 ||
+                      text.indexOf("__processed_") !== -1 ||
+                      text.indexOf("cz-shortcut-listen") !== -1 ||
+                      (text.indexOf("hydrat") !== -1 && text.indexOf("didn't match") !== -1 && text.indexOf("bis_") !== -1)
+                    );
+                  }
+
+                  // 1. Filtrer console.error & console.warn
+                  function shouldFilterArgs(args) {
                     try {
                       var fullText = "";
                       for (var i = 0; i < args.length; i++) {
@@ -45,44 +62,64 @@ export default function RootLayout({
                           try { fullText += " " + JSON.stringify(a); } catch(e) {}
                         }
                       }
-                      if (
-                        fullText.indexOf("bis_skin_checked") !== -1 ||
-                        fullText.indexOf("bis_register") !== -1 ||
-                        fullText.indexOf("__processed_") !== -1 ||
-                        fullText.indexOf("cz-shortcut-listen") !== -1 ||
-                        (fullText.indexOf("hydrat") !== -1 && fullText.indexOf("didn't match") !== -1 && fullText.indexOf("bis_") !== -1)
-                      ) {
-                        return true;
-                      }
-                    } catch(e) {}
-                    return false;
+                      return isExtensionError(fullText);
+                    } catch(e) {
+                      return false;
+                    }
                   }
 
                   var origError = console.error;
                   console.error = function() {
-                    if (shouldFilter(arguments)) return;
+                    if (shouldFilterArgs(arguments)) return;
                     origError.apply(console, arguments);
                   };
 
                   var origWarn = console.warn;
                   console.warn = function() {
-                    if (shouldFilter(arguments)) return;
+                    if (shouldFilterArgs(arguments)) return;
                     origWarn.apply(console, arguments);
                   };
 
-                  // 2. Intercepter les erreurs non capturées au niveau de window
-                  window.addEventListener("error", function(e) {
-                    if (
-                      e &&
-                      e.message &&
-                      (e.message.indexOf("bis_skin_checked") !== -1 || e.message.indexOf("bis_register") !== -1)
-                    ) {
-                      e.preventDefault();
-                      e.stopImmediatePropagation();
+                  // 2. Intercepter window.onerror
+                  var origOnError = window.onerror;
+                  window.onerror = function(msg, url, line, col, err) {
+                    var str = (msg || "") + " " + (url || "") + " " + (err && err.stack ? err.stack : "");
+                    if (isExtensionError(str)) {
+                      return true; // Empêche l'affichage de l'overlay Next.js
                     }
+                    if (origOnError) return origOnError.apply(this, arguments);
+                  };
+
+                  // 3. Intercepter window.addEventListener('error') en phase de capture prioritaire
+                  window.addEventListener("error", function(e) {
+                    try {
+                      var fn = e && e.filename ? e.filename : "";
+                      var msg = e && e.message ? e.message : "";
+                      var stack = e && e.error && e.error.stack ? e.error.stack : "";
+                      var total = fn + " " + msg + " " + stack;
+                      if (isExtensionError(total)) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                        return true;
+                      }
+                    } catch(err) {}
                   }, true);
 
-                  // 3. Empêcher l'extension d'injecter bis_skin_checked via setAttribute
+                  // 4. Intercepter les promesses non gérées provenant d'extensions
+                  window.addEventListener("unhandledrejection", function(e) {
+                    try {
+                      var reason = e && e.reason;
+                      var str = (reason && (reason.stack || reason.message)) || String(reason || "");
+                      if (isExtensionError(str)) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                      }
+                    } catch(err) {}
+                  }, true);
+
+                  // 5. Empêcher l'extension d'injecter des attributs comme bis_skin_checked
                   var origSet = Element.prototype.setAttribute;
                   Element.prototype.setAttribute = function(name, val) {
                     if (
@@ -96,7 +133,7 @@ export default function RootLayout({
                     return origSet.apply(this, arguments);
                   };
 
-                  // 4. Nettoyeur d'attributs récursif
+                  // 6. Nettoyeur d'attributs récursif
                   function sanitizeNode(el) {
                     if (!el || el.nodeType !== 1) return;
                     var attrs = el.attributes;
@@ -116,7 +153,7 @@ export default function RootLayout({
                     }
                   }
 
-                  // 5. MutationObserver temps réel pour nettoyer dès l'insertion
+                  // 7. MutationObserver en temps réel
                   if (typeof MutationObserver !== "undefined") {
                     var observer = new MutationObserver(function(mutations) {
                       for (var i = 0; i < mutations.length; i++) {
