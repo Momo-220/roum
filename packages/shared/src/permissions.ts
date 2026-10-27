@@ -38,7 +38,14 @@ export const PERMISSIONS = [
   { code: "config.modes", module: "Configuration", label: "Gérer les modes de transport" },
   { code: "config.statuses", module: "Configuration", label: "Gérer la liste des statuts" },
 
+  { code: "requests.view", module: "Demandes reçues", label: "Consulter les demandes clients (Alibaba, Transit, Colis)" },
+  { code: "requests.process", module: "Demandes reçues", label: "Traiter et convertir les demandes en expédition ou devis" },
+
+  { code: "tasks.manage", module: "Tâches", label: "Créer, assigner et valider les tâches internes" },
+
   { code: "exports.run", module: "Exports", label: "Exporter les données (CSV)" },
+
+  { code: "settings.manage", module: "Paramètres", label: "Gérer les coordonnées d'entrepôt et paramètres généraux" },
 
   { code: "audit.view", module: "Journal", label: "Consulter le journal des actions" },
 ] as const;

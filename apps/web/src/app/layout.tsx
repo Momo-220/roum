@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Script from "next/script";
-import { Phone, ShieldCheck } from "lucide-react";
+import { Phone } from "lucide-react";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -85,7 +85,7 @@ export default function RootLayout({
             position: "sticky",
             top: 0,
             zIndex: 100,
-            background: "rgba(7, 12, 24, 0.85)",
+            background: "rgba(23, 20, 18, 0.9)",
             backdropFilter: "blur(16px)",
             borderBottom: "1px solid var(--border-subtle)",
             padding: "16px 0",
@@ -114,14 +114,14 @@ export default function RootLayout({
                   width: "42px",
                   height: "42px",
                   borderRadius: "12px",
-                  background: "linear-gradient(135deg, #f5a623 0%, #00b4d8 100%)",
+                  background: "linear-gradient(135deg, #d4af37 0%, #4A2C20 100%)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "#000",
+                  color: "#FAF7F2",
                   fontWeight: "800",
                   fontSize: "1.2rem",
-                  boxShadow: "0 4px 15px rgba(245, 166, 35, 0.3)",
+                  boxShadow: "0 4px 15px rgba(212, 175, 55, 0.3)",
                 }}
               >
                 RT
@@ -189,18 +189,6 @@ export default function RootLayout({
                 }}
               >
                 Nos Services
-              </Link>
-              <Link
-                href="/admin"
-                className="btn btn-secondary"
-                style={{
-                  padding: "8px 18px",
-                  fontSize: "0.85rem",
-                  gap: "6px",
-                }}
-              >
-                <ShieldCheck size={16} color="var(--gold)" />
-                Espace Pro
               </Link>
             </nav>
           </div>

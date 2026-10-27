@@ -511,3 +511,512 @@ adminRouter.get("/statuses", async (c) => {
 
   return c.json({ statuses });
 });
+
+/* ==========================================================================
+   5. TABLEAU DE BORD (KPIs & Statistiques globales)
+   ========================================================================== */
+
+adminRouter.get("/stats", async (c) => {
+  if (!checkPermission(c, "dashboard.view")) {
+    return c.json({ error: "Permission insuffisante (dashboard.view requise)." }, 403);
+  }
+
+  const [shipmentsCount, activeShipments, clientsCount, requestsCount, pendingRequests, paymentsTotal, tasksCount] = await Promise.all([
+    c.env.DB.prepare(`SELECT COUNT(*) as total FROM shipments`).first<{ total: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) as total FROM shipments WHERE current_status NOT IN ('DELIVERED', 'CANCELLED')`).first<{ total: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) as total FROM clients`).first<{ total: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) as total FROM customer_requests`).first<{ total: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) as total FROM customer_requests WHERE status IN ('NEW', 'IN_REVIEW')`).first<{ total: number }>(),
+    c.env.DB.prepare(`SELECT COALESCE(SUM(amount_minor), 0) as total FROM payments WHERE status = 'CONFIRMED'`).first<{ total: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) as total FROM tasks WHERE status != 'DONE'`).first<{ total: number }>(),
+  ]);
+
+  return c.json({
+    stats: {
+      total_shipments: shipmentsCount?.total || 0,
+      active_shipments: activeShipments?.total || 0,
+      total_clients: clientsCount?.total || 0,
+      total_requests: requestsCount?.total || 0,
+      pending_requests: pendingRequests?.total || 0,
+      total_payments_minor: paymentsTotal?.total || 0,
+      pending_tasks: tasksCount?.total || 0,
+    },
+  });
+});
+
+/* ==========================================================================
+   6. DEMANDES CLIENTS REÇUES (Alibaba, Transit Fournisseur, Expéditions)
+   ========================================================================== */
+
+adminRouter.get("/requests", async (c) => {
+  if (!checkPermission(c, "requests.view") && !checkPermission(c, "quotes.view")) {
+    return c.json({ error: "Permission insuffisante (requests.view requise)." }, 403);
+  }
+
+  const status = c.req.query("status");
+  const type = c.req.query("type");
+  const search = c.req.query("search");
+
+  let query = `
+    SELECT 
+      r.id, r.reference, r.request_type, r.client_name, r.client_phone, r.client_email,
+      r.origin_country, r.destination_country, r.status, r.created_at,
+      r.estimated_weight_kg, r.estimated_cbm, r.description,
+      u.full_name as assigned_to_name
+    FROM customer_requests r
+    LEFT JOIN users u ON r.assigned_to_user_id = u.id
+    WHERE 1=1
+  `;
+  const params: any[] = [];
+
+  if (status) {
+    query += ` AND r.status = ?`;
+    params.push(status);
+  }
+  if (type) {
+    query += ` AND r.request_type = ?`;
+    params.push(type);
+  }
+  if (search) {
+    query += ` AND (r.reference LIKE ? OR r.client_name LIKE ? OR r.client_phone LIKE ?)`;
+    const term = `%${search}%`;
+    params.push(term, term, term);
+  }
+
+  query += ` ORDER BY r.created_at DESC LIMIT 50`;
+
+  const { results: requests } = await c.env.DB.prepare(query).bind(...params).all();
+  return c.json({ requests });
+});
+
+adminRouter.get("/requests/:id", async (c) => {
+  if (!checkPermission(c, "requests.view") && !checkPermission(c, "quotes.view")) {
+    return c.json({ error: "Permission insuffisante." }, 403);
+  }
+
+  const id = c.req.param("id");
+  const request = await c.env.DB.prepare(`
+    SELECT r.*, u.full_name as assigned_to_name
+    FROM customer_requests r
+    LEFT JOIN users u ON r.assigned_to_user_id = u.id
+    WHERE r.id = ?
+  `).bind(id).first();
+
+  if (!request) {
+    return c.json({ error: "Demande introuvable." }, 404);
+  }
+
+  const { results: items } = await c.env.DB.prepare(`
+    SELECT * FROM request_items WHERE request_id = ? ORDER BY item_index ASC
+  `).bind(id).all();
+
+  return c.json({ request, items });
+});
+
+const updateRequestStatusSchema = z.object({
+  status: z.enum(["NEW", "IN_REVIEW", "QUOTE_SENT", "CONVERTED", "CLOSED", "CANCELLED"]),
+  admin_notes: z.string().optional(),
+});
+
+adminRouter.patch("/requests/:id/status", zValidator("json", updateRequestStatusSchema), async (c) => {
+  if (!checkPermission(c, "requests.process") && !checkPermission(c, "quotes.process")) {
+    return c.json({ error: "Permission insuffisante (requests.process requise)." }, 403);
+  }
+
+  const id = c.req.param("id");
+  const data = c.req.valid("json");
+
+  await c.env.DB.prepare(`
+    UPDATE customer_requests
+    SET status = ?, admin_notes = COALESCE(?, admin_notes), updated_at = datetime('now')
+    WHERE id = ?
+  `).bind(data.status, data.admin_notes || null, id).run();
+
+  return c.json({ success: true, message: `Demande mise à jour vers le statut ${data.status}.` });
+});
+
+/* ==========================================================================
+   7. RÉPERTOIRE DES CLIENTS
+   ========================================================================== */
+
+adminRouter.get("/clients", async (c) => {
+  if (!checkPermission(c, "clients.view")) {
+    return c.json({ error: "Permission insuffisante (clients.view requise)." }, 403);
+  }
+
+  const search = c.req.query("search");
+  let query = `
+    SELECT 
+      c.id, c.full_name, c.phone_whatsapp, c.email, c.city, c.country, c.created_at,
+      (SELECT COUNT(*) FROM shipments s WHERE s.client_id = c.id) as shipments_count,
+      (SELECT COUNT(*) FROM customer_requests r WHERE r.client_id = c.id) as requests_count
+    FROM clients c
+    WHERE 1=1
+  `;
+  const params: any[] = [];
+
+  if (search) {
+    query += ` AND (c.full_name LIKE ? OR c.phone_whatsapp LIKE ? OR c.email LIKE ?)`;
+    const term = `%${search}%`;
+    params.push(term, term, term);
+  }
+
+  query += ` ORDER BY c.created_at DESC LIMIT 50`;
+
+  const { results: clients } = await c.env.DB.prepare(query).bind(...params).all();
+  return c.json({ clients });
+});
+
+const createClientSchema = z.object({
+  full_name: z.string().min(2, "Nom complet requis"),
+  phone_whatsapp: phoneSchema,
+  email: z.string().email().optional().or(z.literal("")),
+  country: z.string().min(2, "Pays requis"),
+  city: z.string().optional(),
+  address: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+adminRouter.post("/clients", zValidator("json", createClientSchema), async (c) => {
+  if (!checkPermission(c, "clients.create")) {
+    return c.json({ error: "Permission insuffisante (clients.create requise)." }, 403);
+  }
+
+  const data = c.req.valid("json");
+  const clientId = crypto.randomUUID();
+
+  await c.env.DB.prepare(`
+    INSERT INTO clients (id, full_name, phone_whatsapp, email, address, city, country, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    clientId,
+    data.full_name.trim(),
+    data.phone_whatsapp,
+    data.email || null,
+    data.address || null,
+    data.city || null,
+    data.country.trim(),
+    data.notes || null
+  ).run();
+
+  return c.json({ success: true, client_id: clientId, message: "Client créé avec succès." }, 201);
+});
+
+/* ==========================================================================
+   8. ROUTES, MODES DE TRANSPORT & TARIFS
+   ========================================================================== */
+
+adminRouter.get("/routes", async (c) => {
+  const { results: routes } = await c.env.DB.prepare(`
+    SELECT id, origin_country, origin_city, destination_country, destination_city, is_active
+    FROM routes
+    WHERE is_active = 1
+    ORDER BY origin_country ASC, destination_country ASC
+  `).all();
+  return c.json({ routes });
+});
+
+adminRouter.get("/modes", async (c) => {
+  const { results: modes } = await c.env.DB.prepare(`
+    SELECT id, name, type, pricing_basis, is_active, sort_order
+    FROM shipping_modes
+    WHERE is_active = 1
+    ORDER BY sort_order ASC
+  `).all();
+  return c.json({ modes });
+});
+
+adminRouter.get("/tariffs", async (c) => {
+  const { results: tariffs } = await c.env.DB.prepare(`
+    SELECT 
+      t.id, t.currency, t.price_per_unit_minor, t.minimum_charge_minor,
+      t.estimated_days_min, t.estimated_days_max, t.is_active,
+      r.origin_country, r.origin_city, r.destination_country, r.destination_city,
+      sm.name as shipping_mode_name, sm.type as shipping_mode_type, sm.pricing_basis
+    FROM tariffs t
+    JOIN routes r ON t.route_id = r.id
+    JOIN shipping_modes sm ON t.shipping_mode_id = sm.id
+    ORDER BY r.origin_country ASC, sm.name ASC
+  `).all();
+  return c.json({ tariffs });
+});
+
+const createTariffSchema = z.object({
+  route_id: z.string().min(1),
+  shipping_mode_id: z.string().min(1),
+  currency: z.string().default("USD"),
+  price_per_unit_minor: z.number().int().positive("Prix unitaire requis"),
+  minimum_charge_minor: z.number().int().nonnegative().optional(),
+  estimated_days_min: z.number().int().positive().optional(),
+  estimated_days_max: z.number().int().positive().optional(),
+});
+
+adminRouter.post("/tariffs", zValidator("json", createTariffSchema), async (c) => {
+  if (!checkPermission(c, "config.tariffs")) {
+    return c.json({ error: "Permission insuffisante (config.tariffs requise)." }, 403);
+  }
+
+  const data = c.req.valid("json");
+  const tariffId = crypto.randomUUID();
+
+  await c.env.DB.prepare(`
+    INSERT INTO tariffs (
+      id, route_id, shipping_mode_id, currency, price_per_unit_minor,
+      minimum_charge_minor, estimated_days_min, estimated_days_max, is_active
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+  `).bind(
+    tariffId,
+    data.route_id,
+    data.shipping_mode_id,
+    data.currency,
+    data.price_per_unit_minor,
+    data.minimum_charge_minor || 0,
+    data.estimated_days_min || null,
+    data.estimated_days_max || null
+  ).run();
+
+  return c.json({ success: true, tariff_id: tariffId, message: "Tarif enregistré avec succès." }, 201);
+});
+
+/* ==========================================================================
+   9. FINANCES & PAIEMENTS
+   ========================================================================== */
+
+adminRouter.get("/payments", async (c) => {
+  if (!checkPermission(c, "finance.view")) {
+    return c.json({ error: "Permission insuffisante (finance.view requise)." }, 403);
+  }
+
+  const { results: payments } = await c.env.DB.prepare(`
+    SELECT 
+      p.id, p.amount_minor, p.currency, p.payment_method, p.payment_type,
+      p.reference_code, p.status, p.receipt_notes, p.recorded_at,
+      c.full_name as client_name, c.phone_whatsapp as client_phone,
+      s.tracking_number,
+      u.full_name as recorded_by_name
+    FROM payments p
+    JOIN clients c ON p.client_id = c.id
+    LEFT JOIN shipments s ON p.shipment_id = s.id
+    JOIN users u ON p.recorded_by_user_id = u.id
+    ORDER BY p.recorded_at DESC LIMIT 50
+  `).all();
+
+  return c.json({ payments });
+});
+
+const recordPaymentSchema = z.object({
+  client_id: z.string().min(1, "Client requis"),
+  shipment_id: z.string().optional(),
+  amount_minor: z.number().int().positive("Montant requis"),
+  currency: z.string().default("USD"),
+  payment_method: z.enum(["CASH", "BANK_TRANSFER", "WAVE", "ORANGE_MONEY", "OTHER"]),
+  payment_type: z.enum(["ADVANCE", "BALANCE", "FULL", "REFUND"]).default("ADVANCE"),
+  reference_code: z.string().optional(),
+  receipt_notes: z.string().optional(),
+});
+
+adminRouter.post("/payments", zValidator("json", recordPaymentSchema), async (c) => {
+  if (!checkPermission(c, "finance.edit")) {
+    return c.json({ error: "Permission insuffisante (finance.edit requise)." }, 403);
+  }
+
+  const user = c.get("user");
+  const data = c.req.valid("json");
+  const paymentId = crypto.randomUUID();
+
+  const statements: D1PreparedStatement[] = [
+    c.env.DB.prepare(`
+      INSERT INTO payments (
+        id, shipment_id, client_id, amount_minor, currency,
+        payment_method, payment_type, reference_code, status,
+        receipt_notes, recorded_by_user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'CONFIRMED', ?, ?)
+    `).bind(
+      paymentId,
+      data.shipment_id || null,
+      data.client_id,
+      data.amount_minor,
+      data.currency,
+      data.payment_method,
+      data.payment_type,
+      data.reference_code || null,
+      data.receipt_notes || null,
+      user.userId
+    ),
+  ];
+
+  // Si associé à une expédition, mise à jour éventuelle du statut de paiement
+  if (data.shipment_id && data.payment_type === "FULL") {
+    statements.push(
+      c.env.DB.prepare(`
+        UPDATE shipments SET payment_status = 'PAID', updated_at = datetime('now') WHERE id = ?
+      `).bind(data.shipment_id)
+    );
+  } else if (data.shipment_id && data.payment_type === "ADVANCE") {
+    statements.push(
+      c.env.DB.prepare(`
+        UPDATE shipments SET payment_status = 'PARTIAL', updated_at = datetime('now') WHERE id = ?
+      `).bind(data.shipment_id)
+    );
+  }
+
+  await c.env.DB.batch(statements);
+
+  return c.json({ success: true, payment_id: paymentId, message: "Paiement consigné avec succès." }, 201);
+});
+
+/* ==========================================================================
+   10. TÂCHES D'ÉQUIPE (Suivi & relance)
+   ========================================================================== */
+
+adminRouter.get("/tasks", async (c) => {
+  const { results: tasks } = await c.env.DB.prepare(`
+    SELECT 
+      t.id, t.title, t.description, t.category, t.priority, t.status, t.due_date, t.created_at,
+      u.full_name as assigned_to_name
+    FROM tasks t
+    LEFT JOIN users u ON t.assigned_to_user_id = u.id
+    ORDER BY 
+      CASE t.priority WHEN 'URGENT' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 ELSE 4 END ASC,
+      t.created_at DESC
+  `).all();
+  return c.json({ tasks });
+});
+
+const createTaskSchema = z.object({
+  title: z.string().min(2, "Titre requis"),
+  description: z.string().optional(),
+  category: z.enum(["GENERAL", "MISSING_INFO", "QUOTE_PREP", "PAYMENT_CHECK", "WAREHOUSE_CHECK"]).default("GENERAL"),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
+  assigned_to_user_id: z.string().optional(),
+  due_date: z.string().optional(),
+});
+
+adminRouter.post("/tasks", zValidator("json", createTaskSchema), async (c) => {
+  const user = c.get("user");
+  const data = c.req.valid("json");
+  const taskId = crypto.randomUUID();
+
+  await c.env.DB.prepare(`
+    INSERT INTO tasks (id, title, description, category, priority, status, assigned_to_user_id, due_date, created_by_user_id)
+    VALUES (?, ?, ?, ?, ?, 'TODO', ?, ?, ?)
+  `).bind(
+    taskId,
+    data.title.trim(),
+    data.description || null,
+    data.category,
+    data.priority,
+    data.assigned_to_user_id || null,
+    data.due_date || null,
+    user.userId
+  ).run();
+
+  return c.json({ success: true, task_id: taskId, message: "Tâche créée avec succès." }, 201);
+});
+
+adminRouter.patch("/tasks/:id/status", zValidator("json", z.object({ status: z.enum(["TODO", "IN_PROGRESS", "DONE", "CANCELLED"]) })), async (c) => {
+  const id = c.req.param("id");
+  const { status } = c.req.valid("json");
+
+  await c.env.DB.prepare(`
+    UPDATE tasks SET status = ?, updated_at = datetime('now') WHERE id = ?
+  `).bind(status, id).run();
+
+  return c.json({ success: true, message: `Statut de la tâche mis à jour vers ${status}.` });
+});
+
+/* ==========================================================================
+   11. PARAMÈTRES GÉNÉRAUX D'ENTREPRISE
+   ========================================================================== */
+
+adminRouter.get("/settings", async (c) => {
+  const { results: settings } = await c.env.DB.prepare(`SELECT key, value FROM business_settings`).all();
+  const map: Record<string, string> = {};
+  for (const s of settings as any[]) {
+    map[s.key] = s.value;
+  }
+  return c.json({ settings: map });
+});
+
+adminRouter.put("/settings", zValidator("json", z.record(z.string(), z.string())), async (c) => {
+  const user = c.get("user");
+  if (!user.isSuperAdmin && !checkPermission(c, "settings.manage")) {
+    return c.json({ error: "Permission insuffisante (settings.manage requise)." }, 403);
+  }
+
+  const data = c.req.valid("json");
+  const statements: D1PreparedStatement[] = [];
+
+  for (const [key, value] of Object.entries(data)) {
+    statements.push(
+      c.env.DB.prepare(`
+        INSERT INTO business_settings (key, value, updated_by_user_id, updated_at)
+        VALUES (?, ?, ?, datetime('now'))
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+      `).bind(key, value, user.userId)
+    );
+  }
+
+  if (statements.length > 0) {
+    await c.env.DB.batch(statements);
+  }
+
+  return c.json({ success: true, message: "Paramètres enregistrés avec succès." });
+});
+
+/* ==========================================================================
+   12. JOURNAL D'AUDIT (Traçabilité des opérations sensibles)
+   ========================================================================== */
+
+adminRouter.get("/audit-logs", async (c) => {
+  if (!checkPermission(c, "audit.view")) {
+    return c.json({ error: "Permission insuffisante (audit.view requise)." }, 403);
+  }
+
+  const { results: logs } = await c.env.DB.prepare(`
+    SELECT a.id, a.action, a.entity_type, a.entity_id, a.details_json, a.created_at,
+           u.full_name as user_name, u.email as user_email
+    FROM audit_logs a
+    LEFT JOIN users u ON a.user_id = u.id
+    ORDER BY a.created_at DESC LIMIT 100
+  `).all();
+
+  return c.json({ logs });
+});
+
+/* ==========================================================================
+   13. EXPORT CSV (Shipments)
+   ========================================================================== */
+
+adminRouter.get("/exports/shipments.csv", async (c) => {
+  if (!checkPermission(c, "exports.run")) {
+    return c.text("Permission insuffisante", 403);
+  }
+
+  const { results: rows } = await c.env.DB.prepare(`
+    SELECT 
+      s.tracking_number, s.current_status, s.total_parcels_count, s.total_weight_kg,
+      s.total_volume_cbm, s.final_price_minor, s.currency, s.payment_status, s.created_at,
+      c.full_name as client_name, c.phone_whatsapp as client_phone,
+      r.origin_country, r.destination_country, sm.name as shipping_mode
+    FROM shipments s
+    JOIN clients c ON s.client_id = c.id
+    JOIN routes r ON s.route_id = r.id
+    JOIN shipping_modes sm ON s.shipping_mode_id = sm.id
+    ORDER BY s.created_at DESC
+  `).all();
+
+  const header = "Numéro Suivi,Statut,Client,Téléphone,Origine,Destination,Mode,Colis,Poids (kg),Volume (m3),Prix,Devise,Paiement,Date Création\n";
+  const lines = (rows as any[]).map((r) => {
+    return `"${r.tracking_number}","${r.current_status}","${r.client_name.replace(/"/g, '""')}","${r.client_phone}","${r.origin_country}","${r.destination_country}","${r.shipping_mode}",${r.total_parcels_count},${r.total_weight_kg},${r.total_volume_cbm},${(r.final_price_minor || 0) / 100},"${r.currency}","${r.payment_status}","${r.created_at}"`;
+  });
+
+  const csv = header + lines.join("\n");
+  return new Response(csv, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="roum_shipments_${new Date().toISOString().slice(0, 10)}.csv"`,
+    },
+  });
+});
+

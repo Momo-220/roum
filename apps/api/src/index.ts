@@ -23,12 +23,15 @@ app.use(
 app.route("/", healthRouter);
 
 // Routes publiques (suivi direct, tarifs, devis)
+app.route("/api/public", publicRouter);
 app.route("/api/v1/public", publicRouter);
 
 // Routes d'authentification
+app.route("/api/auth", authRouter);
 app.route("/api/v1/auth", authRouter);
 
 // Routes d'administration sécurisées
+app.route("/api/admin", adminRouter);
 app.route("/api/v1/admin", adminRouter);
 
 // Gestionnaire 404

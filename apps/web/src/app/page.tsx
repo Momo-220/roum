@@ -225,7 +225,7 @@ export default function HomePage() {
                   style={{
                     background: "none",
                     border: "none",
-                    color: "var(--cyan)",
+                    color: "var(--caramel)",
                     cursor: "pointer",
                     textDecoration: "underline",
                   }}
@@ -273,8 +273,8 @@ export default function HomePage() {
                   width: "52px",
                   height: "52px",
                   borderRadius: "14px",
-                  background: "rgba(0, 180, 216, 0.15)",
-                  color: "var(--cyan)",
+                  background: "rgba(166, 124, 82, 0.2)",
+                  color: "var(--light-brown)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -319,7 +319,7 @@ export default function HomePage() {
                 Optimisez vos coûts pour les gros volumes. Vous ne payez que le volume (CBM) réellement
                 occupé dans nos conteneurs sécurisés avec dédouanement inclus.
               </p>
-              <div style={{ color: "var(--cyan)", fontWeight: "600", fontSize: "0.9rem" }}>
+              <div style={{ color: "var(--caramel)", fontWeight: "600", fontSize: "0.9rem" }}>
                 🚢 Tarification avantageuse au m³ (CBM)
               </div>
             </div>
@@ -448,8 +448,8 @@ export default function HomePage() {
                         className="btn"
                         style={{
                           flex: 1,
-                          background: simMode === "AIR" ? "var(--cyan)" : "var(--bg-glass)",
-                          color: simMode === "AIR" ? "#000" : "var(--text-main)",
+                          background: simMode === "AIR" ? "var(--caramel)" : "var(--bg-glass)",
+                          color: simMode === "AIR" ? "#171412" : "var(--text-main)",
                           border: "1px solid var(--border-subtle)",
                         }}
                       >
@@ -477,7 +477,7 @@ export default function HomePage() {
                     <div>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "0.85rem" }}>
                         <span style={{ color: "var(--text-muted)" }}>Poids estimé (kg)</span>
-                        <strong style={{ color: "var(--cyan)" }}>{simWeight} kg</strong>
+                        <strong style={{ color: "var(--caramel)" }}>{simWeight} kg</strong>
                       </div>
                       <input
                         type="range"
@@ -485,7 +485,7 @@ export default function HomePage() {
                         max="200"
                         value={simWeight}
                         onChange={(e) => setSimWeight(Number(e.target.value))}
-                        style={{ width: "100%", accentColor: "var(--cyan)", cursor: "pointer" }}
+                        style={{ width: "100%", accentColor: "var(--caramel)", cursor: "pointer" }}
                       />
                     </div>
                   ) : (

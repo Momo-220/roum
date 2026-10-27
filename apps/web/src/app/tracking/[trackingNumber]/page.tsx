@@ -238,7 +238,7 @@ export default function TrackingResultPage() {
 
                 <div>
                   <div style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>Mode de Transport</div>
-                  <div style={{ fontWeight: "600", color: "var(--cyan)", fontSize: "0.95rem" }}>
+                  <div style={{ fontWeight: "600", color: "var(--caramel)", fontSize: "0.95rem" }}>
                     {data.shipping_mode}
                   </div>
                 </div>
@@ -263,7 +263,7 @@ export default function TrackingResultPage() {
 
                 <div style={{ padding: "12px", background: "rgba(255, 255, 255, 0.02)", borderRadius: "var(--radius-sm)" }}>
                   <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>Poids Total</div>
-                  <div style={{ fontSize: "1.25rem", fontWeight: "800", color: "var(--cyan)" }}>
+                  <div style={{ fontSize: "1.25rem", fontWeight: "800", color: "var(--caramel)" }}>
                     {data.summary.total_weight_kg} kg
                   </div>
                 </div>
@@ -348,7 +348,7 @@ export default function TrackingResultPage() {
                             alignItems: "center",
                             gap: "6px",
                             fontSize: "0.85rem",
-                            color: "var(--cyan)",
+                            color: "var(--caramel)",
                             marginTop: "2px",
                           }}
                         >
@@ -379,7 +379,7 @@ export default function TrackingResultPage() {
             {data.parcels.length > 0 && (
               <div className="glass-card" style={{ padding: "32px" }}>
                 <h3 style={{ fontSize: "1.25rem", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Package size={20} color="var(--cyan)" />
+                  <Package size={20} color="var(--caramel)" />
                   Contenu détaillé ({data.parcels.length} colis)
                 </h3>
 
@@ -409,7 +409,7 @@ export default function TrackingResultPage() {
                               </div>
                             )}
                           </td>
-                          <td style={{ padding: "12px 8px", color: "var(--cyan)", fontWeight: "600" }}>
+                          <td style={{ padding: "12px 8px", color: "var(--caramel)", fontWeight: "600" }}>
                             {p.weight_kg} kg
                           </td>
                           <td style={{ padding: "12px 8px", color: "var(--text-muted)" }}>

@@ -4,42 +4,46 @@
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-display: 'Space Grotesk', var(--font-sans);
 
-  /* Couleurs de base - Thème Maritime & Fret Premium */
-  --bg-primary: #070c18;
-  --bg-secondary: #0d1629;
-  --bg-card: rgba(15, 25, 48, 0.75);
-  --bg-card-hover: rgba(22, 36, 68, 0.85);
-  --bg-glass: rgba(255, 255, 255, 0.04);
+  /* Couleurs de base - Charte ROUM TRANSIT (Marron, Marron clair, Beige, Noir) */
+  --bg-primary: #171412;        /* Noir chaleureux / Dark Espresso */
+  --bg-secondary: #231c18;      /* Brun sombre profond */
+  --bg-card: rgba(45, 34, 28, 0.78); /* Marron riche glassmorphism */
+  --bg-card-hover: rgba(62, 47, 39, 0.88);
+  --bg-glass: rgba(242, 230, 213, 0.05);
 
   /* Bordures */
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-active: rgba(245, 166, 35, 0.4);
-  --border-glow: rgba(0, 180, 216, 0.3);
+  --border-subtle: rgba(242, 230, 213, 0.12);
+  --border-active: rgba(212, 175, 55, 0.5);
+  --border-glow: rgba(166, 124, 82, 0.4);
 
-  /* Accents */
-  --gold: #f5a623;
-  --gold-glow: rgba(245, 166, 35, 0.25);
-  --gold-dark: #d48b11;
-  --cyan: #00b4d8;
-  --cyan-glow: rgba(0, 180, 216, 0.25);
-  --blue-ocean: #0077b6;
+  /* Marque & Accents Chauds */
+  --deep-brown: #4A2C20;
+  --light-brown: #A67C52;
+  --beige: #F2E6D5;
+  --near-black: #171412;
+  --off-white: #FAF7F2;
+
+  --gold: #d4af37;
+  --gold-glow: rgba(212, 175, 55, 0.28);
+  --gold-dark: #a67c52;
+  --caramel: #c4925e;
   --emerald: #10b981;
-  --rose: #f43f5e;
+  --rose: #e05656;
   --amber: #f59e0b;
 
   /* Textes */
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
+  --text-main: #FAF7F2;
+  --text-muted: #d8cbbe;
+  --text-dim: #9e8d7f;
 
   /* Rayons & Ombres */
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 20px;
   --radius-full: 9999px;
-  --shadow-card: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
-  --shadow-glow-gold: 0 0 25px rgba(245, 166, 35, 0.3);
-  --shadow-glow-cyan: 0 0 25px rgba(0, 180, 216, 0.3);
+  --shadow-card: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+  --shadow-glow-gold: 0 0 25px rgba(212, 175, 55, 0.35);
+  --shadow-glow-brown: 0 0 25px rgba(166, 124, 82, 0.3);
 }
 
 * {
@@ -58,7 +62,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Arrière-plan dynamique avec aura de lumière */
+/* Arrière-plan chaleureux avec auras ambrées et marron */
 body::before {
   content: '';
   position: fixed;
@@ -66,7 +70,7 @@ body::before {
   left: 20vw;
   width: 60vw;
   height: 60vh;
-  background: radial-gradient(circle, rgba(0, 180, 216, 0.08) 0%, rgba(245, 166, 35, 0.05) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(166, 124, 82, 0.12) 0%, rgba(74, 44, 32, 0.08) 50%, transparent 70%);
   pointer-events: none;
   z-index: 0;
   filter: blur(80px);
@@ -79,7 +83,7 @@ body::after {
   right: 10vw;
   width: 50vw;
   height: 50vh;
-  background: radial-gradient(circle, rgba(245, 166, 35, 0.06) 0%, rgba(13, 22, 41, 0) 70%);
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.08) 0%, rgba(23, 20, 18, 0) 70%);
   pointer-events: none;
   z-index: 0;
   filter: blur(90px);
@@ -122,13 +126,14 @@ a {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #f5a623 0%, #ffbe42 100%);
-  color: #000;
-  box-shadow: 0 4px 20px rgba(245, 166, 35, 0.35);
+  background: linear-gradient(135deg, #d4af37 0%, #a67c52 100%);
+  color: #171412;
+  font-weight: 700;
+  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.35);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #ffbe42 0%, #f5a623 100%);
+  background: linear-gradient(135deg, #e5be48 0%, #b88b5d 100%);
   box-shadow: var(--shadow-glow-gold);
   transform: translateY(-2px);
 }
@@ -152,8 +157,8 @@ a {
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(242, 230, 213, 0.12);
+  border-color: rgba(242, 230, 213, 0.25);
   transform: translateY(-2px);
 }
 
@@ -171,7 +176,7 @@ a {
 }
 
 .glass-card:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(212, 175, 55, 0.3);
 }
 
 /* Badges de Statut */
@@ -188,40 +193,40 @@ a {
 }
 
 .status-draft {
-  background: rgba(148, 163, 184, 0.15);
-  color: #cbd5e1;
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(158, 141, 127, 0.18);
+  color: #dfcfb9;
+  border: 1px solid rgba(158, 141, 127, 0.35);
 }
 
 .status-hub {
-  background: rgba(0, 180, 216, 0.15);
-  color: #38bdf8;
-  border: 1px solid rgba(0, 180, 216, 0.3);
+  background: rgba(166, 124, 82, 0.2);
+  color: #F2E6D5;
+  border: 1px solid rgba(166, 124, 82, 0.45);
 }
 
 .status-transit {
-  background: rgba(245, 166, 35, 0.15);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 166, 35, 0.3);
+  background: rgba(212, 175, 55, 0.2);
+  color: #d4af37;
+  border: 1px solid rgba(212, 175, 55, 0.45);
 }
 
 .status-delivered {
-  background: rgba(16, 185, 129, 0.15);
+  background: rgba(16, 185, 129, 0.18);
   color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  border: 1px solid rgba(16, 185, 129, 0.35);
 }
 
 .status-incident {
-  background: rgba(244, 63, 94, 0.15);
+  background: rgba(224, 86, 86, 0.18);
   color: #fb7185;
-  border: 1px solid rgba(244, 63, 94, 0.3);
+  border: 1px solid rgba(224, 86, 86, 0.35);
 }
 
 /* Champs de formulaires */
 .input-field {
   width: 100%;
   padding: 14px 18px;
-  background: rgba(7, 12, 24, 0.8);
+  background: rgba(23, 20, 18, 0.85);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   color: var(--text-main);
@@ -233,7 +238,7 @@ a {
 
 .input-field:focus {
   border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.15);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.18);
 }
 
 .input-field::placeholder {
@@ -249,13 +254,13 @@ a {
   z-index: 1;
 }
 
-/* Animations légères */
+/* Animations douces */
 @keyframes pulseGlow {
   0%, 100% {
-    box-shadow: 0 0 15px rgba(245, 166, 35, 0.2);
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
   }
   50% {
-    box-shadow: 0 0 30px rgba(245, 166, 35, 0.45);
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.45);
   }
 }
 
