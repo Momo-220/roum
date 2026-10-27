@@ -1,0 +1,21 @@
+{
+  "name": "@roum/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Types, constantes, validations et utilitaires partagés entre l'API et le site ROUM_TRANSIT.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "vitest": "4.1.12"
+  }
+}

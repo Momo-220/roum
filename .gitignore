@@ -1,0 +1,35 @@
+# Dépendances
+node_modules/
+
+# Builds
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# Cloudflare Wrangler (base D1 locale, cache)
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Secrets / environnement
+.env
+.env.*
+!.env.example
+
+# Tests / couverture
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Système / éditeurs
+.DS_Store
+._*
+.idea/
+.vscode/*
+!.vscode/extensions.json
