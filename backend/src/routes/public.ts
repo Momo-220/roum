@@ -134,6 +134,8 @@ publicRouter.get("/tariffs", async (c) => {
       t.minimum_charge_minor,
       t.estimated_days_min,
       t.estimated_days_max,
+      t.category_tag,
+      t.note,
       sm.id as mode_id,
       sm.name as mode_name,
       sm.type as mode_type,

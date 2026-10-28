@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
-import { geoOrthographic, geoPath, geoInterpolate, geoDistance } from "d3-geo";
+import { createPortal } from "react-dom";
+import { geoOrthographic, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import worldData from "world-atlas/countries-110m.json";
 import {
@@ -14,9 +15,15 @@ import {
   RotateCcw,
   CheckCircle2,
   Package,
+  Maximize2,
+  Minimize2,
+  ZoomIn,
+  ZoomOut,
+  Globe,
 } from "lucide-react";
+import { CircularFlag } from "@/components/CircularFlag";
 
-// Types
+// Types des transactions logistiques
 export interface TransactionRoute {
   id: string;
   tracking_number: string;
@@ -29,66 +36,120 @@ export interface TransactionRoute {
   dest_country: string;
   dest_lon: number;
   dest_lat: number;
-  status_category: "IN_TRANSIT" | "DELIVERED" | "PENDING_HUB";
+  status_category: "IN_TRANSIT" | "DELIVERED" | "PREPARATION";
   status_label: string;
   mode: "AIR" | "SEA";
   weight_kg?: number;
   volume_cbm?: number;
 }
 
-interface RouteGlobeProps {
+export interface RouteGlobeProps {
   shipments?: any[];
   className?: string;
-  onSelectShipment?: (shipment: any) => void;
+  isSidebarCollapsed?: boolean;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
+  onSelectShipment?: (shipment: TransactionRoute) => void;
+  selectedShipmentId?: string | null;
+  focusTarget?: { lon: number; lat: number } | null;
+  onClearSelection?: () => void;
 }
 
-// Couleurs sobres & luxueuses selon la charte ROUM TRANSIT
+// Couleurs sobres & lumineuses selon la charte ROUM TRANSIT
 const THEME = {
-  // Fond et contours de la sphère
   globeBase: "#FAF6F0",
   globeBorder: "#D8CEBE",
-  globeShadow: "rgba(59, 34, 24, 0.05)",
-  graticule: "rgba(166, 124, 82, 0.12)",
 
-  // Continents et pays
+  // Continents et pays réels
   landFill: "#EBE3D7",
   landStroke: "#D2C5B4",
   countryStroke: "#DDD3C6",
 
-  // 1. Transactions EN COURS (In Transit) : Marron/Ambre dynamique
+  // 1. Transactions EN TRANSIT (Ambre dynamique)
   inTransit: {
     arc: "#B4652A",
-    comet: "#D97706",
+    comet: "#EA580C",
     pin: "#B4652A",
-    pulse: "rgba(217, 119, 6, 0.6)",
   },
 
-  // 2. Transactions FAITES / LIVRÉES (Delivered) : Vert sauge sobre
+  // 2. Transactions LIVRÉES (Vert sauge profond)
   delivered: {
     arc: "#2E7D4E",
-    comet: "#4E9B68",
+    comet: "#10B981",
     pin: "#2E7D4E",
-    pulse: "rgba(46, 125, 78, 0.4)",
   },
 
-  // 3. Transactions EN PRÉPARATION / HUB (Pending) : Marron-beige doux
-  pendingHub: {
-    arc: "#8D6346",
-    comet: "#A67C52",
-    pin: "#8D6346",
-    pulse: "rgba(141, 99, 70, 0.4)",
+  // 3. Transactions EN PRÉPARATION (Bleu royal éclatant selon demande utilisateur)
+  preparation: {
+    arc: "#2563EB",
+    comet: "#60A5FA",
+    pin: "#1D4ED8",
   },
 
-  // Hubs principaux
+  // Hubs principaux d'expédition (Chine, Dubaï, Maroc)
   hubOrigin: {
     pin: "#3B2218",
-    ring: "rgba(59, 34, 24, 0.5)",
+    ring: "rgba(59, 34, 24, 0.45)",
   },
 };
 
-// Données géographiques pré-extraites (Natural Earth 110m)
+// Données cartographiques vectorielles
 const worldLand = feature(worldData as any, (worldData as any).objects.land);
 const worldCountries = feature(worldData as any, (worldData as any).objects.countries);
+
+// Primitives 3D mathématiques
+export type Vec3 = [number, number, number];
+const RAD = Math.PI / 180;
+
+export function toVec(lon: number, lat: number): Vec3 {
+  const phi = lat * RAD;
+  const lam = lon * RAD;
+  return [
+    Math.cos(phi) * Math.sin(lam),
+    Math.sin(phi),
+    Math.cos(phi) * Math.cos(lam),
+  ];
+}
+
+export function rotate(v: Vec3, yaw: number, tilt: number): Vec3 {
+  // Rotation 1 : axe polaire vertical (Y) selon yaw
+  const cosY = Math.cos(yaw);
+  const sinY = Math.sin(yaw);
+  const x1 = v[0] * cosY + v[2] * sinY;
+  const y1 = v[1];
+  const z1 = -v[0] * sinY + v[2] * cosY;
+
+  // Rotation 2 : axe transversal (X) selon tilt
+  const cosT = Math.cos(tilt);
+  const sinT = Math.sin(tilt);
+  const x2 = x1;
+  const y2 = y1 * cosT - z1 * sinT;
+  const z2 = y1 * sinT + z1 * cosT;
+
+  return [x2, y2, z2];
+}
+
+export function slerp(a: Vec3, b: Vec3, t: number): Vec3 {
+  const dot = Math.max(-1, Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]));
+  const theta = Math.acos(dot);
+  if (theta < 0.0001) return a;
+  const sinTheta = Math.sin(theta);
+  const w1 = Math.sin((1 - t) * theta) / sinTheta;
+  const w2 = Math.sin(t * theta) / sinTheta;
+  return [
+    w1 * a[0] + w2 * b[0],
+    w1 * a[1] + w2 * b[1],
+    w1 * a[2] + w2 * b[2],
+  ];
+}
+
+function isRouteSelected(route: TransactionRoute, targetId: string | null | undefined): boolean {
+  if (!targetId) return false;
+  const t = String(targetId).trim().toLowerCase();
+  const rId = String(route.id).trim().toLowerCase();
+  const rTrack = String(route.tracking_number).trim().toLowerCase();
+  return rId === t || rTrack === t || t.includes(rTrack) || rTrack.includes(t);
+}
 
 // Hubs connus pour mapping automatique
 const KNOWN_HUBS: Record<string, { lon: number; lat: number; country: string; name: string }> = {
@@ -97,6 +158,8 @@ const KNOWN_HUBS: Record<string, { lon: number; lat: number; country: string; na
   Dubaï: { lon: 55.27, lat: 25.20, country: "Émirats", name: "Dubaï" },
   Dubai: { lon: 55.27, lat: 25.20, country: "Émirats", name: "Dubaï" },
   Casablanca: { lon: -7.59, lat: 33.57, country: "Maroc", name: "Casablanca" },
+  Paris: { lon: 2.35, lat: 48.85, country: "France", name: "Paris" },
+  Abidjan: { lon: -4.01, lat: 5.36, country: "Côte d'Ivoire", name: "Abidjan" },
 };
 
 const KNOWN_DESTS: Record<string, { lon: number; lat: number; country: string; name: string }> = {
@@ -108,10 +171,13 @@ const KNOWN_DESTS: Record<string, { lon: number; lat: number; country: string; n
   Lome: { lon: 1.22, lat: 6.13, country: "Togo", name: "Lomé" },
   Cotonou: { lon: 2.42, lat: 6.37, country: "Bénin", name: "Cotonou" },
   Douala: { lon: 9.77, lat: 4.05, country: "Cameroun", name: "Douala" },
+  Ouagadougou: { lon: -1.52, lat: 12.37, country: "Burkina Faso", name: "Ouagadougou" },
+  Libreville: { lon: 9.45, lat: 0.39, country: "Gabon", name: "Libreville" },
+  Paris: { lon: 2.35, lat: 48.85, country: "France", name: "Paris" },
 };
 
-// Données réalistes par défaut
-const DEFAULT_ROUTES: TransactionRoute[] = [
+// 15 Transactions de référence synchronisées avec la console
+const DEFAULT_FALLBACK_ROUTES: TransactionRoute[] = [
   {
     id: "tx-1",
     tracking_number: "RM-AIR-2610-K8P9Q2",
@@ -168,6 +234,78 @@ const DEFAULT_ROUTES: TransactionRoute[] = [
   },
   {
     id: "tx-4",
+    tracking_number: "RM-AIR-2610-P7L2M8",
+    client_name: "Boubacar Cissé",
+    origin_name: "Casablanca",
+    origin_country: "Maroc",
+    origin_lon: -7.59,
+    origin_lat: 33.57,
+    dest_name: "Conakry",
+    dest_country: "Guinée",
+    dest_lon: -13.68,
+    dest_lat: 9.54,
+    status_category: "IN_TRANSIT",
+    status_label: "En transit Casablanca → Conakry",
+    mode: "AIR",
+    weight_kg: 28.0,
+    volume_cbm: 0.18,
+  },
+  {
+    id: "tx-5",
+    tracking_number: "RM-AIR-2610-Q9HLSS",
+    client_name: "Oumar Sidibé",
+    origin_name: "Guangzhou",
+    origin_country: "Chine",
+    origin_lon: 113.26,
+    origin_lat: 23.13,
+    dest_name: "Bamako",
+    dest_country: "Mali",
+    dest_lon: -8.00,
+    dest_lat: 12.64,
+    status_category: "IN_TRANSIT",
+    status_label: "En cours d'acheminement",
+    mode: "AIR",
+    weight_kg: 14.5,
+    volume_cbm: 0.09,
+  },
+  {
+    id: "tx-6",
+    tracking_number: "RM-SEA-2610-C5D6E7",
+    client_name: "Fanta Coulibaly",
+    origin_name: "Yiwu",
+    origin_country: "Chine",
+    origin_lon: 120.07,
+    origin_lat: 29.30,
+    dest_name: "Lomé",
+    dest_country: "Togo",
+    dest_lon: 1.22,
+    dest_lat: 6.13,
+    status_category: "IN_TRANSIT",
+    status_label: "En mer (Conteneur LCL)",
+    mode: "SEA",
+    weight_kg: 310.0,
+    volume_cbm: 2.1,
+  },
+  {
+    id: "tx-7",
+    tracking_number: "RM-AIR-2610-W2X3Y4",
+    client_name: "Mamadou Camara",
+    origin_name: "Dubaï",
+    origin_country: "Émirats",
+    origin_lon: 55.27,
+    origin_lat: 25.20,
+    dest_name: "Bamako",
+    dest_country: "Mali",
+    dest_lon: -8.00,
+    dest_lat: 12.64,
+    status_category: "IN_TRANSIT",
+    status_label: "En vol Dubaï → Bamako",
+    mode: "AIR",
+    weight_kg: 25.0,
+    volume_cbm: 0.16,
+  },
+  {
+    id: "tx-8",
     tracking_number: "RM-AIR-2610-B1C2D3",
     client_name: "Moussa Konaté",
     origin_name: "Guangzhou",
@@ -179,33 +317,15 @@ const DEFAULT_ROUTES: TransactionRoute[] = [
     dest_lon: -8.00,
     dest_lat: 12.64,
     status_category: "DELIVERED",
-    status_label: "Livré en boutique",
+    status_label: "Livré en boutique Bamako",
     mode: "AIR",
     weight_kg: 22.0,
     volume_cbm: 0.15,
   },
   {
-    id: "tx-5",
+    id: "tx-9",
     tracking_number: "RM-SEA-2610-E5F6G7",
     client_name: "Awa Sanogo",
-    origin_name: "Casablanca",
-    origin_country: "Maroc",
-    origin_lon: -7.59,
-    origin_lat: 33.57,
-    dest_name: "Conakry",
-    dest_country: "Guinée",
-    dest_lon: -13.68,
-    dest_lat: 9.54,
-    status_category: "DELIVERED",
-    status_label: "Livré au port de Conakry",
-    mode: "SEA",
-    weight_kg: 180.0,
-    volume_cbm: 1.4,
-  },
-  {
-    id: "tx-6",
-    tracking_number: "RM-AIR-2610-H8J9K0",
-    client_name: "Ousmane Fofana",
     origin_name: "Casablanca",
     origin_country: "Maroc",
     origin_lon: -7.59,
@@ -214,61 +334,187 @@ const DEFAULT_ROUTES: TransactionRoute[] = [
     dest_country: "Mali",
     dest_lon: -8.00,
     dest_lat: 12.64,
-    status_category: "PENDING_HUB",
-    status_label: "Réceptionné au Hub Casa",
+    status_category: "DELIVERED",
+    status_label: "Livré en agence Bamako",
+    mode: "SEA",
+    weight_kg: 180.0,
+    volume_cbm: 1.4,
+  },
+  {
+    id: "tx-10",
+    tracking_number: "RM-AIR-2610-Y9Z1A2",
+    client_name: "Seydou Keita",
+    origin_name: "Dubaï",
+    origin_country: "Émirats",
+    origin_lon: 55.27,
+    origin_lat: 25.20,
+    dest_name: "Abidjan",
+    dest_country: "Côte d'Ivoire",
+    dest_lon: -4.01,
+    dest_lat: 5.36,
+    status_category: "DELIVERED",
+    status_label: "Livré à Abidjan",
+    mode: "AIR",
+    weight_kg: 45.0,
+    volume_cbm: 0.32,
+  },
+  {
+    id: "tx-11",
+    tracking_number: "RM-AIR-2610-D4E5F6",
+    client_name: "Mariam Bamba",
+    origin_name: "Guangzhou",
+    origin_country: "Chine",
+    origin_lon: 113.26,
+    origin_lat: 23.13,
+    dest_name: "Abidjan",
+    dest_country: "Côte d'Ivoire",
+    dest_lon: -4.01,
+    dest_lat: 5.36,
+    status_category: "DELIVERED",
+    status_label: "Livré au client",
+    mode: "AIR",
+    weight_kg: 16.0,
+    volume_cbm: 0.11,
+  },
+  {
+    id: "tx-12",
+    tracking_number: "RM-AIR-2610-T7U8V9",
+    client_name: "Sékou Touré",
+    origin_name: "Casablanca",
+    origin_country: "Maroc",
+    origin_lon: -7.59,
+    origin_lat: 33.57,
+    dest_name: "Dakar",
+    dest_country: "Sénégal",
+    dest_lon: -17.47,
+    dest_lat: 14.71,
+    status_category: "DELIVERED",
+    status_label: "Remis en main propre",
+    mode: "AIR",
+    weight_kg: 31.0,
+    volume_cbm: 0.22,
+  },
+  {
+    id: "tx-13",
+    tracking_number: "RM-AIR-2610-H8J9K0",
+    client_name: "Fatoumata Diarra",
+    origin_name: "Guangzhou",
+    origin_country: "Chine",
+    origin_lon: 113.26,
+    origin_lat: 23.13,
+    dest_name: "Conakry",
+    dest_country: "Guinée",
+    dest_lon: -13.68,
+    dest_lat: 9.54,
+    status_category: "DELIVERED",
+    status_label: "Livré à Conakry",
+    mode: "AIR",
+    weight_kg: 19.5,
+    volume_cbm: 0.13,
+  },
+  {
+    id: "tx-14",
+    tracking_number: "RM-AIR-2610-N1P2Q3",
+    client_name: "Adama Koné",
+    origin_name: "Guangzhou",
+    origin_country: "Chine",
+    origin_lon: 113.26,
+    origin_lat: 23.13,
+    dest_name: "Bamako",
+    dest_country: "Mali",
+    dest_lon: -8.00,
+    dest_lat: 12.64,
+    status_category: "PREPARATION",
+    status_label: "Reçu au hub de Guangzhou",
     mode: "AIR",
     weight_kg: 12.0,
     volume_cbm: 0.08,
   },
   {
-    id: "tx-7",
-    tracking_number: "RM-AIR-2610-L1M2N3",
-    client_name: "Fatoumata Barry",
+    id: "tx-15",
+    tracking_number: "RM-SEA-2610-S4T5U6",
+    client_name: "Salif Traoré",
     origin_name: "Yiwu",
     origin_country: "Chine",
     origin_lon: 120.07,
     origin_lat: 29.30,
-    dest_name: "Lomé",
-    dest_country: "Togo",
-    dest_lon: 1.22,
-    dest_lat: 6.13,
-    status_category: "PENDING_HUB",
-    status_label: "Groupage en cours Yiwu",
-    mode: "AIR",
-    weight_kg: 45.0,
-    volume_cbm: 0.3,
+    dest_name: "Abidjan",
+    dest_country: "Côte d'Ivoire",
+    dest_lon: -4.01,
+    dest_lat: 5.36,
+    status_category: "PREPARATION",
+    status_label: "Empotage conteneur à Yiwu",
+    mode: "SEA",
+    weight_kg: 250.0,
+    volume_cbm: 1.8,
   },
 ];
 
-export function RouteGlobe({ shipments = [], className = "", onSelectShipment }: RouteGlobeProps) {
+export function RouteGlobe({
+  shipments,
+  className = "",
+  isSidebarCollapsed = false,
+  isExpanded: controlledExpanded,
+  onToggleExpand,
+  onSelectShipment,
+  selectedShipmentId,
+  focusTarget,
+  onClearSelection,
+}: RouteGlobeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // État du filtre (Toutes, En transit, Livrées, Au Hub)
-  const [filter, setFilter] = useState<"ALL" | "IN_TRANSIT" | "DELIVERED" | "PENDING_HUB">("ALL");
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  // Hover interactif sur un point ou arc
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const isExpanded = controlledExpanded !== undefined ? controlledExpanded : internalExpanded;
+
+  const handleToggleExpand = useCallback(() => {
+    if (onToggleExpand) {
+      onToggleExpand();
+    } else {
+      setInternalExpanded((prev) => !prev);
+    }
+  }, [onToggleExpand]);
+
+  const [filter, setFilter] = useState<"ALL" | "IN_TRANSIT" | "DELIVERED" | "PREPARATION">("ALL");
+
   const [hoveredRoute, setHoveredRoute] = useState<{
     route: TransactionRoute;
     x: number;
     y: number;
   } | null>(null);
 
-  // Conversion dynamique des expéditions réelles
+  // Touche Échap pour quitter le plein écran
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isExpanded) {
+        handleToggleExpand();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isExpanded, handleToggleExpand]);
+
+  // Synchronisation dynamique des expéditions
   const routesData = useMemo<TransactionRoute[]>(() => {
-    if (!shipments || shipments.length === 0) {
-      return DEFAULT_ROUTES;
+    const list = shipments || [];
+    if (list.length === 0) {
+      return DEFAULT_FALLBACK_ROUTES;
     }
 
-    const parsed: TransactionRoute[] = shipments.map((s, idx) => {
-      // Détermination origine
+    return list.map((s: any, idx: number) => {
       let origin = KNOWN_HUBS.Guangzhou;
-      const origStr = (s.origin_hub || s.origin_country || "").toLowerCase();
+      const origStr = (s.origin_hub || s.origin_city || s.origin_country || "").toLowerCase();
       if (origStr.includes("yiwu")) origin = KNOWN_HUBS.Yiwu;
       else if (origStr.includes("duba") || origStr.includes("dxb")) origin = KNOWN_HUBS["Dubaï"];
       else if (origStr.includes("casa") || origStr.includes("maroc")) origin = KNOWN_HUBS.Casablanca;
+      else if (origStr.includes("paris") || origStr.includes("france")) origin = KNOWN_HUBS.Paris;
+      else if (origStr.includes("abidjan") || origStr.includes("ivoire")) origin = KNOWN_HUBS.Abidjan;
 
-      // Détermination destination
       let dest = KNOWN_DESTS.Bamako;
       const destStr = (s.destination_city || s.destination_country || "").toLowerCase();
       if (destStr.includes("abidjan") || destStr.includes("ivoire")) dest = KNOWN_DESTS.Abidjan;
@@ -277,16 +523,31 @@ export function RouteGlobe({ shipments = [], className = "", onSelectShipment }:
       else if (destStr.includes("lome") || destStr.includes("lomé") || destStr.includes("togo")) dest = KNOWN_DESTS["Lomé"];
       else if (destStr.includes("cotonou") || destStr.includes("benin") || destStr.includes("bénin")) dest = KNOWN_DESTS.Cotonou;
       else if (destStr.includes("douala") || destStr.includes("cameroun")) dest = KNOWN_DESTS.Douala;
+      else if (destStr.includes("ouaga") || destStr.includes("burkina")) dest = KNOWN_DESTS.Ouagadougou;
+      else if (destStr.includes("libreville") || destStr.includes("gabon")) dest = KNOWN_DESTS.Libreville;
+      else if (destStr.includes("paris") || destStr.includes("france")) dest = KNOWN_DESTS.Paris;
 
-      // Catégorie de statut
-      let category: "IN_TRANSIT" | "DELIVERED" | "PENDING_HUB" = "IN_TRANSIT";
-      if (s.status === "DELIVERED") category = "DELIVERED";
-      else if (s.status === "RECEIVED_AT_HUB" || s.status === "DRAFT") category = "PENDING_HUB";
+      const rawStatus = (s.current_status || s.status || s.status_code || "").toUpperCase();
+      let category: "IN_TRANSIT" | "DELIVERED" | "PREPARATION" = "IN_TRANSIT";
+      if (rawStatus === "DELIVERED" || rawStatus.includes("LIVR")) {
+        category = "DELIVERED";
+      } else if (
+        rawStatus === "RECEIVED_AT_HUB" ||
+        rawStatus === "DRAFT" ||
+        rawStatus === "IN_PREPARATION" ||
+        rawStatus === "PREPARATION" ||
+        rawStatus.includes("HUB") ||
+        rawStatus.includes("PREPAR")
+      ) {
+        category = "PREPARATION";
+      } else {
+        category = "IN_TRANSIT";
+      }
 
       return {
-        id: s.id || `sh-${idx}`,
-        tracking_number: s.tracking_number || `RM-${idx}`,
-        client_name: s.client_name || s.client?.full_name || "Client",
+        id: String(s.id || `sh-${idx}`),
+        tracking_number: String(s.tracking_number || `RM-${idx}`),
+        client_name: s.client_name || s.client?.full_name || "Client Partenaire",
         origin_name: origin.name,
         origin_country: origin.country,
         origin_lon: origin.lon,
@@ -296,55 +557,123 @@ export function RouteGlobe({ shipments = [], className = "", onSelectShipment }:
         dest_lon: dest.lon,
         dest_lat: dest.lat,
         status_category: category,
-        status_label: s.status_label || s.status || "Expédition",
-        mode: s.shipping_mode === "SEA" ? "SEA" : "AIR",
-        weight_kg: Number(s.chargeable_weight_kg || s.weight_kg || 15),
-        volume_cbm: Number(s.volume_cbm || 0.1),
+        status_label:
+          s.status_label ||
+          (category === "IN_TRANSIT"
+            ? "En cours d'acheminement"
+            : category === "DELIVERED"
+            ? "Livré au destinataire"
+            : "Réceptionné en agence"),
+        mode: s.shipping_mode === "SEA" || (s.shipping_mode_name || "").includes("Maritime") ? "SEA" : "AIR",
+        weight_kg: Number(s.chargeable_weight_kg || s.weight_kg || s.total_weight_kg || 15),
+        volume_cbm: Number(s.volume_cbm || s.total_volume_cbm || 0.1),
       };
     });
-
-    return parsed;
   }, [shipments]);
 
-  // Filtrage
   const visibleRoutes = useMemo(() => {
     if (filter === "ALL") return routesData;
     return routesData.filter((r) => r.status_category === filter);
   }, [routesData, filter]);
 
-  // Statistiques de comptage pour les pills
   const counts = useMemo(() => {
     return {
       all: routesData.length,
       inTransit: routesData.filter((r) => r.status_category === "IN_TRANSIT").length,
       delivered: routesData.filter((r) => r.status_category === "DELIVERED").length,
-      pendingHub: routesData.filter((r) => r.status_category === "PENDING_HUB").length,
+      preparation: routesData.filter((r) => r.status_category === "PREPARATION").length,
     };
   }, [routesData]);
 
-  // État de rotation du globe
+  const [zoomPercent, setZoomPercent] = useState(100);
+
+  // État de rotation avec physique continue fluide (Inertie & Lissage)
   const stateRef = useRef({
-    yaw: 20, // degrés
-    tilt: -12, // degrés
-    targetYaw: 20,
-    targetTilt: -12,
-    vx: 0,
+    yaw: 20 * RAD, // radians
+    tilt: 18 * RAD, // radians
+    targetYaw: 20 * RAD,
+    targetTilt: 18 * RAD,
+    zoom: 1.0,
+    targetZoom: 1.0,
     vy: 0,
-    isDragging: false,
-    lastX: 0,
-    lastY: 0,
-    lastTime: performance.now(),
-    lastInteraction: performance.now(),
+    vt: 0,
+    drag: false,
+    hasDragged: false,
+    hasActiveTarget: false,
+    isHoveringGlobe: false,
+    px: 0,
+    py: 0,
+    last: 0,
   });
 
-  // Fonction pour animer vers une région spécifique
-  const focusRegion = useCallback((targetYaw: number, targetTilt: number) => {
-    stateRef.current.targetYaw = targetYaw;
-    stateRef.current.targetTilt = targetTilt;
-    stateRef.current.lastInteraction = performance.now() + 5000; // Suspend l'auto-rotation
+  const routesRef = useRef(visibleRoutes);
+  routesRef.current = visibleRoutes;
+
+  const selectedShipmentRef = useRef(selectedShipmentId);
+  selectedShipmentRef.current = selectedShipmentId;
+
+  const onSelectShipmentRef = useRef(onSelectShipment);
+  onSelectShipmentRef.current = onSelectShipment;
+
+  const hoveredRouteRef = useRef<{
+    route: TransactionRoute;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const isExpandedRef = useRef(isExpanded);
+  isExpandedRef.current = isExpanded;
+
+  // Animation douce vers une région
+  const focusRegion = useCallback((targetYawRad: number, targetTiltRad: number) => {
+    const curYaw = stateRef.current.yaw;
+    const twoPi = Math.PI * 2;
+    const diff = ((targetYawRad - curYaw) % twoPi + Math.PI * 3) % twoPi - Math.PI;
+    stateRef.current.targetYaw = curYaw + diff;
+    stateRef.current.targetTilt = Math.max(-0.85, Math.min(0.85, targetTiltRad));
+    stateRef.current.vy = 0;
+    stateRef.current.vt = 0;
+    stateRef.current.hasActiveTarget = true;
   }, []);
 
-  // Animation Loop avec Canvas 2D
+  // Centrage automatique sur le point médian géodésique du colis sélectionné
+  useEffect(() => {
+    if (focusTarget) {
+      focusRegion(focusTarget.lon * RAD, focusTarget.lat * RAD);
+    } else if (selectedShipmentId) {
+      const match = routesData.find((r) => isRouteSelected(r, selectedShipmentId));
+      if (match) {
+        const vA = toVec(match.origin_lon, match.origin_lat);
+        const vB = toVec(match.dest_lon, match.dest_lat);
+        const vMid = slerp(vA, vB, 0.5);
+        const [midX, midY, midZ] = vMid;
+        const midLon = Math.atan2(midX, midZ);
+        const midLat = Math.asin(Math.max(-1, Math.min(1, midY)));
+        // Oriente la face caméra vers ce point médian
+        focusRegion(midLon, midLat * 0.5);
+      }
+    } else {
+      stateRef.current.hasActiveTarget = false;
+    }
+  }, [selectedShipmentId, focusTarget, routesData, focusRegion]);
+
+  const adjustZoom = useCallback((factor: number) => {
+    const nextZoom = Math.max(0.45, Math.min(3.5, stateRef.current.targetZoom * factor));
+    stateRef.current.targetZoom = nextZoom;
+    setZoomPercent(Math.round(nextZoom * 100));
+  }, []);
+
+  const resetGlobe = useCallback(() => {
+    focusRegion(20 * RAD, 18 * RAD);
+    stateRef.current.targetZoom = 1.0;
+    stateRef.current.hasActiveTarget = false;
+    setZoomPercent(100);
+    if (onClearSelection) {
+      onClearSelection();
+    }
+  }, [focusRegion, onClearSelection]);
+
+  // Canvas render loop
   useEffect(() => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
@@ -355,12 +684,14 @@ export function RouteGlobe({ shipments = [], className = "", onSelectShipment }:
 
     let animId = 0;
     let isAlive = true;
+    let t0 = performance.now();
 
-    // Prise en charge du resize
     const resizeCanvas = () => {
+      if (!container || !canvas) return;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = container.clientWidth;
-      const h = container.clientHeight || 520;
+      const h = container.clientHeight || 500;
+      if (w <= 0 || h <= 0) return;
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
     };
@@ -369,368 +700,493 @@ export function RouteGlobe({ shipments = [], className = "", onSelectShipment }:
     const ro = new ResizeObserver(resizeCanvas);
     ro.observe(container);
 
-    // Boucle de rendu
-    const render = (timestamp: number) => {
+    const project = (
+      v: Vec3,
+      lift: number,
+      r: number,
+      cx: number,
+      cy: number,
+      yaw: number,
+      tilt: number
+    ) => {
+      const [x, y, z] = rotate(v, yaw, tilt);
+      return { x: cx + x * r * lift, y: cy - y * r * lift, z };
+    };
+
+    const draw = (now: number) => {
       if (!isAlive) return;
 
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = container.clientWidth;
-      const h = container.clientHeight || 520;
+      const h = container.clientHeight || 500;
+
+      if (w <= 20 || h <= 20) {
+        animId = requestAnimationFrame(draw);
+        return;
+      }
+
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
 
       const st = stateRef.current;
-      const dt = Math.min((timestamp - st.lastTime) / 1000, 0.05);
-      st.lastTime = timestamp;
+      const dt = st.last ? Math.min(0.05, (now - st.last) / 1000) : 0.016;
+      st.last = now;
 
-      // Inertie ou retour fluide
-      if (!st.isDragging) {
-        // Rapprochement doux vers la cible demandée si focusRegion
-        const diffYaw = st.targetYaw - st.yaw;
+      // 1. ROTATION CONTINUE SEREINE ET PHYSIQUE FLUIDE
+      if (st.drag) {
+        // En cours de glissement
+      } else if (st.hasActiveTarget) {
+        const twoPi = Math.PI * 2;
+        const diffYaw = ((st.targetYaw - st.yaw) % twoPi + Math.PI * 3) % twoPi - Math.PI;
         const diffTilt = st.targetTilt - st.tilt;
 
-        if (Math.abs(diffYaw) > 0.1 || Math.abs(diffTilt) > 0.1) {
-          st.yaw += diffYaw * Math.min(dt * 4, 0.2);
-          st.tilt += diffTilt * Math.min(dt * 4, 0.2);
+        if (Math.abs(diffYaw) > 0.005 || Math.abs(diffTilt) > 0.005) {
+          st.yaw += diffYaw * Math.min(dt * 5, 0.25);
+          st.tilt += diffTilt * Math.min(dt * 5, 0.25);
         } else {
-          // Décélération inertielle
-          st.yaw += st.vx * dt;
-          st.tilt += st.vy * dt;
-          st.vx *= Math.pow(0.08, dt);
-          st.vy *= Math.pow(0.08, dt);
-
-          // Rotation automatique lente après 2.5s d'inactivité
-          if (timestamp - st.lastInteraction > 2500) {
-            st.yaw -= dt * 6; // 6 degrés par seconde
-            st.targetYaw = st.yaw;
-          }
+          st.hasActiveTarget = false;
         }
+      } else if (st.isHoveringGlobe) {
+        // LE CURSEUR EST SUR LE GLOBE : IL S'ARRÊTE SANS GLITCH !
+        st.targetYaw = st.yaw;
+        st.vy *= Math.pow(0.01, dt);
+        st.vt *= Math.pow(0.01, dt);
+      } else {
+        // Rotation lente continue quand le curseur n'est PAS sur le globe
+        st.yaw += dt * 0.06;
+        st.targetYaw = st.yaw;
 
-        // Limites de tilt vertical
-        st.tilt = Math.max(-50, Math.min(50, st.tilt));
-        st.targetTilt = Math.max(-50, Math.min(50, st.targetTilt));
+        st.yaw += st.vy * dt;
+        st.tilt += st.vt * dt;
+        st.vy *= Math.pow(0.05, dt);
+        st.vt *= Math.pow(0.05, dt);
+
+        st.tilt = Math.max(
+          -0.85,
+          Math.min(0.85, st.tilt + (18 * RAD - st.tilt) * Math.min(1, dt * 0.4))
+        );
       }
 
-      // Configuration de la projection d3-geo Orthographic
-      const radius = Math.min(w, h) * 0.42;
+      // Lissage du zoom
+      const diffZoom = st.targetZoom - st.zoom;
+      if (Math.abs(diffZoom) > 0.003) {
+        st.zoom += diffZoom * Math.min(dt * 8, 0.25);
+      } else {
+        st.zoom = st.targetZoom;
+      }
+
+      // 2. TAILLE NORMALE PARFAITEMENT PROPORTIONNÉE (Non coupée, non trop zoomée)
+      // En mode agrandi, 0.35 permet d'avoir le globe 100% visible avec marges élégantes
+      const baseRadius = Math.min(w, h) * (isExpandedRef.current ? 0.34 : 0.35);
+      const r = baseRadius * st.zoom;
       const cx = w / 2;
       const cy = h / 2;
 
+      // Dessin des continents Natural Earth synchronisés avec rotate
+      // Conversion yaw (rad) -> rotation D3 lambda/phi
+      const d3Yaw = (st.yaw / RAD);
+      const d3Tilt = (-st.tilt / RAD);
+
       const projection = geoOrthographic()
-        .scale(radius)
+        .scale(r)
         .translate([cx, cy])
-        .rotate([st.yaw, st.tilt, 0])
-        .clipAngle(90); // Rendu strict de l'hémisphère visible
+        .rotate([d3Yaw, d3Tilt, 0])
+        .clipAngle(90);
 
       const geoPathGen = geoPath(projection, ctx);
 
-      // 1. DESSIN DE LA SPHÈRE DE FOND (Océans sobres)
+      // Fond de la planète
       ctx.save();
       ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.fillStyle = THEME.globeBase;
       ctx.fill();
 
-      // Ombrage radial discret pour donner un volume 3D doux
+      // Halo 3D doux
       const gradient = ctx.createRadialGradient(
-        cx - radius * 0.3,
-        cy - radius * 0.3,
-        radius * 0.2,
+        cx - r * 0.3,
+        cy - r * 0.3,
+        r * 0.15,
         cx,
         cy,
-        radius
+        r
       );
-      gradient.addColorStop(0, "rgba(255, 255, 255, 0.6)");
-      gradient.addColorStop(0.7, "rgba(250, 246, 240, 0)");
+      gradient.addColorStop(0, "rgba(255, 255, 255, 0.7)");
+      gradient.addColorStop(0.75, "rgba(250, 246, 240, 0)");
       gradient.addColorStop(1, "rgba(59, 34, 24, 0.08)");
       ctx.fillStyle = gradient;
       ctx.fill();
 
-      // Bordure fine de la planète
       ctx.strokeStyle = THEME.globeBorder;
       ctx.lineWidth = 1.2;
       ctx.stroke();
       ctx.restore();
 
-      // 2. DESSIN DES CONTINENTS RÉELS & PAYS (Natural Earth)
+      // Continents & Pays
       ctx.save();
-      // Remplissage des terres
       ctx.beginPath();
       geoPathGen(worldLand as any);
       ctx.fillStyle = THEME.landFill;
       ctx.fill();
 
-      // Frontières des pays (vrais dessins géographiques)
       ctx.beginPath();
       geoPathGen(worldCountries as any);
       ctx.strokeStyle = THEME.countryStroke;
       ctx.lineWidth = 0.55;
       ctx.stroke();
 
-      // Contour extérieur des côtes
       ctx.beginPath();
       geoPathGen(worldLand as any);
       ctx.strokeStyle = THEME.landStroke;
-      ctx.lineWidth = 0.9;
+      ctx.lineWidth = 0.85;
       ctx.stroke();
       ctx.restore();
 
-      // 3. DESSIN DES ROUTES & TRANSACTIONS (Arcs géodésiques 3D)
-      const centerLon = -st.yaw;
-      const centerLat = -st.tilt;
-      const tSeconds = timestamp / 1000;
+      // 3. ANIMATION DES FLUX EXACTE DU CODE FOURNI PAR L'UTILISATEUR
+      const t = (now - t0) / 1000;
+      const currentRoutes = routesRef.current;
+      const activeSelectedId = selectedShipmentRef.current;
 
-      visibleRoutes.forEach((route, index) => {
-        const originCoord: [number, number] = [route.origin_lon, route.origin_lat];
-        const destCoord: [number, number] = [route.dest_lon, route.dest_lat];
+      ctx.lineCap = "round";
 
-        // Calcul des points interpolés le long du grand cercle
-        const interpolator = geoInterpolate(originCoord, destCoord);
-        const steps = 36;
-        const arcPoints: { x: number; y: number; isVisible: boolean }[] = [];
+      // Enregistrement des hubs distincts pour les anneaux respiratoires
+      const renderedHubs = new Set<string>();
 
-        // Altitude de l'arc (plus haut au milieu)
-        const distRad = geoDistance(originCoord, destCoord);
-        const arcHeight = Math.max(16, distRad * radius * 0.28);
+      currentRoutes.forEach((route, index) => {
+        const isSelected = isRouteSelected(route, activeSelectedId);
 
-        for (let s = 0; s <= steps; s++) {
-          const u = s / steps;
-          const pt = interpolator(u);
-
-          // Visibilité sur l'hémisphère avant
-          const dToCenter = geoDistance(pt, [centerLon, centerLat]);
-          const isVisible = dToCenter <= Math.PI / 2;
-
-          // Projection à la surface
-          const projected = projection(pt);
-          if (projected) {
-            // Surélévation 3D normale à la surface
-            const dx = projected[0] - cx;
-            const dy = projected[1] - cy;
-            const len = Math.hypot(dx, dy) || 1;
-            const lift = Math.sin(Math.PI * u) * arcHeight;
-
-            arcPoints.push({
-              x: projected[0] + (dx / len) * lift,
-              y: projected[1] + (dy / len) * lift,
-              isVisible,
-            });
-          }
+        // Si une expédition est centrée, on retire toutes les autres !
+        if (activeSelectedId && !isSelected) {
+          return;
         }
 
-        // Choix du style de couleur selon la catégorie de transaction (Demande audio 1)
         const colorPalette =
           route.status_category === "IN_TRANSIT"
             ? THEME.inTransit
             : route.status_category === "DELIVERED"
             ? THEME.delivered
-            : THEME.pendingHub;
+            : THEME.preparation;
 
-        // Tracé de l'arc
-        if (arcPoints.length > 1) {
-          ctx.save();
+        const H = toVec(route.origin_lon, route.origin_lat);
+        const V = toVec(route.dest_lon, route.dest_lat);
+
+        const ang = Math.acos(
+          Math.max(-1, Math.min(1, H[0] * V[0] + H[1] * V[1] + H[2] * V[2]))
+        );
+        // Légère variation orbitale par index pour que 2 colis sur la même ligne ne se superposent pas
+        const height = 0.06 + ang * 0.12 + (index % 3) * 0.02;
+
+        const pts: { x: number; y: number; z: number }[] = [];
+        for (let k = 0; k <= 48; k++) {
+          const u = k / 48;
+          pts.push(
+            project(
+              slerp(H, V, u),
+              1 + Math.sin(Math.PI * u) * height,
+              r,
+              cx,
+              cy,
+              st.yaw,
+              st.tilt
+            )
+          );
+        }
+
+        // L'ARC : discret lorsqu'il passe derrière le globe, rehaussé si survolé
+        const isHovered = hoveredRouteRef.current?.route.id === route.id;
+        ctx.strokeStyle = colorPalette.arc;
+        ctx.lineWidth = isHovered ? 2.0 : 1.1;
+        for (let k = 0; k < 48; k++) {
+          const a = pts[k],
+            b = pts[k + 1];
+          const hidden = a.z < 0 && Math.hypot(a.x - cx, a.y - cy) < r;
+          ctx.globalAlpha = hidden ? 0.05 : isHovered ? 0.95 : 0.38;
           ctx.beginPath();
-          ctx.lineWidth = route.status_category === "IN_TRANSIT" ? 1.5 : 1.1;
-          ctx.strokeStyle = colorPalette.arc;
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
 
-          for (let i = 0; i < arcPoints.length - 1; i++) {
-            const p1 = arcPoints[i];
-            const p2 = arcPoints[i + 1];
+        // LA COMÈTE / ÉTOILE FILANTE : tête brillante avec traînée effilée (code exact utilisateur)
+        const cycle = 3.6;
+        const routeOffset = isSelected ? 0 : (index / Math.max(1, currentRoutes.length));
+        const ph = (t / cycle + routeOffset) % 1;
+        const run = Math.min(1, ph / 0.7);
+        const head = Math.floor(run * 48);
 
-            // Arc discret si invisible
-            ctx.globalAlpha = p1.isVisible && p2.isVisible ? 0.65 : 0.08;
+        for (let k = Math.max(0, head - 10); k < head; k++) {
+          const a = pts[k],
+            b = pts[k + 1];
+          if (a.z < 0 && Math.hypot(a.x - cx, a.y - cy) < r) continue;
+          ctx.globalAlpha = (1 - (head - k) / 10) * 0.95;
+          ctx.lineWidth = 2.2;
+          ctx.strokeStyle = colorPalette.comet;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+
+        // PIN DE DESTINATION & PULSATION D'ARRIVÉE (code exact utilisateur)
+        const end = pts[48];
+        const front = end.z > 0;
+        if (front) {
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = colorPalette.comet;
+          ctx.beginPath();
+          ctx.arc(end.x, end.y, 2.6, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Pulsation d'arrivée à destination
+          if (ph > 0.7) {
+            const k = (ph - 0.7) / 0.3;
+            ctx.globalAlpha = 1 - k;
+            ctx.lineWidth = 1.4;
+            ctx.strokeStyle = colorPalette.comet;
             ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
+            ctx.arc(end.x, end.y, 3 + k * 16, 0, Math.PI * 2);
             ctx.stroke();
           }
-          ctx.restore();
+        }
 
-          // Comète animée (Uniquement pour transactions En Cours / In Transit)
-          if (route.status_category === "IN_TRANSIT") {
-            const cycle = 3.2; // secondes par trajet
-            const offset = (index * 0.35) % 1;
-            const progress = ((tSeconds / cycle + offset) % 1) / 0.8; // 80% trajet, 20% pause
-            const clampedProg = Math.min(1, Math.max(0, progress));
+        // LE HUB D'ORIGINE AVEC ANNEAU RESPIRATOIRE (code exact utilisateur)
+        if (!renderedHubs.has(route.origin_name)) {
+          renderedHubs.add(route.origin_name);
+          const h = project(H, 1, r, cx, cy, st.yaw, st.tilt);
+          if (h.z > 0) {
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = THEME.hubOrigin.pin;
+            ctx.beginPath();
+            ctx.arc(h.x, h.y, 3.8, 0, Math.PI * 2);
+            ctx.fill();
 
-            const headIdx = Math.floor(clampedProg * (arcPoints.length - 1));
-            const headPoint = arcPoints[headIdx];
-
-            if (headPoint && headPoint.isVisible) {
-              // Queue de la comète
-              const tailLength = 8;
-              for (let k = Math.max(0, headIdx - tailLength); k <= headIdx; k++) {
-                const pt = arcPoints[k];
-                if (!pt || !pt.isVisible) continue;
-                const alpha = (1 - (headIdx - k) / tailLength) * 0.9;
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(pt.x, pt.y, 1.8 + (1 - (headIdx - k) / tailLength) * 1.5, 0, Math.PI * 2);
-                ctx.fillStyle = colorPalette.comet;
-                ctx.globalAlpha = alpha;
-                ctx.fill();
-                ctx.restore();
-              }
-
-              // Pulsation à l'arrivée
-              if (clampedProg >= 0.95) {
-                const pulsePhase = (progress - 0.8) / 0.2;
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(headPoint.x, headPoint.y, 4 + pulsePhase * 14, 0, Math.PI * 2);
-                ctx.strokeStyle = colorPalette.comet;
-                ctx.lineWidth = 1.4;
-                ctx.globalAlpha = 1 - pulsePhase;
-                ctx.stroke();
-                ctx.restore();
-              }
-            }
+            // Anneau respiratoire
+            ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t * 3);
+            ctx.strokeStyle = THEME.hubOrigin.pin;
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.arc(h.x, h.y, 8.5, 0, Math.PI * 2);
+            ctx.stroke();
           }
-        }
-
-        // Marqueurs des Hubs et Destinations
-        const originProj = projection(originCoord);
-        if (originProj && geoDistance(originCoord, [centerLon, centerLat]) <= Math.PI / 2) {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(originProj[0], originProj[1], 3.8, 0, Math.PI * 2);
-          ctx.fillStyle = THEME.hubOrigin.pin;
-          ctx.fill();
-          ctx.strokeStyle = "#FFFFFF";
-          ctx.lineWidth = 1.2;
-          ctx.stroke();
-          ctx.restore();
-        }
-
-        const destProj = projection(destCoord);
-        if (destProj && geoDistance(destCoord, [centerLon, centerLat]) <= Math.PI / 2) {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(destProj[0], destProj[1], 3.5, 0, Math.PI * 2);
-          ctx.fillStyle = colorPalette.pin;
-          ctx.fill();
-          ctx.strokeStyle = "#FFFFFF";
-          ctx.lineWidth = 1;
-          ctx.stroke();
-          ctx.restore();
         }
       });
 
-      animId = requestAnimationFrame(render);
+      ctx.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
     };
 
-    animId = requestAnimationFrame(render);
+    animId = requestAnimationFrame(draw);
 
-    // Événements Pointer (Glisser pour faire tourner le globe)
-    const onPointerDown = (e: PointerEvent) => {
-      stateRef.current.isDragging = true;
-      stateRef.current.lastX = e.clientX;
-      stateRef.current.lastY = e.clientY;
-      stateRef.current.vx = 0;
-      stateRef.current.vy = 0;
-      stateRef.current.lastInteraction = performance.now();
+    // GESTION POINTER CONFORME AU CODE UTILISATEUR
+    const onDown = (e: PointerEvent) => {
       canvas.setPointerCapture(e.pointerId);
+      const st = stateRef.current;
+      st.drag = true;
+      st.hasDragged = false;
+      st.px = e.clientX;
+      st.py = e.clientY;
+      st.vy = st.vt = 0;
     };
 
-    const onPointerMove = (e: PointerEvent) => {
+    const onMove = (e: PointerEvent) => {
       const st = stateRef.current;
-      if (st.isDragging) {
-        const dx = e.clientX - st.lastX;
-        const dy = e.clientY - st.lastY;
-        st.lastX = e.clientX;
-        st.lastY = e.clientY;
+      const w = container.clientWidth;
+      const h = container.clientHeight || 500;
+      const baseRadius = Math.min(w, h) * (isExpandedRef.current ? 0.34 : 0.35);
+      const r = baseRadius * st.zoom;
+      const cx = w / 2;
+      const cy = h / 2;
 
-        // Sensibilité de rotation
-        const sens = 0.35;
-        st.yaw += dx * sens;
-        st.tilt = Math.max(-50, Math.min(50, st.tilt - dy * sens));
-        st.targetYaw = st.yaw;
-        st.targetTilt = st.tilt;
-
-        st.vx = dx * sens * 12;
-        st.vy = -dy * sens * 12;
-        st.lastInteraction = performance.now();
-        setHoveredRoute(null);
-        return;
-      }
-
-      // Détection de survol pour afficher les détails du colis/trajet
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
 
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = container.clientWidth;
-      const h = container.clientHeight || 520;
-      const radius = Math.min(w, h) * 0.42;
-      const cx = w / 2;
-      const cy = h / 2;
+      if (st.drag) {
+        const dx = e.clientX - st.px;
+        const dy = e.clientY - st.py;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+          st.hasDragged = true;
+        }
+        st.px = e.clientX;
+        st.py = e.clientY;
+        st.yaw += dx / r;
+        st.tilt = Math.max(-0.85, Math.min(0.85, st.tilt - dy / r));
+        st.vy = (dx / r) * 20;
+        st.vt = (-dy / r) * 20;
+        if (hoveredRouteRef.current) {
+          hoveredRouteRef.current = null;
+          setHoveredRoute(null);
+        }
+        return;
+      }
 
-      const proj = geoOrthographic()
-        .scale(radius)
-        .translate([cx, cy])
-        .rotate([st.yaw, st.tilt, 0])
-        .clipAngle(90);
+      // 1. Détection : Le curseur est-il sur la sphère du globe ?
+      const distFromCenter = Math.hypot(mouseX - cx, mouseY - cy);
+      const isOverGlobe = distFromCenter <= r * 1.02;
+      st.isHoveringGlobe = isOverGlobe;
 
-      const centerLon = -st.yaw;
-      const centerLat = -st.tilt;
+      // 2. Détection : Le curseur est-il spécifiquement sur un des FLUX ?
+      // Règle demandée :
+      // "dès que le curseur monte sur le globe, sur le globe hein pas sur un des flux, il s'arrête.
+      // Et c'est quand c'est sur un des flux qu'il affiche la description du flux."
+      let matched: TransactionRoute | null = null;
+      let hitX = mouseX;
+      let hitY = mouseY;
 
-      let found: TransactionRoute | null = null;
-      let foundX = 0;
-      let foundY = 0;
+      if (isOverGlobe) {
+        const currentRoutes = routesRef.current;
+        const activeSelectedId = selectedShipmentRef.current;
 
-      for (const route of visibleRoutes) {
-        const destCoord: [number, number] = [route.dest_lon, route.dest_lat];
-        if (geoDistance(destCoord, [centerLon, centerLat]) <= Math.PI / 2) {
-          const pt = proj(destCoord);
-          if (pt && Math.hypot(pt[0] - mouseX, pt[1] - mouseY) < 18) {
-            found = route;
-            foundX = pt[0];
-            foundY = pt[1];
+        for (let i = 0; i < currentRoutes.length; i++) {
+          const route = currentRoutes[i];
+          const isSelected = isRouteSelected(route, activeSelectedId);
+          if (activeSelectedId && !isSelected) continue;
+
+          // A. Test du point d'arrivée (destination pin)
+          const V = toVec(route.dest_lon, route.dest_lat);
+          const pDest = project(V, 1, r, cx, cy, st.yaw, st.tilt);
+          if (pDest.z > 0 && Math.hypot(pDest.x - mouseX, pDest.y - mouseY) < 16) {
+            matched = route;
+            hitX = pDest.x;
+            hitY = pDest.y;
             break;
           }
+
+          // B. Test du point de départ (hub origin)
+          const H = toVec(route.origin_lon, route.origin_lat);
+          const pOrig = project(H, 1, r, cx, cy, st.yaw, st.tilt);
+          if (pOrig.z > 0 && Math.hypot(pOrig.x - mouseX, pOrig.y - mouseY) < 14) {
+            matched = route;
+            hitX = pOrig.x;
+            hitY = pOrig.y;
+            break;
+          }
+
+          // C. Test le long de l'arc 3D du flux
+          const ang = Math.acos(Math.max(-1, Math.min(1, H[0] * V[0] + H[1] * V[1] + H[2] * V[2])));
+          const height = 0.06 + ang * 0.12 + (i % 3) * 0.02;
+
+          for (let k = 0; k <= 24; k++) {
+            const u = k / 24;
+            const pt = project(
+              slerp(H, V, u),
+              1 + Math.sin(Math.PI * u) * height,
+              r,
+              cx,
+              cy,
+              st.yaw,
+              st.tilt
+            );
+            const hidden = pt.z < 0 && Math.hypot(pt.x - cx, pt.y - cy) < r;
+            if (!hidden) {
+              const d = Math.hypot(pt.x - mouseX, pt.y - mouseY);
+              if (d < 12) {
+                matched = route;
+                hitX = pt.x;
+                hitY = pt.y;
+                break;
+              }
+            }
+          }
+
+          if (matched) break;
         }
       }
 
-      if (found) {
-        setHoveredRoute({ route: found, x: foundX, y: foundY });
+      // Mise à jour de la description UNIQUEMENT si le flux ciblé a changé
+      if (matched) {
+        if (!hoveredRouteRef.current || hoveredRouteRef.current.route.id !== matched.id) {
+          const nextVal = { route: matched, x: hitX, y: hitY };
+          hoveredRouteRef.current = nextVal;
+          setHoveredRoute(nextVal);
+        }
       } else {
+        if (hoveredRouteRef.current) {
+          hoveredRouteRef.current = null;
+          setHoveredRoute(null);
+        }
+      }
+    };
+
+    const onUp = () => {
+      const st = stateRef.current;
+      if (!st.hasDragged && hoveredRouteRef.current) {
+        onSelectShipmentRef.current?.(hoveredRouteRef.current.route);
+      }
+      st.drag = false;
+    };
+
+    const onLeave = () => {
+      const st = stateRef.current;
+      st.isHoveringGlobe = false;
+      st.drag = false;
+      if (hoveredRouteRef.current) {
+        hoveredRouteRef.current = null;
         setHoveredRoute(null);
       }
     };
 
-    const onPointerUp = () => {
-      stateRef.current.isDragging = false;
-      stateRef.current.lastInteraction = performance.now();
+    // Molette de souris & gesture trackpad pour zoom fluide
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const factor = e.deltaY < 0 ? 1.10 : 0.90;
+      adjustZoom(factor);
     };
 
-    canvas.addEventListener("pointerdown", onPointerDown);
-    canvas.addEventListener("pointermove", onPointerMove);
-    canvas.addEventListener("pointerup", onPointerUp);
-    canvas.addEventListener("pointercancel", onPointerUp);
-    canvas.addEventListener("pointerleave", () => setHoveredRoute(null));
+    canvas.addEventListener("pointerdown", onDown);
+    canvas.addEventListener("pointermove", onMove);
+    canvas.addEventListener("pointerup", onUp);
+    canvas.addEventListener("pointercancel", onUp);
+    canvas.addEventListener("pointerleave", onLeave);
+    canvas.addEventListener("wheel", onWheel, { passive: false });
 
     return () => {
       isAlive = false;
       cancelAnimationFrame(animId);
       ro.disconnect();
-      canvas.removeEventListener("pointerdown", onPointerDown);
-      canvas.removeEventListener("pointermove", onPointerMove);
-      canvas.removeEventListener("pointerup", onPointerUp);
-      canvas.removeEventListener("pointercancel", onPointerUp);
+      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointercancel", onUp);
+      canvas.removeEventListener("pointerleave", onLeave);
+      canvas.removeEventListener("wheel", onWheel);
     };
-  }, [visibleRoutes]);
+  }, [adjustZoom, isExpanded]);
 
-  return (
+  // Contenu du composant
+  const renderContent = (isExp: boolean) => (
     <div
-      className={`card-clean ${className}`}
-      style={{
-        padding: "24px 28px",
-        position: "relative",
-        overflow: "hidden",
-      }}
+      className={isExp ? "" : `card-clean ${className}`}
+      style={
+        isExp
+          ? {
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: "100vw",
+              height: "100vh",
+              zIndex: 99999,
+              background: "var(--bg-app)",
+              padding: "20px 32px 16px 32px",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }
+          : {
+              padding: "24px 28px",
+              position: "relative",
+              overflow: "hidden",
+              background: "#FFFFFF",
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+            }
+      }
     >
-      {/* 1. EN-TÊTE ÉPURÉ AVEC SÉLECTEURS EN PILL (Instruction Audio 2) */}
+      {/* 1. EN-TÊTE ÉPURÉ AVEC SÉLECTEURS EN PILL ET BOUTON AGRANDIR */}
       <div
         style={{
           display: "flex",
@@ -738,104 +1194,231 @@ export function RouteGlobe({ shipments = [], className = "", onSelectShipment }:
           alignItems: "center",
           flexWrap: "wrap",
           gap: "16px",
-          marginBottom: "18px",
+          marginBottom: isExp ? "10px" : "16px",
+          flexShrink: 0,
         }}
       >
         <div>
           <div
             style={{
-              display: "flex",
+              display: "inline-flex",
               alignItems: "center",
               gap: "8px",
-              color: "var(--brown-light)",
-              fontSize: "0.78rem",
+              color: "var(--brown-dark)",
+              fontSize: "0.76rem",
               fontWeight: "700",
               textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              marginBottom: "4px",
+              letterSpacing: "0.08em",
+              marginBottom: "6px",
+              background: "rgba(59, 34, 24, 0.05)",
+              padding: "4px 12px",
+              borderRadius: "9999px",
+              border: "1px solid rgba(59, 34, 24, 0.08)",
             }}
           >
-            <Compass size={16} />
-            Réseau Logistique International
+            <Compass size={15} style={{ color: "var(--brown-light)" }} />
+            <span>Réseau Logistique International</span>
+            <span
+              style={{
+                display: "inline-block",
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                background: "#16a34a",
+                boxShadow: "0 0 6px #16a34a",
+                marginLeft: "2px",
+              }}
+            />
           </div>
-          <h2 style={{ fontSize: "1.25rem", color: "var(--text-main)", fontWeight: "800" }}>
+          <h2 style={{ fontSize: isExp ? "1.35rem" : "1.25rem", color: "var(--text-main)", fontWeight: "800", letterSpacing: "-0.02em" }}>
             Flux d&apos;Acheminement & Expéditions en Direct
           </h2>
-          <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-            Visualisation 3D temps réel des liaisons Chine, Dubaï et Maroc vers l&apos;Afrique de l&apos;Ouest.
+          <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginTop: "3px" }}>
+            {selectedShipmentId ? (
+              <span style={{ color: "var(--brown-dark)", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <span>Expédition sélectionnée · Ligne isolée</span>
+                <button
+                  type="button"
+                  onClick={resetGlobe}
+                  style={{
+                    background: "rgba(59, 34, 24, 0.08)",
+                    border: "none",
+                    borderRadius: "6px",
+                    color: "var(--brown-dark)",
+                    cursor: "pointer",
+                    fontSize: "0.78rem",
+                    fontWeight: "700",
+                    padding: "2px 8px",
+                    marginLeft: "4px",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  Réafficher tous les flux
+                </button>
+              </span>
+            ) : (
+              <span>Survolez un flux ou faites pivoter le globe pour inspecter les cargaisons en temps réel.</span>
+            )}
           </p>
         </div>
 
-        {/* SÉLECTEUR EN PILLS SOBRE & ÉPURÉ */}
-        <div className="pill-selector">
-          <button
-            type="button"
-            onClick={() => setFilter("ALL")}
-            className={`pill-option ${filter === "ALL" ? "pill-option-active" : ""}`}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {/* Pills de statut */}
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "3px",
+              background: "var(--bg-app)",
+              borderRadius: "var(--radius-full)",
+              border: "1px solid var(--border-light)",
+              gap: "2px",
+            }}
           >
-            Tous les flux
-            <span style={{ fontSize: "0.72rem", opacity: 0.7 }}>({counts.all})</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter("IN_TRANSIT")}
-            className={`pill-option ${filter === "IN_TRANSIT" ? "pill-option-active" : ""}`}
-          >
-            <span
-              style={{
-                width: "7px",
-                height: "7px",
-                borderRadius: "50%",
-                background: THEME.inTransit.comet,
+            <button
+              type="button"
+              onClick={() => {
+                setFilter("ALL");
+                if (onClearSelection) onClearSelection();
               }}
-            />
-            En transit
-            <span style={{ fontSize: "0.72rem", opacity: 0.7 }}>({counts.inTransit})</span>
-          </button>
+              style={{
+                border: "none",
+                background: filter === "ALL" ? "#FFFFFF" : "transparent",
+                color: filter === "ALL" ? "var(--text-main)" : "var(--text-muted)",
+                fontWeight: filter === "ALL" ? "700" : "500",
+                fontSize: "0.78rem",
+                padding: "6px 12px",
+                borderRadius: "var(--radius-full)",
+                boxShadow: filter === "ALL" ? "0 1px 3px rgba(0, 0, 0, 0.08)" : "none",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              Tous les flux ({counts.all})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setFilter("IN_TRANSIT");
+                if (onClearSelection) onClearSelection();
+              }}
+              style={{
+                border: "none",
+                background: filter === "IN_TRANSIT" ? "#FFFFFF" : "transparent",
+                color: filter === "IN_TRANSIT" ? "var(--text-main)" : "var(--text-muted)",
+                fontWeight: filter === "IN_TRANSIT" ? "700" : "500",
+                fontSize: "0.78rem",
+                padding: "6px 12px",
+                borderRadius: "var(--radius-full)",
+                boxShadow: filter === "IN_TRANSIT" ? "0 1px 3px rgba(0, 0, 0, 0.08)" : "none",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: THEME.inTransit.comet }} />
+              En transit ({counts.inTransit})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setFilter("DELIVERED");
+                if (onClearSelection) onClearSelection();
+              }}
+              style={{
+                border: "none",
+                background: filter === "DELIVERED" ? "#FFFFFF" : "transparent",
+                color: filter === "DELIVERED" ? "var(--text-main)" : "var(--text-muted)",
+                fontWeight: filter === "DELIVERED" ? "700" : "500",
+                fontSize: "0.78rem",
+                padding: "6px 12px",
+                borderRadius: "var(--radius-full)",
+                boxShadow: filter === "DELIVERED" ? "0 1px 3px rgba(0, 0, 0, 0.08)" : "none",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: THEME.delivered.comet }} />
+              Livrées ({counts.delivered})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setFilter("PREPARATION");
+                if (onClearSelection) onClearSelection();
+              }}
+              style={{
+                border: "none",
+                background: filter === "PREPARATION" ? "#FFFFFF" : "transparent",
+                color: filter === "PREPARATION" ? "var(--text-main)" : "var(--text-muted)",
+                fontWeight: filter === "PREPARATION" ? "700" : "500",
+                fontSize: "0.78rem",
+                padding: "6px 12px",
+                borderRadius: "var(--radius-full)",
+                boxShadow: filter === "PREPARATION" ? "0 1px 3px rgba(0, 0, 0, 0.08)" : "none",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: THEME.preparation.comet }} />
+              En préparation ({counts.preparation})
+            </button>
+          </div>
+
+          {/* Bouton Agrandir / Réduire */}
           <button
             type="button"
-            onClick={() => setFilter("DELIVERED")}
-            className={`pill-option ${filter === "DELIVERED" ? "pill-option-active" : ""}`}
+            onClick={handleToggleExpand}
+            className="btn btn-secondary"
+            style={{
+              padding: "6px 14px",
+              fontSize: "0.78rem",
+              gap: "6px",
+              borderRadius: "var(--radius-full)",
+              background: isExp ? "var(--brown-dark)" : "#FFFFFF",
+              color: isExp ? "#FAF8F5" : "var(--text-main)",
+              borderColor: isExp ? "var(--brown-dark)" : "var(--border-light)",
+              boxShadow: isExp ? "0 2px 8px rgba(59, 34, 24, 0.2)" : "none",
+            }}
+            title={isExp ? "Réduire l'affichage (Échap)" : "Prendre tout l'espace plein écran"}
           >
-            <span
-              style={{
-                width: "7px",
-                height: "7px",
-                borderRadius: "50%",
-                background: THEME.delivered.arc,
-              }}
-            />
-            Livrées
-            <span style={{ fontSize: "0.72rem", opacity: 0.7 }}>({counts.delivered})</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter("PENDING_HUB")}
-            className={`pill-option ${filter === "PENDING_HUB" ? "pill-option-active" : ""}`}
-          >
-            <span
-              style={{
-                width: "7px",
-                height: "7px",
-                borderRadius: "50%",
-                background: THEME.pendingHub.arc,
-              }}
-            />
-            Au Hub
-            <span style={{ fontSize: "0.72rem", opacity: 0.7 }}>({counts.pendingHub})</span>
+            {isExp ? (
+              <>
+                <Minimize2 size={14} />
+                Réduire la vue
+              </>
+            ) : (
+              <>
+                <Maximize2 size={14} />
+                Agrandir
+              </>
+            )}
           </button>
         </div>
       </div>
 
-      {/* 2. ZONE PRINCIPALE : LE GLOBE 3D INTERACTIF AVEC LES VRAIS DESSINS DES PAYS */}
+      {/* 2. ZONE DU GLOBE 3D */}
       <div
         ref={containerRef}
         style={{
+          flex: 1,
           width: "100%",
-          height: "460px",
+          height: isExp ? "100%" : "480px",
+          minHeight: 0,
           position: "relative",
           cursor: "grab",
-          background: "radial-gradient(circle at center, rgba(250, 246, 240, 0.4) 0%, transparent 70%)",
+          background: "radial-gradient(circle at center, rgba(250, 246, 240, 0.5) 0%, transparent 70%)",
         }}
       >
         <canvas
@@ -848,199 +1431,260 @@ export function RouteGlobe({ shipments = [], className = "", onSelectShipment }:
           }}
         />
 
-        {/* Info-bulle flottante au survol d'une expédition */}
+        {/* Info-bulle interactive */}
         {hoveredRoute && (
           <div
             style={{
               position: "absolute",
-              left: `${Math.min(Math.max(hoveredRoute.x, 140), containerRef.current ? containerRef.current.clientWidth - 140 : 300)}px`,
-              top: `${Math.max(20, hoveredRoute.y - 120)}px`,
-              transform: "translate(-50%, -10px)",
-              background: "#FFFFFF",
+              left: `${Math.min(hoveredRoute.x + 12, (containerRef.current?.clientWidth || 600) - 240)}px`,
+              top: `${Math.max(10, hoveredRoute.y - 45)}px`,
+              background: "rgba(255, 255, 255, 0.98)",
+              backdropFilter: "blur(10px)",
+              padding: "10px 14px",
+              borderRadius: "10px",
+              boxShadow: "0 6px 20px rgba(59, 34, 24, 0.15), 0 1px 3px rgba(0, 0, 0, 0.05)",
               border: "1px solid var(--border-light)",
-              borderRadius: "var(--radius-sm)",
-              padding: "12px 14px",
-              boxShadow: "0 6px 18px rgba(35, 25, 20, 0.1)",
-              zIndex: 10,
-              minWidth: "220px",
               pointerEvents: "none",
+              zIndex: 30,
+              minWidth: "210px",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "6px",
-              }}
-            >
-              <strong style={{ fontSize: "0.85rem", color: "var(--text-main)" }}>
-                {hoveredRoute.route.tracking_number}
-              </strong>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "4px" }}>
+              <span style={{ fontSize: "0.68rem", fontWeight: "700", color: "var(--brown-light)" }}>
+                {hoveredRoute.route.mode === "AIR" ? "✈️ Voie Aérienne" : "🚢 Voie Maritime"}
+              </span>
               <span
                 style={{
-                  fontSize: "0.7rem",
-                  padding: "2px 8px",
+                  fontSize: "0.65rem",
+                  fontWeight: "700",
+                  padding: "1px 6px",
                   borderRadius: "9999px",
-                  fontWeight: "600",
                   background:
-                    hoveredRoute.route.status_category === "IN_TRANSIT"
-                      ? "var(--state-warning-bg)"
-                      : hoveredRoute.route.status_category === "DELIVERED"
-                      ? "var(--state-success-bg)"
-                      : "var(--bg-subtle)",
+                    hoveredRoute.route.status_category === "DELIVERED"
+                      ? "rgba(16, 185, 129, 0.12)"
+                      : hoveredRoute.route.status_category === "IN_TRANSIT"
+                      ? "rgba(245, 158, 11, 0.12)"
+                      : "rgba(37, 99, 235, 0.12)",
                   color:
-                    hoveredRoute.route.status_category === "IN_TRANSIT"
-                      ? "var(--state-warning-text)"
-                      : hoveredRoute.route.status_category === "DELIVERED"
-                      ? "var(--state-success-text)"
-                      : "var(--text-secondary)",
+                    hoveredRoute.route.status_category === "DELIVERED"
+                      ? "#10B981"
+                      : hoveredRoute.route.status_category === "IN_TRANSIT"
+                      ? "#B4652A"
+                      : "#2563EB",
                 }}
               >
-                {hoveredRoute.route.status_label}
+                {hoveredRoute.route.status_category === "DELIVERED"
+                  ? "Livré"
+                  : hoveredRoute.route.status_category === "IN_TRANSIT"
+                  ? "En Transit"
+                  : "Préparation"}
               </span>
             </div>
 
-            <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "4px" }}>
-              Client : <strong>{hoveredRoute.route.client_name}</strong>
+            <div style={{ fontWeight: "800", fontSize: "0.85rem", color: "var(--text-main)" }}>
+              {hoveredRoute.route.tracking_number}
             </div>
 
-            <div style={{ fontSize: "0.76rem", color: "var(--brown-dark)", fontWeight: "600" }}>
-              {hoveredRoute.route.origin_name} ({hoveredRoute.route.origin_country}) →{" "}
-              {hoveredRoute.route.dest_name} ({hoveredRoute.route.dest_country})
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "2px" }}>
+              {hoveredRoute.route.origin_name} ({hoveredRoute.route.origin_country}) → {hoveredRoute.route.dest_name} ({hoveredRoute.route.dest_country})
             </div>
 
-            <div
-              style={{
-                fontSize: "0.72rem",
-                color: "var(--text-muted)",
-                marginTop: "6px",
-                paddingTop: "6px",
-                borderTop: "1px solid var(--border-light)",
-                display: "flex",
-                justifyContent: "space-between",
-              }}
-            >
-              <span>{hoveredRoute.route.mode === "AIR" ? "✈️ Fret Aérien" : "🚢 Fret Maritime"}</span>
-              <span>{hoveredRoute.route.weight_kg} kg</span>
-            </div>
+            {hoveredRoute.route.client_name && (
+              <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: "4px" }}>
+                Destinataire : <strong>{hoveredRoute.route.client_name}</strong>
+              </div>
+            )}
           </div>
         )}
 
-        {/* PILLS DE FOCUS RÉGIONAL (En bas à gauche) */}
+        {/* Contrôles de zoom & réinitialisation */}
         <div
           style={{
             position: "absolute",
-            bottom: "16px",
-            left: "16px",
+            top: "14px",
+            right: "14px",
             display: "flex",
             alignItems: "center",
-            gap: "6px",
-            background: "rgba(255, 255, 255, 0.9)",
-            backdropFilter: "blur(6px)",
+            gap: "5px",
+            background: "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(10px)",
             padding: "4px 8px",
-            borderRadius: "9999px",
+            borderRadius: "var(--radius-full)",
             border: "1px solid var(--border-light)",
-            boxShadow: "0 1px 3px rgba(35, 25, 20, 0.05)",
+            boxShadow: "0 2px 10px rgba(59, 34, 24, 0.08)",
+            zIndex: 10,
           }}
         >
-          <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: "600", marginLeft: "4px" }}>
+          <button
+            type="button"
+            onClick={() => adjustZoom(1.2)}
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "50%",
+              border: "none",
+              background: "#F5F6F8",
+              color: "var(--text-main)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+            title="Zoomer (+)"
+          >
+            <ZoomIn size={14} />
+          </button>
+          <span
+            style={{
+              fontSize: "0.7rem",
+              fontWeight: "700",
+              color: "var(--brown-dark)",
+              minWidth: "36px",
+              textAlign: "center",
+              userSelect: "none",
+            }}
+            title="Niveau de zoom actuel"
+          >
+            {zoomPercent}%
+          </span>
+          <button
+            type="button"
+            onClick={() => adjustZoom(0.83)}
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "50%",
+              border: "none",
+              background: "#F5F6F8",
+              color: "var(--text-main)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+            title="Dézoomer (-)"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <div style={{ width: "1px", height: "14px", background: "var(--border-light)" }} />
+          <button
+            type="button"
+            onClick={resetGlobe}
+            style={{
+              padding: "4px 10px",
+              borderRadius: "var(--radius-full)",
+              border: "none",
+              background: "transparent",
+              color: "var(--text-muted)",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              fontSize: "0.72rem",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+            title="Réinitialiser le zoom & la rotation (100%)"
+          >
+            <RotateCcw size={12} /> 100%
+          </button>
+        </div>
+      </div>
+
+      {/* 3. BARRE DE CENTRAGE RAPIDE & LÉGENDE */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "12px",
+          marginTop: "10px",
+          paddingTop: "10px",
+          borderTop: "1px solid rgba(59, 34, 24, 0.06)",
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+          <span style={{ fontSize: "0.72rem", fontWeight: "700", color: "var(--text-muted)" }}>
             Centrer :
           </span>
           <button
             type="button"
-            onClick={() => focusRegion(-105, -20)}
-            className="btn btn-pill"
-            style={{ padding: "3px 10px", fontSize: "0.74rem", background: "transparent", border: "none" }}
-            title="Centrer sur la Chine"
+            onClick={() => {
+              focusRegion(113.26 * RAD, 23.13 * RAD);
+              if (onClearSelection) onClearSelection();
+            }}
+            className="btn btn-secondary"
+            style={{ padding: "3px 9px", fontSize: "0.72rem", borderRadius: "var(--radius-full)", display: "inline-flex", alignItems: "center", gap: "5px" }}
           >
-            🇨🇳 Chine
+            <CircularFlag countryCode="CN" size={13} />
+            Chine
           </button>
           <button
             type="button"
-            onClick={() => focusRegion(-55, -22)}
-            className="btn btn-pill"
-            style={{ padding: "3px 10px", fontSize: "0.74rem", background: "transparent", border: "none" }}
-            title="Centrer sur Dubaï"
+            onClick={() => {
+              focusRegion(55.27 * RAD, 25.20 * RAD);
+              if (onClearSelection) onClearSelection();
+            }}
+            className="btn btn-secondary"
+            style={{ padding: "3px 9px", fontSize: "0.72rem", borderRadius: "var(--radius-full)", display: "inline-flex", alignItems: "center", gap: "5px" }}
           >
-            🇦🇪 Dubaï
+            <CircularFlag countryCode="AE" size={13} />
+            Dubaï
           </button>
           <button
             type="button"
-            onClick={() => focusRegion(8, -28)}
-            className="btn btn-pill"
-            style={{ padding: "3px 10px", fontSize: "0.74rem", background: "transparent", border: "none" }}
-            title="Centrer sur le Maroc"
+            onClick={() => {
+              focusRegion(-7.59 * RAD, 33.57 * RAD);
+              if (onClearSelection) onClearSelection();
+            }}
+            className="btn btn-secondary"
+            style={{ padding: "3px 9px", fontSize: "0.72rem", borderRadius: "var(--radius-full)", display: "inline-flex", alignItems: "center", gap: "5px" }}
           >
-            🇲🇦 Maroc
+            <CircularFlag countryCode="MA" size={13} />
+            Maroc
           </button>
           <button
             type="button"
-            onClick={() => focusRegion(8, -10)}
-            className="btn btn-pill"
-            style={{ padding: "3px 10px", fontSize: "0.74rem", background: "transparent", border: "none" }}
-            title="Centrer sur l'Afrique de l'Ouest"
+            onClick={() => {
+              focusRegion(0 * RAD, 5 * RAD);
+              if (onClearSelection) onClearSelection();
+            }}
+            className="btn btn-secondary"
+            style={{ padding: "3px 9px", fontSize: "0.72rem", borderRadius: "var(--radius-full)", display: "inline-flex", alignItems: "center", gap: "5px" }}
           >
-            🌍 Afrique
+            <Globe size={13} color="var(--brown-dark)" />
+            Afrique
           </button>
         </div>
 
-        {/* LÉGENDE DES COULEURS DES TRANSACTIONS (En bas à droite) */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: "16px",
-            right: "16px",
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            background: "rgba(255, 255, 255, 0.9)",
-            backdropFilter: "blur(6px)",
-            padding: "6px 14px",
-            borderRadius: "9999px",
-            border: "1px solid var(--border-light)",
-            fontSize: "0.74rem",
-            color: "var(--text-secondary)",
-            boxShadow: "0 1px 3px rgba(35, 25, 20, 0.05)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-            <span
-              style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "50%",
-                background: THEME.inTransit.comet,
-              }}
-            />
-            <span>En transit (Comète)</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-            <span
-              style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "50%",
-                background: THEME.delivered.arc,
-              }}
-            />
-            <span>Livrées</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-            <span
-              style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "50%",
-                background: THEME.pendingHub.arc,
-              }}
-            />
-            <span>Au Hub</span>
-          </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px", fontSize: "0.72rem", color: "var(--text-muted)" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+            <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: THEME.inTransit.comet }} />
+            En transit
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+            <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: THEME.delivered.comet }} />
+            Livrées
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+            <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: THEME.preparation.comet }} />
+            En préparation
+          </span>
         </div>
       </div>
     </div>
   );
+
+  // Si agrandi, rendu via React Portal sur document.body pour plein écran sans coupure
+  if (isExpanded && mounted && typeof document !== "undefined") {
+    return createPortal(renderContent(true), document.body);
+  }
+
+  return renderContent(false);
 }
 
 export default RouteGlobe;

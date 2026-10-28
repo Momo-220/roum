@@ -267,8 +267,8 @@ adminRouter.get("/shipments", async (c) => {
       s.estimated_price_minor, s.final_price_minor, s.currency, s.payment_status,
       s.created_at,
       c.full_name as client_name, c.phone_whatsapp as client_phone,
-      r.origin_country, r.destination_country,
-      sm.name as shipping_mode_name
+      r.origin_country, r.origin_city, r.destination_country, r.destination_city,
+      sm.name as shipping_mode_name, sm.type as shipping_mode_type
     FROM shipments s
     JOIN shipment_statuses st ON s.current_status = st.code
     JOIN clients c ON s.client_id = c.id
@@ -498,6 +498,117 @@ adminRouter.patch("/shipments/:id/status", zValidator("json", updateStatusSchema
   return c.json({ success: true, message: `Statut mis à jour vers ${new_status}.` });
 });
 
+/**
+ * Détail complet d'une expédition avec ses colis, événements de suivi et paiements
+ */
+adminRouter.get("/shipments/:id", async (c) => {
+  if (!checkPermission(c, "shipments.view")) {
+    return c.json({ error: "Permission insuffisante (shipments.view requise)." }, 403);
+  }
+
+  const shipmentId = c.req.param("id");
+  const shipment = await c.env.DB.prepare(`
+    SELECT 
+      s.*, st.label_public as status_label,
+      c.full_name as client_name, c.phone_whatsapp as client_phone, c.email as client_email,
+      c.city as client_city, c.country as client_country,
+      r.origin_country, r.origin_city, r.destination_country, r.destination_city,
+      sm.name as shipping_mode_name, sm.type as shipping_mode_type, sm.pricing_basis
+    FROM shipments s
+    LEFT JOIN shipment_statuses st ON s.current_status = st.code
+    JOIN clients c ON s.client_id = c.id
+    JOIN routes r ON s.route_id = r.id
+    JOIN shipping_modes sm ON s.shipping_mode_id = sm.id
+    WHERE s.id = ?
+  `).bind(shipmentId).first();
+
+  if (!shipment) {
+    return c.json({ error: "Expédition introuvable." }, 404);
+  }
+
+  const [parcelsRes, eventsRes, paymentsRes] = await Promise.all([
+    c.env.DB.prepare(`SELECT * FROM parcels WHERE shipment_id = ? ORDER BY parcel_index ASC`).bind(shipmentId).all(),
+    c.env.DB.prepare(`
+      SELECT t.*, u.full_name as recorded_by_name, st.label_public as status_label
+      FROM tracking_events t
+      LEFT JOIN users u ON t.recorded_by_user_id = u.id
+      LEFT JOIN shipment_statuses st ON t.status = st.code
+      WHERE t.shipment_id = ?
+      ORDER BY t.event_timestamp DESC
+    `).bind(shipmentId).all(),
+    c.env.DB.prepare(`
+      SELECT p.*, u.full_name as recorded_by_name
+      FROM payments p
+      LEFT JOIN users u ON p.recorded_by_user_id = u.id
+      WHERE p.shipment_id = ?
+      ORDER BY p.recorded_at DESC
+    `).bind(shipmentId).all(),
+  ]);
+
+  return c.json({
+    shipment,
+    parcels: parcelsRes.results,
+    tracking_events: eventsRes.results,
+    payments: paymentsRes.results,
+  });
+});
+
+/**
+ * Réception physique et pesée réelle au magasin / hub
+ */
+const shipmentIntakeSchema = z.object({
+  total_weight_kg: z.number().positive("Poids réel supérieur à 0 requis"),
+  total_volume_cbm: z.number().nonnegative().optional(),
+  hub_location: z.string().min(2, "Lieu d'entrepôt requis"),
+  status: z.string().default("RECEIVED_AT_HUB"),
+  comment: z.string().optional(),
+  final_price_minor: z.number().int().nonnegative().optional(),
+});
+
+adminRouter.patch("/shipments/:id/intake", zValidator("json", shipmentIntakeSchema), async (c) => {
+  if (!checkPermission(c, "shipments.status.update")) {
+    return c.json({ error: "Permission insuffisante (shipments.status.update requise)." }, 403);
+  }
+
+  const user = c.get("user");
+  const shipmentId = c.req.param("id");
+  const data = c.req.valid("json");
+
+  const statements: D1PreparedStatement[] = [
+    c.env.DB.prepare(`
+      UPDATE shipments 
+      SET 
+        total_weight_kg = ?,
+        total_volume_cbm = COALESCE(?, total_volume_cbm),
+        current_status = ?,
+        final_price_minor = COALESCE(?, final_price_minor),
+        updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(
+      Math.round(data.total_weight_kg * 100) / 100,
+      data.total_volume_cbm !== undefined ? Math.round(data.total_volume_cbm * 10000) / 10000 : null,
+      data.status,
+      data.final_price_minor || null,
+      shipmentId
+    ),
+    c.env.DB.prepare(`
+      INSERT INTO tracking_events (id, shipment_id, status, location, comment, recorded_by_user_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(
+      crypto.randomUUID(),
+      shipmentId,
+      data.status,
+      data.hub_location.trim(),
+      data.comment?.trim() || `Réception physique et pesée réelle au hub (${data.total_weight_kg} kg${data.total_volume_cbm ? `, ${data.total_volume_cbm} m³` : ""})`,
+      user.userId
+    ),
+  ];
+
+  await c.env.DB.batch(statements);
+
+  return c.json({ success: true, message: "Réception physique et pesée enregistrées avec succès." });
+});
+
 /* ==========================================================================
    4. GESTION DES STATUTS D'EXPÉDITION
    ========================================================================== */
@@ -521,13 +632,14 @@ adminRouter.get("/stats", async (c) => {
     return c.json({ error: "Permission insuffisante (dashboard.view requise)." }, 403);
   }
 
-  const [shipmentsCount, activeShipments, clientsCount, requestsCount, pendingRequests, paymentsTotal, tasksCount] = await Promise.all([
+  const [shipmentsCount, activeShipments, clientsCount, requestsCount, pendingRequests, confirmedPayments, pendingPayments, tasksCount] = await Promise.all([
     c.env.DB.prepare(`SELECT COUNT(*) as total FROM shipments`).first<{ total: number }>(),
     c.env.DB.prepare(`SELECT COUNT(*) as total FROM shipments WHERE current_status NOT IN ('DELIVERED', 'CANCELLED')`).first<{ total: number }>(),
     c.env.DB.prepare(`SELECT COUNT(*) as total FROM clients`).first<{ total: number }>(),
     c.env.DB.prepare(`SELECT COUNT(*) as total FROM customer_requests`).first<{ total: number }>(),
     c.env.DB.prepare(`SELECT COUNT(*) as total FROM customer_requests WHERE status IN ('NEW', 'IN_REVIEW')`).first<{ total: number }>(),
     c.env.DB.prepare(`SELECT COALESCE(SUM(amount_minor), 0) as total FROM payments WHERE status = 'CONFIRMED'`).first<{ total: number }>(),
+    c.env.DB.prepare(`SELECT COALESCE(SUM(amount_minor), 0) as total FROM payments WHERE status = 'PENDING'`).first<{ total: number }>(),
     c.env.DB.prepare(`SELECT COUNT(*) as total FROM tasks WHERE status != 'DONE'`).first<{ total: number }>(),
   ]);
 
@@ -538,7 +650,8 @@ adminRouter.get("/stats", async (c) => {
       total_clients: clientsCount?.total || 0,
       total_requests: requestsCount?.total || 0,
       pending_requests: pendingRequests?.total || 0,
-      total_payments_minor: paymentsTotal?.total || 0,
+      total_payments_minor: confirmedPayments?.total || 0,
+      pending_payments_minor: pendingPayments?.total || 0,
       pending_tasks: tasksCount?.total || 0,
     },
   });
@@ -633,6 +746,112 @@ adminRouter.patch("/requests/:id/status", zValidator("json", updateRequestStatus
   `).bind(data.status, data.admin_notes || null, id).run();
 
   return c.json({ success: true, message: `Demande mise à jour vers le statut ${data.status}.` });
+});
+
+/**
+ * Conversion d'une demande acceptée en expédition officielle
+ */
+const convertRequestSchema = z.object({
+  shipping_mode_id: z.string().min(1, "Mode de transport requis"),
+  route_id: z.string().min(1, "Liaison requise"),
+  weight_kg: z.number().positive("Poids réel supérieur à 0 requis"),
+  volume_cbm: z.number().nonnegative().optional(),
+  package_label: z.string().optional(),
+  description: z.string().optional(),
+  estimated_price_minor: z.number().int().nonnegative().optional(),
+  currency: z.string().default("FCFA"),
+});
+
+adminRouter.post("/requests/:id/convert", zValidator("json", convertRequestSchema), async (c) => {
+  if (!checkPermission(c, "shipments.create")) {
+    return c.json({ error: "Permission insuffisante (shipments.create requise)." }, 403);
+  }
+
+  const user = c.get("user");
+  const requestId = c.req.param("id");
+  const data = c.req.valid("json");
+
+  const reqRow = await c.env.DB.prepare(`SELECT * FROM customer_requests WHERE id = ?`).bind(requestId).first<any>();
+  if (!reqRow) {
+    return c.json({ error: "Demande introuvable." }, 404);
+  }
+
+  const mode = await c.env.DB.prepare(`SELECT type FROM shipping_modes WHERE id = ?`).bind(data.shipping_mode_id).first<{ type: TransportType }>();
+  if (!mode) {
+    return c.json({ error: "Mode de transport inconnu." }, 400);
+  }
+
+  const trackingNumber = generateTrackingNumber(mode.type);
+  const shipmentId = crypto.randomUUID();
+  let clientId = reqRow.client_id;
+
+  if (!clientId) {
+    const existingClient = await c.env.DB.prepare(`SELECT id FROM clients WHERE phone_whatsapp = ?`).bind(reqRow.client_phone).first<{ id: string }>();
+    if (existingClient) {
+      clientId = existingClient.id;
+    } else {
+      clientId = crypto.randomUUID();
+      await c.env.DB.prepare(`
+        INSERT INTO clients (id, full_name, phone_whatsapp, email, country)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(clientId, reqRow.client_name, reqRow.client_phone, reqRow.client_email || null, reqRow.destination_country || "Mali").run();
+    }
+  }
+
+  const statements: D1PreparedStatement[] = [
+    c.env.DB.prepare(`
+      INSERT INTO shipments (
+        id, tracking_number, client_id, route_id, shipping_mode_id,
+        current_status, total_parcels_count, total_weight_kg, total_volume_cbm,
+        estimated_price_minor, currency, payment_status, created_by_user_id
+      ) VALUES (?, ?, ?, ?, ?, 'DRAFT', 1, ?, ?, ?, ?, 'PENDING', ?)
+    `).bind(
+      shipmentId,
+      trackingNumber,
+      clientId,
+      data.route_id,
+      data.shipping_mode_id,
+      Math.round(data.weight_kg * 100) / 100,
+      data.volume_cbm ? Math.round(data.volume_cbm * 10000) / 10000 : 0,
+      data.estimated_price_minor || 0,
+      data.currency,
+      user.userId
+    ),
+    c.env.DB.prepare(`
+      INSERT INTO parcels (id, shipment_id, parcel_index, package_label, weight_kg, length_cm, width_cm, height_cm, description)
+      VALUES (?, ?, 1, ?, ?, null, null, null, ?)
+    `).bind(
+      crypto.randomUUID(),
+      shipmentId,
+      data.package_label || `Colis Demande ${reqRow.reference}`,
+      Math.round(data.weight_kg * 100) / 100,
+      data.description || reqRow.description || null
+    ),
+    c.env.DB.prepare(`
+      INSERT INTO tracking_events (id, shipment_id, status, location, comment, recorded_by_user_id)
+      VALUES (?, ?, 'DRAFT', ?, ?, ?)
+    `).bind(
+      crypto.randomUUID(),
+      shipmentId,
+      user.hubLocation || "Bureau Central",
+      `Dossier créé suite à la conversion de la demande ${reqRow.reference}`,
+      user.userId
+    ),
+    c.env.DB.prepare(`
+      UPDATE customer_requests
+      SET status = 'CONVERTED', admin_notes = COALESCE(admin_notes || ' | ', '') || 'Converti en expédition ' || ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(trackingNumber, requestId),
+  ];
+
+  await c.env.DB.batch(statements);
+
+  return c.json({
+    success: true,
+    shipment_id: shipmentId,
+    tracking_number: trackingNumber,
+    message: `Demande ${reqRow.reference} convertie avec succès en expédition ${trackingNumber}.`,
+  }, 201);
 });
 
 /* ==========================================================================
@@ -730,7 +949,7 @@ adminRouter.get("/tariffs", async (c) => {
   const { results: tariffs } = await c.env.DB.prepare(`
     SELECT 
       t.id, t.currency, t.price_per_unit_minor, t.minimum_charge_minor,
-      t.estimated_days_min, t.estimated_days_max, t.is_active,
+      t.estimated_days_min, t.estimated_days_max, t.category_tag, t.note, t.is_active,
       r.origin_country, r.origin_city, r.destination_country, r.destination_city,
       sm.name as shipping_mode_name, sm.type as shipping_mode_type, sm.pricing_basis
     FROM tariffs t
@@ -742,13 +961,19 @@ adminRouter.get("/tariffs", async (c) => {
 });
 
 const createTariffSchema = z.object({
-  route_id: z.string().min(1),
-  shipping_mode_id: z.string().min(1),
+  route_id: z.string().optional(),
+  origin_country: z.string().optional(),
+  origin_city: z.string().optional(),
+  destination_country: z.string().optional(),
+  destination_city: z.string().optional(),
+  shipping_mode_id: z.string().min(1, "Mode de transport requis"),
   currency: z.string().default("USD"),
   price_per_unit_minor: z.number().int().positive("Prix unitaire requis"),
   minimum_charge_minor: z.number().int().nonnegative().optional(),
   estimated_days_min: z.number().int().positive().optional(),
   estimated_days_max: z.number().int().positive().optional(),
+  category_tag: z.string().optional(),
+  note: z.string().optional(),
 });
 
 adminRouter.post("/tariffs", zValidator("json", createTariffSchema), async (c) => {
@@ -757,25 +982,69 @@ adminRouter.post("/tariffs", zValidator("json", createTariffSchema), async (c) =
   }
 
   const data = c.req.valid("json");
+  let routeId = data.route_id;
+
+  // Si pays de départ et pays d'arrivée sont saisis directement, on trouve ou crée la liaison
+  if (!routeId && data.origin_country && data.destination_country) {
+    const origCountry = data.origin_country.trim();
+    const destCountry = data.destination_country.trim();
+    const origCity = data.origin_city?.trim() || null;
+    const destCity = data.destination_city?.trim() || null;
+
+    const existing = await c.env.DB.prepare(`
+      SELECT id FROM routes 
+      WHERE LOWER(origin_country) = LOWER(?) AND LOWER(destination_country) = LOWER(?)
+      LIMIT 1
+    `).bind(origCountry, destCountry).first<{ id: string }>();
+
+    if (existing?.id) {
+      routeId = existing.id;
+    } else {
+      routeId = `route-${crypto.randomUUID().slice(0, 8)}`;
+      await c.env.DB.prepare(`
+        INSERT INTO routes (id, origin_country, origin_city, destination_country, destination_city, is_active)
+        VALUES (?, ?, ?, ?, ?, 1)
+      `).bind(routeId, origCountry, origCity, destCountry, destCity).run();
+    }
+  }
+
+  if (!routeId) {
+    return c.json({ error: "Veuillez sélectionner ou renseigner un pays de départ et un pays de destination." }, 400);
+  }
+
   const tariffId = crypto.randomUUID();
 
   await c.env.DB.prepare(`
     INSERT INTO tariffs (
       id, route_id, shipping_mode_id, currency, price_per_unit_minor,
-      minimum_charge_minor, estimated_days_min, estimated_days_max, is_active
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+      minimum_charge_minor, estimated_days_min, estimated_days_max,
+      category_tag, note, is_active
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
   `).bind(
     tariffId,
-    data.route_id,
+    routeId,
     data.shipping_mode_id,
-    data.currency,
+    data.currency || "USD",
     data.price_per_unit_minor,
     data.minimum_charge_minor || 0,
     data.estimated_days_min || null,
-    data.estimated_days_max || null
+    data.estimated_days_max || null,
+    data.category_tag || null,
+    data.note || null
   ).run();
 
   return c.json({ success: true, tariff_id: tariffId, message: "Tarif enregistré avec succès." }, 201);
+});
+
+adminRouter.delete("/tariffs/:id", async (c) => {
+  if (!checkPermission(c, "config.tariffs")) {
+    return c.json({ error: "Permission insuffisante (config.tariffs requise)." }, 403);
+  }
+
+  const tariffId = c.req.param("id");
+  await c.env.DB.prepare(`DELETE FROM tariffs WHERE id = ?`).bind(tariffId).run();
+
+  return c.json({ success: true, message: "Tarif supprimé avec succès." });
 });
 
 /* ==========================================================================
@@ -808,10 +1077,11 @@ const recordPaymentSchema = z.object({
   client_id: z.string().min(1, "Client requis"),
   shipment_id: z.string().optional(),
   amount_minor: z.number().int().positive("Montant requis"),
-  currency: z.string().default("USD"),
+  currency: z.string().default("FCFA"),
   payment_method: z.enum(["CASH", "BANK_TRANSFER", "WAVE", "ORANGE_MONEY", "OTHER"]),
   payment_type: z.enum(["ADVANCE", "BALANCE", "FULL", "REFUND"]).default("ADVANCE"),
   reference_code: z.string().optional(),
+  status: z.enum(["PENDING", "CONFIRMED"]).default("PENDING"),
   receipt_notes: z.string().optional(),
 });
 
@@ -823,6 +1093,7 @@ adminRouter.post("/payments", zValidator("json", recordPaymentSchema), async (c)
   const user = c.get("user");
   const data = c.req.valid("json");
   const paymentId = crypto.randomUUID();
+  const paymentStatus = data.status || "PENDING";
 
   const statements: D1PreparedStatement[] = [
     c.env.DB.prepare(`
@@ -830,7 +1101,7 @@ adminRouter.post("/payments", zValidator("json", recordPaymentSchema), async (c)
         id, shipment_id, client_id, amount_minor, currency,
         payment_method, payment_type, reference_code, status,
         receipt_notes, recorded_by_user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'CONFIRMED', ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       paymentId,
       data.shipment_id || null,
@@ -840,29 +1111,86 @@ adminRouter.post("/payments", zValidator("json", recordPaymentSchema), async (c)
       data.payment_method,
       data.payment_type,
       data.reference_code || null,
+      paymentStatus,
       data.receipt_notes || null,
       user.userId
     ),
   ];
 
-  // Si associé à une expédition, mise à jour éventuelle du statut de paiement
-  if (data.shipment_id && data.payment_type === "FULL") {
-    statements.push(
-      c.env.DB.prepare(`
-        UPDATE shipments SET payment_status = 'PAID', updated_at = datetime('now') WHERE id = ?
-      `).bind(data.shipment_id)
-    );
-  } else if (data.shipment_id && data.payment_type === "ADVANCE") {
-    statements.push(
-      c.env.DB.prepare(`
-        UPDATE shipments SET payment_status = 'PARTIAL', updated_at = datetime('now') WHERE id = ?
-      `).bind(data.shipment_id)
-    );
+  // Si le paiement est d'emblée confirmé et associé à une expédition
+  if (paymentStatus === "CONFIRMED" && data.shipment_id) {
+    if (data.payment_type === "FULL") {
+      statements.push(
+        c.env.DB.prepare(`
+          UPDATE shipments SET payment_status = 'PAID', updated_at = datetime('now') WHERE id = ?
+        `).bind(data.shipment_id)
+      );
+    } else if (data.payment_type === "ADVANCE") {
+      statements.push(
+        c.env.DB.prepare(`
+          UPDATE shipments SET payment_status = 'PARTIAL', updated_at = datetime('now') WHERE id = ?
+        `).bind(data.shipment_id)
+      );
+    }
   }
 
   await c.env.DB.batch(statements);
 
-  return c.json({ success: true, payment_id: paymentId, message: "Paiement consigné avec succès." }, 201);
+  return c.json({
+    success: true,
+    payment_id: paymentId,
+    message: paymentStatus === "CONFIRMED" ? "Paiement consigné et confirmé." : "Paiement consigné (en attente de vérification).",
+  }, 201);
+});
+
+/**
+ * Validation ou rejet manuel d'un paiement après vérification
+ */
+const updatePaymentStatusSchema = z.object({
+  status: z.enum(["PENDING", "CONFIRMED", "CANCELLED"]),
+  receipt_notes: z.string().optional(),
+});
+
+adminRouter.patch("/payments/:id/status", zValidator("json", updatePaymentStatusSchema), async (c) => {
+  if (!checkPermission(c, "finance.edit")) {
+    return c.json({ error: "Permission insuffisante (finance.edit requise)." }, 403);
+  }
+
+  const paymentId = c.req.param("id");
+  const { status, receipt_notes } = c.req.valid("json");
+
+  const payment = await c.env.DB.prepare(`SELECT * FROM payments WHERE id = ?`).bind(paymentId).first<any>();
+  if (!payment) {
+    return c.json({ error: "Paiement introuvable." }, 404);
+  }
+
+  const statements: D1PreparedStatement[] = [
+    c.env.DB.prepare(`
+      UPDATE payments 
+      SET status = ?, receipt_notes = COALESCE(?, receipt_notes)
+      WHERE id = ?
+    `).bind(status, receipt_notes || null, paymentId),
+  ];
+
+  // Si le paiement devient confirmé et est rattaché à une expédition
+  if (status === "CONFIRMED" && payment.shipment_id) {
+    if (payment.payment_type === "FULL") {
+      statements.push(
+        c.env.DB.prepare(`UPDATE shipments SET payment_status = 'PAID', updated_at = datetime('now') WHERE id = ?`).bind(payment.shipment_id)
+      );
+    } else if (payment.payment_type === "ADVANCE") {
+      statements.push(
+        c.env.DB.prepare(`UPDATE shipments SET payment_status = 'PARTIAL', updated_at = datetime('now') WHERE id = ?`).bind(payment.shipment_id)
+      );
+    }
+  }
+
+  await c.env.DB.batch(statements);
+
+  return c.json({
+    success: true,
+    message: status === "CONFIRMED" ? "Paiement validé et confirmé avec succès." : `Statut du paiement mis à jour vers ${status}.`,
+  });
 });
 
 /* ==========================================================================

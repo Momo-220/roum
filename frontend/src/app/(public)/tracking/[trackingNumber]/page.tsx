@@ -247,7 +247,7 @@ export default function TrackingResultPage() {
                 <div>
                   <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Mode</div>
                   <div style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "0.95rem" }}>
-                    {data.shipping_mode === "AIR" ? "Fret Aérien Express" : "Fret Maritime Groupage"}
+                    {data.shipping_mode?.includes("Maritime") || data.shipping_mode === "SEA" ? "Voie Maritime" : (data.shipping_mode || "Voie Aérienne")}
                   </div>
                 </div>
 

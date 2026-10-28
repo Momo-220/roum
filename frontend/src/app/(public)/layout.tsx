@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Phone } from "lucide-react";
+import { Phone, Ship, MapPin } from "lucide-react";
+import { CircularFlag } from "@/components/CircularFlag";
 
 export default function PublicLayout({
   children,
@@ -147,7 +148,7 @@ export default function PublicLayout({
                 ROUM TRANSIT
               </h4>
               <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", lineHeight: "1.6" }}>
-                Spécialiste du transport de fret maritime, aérien et de l&apos;approvisionnement international
+                Spécialiste du transport par voie maritime, aérienne et de l&apos;approvisionnement international
                 au départ de la Chine, Dubaï et du Maroc vers l&apos;Afrique de l&apos;Ouest et Centrale.
               </p>
             </div>
@@ -156,23 +157,44 @@ export default function PublicLayout({
               <h4 style={{ color: "var(--text-main)", marginBottom: "14px", fontSize: "1.05rem" }}>
                 Liaisons Principales
               </h4>
-              <ul style={{ listStyle: "none", color: "var(--text-secondary)", fontSize: "0.88rem", lineHeight: "2" }}>
-                <li>🇨🇳 Guangzhou / Yiwu → 🇲🇱 Bamako, 🇬🇳 Conakry</li>
-                <li>🇦🇪 Dubaï → 🇨🇮 Abidjan, 🇸🇳 Dakar</li>
-                <li>🇲🇦 Casablanca → 🇸🇳 Dakar, 🇲🇱 Bamako</li>
-                <li>Fret Maritime Groupage (LCL) & Aérien Express</li>
+              <ul style={{ listStyle: "none", color: "var(--text-secondary)", fontSize: "0.85rem", display: "grid", gap: "10px" }}>
+                <li style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <CircularFlag countryCode="CN" size={15} />
+                  <span>Guangzhou / Yiwu → Abidjan, Dakar, Bamako</span>
+                </li>
+                <li style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <CircularFlag countryCode="AE" size={15} />
+                  <span>Dubaï → Abidjan, Ouagadougou, Libreville</span>
+                </li>
+                <li style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <CircularFlag countryCode="MA" size={15} />
+                  <span>Maroc → 5 Pays Subsahariens (5j Chrono)</span>
+                </li>
+                <li style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <CircularFlag countryCode="FR" size={15} />
+                  <span>Paris ↔ Abidjan (Aérien Bilatéral F/€)</span>
+                </li>
+                <li style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Ship size={15} color="#0284c7" />
+                  <span>Voie Maritime Groupage (300 000 F / CBM)</span>
+                </li>
               </ul>
             </div>
 
             <div>
               <h4 style={{ color: "var(--text-main)", marginBottom: "14px", fontSize: "1.05rem" }}>
-                Contact & Assistance
+                Contact & Agence
               </h4>
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "14px" }}>
-                Assistance directe par WhatsApp 7j/7 pour vos demandes et expéditions.
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <MapPin size={15} color="var(--brown-dark)" />
+                Agence : Abidjan Bingerville, Côte d&apos;Ivoire
+              </p>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "14px", lineHeight: "1.5" }}>
+                WhatsApp : <strong>+225 01 53 638 569</strong><br />
+                Instagram : @roum_transittt • TikTok : @roum_transit
               </p>
               <a
-                href="https://wa.me/22370000000"
+                href="https://wa.me/2250153638569"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-whatsapp"

@@ -6,7 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "roum-db"
-database_id = "local-roum-db"
+database_id = "102db612-0c02-4b85-bc26-ff82f8280e93"
 migrations_dir = "migrations"
 
 [vars]
