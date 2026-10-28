@@ -7,15 +7,29 @@ import {
   generateQuoteReference,
   phoneSchema,
 } from "../shared";
+import { checkRateLimit } from "../crypto";
 import type { Env } from "../types";
 
 export const publicRouter = new Hono<{ Bindings: Env }>();
 
 /**
  * 1. Suivi public d'une expédition par son numéro de suivi (tracking number)
- * Accès direct et public sans mot de passe requis.
+ * Accès direct et public sans mot de passe requis (avec anti-énumération et sans PII client).
  */
 publicRouter.get("/tracking/:trackingNumber", async (c) => {
+  const clientIp =
+    c.req.header("CF-Connecting-IP") ||
+    c.req.header("X-Forwarded-For")?.split(",")[0]?.trim() ||
+    "local-ip";
+  const rateCheck = checkRateLimit(`tracking:${clientIp}`, 30, 60 * 1000);
+  if (!rateCheck.allowed) {
+    c.header("Retry-After", String(rateCheck.retryAfterSec));
+    return c.json(
+      { error: "Trop de requêtes de suivi. Veuillez patienter quelques instants." },
+      429
+    );
+  }
+
   const rawNumber = c.req.param("trackingNumber");
   const normalized = normalizeTrackingNumber(rawNumber);
 
@@ -26,7 +40,7 @@ publicRouter.get("/tracking/:trackingNumber", async (c) => {
     );
   }
 
-  // Requête du dossier d'expédition
+  // Requête du dossier d'expédition (sans exposer ni charger le nom/téléphone du client)
   const shipment = await c.env.DB.prepare(`
     SELECT 
       s.id,
@@ -44,14 +58,11 @@ publicRouter.get("/tracking/:trackingNumber", async (c) => {
       r.destination_country,
       r.destination_city,
       sm.name as shipping_mode_name,
-      sm.type as shipping_mode_type,
-      c.full_name as client_name,
-      c.phone_whatsapp as client_phone
+      sm.type as shipping_mode_type
     FROM shipments s
     JOIN shipment_statuses st ON s.current_status = st.code
     JOIN routes r ON s.route_id = r.id
     JOIN shipping_modes sm ON s.shipping_mode_id = sm.id
-    JOIN clients c ON s.client_id = c.id
     WHERE s.tracking_number = ?
   `).bind(normalized).first();
 
@@ -151,24 +162,37 @@ publicRouter.get("/tariffs", async (c) => {
 });
 
 const quoteRequestSchema = z.object({
-  client_name: z.string().min(2, "Le nom est requis"),
+  client_name: z.string().min(2, "Le nom est requis").max(120),
   client_phone: phoneSchema,
-  client_email: z.string().email("Email invalide").optional().or(z.literal("")),
-  origin_country: z.string().min(2, "Pays d'origine requis"),
-  destination_country: z.string().min(2, "Pays de destination requis"),
-  shipping_mode_id: z.string().optional(),
-  estimated_weight_kg: z.number().positive().optional(),
-  estimated_cbm: z.number().positive().optional(),
-  cargo_type: z.string().optional(),
+  client_email: z.string().email("Email invalide").max(160).optional().or(z.literal("")),
+  origin_country: z.string().min(2, "Pays d'origine requis").max(80),
+  destination_country: z.string().min(2, "Pays de destination requis").max(80),
+  shipping_mode_id: z.string().max(64).optional(),
+  estimated_weight_kg: z.number().positive().max(1_000_000).optional(),
+  estimated_cbm: z.number().positive().max(10_000).optional(),
+  cargo_type: z.string().max(500).optional(),
 });
 
 /**
- * 3. Enregistrement d'une demande de devis client
+ * 3. Enregistrement d'une demande de devis client (avec protection anti-spam)
  */
 publicRouter.post(
   "/quotes",
   zValidator("json", quoteRequestSchema),
   async (c) => {
+    const clientIp =
+      c.req.header("CF-Connecting-IP") ||
+      c.req.header("X-Forwarded-For")?.split(",")[0]?.trim() ||
+      "local-ip";
+    const rateCheck = checkRateLimit(`quotes:${clientIp}`, 10, 10 * 60 * 1000);
+    if (!rateCheck.allowed) {
+      c.header("Retry-After", String(rateCheck.retryAfterSec));
+      return c.json(
+        { error: "Trop de demandes envoyées récemment. Veuillez patienter quelques minutes." },
+        429
+      );
+    }
+
     const data = c.req.valid("json");
     const quoteRef = generateQuoteReference();
     const id = crypto.randomUUID();

@@ -480,6 +480,7 @@ export function RouteGlobe({
   }, [onToggleExpand]);
 
   const [filter, setFilter] = useState<"ALL" | "IN_TRANSIT" | "DELIVERED" | "PREPARATION">("ALL");
+  const [originFilter, setOriginFilter] = useState<"Chine" | "Dubaï" | "Maroc" | null>(null);
 
   const [hoveredRoute, setHoveredRoute] = useState<{
     route: TransactionRoute;
@@ -571,9 +572,23 @@ export function RouteGlobe({
   }, [shipments]);
 
   const visibleRoutes = useMemo(() => {
-    if (filter === "ALL") return routesData;
-    return routesData.filter((r) => r.status_category === filter);
-  }, [routesData, filter]);
+    return routesData.filter((r) => {
+      if (filter !== "ALL" && r.status_category !== filter) return false;
+      if (originFilter === "Chine") {
+        const orig = `${r.origin_country} ${r.origin_name}`.toLowerCase();
+        return orig.includes("chine") || orig.includes("guangzhou") || orig.includes("yiwu");
+      }
+      if (originFilter === "Dubaï") {
+        const orig = `${r.origin_country} ${r.origin_name}`.toLowerCase();
+        return orig.includes("duba") || orig.includes("émirat") || orig.includes("uae");
+      }
+      if (originFilter === "Maroc") {
+        const orig = `${r.origin_country} ${r.origin_name}`.toLowerCase();
+        return orig.includes("maroc") || orig.includes("casablanca");
+      }
+      return true;
+    });
+  }, [routesData, filter, originFilter]);
 
   const counts = useMemo(() => {
     return {
@@ -667,6 +682,7 @@ export function RouteGlobe({
     stateRef.current.targetZoom = 1.0;
     stateRef.current.hasActiveTarget = false;
     setZoomPercent(100);
+    setOriginFilter(null);
     if (onClearSelection) {
       onClearSelection();
     }
@@ -751,8 +767,8 @@ export function RouteGlobe({
         st.vy *= Math.pow(0.01, dt);
         st.vt *= Math.pow(0.01, dt);
       } else {
-        // Rotation lente continue quand le curseur n'est PAS sur le globe
-        st.yaw += dt * 0.06;
+        // Rotation lente continue dans le sens horaire quand le curseur n'est PAS sur le globe
+        st.yaw -= dt * 0.06;
         st.targetYaw = st.yaw;
 
         st.yaw += st.vy * dt;
@@ -906,44 +922,97 @@ export function RouteGlobe({
           ctx.stroke();
         }
 
-        // LA COMÈTE / ÉTOILE FILANTE : tête brillante avec traînée effilée (code exact utilisateur)
-        const cycle = 3.6;
+        // LA COMÈTE / ÉTOILE FILANTE : vol fluide sous-pixel et atterrissage amorti en douceur
+        const cycle = 4.0;
         const routeOffset = isSelected ? 0 : (index / Math.max(1, currentRoutes.length));
         const ph = (t / cycle + routeOffset) % 1;
-        const run = Math.min(1, ph / 0.7);
-        const head = Math.floor(run * 48);
 
-        for (let k = Math.max(0, head - 10); k < head; k++) {
-          const a = pts[k],
-            b = pts[k + 1];
-          if (a.z < 0 && Math.hypot(a.x - cx, a.y - cy) < r) continue;
-          ctx.globalAlpha = (1 - (head - k) / 10) * 0.95;
-          ctx.lineWidth = 2.2;
-          ctx.strokeStyle = colorPalette.comet;
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-          ctx.stroke();
+        // Phase de vol (0 -> 0.72) avec décélération douce à l'approche, puis absorption progressive de la traînée (0.72 -> 0.92)
+        const tailLen = 11;
+        const flightDuration = 0.72;
+        const absorbDuration = 0.20;
+
+        let headPos = 0; // Position flottante de la tête (0..48)
+        let tailStartPos = 0; // Position flottante de la queue
+        let landingFade = 1;
+
+        if (ph <= flightDuration) {
+          const u = ph / flightDuration;
+          // Décélération progressive (ease-out doux) sur le dernier tiers avant l'atterrissage
+          const eased = u < 0.6
+            ? (u / 0.6) * 0.64
+            : 0.64 + (1 - Math.pow(1 - (u - 0.6) / 0.4, 2.1)) * 0.36;
+          headPos = eased * 48;
+          tailStartPos = Math.max(0, headPos - tailLen);
+          // Apparition douce au décollage
+          landingFade = Math.min(1, u / 0.08);
+        } else if (ph <= flightDuration + absorbDuration) {
+          // La tête est posée à destination (48) et la traînée s'absorbe doucement dans le point d'arrivée
+          const absorbU = (ph - flightDuration) / absorbDuration;
+          const easedAbsorb = 1 - Math.pow(1 - absorbU, 2.2);
+          headPos = 48;
+          tailStartPos = Math.min(48, (48 - tailLen) + easedAbsorb * tailLen);
+          landingFade = Math.pow(1 - absorbU, 1.5);
+        } else {
+          headPos = 48;
+          tailStartPos = 48;
+          landingFade = 0;
         }
 
-        // PIN DE DESTINATION & PULSATION D'ARRIVÉE (code exact utilisateur)
+        if (landingFade > 0.01 && headPos > tailStartPos) {
+          const startIdx = Math.max(0, Math.floor(tailStartPos));
+          const endIdx = Math.min(48, Math.ceil(headPos));
+          const currentSpan = Math.max(0.5, headPos - tailStartPos);
+
+          for (let k = startIdx; k < endIdx; k++) {
+            const a = pts[k];
+            const b = pts[k + 1];
+            if (!a || !b) continue;
+            if (a.z < 0 && Math.hypot(a.x - cx, a.y - cy) < r) continue;
+
+            // Interpolation sous-segment pour la pointe de la comète (zéro saccade)
+            const segEnd = k + 1 > headPos ? headPos - k : 1;
+            const bx = a.x + (b.x - a.x) * segEnd;
+            const by = a.y + (b.y - a.y) * segEnd;
+
+            const progressAlongTail = Math.max(0, Math.min(1, (k + segEnd - tailStartPos) / currentSpan));
+            const smoothAlpha = Math.pow(progressAlongTail, 1.4) * 0.92 * landingFade;
+
+            ctx.globalAlpha = smoothAlpha;
+            ctx.lineWidth = 1.0 + progressAlongTail * 1.25;
+            ctx.strokeStyle = colorPalette.comet;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(bx, by);
+            ctx.stroke();
+          }
+        }
+
+        // PIN DE DESTINATION & ONDE D'ATTERRISSAGE DOUCE (amortie en ease-out cubique)
         const end = pts[48];
         const front = end.z > 0;
         if (front) {
+          const isTouchingDown = ph >= flightDuration - 0.05 && ph <= flightDuration + 0.26;
+          const touchProgress = isTouchingDown
+            ? (ph - (flightDuration - 0.05)) / 0.31
+            : 0;
+          const pinBreath = isTouchingDown ? Math.sin(touchProgress * Math.PI) * 0.9 : 0;
+
           ctx.globalAlpha = 1;
           ctx.fillStyle = colorPalette.comet;
           ctx.beginPath();
-          ctx.arc(end.x, end.y, 2.6, 0, Math.PI * 2);
+          ctx.arc(end.x, end.y, 2.5 + pinBreath, 0, Math.PI * 2);
           ctx.fill();
 
-          // Pulsation d'arrivée à destination
-          if (ph > 0.7) {
-            const k = (ph - 0.7) / 0.3;
-            ctx.globalAlpha = 1 - k;
-            ctx.lineWidth = 1.4;
+          // Onde d'atterrissage soyeuse et progressive
+          if (isTouchingDown) {
+            const easeOutRipple = 1 - Math.pow(1 - touchProgress, 3);
+            const rippleAlpha = Math.pow(1 - touchProgress, 1.85) * 0.65;
+            ctx.globalAlpha = rippleAlpha;
+            ctx.lineWidth = 1.25 * (1 - touchProgress * 0.4);
             ctx.strokeStyle = colorPalette.comet;
             ctx.beginPath();
-            ctx.arc(end.x, end.y, 3 + k * 16, 0, Math.PI * 2);
+            ctx.arc(end.x, end.y, 3.2 + easeOutRipple * 13, 0, Math.PI * 2);
             ctx.stroke();
           }
         }
@@ -1185,115 +1254,130 @@ export function RouteGlobe({
             }
       }
     >
-      {/* 1. EN-TÊTE ÉPURÉ AVEC SÉLECTEURS EN PILL ET BOUTON AGRANDIR */}
+      {/* 1. EN-TÊTE ÉPURÉ MINIMALISTE (2 LIGNES STRUCTURÉES SANS DÉPASSEMENT) */}
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "16px",
-          marginBottom: isExp ? "10px" : "16px",
+          flexDirection: "column",
+          gap: "12px",
+          marginBottom: isExp ? "10px" : "14px",
+          paddingBottom: "14px",
+          borderBottom: "1px solid rgba(42, 24, 16, 0.07)",
           flexShrink: 0,
         }}
       >
-        <div>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              color: "var(--brown-dark)",
-              fontSize: "0.76rem",
-              fontWeight: "700",
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              marginBottom: "6px",
-              background: "rgba(59, 34, 24, 0.05)",
-              padding: "4px 12px",
-              borderRadius: "9999px",
-              border: "1px solid rgba(59, 34, 24, 0.08)",
-            }}
-          >
-            <Compass size={15} style={{ color: "var(--brown-light)" }} />
-            <span>Réseau Logistique International</span>
-            <span
-              style={{
-                display: "inline-block",
-                width: "6px",
-                height: "6px",
-                borderRadius: "50%",
-                background: "#16a34a",
-                boxShadow: "0 0 6px #16a34a",
-                marginLeft: "2px",
-              }}
-            />
-          </div>
-          <h2 style={{ fontSize: isExp ? "1.35rem" : "1.25rem", color: "var(--text-main)", fontWeight: "800", letterSpacing: "-0.02em" }}>
-            Flux d&apos;Acheminement & Expéditions en Direct
-          </h2>
-          <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginTop: "3px" }}>
-            {selectedShipmentId ? (
-              <span style={{ color: "var(--brown-dark)", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                <span>Expédition sélectionnée · Ligne isolée</span>
-                <button
-                  type="button"
-                  onClick={resetGlobe}
+        {/* Ligne supérieure : Titre sobre à gauche + Bouton Agrandir fixé à droite */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: "12px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "11px", minWidth: 0 }}>
+            <span className="metric-icon-box" style={{ marginTop: "2px" }}>
+              <Compass size={16} strokeWidth={1.8} />
+            </span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <h2
                   style={{
-                    background: "rgba(59, 34, 24, 0.08)",
-                    border: "none",
-                    borderRadius: "6px",
-                    color: "var(--brown-dark)",
-                    cursor: "pointer",
-                    fontSize: "0.78rem",
-                    fontWeight: "700",
-                    padding: "2px 8px",
-                    marginLeft: "4px",
-                    transition: "all 0.15s ease",
+                    fontSize: isExp ? "1.22rem" : "1.06rem",
+                    color: "var(--text-main)",
+                    fontWeight: "800",
+                    letterSpacing: "-0.02em",
+                    margin: 0,
                   }}
                 >
-                  Réafficher tous les flux
-                </button>
-              </span>
+                  Réseau Logistique International
+                </h2>
+                {originFilter && (
+                  <span className="ios-trend-pill ios-trend-pill-gold">
+                    Hub : {originFilter}
+                  </span>
+                )}
+              </div>
+              <p style={{ fontSize: "0.76rem", color: "var(--text-muted)", margin: "3px 0 0 0" }}>
+                {selectedShipmentId || originFilter ? (
+                  <span style={{ color: "var(--brown-dark)", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                    <span>
+                      {selectedShipmentId
+                        ? "Expédition sélectionnée · Ligne isolée"
+                        : `Transactions depuis ${originFilter} uniquement`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={resetGlobe}
+                      style={{
+                        background: "#FAF8F5",
+                        border: "1px solid rgba(42, 24, 16, 0.12)",
+                        borderRadius: "9999px",
+                        color: "var(--brown-dark)",
+                        cursor: "pointer",
+                        fontSize: "0.72rem",
+                        fontWeight: "700",
+                        padding: "2px 9px",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      Réafficher tous les flux
+                    </button>
+                  </span>
+                ) : (
+                  <span>Survolez un corridor ou faites pivoter le globe pour inspecter les cargaisons en direct.</span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* Bouton Agrandir / Réduire toujours aligné en haut à droite */}
+          <button
+            type="button"
+            onClick={handleToggleExpand}
+            className="btn btn-secondary"
+            style={{
+              padding: "6px 13px",
+              fontSize: "0.76rem",
+              gap: "6px",
+              borderRadius: "var(--radius-full)",
+              background: isExp ? "var(--brown-dark)" : "#FAF8F5",
+              color: isExp ? "#FAF8F5" : "var(--brown-dark)",
+              borderColor: isExp ? "var(--brown-dark)" : "rgba(42, 24, 16, 0.12)",
+              fontWeight: "700",
+              flexShrink: 0,
+              whiteSpace: "nowrap",
+            }}
+            title={isExp ? "Réduire l'affichage (Échap)" : "Afficher le globe en plein écran"}
+          >
+            {isExp ? (
+              <>
+                <Minimize2 size={13} strokeWidth={2} />
+                Réduire
+              </>
             ) : (
-              <span>Survolez un flux ou faites pivoter le globe pour inspecter les cargaisons en temps réel.</span>
+              <>
+                <Maximize2 size={13} strokeWidth={2} />
+                Agrandir
+              </>
             )}
-          </p>
+          </button>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          {/* Pills de statut */}
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              padding: "3px",
-              background: "var(--bg-app)",
-              borderRadius: "var(--radius-full)",
-              border: "1px solid var(--border-light)",
-              gap: "2px",
-            }}
-          >
+        {/* Ligne inférieure : Sélecteur de statut monochrome en pilules */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" }}>
+          <div className="pill-selector">
             <button
               type="button"
               onClick={() => {
                 setFilter("ALL");
+                setOriginFilter(null);
                 if (onClearSelection) onClearSelection();
               }}
-              style={{
-                border: "none",
-                background: filter === "ALL" ? "#FFFFFF" : "transparent",
-                color: filter === "ALL" ? "var(--text-main)" : "var(--text-muted)",
-                fontWeight: filter === "ALL" ? "700" : "500",
-                fontSize: "0.78rem",
-                padding: "6px 12px",
-                borderRadius: "var(--radius-full)",
-                boxShadow: filter === "ALL" ? "0 1px 3px rgba(0, 0, 0, 0.08)" : "none",
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-              }}
+              className={`pill-option ${filter === "ALL" ? "pill-option-active" : ""}`}
             >
-              Tous les flux ({counts.all})
+              <Globe size={12} strokeWidth={1.8} />
+              Tous
             </button>
 
             <button
@@ -1302,24 +1386,10 @@ export function RouteGlobe({
                 setFilter("IN_TRANSIT");
                 if (onClearSelection) onClearSelection();
               }}
-              style={{
-                border: "none",
-                background: filter === "IN_TRANSIT" ? "#FFFFFF" : "transparent",
-                color: filter === "IN_TRANSIT" ? "var(--text-main)" : "var(--text-muted)",
-                fontWeight: filter === "IN_TRANSIT" ? "700" : "500",
-                fontSize: "0.78rem",
-                padding: "6px 12px",
-                borderRadius: "var(--radius-full)",
-                boxShadow: filter === "IN_TRANSIT" ? "0 1px 3px rgba(0, 0, 0, 0.08)" : "none",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                transition: "all 0.15s ease",
-              }}
+              className={`pill-option ${filter === "IN_TRANSIT" ? "pill-option-active" : ""}`}
             >
-              <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: THEME.inTransit.comet }} />
-              En transit ({counts.inTransit})
+              <Plane size={12} strokeWidth={1.8} />
+              En transit
             </button>
 
             <button
@@ -1328,24 +1398,10 @@ export function RouteGlobe({
                 setFilter("DELIVERED");
                 if (onClearSelection) onClearSelection();
               }}
-              style={{
-                border: "none",
-                background: filter === "DELIVERED" ? "#FFFFFF" : "transparent",
-                color: filter === "DELIVERED" ? "var(--text-main)" : "var(--text-muted)",
-                fontWeight: filter === "DELIVERED" ? "700" : "500",
-                fontSize: "0.78rem",
-                padding: "6px 12px",
-                borderRadius: "var(--radius-full)",
-                boxShadow: filter === "DELIVERED" ? "0 1px 3px rgba(0, 0, 0, 0.08)" : "none",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                transition: "all 0.15s ease",
-              }}
+              className={`pill-option ${filter === "DELIVERED" ? "pill-option-active" : ""}`}
             >
-              <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: THEME.delivered.comet }} />
-              Livrées ({counts.delivered})
+              <CheckCircle2 size={12} strokeWidth={1.8} />
+              Livrés
             </button>
 
             <button
@@ -1354,56 +1410,12 @@ export function RouteGlobe({
                 setFilter("PREPARATION");
                 if (onClearSelection) onClearSelection();
               }}
-              style={{
-                border: "none",
-                background: filter === "PREPARATION" ? "#FFFFFF" : "transparent",
-                color: filter === "PREPARATION" ? "var(--text-main)" : "var(--text-muted)",
-                fontWeight: filter === "PREPARATION" ? "700" : "500",
-                fontSize: "0.78rem",
-                padding: "6px 12px",
-                borderRadius: "var(--radius-full)",
-                boxShadow: filter === "PREPARATION" ? "0 1px 3px rgba(0, 0, 0, 0.08)" : "none",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                transition: "all 0.15s ease",
-              }}
+              className={`pill-option ${filter === "PREPARATION" ? "pill-option-active" : ""}`}
             >
-              <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: THEME.preparation.comet }} />
-              En préparation ({counts.preparation})
+              <Package size={12} strokeWidth={1.8} />
+              Préparation
             </button>
           </div>
-
-          {/* Bouton Agrandir / Réduire */}
-          <button
-            type="button"
-            onClick={handleToggleExpand}
-            className="btn btn-secondary"
-            style={{
-              padding: "6px 14px",
-              fontSize: "0.78rem",
-              gap: "6px",
-              borderRadius: "var(--radius-full)",
-              background: isExp ? "var(--brown-dark)" : "#FFFFFF",
-              color: isExp ? "#FAF8F5" : "var(--text-main)",
-              borderColor: isExp ? "var(--brown-dark)" : "var(--border-light)",
-              boxShadow: isExp ? "0 2px 8px rgba(59, 34, 24, 0.2)" : "none",
-            }}
-            title={isExp ? "Réduire l'affichage (Échap)" : "Prendre tout l'espace plein écran"}
-          >
-            {isExp ? (
-              <>
-                <Minimize2 size={14} />
-                Réduire la vue
-              </>
-            ) : (
-              <>
-                <Maximize2 size={14} />
-                Agrandir
-              </>
-            )}
-          </button>
         </div>
       </div>
 
@@ -1449,8 +1461,16 @@ export function RouteGlobe({
             }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "4px" }}>
-              <span style={{ fontSize: "0.68rem", fontWeight: "700", color: "var(--brown-light)" }}>
-                {hoveredRoute.route.mode === "AIR" ? "✈️ Voie Aérienne" : "🚢 Voie Maritime"}
+              <span style={{ fontSize: "0.68rem", fontWeight: "700", color: "var(--brown-light)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                {hoveredRoute.route.mode === "AIR" ? (
+                  <>
+                    <Plane size={12} strokeWidth={1.8} /> Voie Aérienne
+                  </>
+                ) : (
+                  <>
+                    <Ship size={12} strokeWidth={1.8} /> Voie Maritime
+                  </>
+                )}
               </span>
               <span
                 style={{
@@ -1613,11 +1633,22 @@ export function RouteGlobe({
           <button
             type="button"
             onClick={() => {
+              setOriginFilter((prev) => (prev === "Chine" ? null : "Chine"));
               focusRegion(113.26 * RAD, 23.13 * RAD);
               if (onClearSelection) onClearSelection();
             }}
             className="btn btn-secondary"
-            style={{ padding: "3px 9px", fontSize: "0.72rem", borderRadius: "var(--radius-full)", display: "inline-flex", alignItems: "center", gap: "5px" }}
+            style={{
+              padding: "3px 10px",
+              fontSize: "0.72rem",
+              borderRadius: "var(--radius-full)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "5px",
+              background: originFilter === "Chine" ? "var(--brown-dark)" : "#FFFFFF",
+              color: originFilter === "Chine" ? "#FAF8F5" : "var(--text-main)",
+              borderColor: originFilter === "Chine" ? "var(--brown-dark)" : "var(--border-light)",
+            }}
           >
             <CircularFlag countryCode="CN" size={13} />
             Chine
@@ -1625,11 +1656,22 @@ export function RouteGlobe({
           <button
             type="button"
             onClick={() => {
+              setOriginFilter((prev) => (prev === "Dubaï" ? null : "Dubaï"));
               focusRegion(55.27 * RAD, 25.20 * RAD);
               if (onClearSelection) onClearSelection();
             }}
             className="btn btn-secondary"
-            style={{ padding: "3px 9px", fontSize: "0.72rem", borderRadius: "var(--radius-full)", display: "inline-flex", alignItems: "center", gap: "5px" }}
+            style={{
+              padding: "3px 10px",
+              fontSize: "0.72rem",
+              borderRadius: "var(--radius-full)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "5px",
+              background: originFilter === "Dubaï" ? "var(--brown-dark)" : "#FFFFFF",
+              color: originFilter === "Dubaï" ? "#FAF8F5" : "var(--text-main)",
+              borderColor: originFilter === "Dubaï" ? "var(--brown-dark)" : "var(--border-light)",
+            }}
           >
             <CircularFlag countryCode="AE" size={13} />
             Dubaï
@@ -1637,11 +1679,22 @@ export function RouteGlobe({
           <button
             type="button"
             onClick={() => {
+              setOriginFilter((prev) => (prev === "Maroc" ? null : "Maroc"));
               focusRegion(-7.59 * RAD, 33.57 * RAD);
               if (onClearSelection) onClearSelection();
             }}
             className="btn btn-secondary"
-            style={{ padding: "3px 9px", fontSize: "0.72rem", borderRadius: "var(--radius-full)", display: "inline-flex", alignItems: "center", gap: "5px" }}
+            style={{
+              padding: "3px 10px",
+              fontSize: "0.72rem",
+              borderRadius: "var(--radius-full)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "5px",
+              background: originFilter === "Maroc" ? "var(--brown-dark)" : "#FFFFFF",
+              color: originFilter === "Maroc" ? "#FAF8F5" : "var(--text-main)",
+              borderColor: originFilter === "Maroc" ? "var(--brown-dark)" : "var(--border-light)",
+            }}
           >
             <CircularFlag countryCode="MA" size={13} />
             Maroc
@@ -1649,11 +1702,12 @@ export function RouteGlobe({
           <button
             type="button"
             onClick={() => {
+              setOriginFilter(null);
               focusRegion(0 * RAD, 5 * RAD);
               if (onClearSelection) onClearSelection();
             }}
             className="btn btn-secondary"
-            style={{ padding: "3px 9px", fontSize: "0.72rem", borderRadius: "var(--radius-full)", display: "inline-flex", alignItems: "center", gap: "5px" }}
+            style={{ padding: "3px 10px", fontSize: "0.72rem", borderRadius: "var(--radius-full)", display: "inline-flex", alignItems: "center", gap: "5px" }}
           >
             <Globe size={13} color="var(--brown-dark)" />
             Afrique

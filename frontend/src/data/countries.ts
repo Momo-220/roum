@@ -154,7 +154,7 @@ export const ALL_WORLD_COUNTRIES: CountryInfo[] = [
   { code: "UA", name: "Ukraine", region: "EUROPE" },
   { code: "VN", name: "Vietnam", hubCity: "Hanoï", region: "ASIE_MOYEN_ORIENT" },
 ].filter((item, index, self) => index === self.findIndex((t) => t.code === item.code))
-.sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
 // Helper pour retrouver le code ISO 2 lettres depuis un nom de pays
 export function getCountryCodeFromName(name: string = ""): string {
@@ -191,7 +191,7 @@ export function getCountryCodeFromName(name: string = ""): string {
   if (n.includes("thaïlande") || n.includes("thailand")) return "TH";
   if (n.includes("qatar")) return "QA";
   if (n.includes("arabie") || n.includes("saoudite")) return "SA";
-  
+
   const found = ALL_WORLD_COUNTRIES.find((c) => c.name.toLowerCase() === n || n.includes(c.name.toLowerCase()));
   return found ? found.code : "CI";
 }

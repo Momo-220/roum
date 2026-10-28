@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { getCookie } from "hono/cookie";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import {
@@ -9,7 +10,7 @@ import {
   phoneSchema,
   type TransportType,
 } from "../shared";
-import { hashPassword, verifyJwt } from "../crypto";
+import { hashPassword, verifyJwt, resolveJwtSecret, sanitizeCsvCell } from "../crypto";
 import type { Env, UserSession } from "../types";
 
 export const adminRouter = new Hono<{ Bindings: Env; Variables: { user: UserSession } }>();
@@ -19,12 +20,33 @@ export const adminRouter = new Hono<{ Bindings: Env; Variables: { user: UserSess
  */
 adminRouter.use("*", async (c, next) => {
   const authHeader = c.req.header("Authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  const cookieToken = getCookie(c, "roum_session");
+  const token =
+    authHeader && authHeader.startsWith("Bearer ")
+      ? authHeader.substring(7)
+      : cookieToken;
+
+  if (!token) {
     return c.json({ error: "Authentification requise." }, 401);
   }
 
-  const token = authHeader.substring(7);
-  const jwtSecret = c.env.JWT_SECRET || "roum-default-dev-secret-key-32chars!";
+  // Session locale de développement (uniquement hors production)
+  if (token === "roum_local_admin_session" && c.env.ENVIRONMENT !== "production") {
+    c.set("user", {
+      userId: "user-superadmin-01",
+      email: "ceo@roumtransit.com",
+      fullName: "Madame Marouba",
+      roleId: SUPER_ADMIN_ROLE_ID,
+      roleName: "CEO",
+      isSuperAdmin: true,
+      hubLocation: "Abidjan / Bamako",
+      permissions: ["*"],
+      allowedStatuses: ["*"],
+    });
+    return await next();
+  }
+
+  const jwtSecret = resolveJwtSecret(c.env);
   const payload = await verifyJwt<{ sub: string; exp: number }>(token, jwtSecret);
 
   if (!payload || !payload.sub || Date.now() > payload.exp) {
@@ -209,11 +231,11 @@ adminRouter.get("/users", async (c) => {
 });
 
 const createUserSchema = z.object({
-  email: z.string().email("Email invalide"),
-  password: z.string().min(8, "Mot de passe de 8 caractères minimum requis"),
-  full_name: z.string().min(2, "Nom complet requis"),
-  role_id: z.string().min(1, "Rôle requis"),
-  hub_location: z.string().optional(),
+  email: z.string().email("Email invalide").max(160),
+  password: z.string().min(8, "Mot de passe de 8 caractères minimum requis").max(128, "Mot de passe trop long"),
+  full_name: z.string().min(2, "Nom complet requis").max(120),
+  role_id: z.string().min(1, "Rôle requis").max(80),
+  hub_location: z.string().max(120).optional(),
 });
 
 adminRouter.post("/users", zValidator("json", createUserSchema), async (c) => {
@@ -223,21 +245,37 @@ adminRouter.post("/users", zValidator("json", createUserSchema), async (c) => {
   }
 
   const data = c.req.valid("json");
+  const roleExists = await c.env.DB.prepare(`SELECT id FROM roles WHERE id = ? AND is_active = 1`).bind(data.role_id).first();
+  if (!roleExists) {
+    return c.json({ error: "Rôle inexistant ou inactif." }, 400);
+  }
+
   const newUserId = crypto.randomUUID();
   const passwordHash = await hashPassword(data.password);
 
   try {
-    await c.env.DB.prepare(`
-      INSERT INTO users (id, email, password_hash, full_name, role_id, hub_location, is_active)
-      VALUES (?, ?, ?, ?, ?, ?, 1)
-    `).bind(
-      newUserId,
-      data.email.trim().toLowerCase(),
-      passwordHash,
-      data.full_name.trim(),
-      data.role_id,
-      data.hub_location || null
-    ).run();
+    await c.env.DB.batch([
+      c.env.DB.prepare(`
+        INSERT INTO users (id, email, password_hash, full_name, role_id, hub_location, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, 1)
+      `).bind(
+        newUserId,
+        data.email.trim().toLowerCase(),
+        passwordHash,
+        data.full_name.trim(),
+        data.role_id,
+        data.hub_location || null
+      ),
+      c.env.DB.prepare(`
+        INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
+        VALUES (?, ?, 'user.create', 'user', ?, ?)
+      `).bind(
+        crypto.randomUUID(),
+        currentUser.userId,
+        newUserId,
+        JSON.stringify({ email: data.email.trim().toLowerCase(), role_id: data.role_id })
+      ),
+    ]);
 
     return c.json({ success: true, user_id: newUserId, message: "Utilisateur créé avec succès." }, 201);
   } catch (err: any) {
@@ -491,6 +529,15 @@ adminRouter.patch("/shipments/:id/status", zValidator("json", updateStatusSchema
       comment?.trim() || null,
       user.userId
     ),
+    c.env.DB.prepare(`
+      INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
+      VALUES (?, ?, 'shipment.status', 'shipment', ?, ?)
+    `).bind(
+      crypto.randomUUID(),
+      user.userId,
+      shipmentId,
+      JSON.stringify({ new_status, location: location.trim() })
+    ),
   ];
 
   await c.env.DB.batch(statements);
@@ -574,6 +621,24 @@ adminRouter.patch("/shipments/:id/intake", zValidator("json", shipmentIntakeSche
   const shipmentId = c.req.param("id");
   const data = c.req.valid("json");
 
+  // Garde-fou RBAC : vérification du statut autorisé pour le rôle
+  if (!user.isSuperAdmin && !user.allowedStatuses.includes(data.status) && !user.allowedStatuses.includes("*")) {
+    return c.json(
+      { error: `Votre rôle (${user.roleName}) n'est pas autorisé à appliquer le statut : ${data.status}` },
+      403
+    );
+  }
+
+  // Garde-fou RBAC Financier : modifier final_price_minor exige finance.edit
+  if (data.final_price_minor !== undefined && !checkPermission(c, "finance.edit")) {
+    return c.json({ error: "Permission insuffisante (finance.edit requise pour modifier le prix final)." }, 403);
+  }
+
+  const statusExists = await c.env.DB.prepare(`SELECT code FROM shipment_statuses WHERE code = ? AND is_active = 1`).bind(data.status).first();
+  if (!statusExists) {
+    return c.json({ error: "Statut inexistant ou inactif." }, 400);
+  }
+
   const statements: D1PreparedStatement[] = [
     c.env.DB.prepare(`
       UPDATE shipments 
@@ -601,6 +666,15 @@ adminRouter.patch("/shipments/:id/intake", zValidator("json", shipmentIntakeSche
       data.hub_location.trim(),
       data.comment?.trim() || `Réception physique et pesée réelle au hub (${data.total_weight_kg} kg${data.total_volume_cbm ? `, ${data.total_volume_cbm} m³` : ""})`,
       user.userId
+    ),
+    c.env.DB.prepare(`
+      INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
+      VALUES (?, ?, 'shipment.intake', 'shipment', ?, ?)
+    `).bind(
+      crypto.randomUUID(),
+      user.userId,
+      shipmentId,
+      JSON.stringify({ total_weight_kg: data.total_weight_kg, status: data.status, final_price_minor: data.final_price_minor })
     ),
   ];
 
@@ -1041,8 +1115,15 @@ adminRouter.delete("/tariffs/:id", async (c) => {
     return c.json({ error: "Permission insuffisante (config.tariffs requise)." }, 403);
   }
 
+  const user = c.get("user");
   const tariffId = c.req.param("id");
-  await c.env.DB.prepare(`DELETE FROM tariffs WHERE id = ?`).bind(tariffId).run();
+  await c.env.DB.batch([
+    c.env.DB.prepare(`DELETE FROM tariffs WHERE id = ?`).bind(tariffId),
+    c.env.DB.prepare(`
+      INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
+      VALUES (?, ?, 'tariff.delete', 'tariff', ?, ?)
+    `).bind(crypto.randomUUID(), user.userId, tariffId, JSON.stringify({ tariff_id: tariffId })),
+  ]);
 
   return c.json({ success: true, message: "Tarif supprimé avec succès." });
 });
@@ -1115,6 +1196,15 @@ adminRouter.post("/payments", zValidator("json", recordPaymentSchema), async (c)
       data.receipt_notes || null,
       user.userId
     ),
+    c.env.DB.prepare(`
+      INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
+      VALUES (?, ?, 'payment.record', 'payment', ?, ?)
+    `).bind(
+      crypto.randomUUID(),
+      user.userId,
+      paymentId,
+      JSON.stringify({ amount_minor: data.amount_minor, currency: data.currency, method: data.payment_method, status: paymentStatus })
+    ),
   ];
 
   // Si le paiement est d'emblée confirmé et associé à une expédition
@@ -1156,6 +1246,7 @@ adminRouter.patch("/payments/:id/status", zValidator("json", updatePaymentStatus
     return c.json({ error: "Permission insuffisante (finance.edit requise)." }, 403);
   }
 
+  const user = c.get("user");
   const paymentId = c.req.param("id");
   const { status, receipt_notes } = c.req.valid("json");
 
@@ -1170,6 +1261,15 @@ adminRouter.patch("/payments/:id/status", zValidator("json", updatePaymentStatus
       SET status = ?, receipt_notes = COALESCE(?, receipt_notes)
       WHERE id = ?
     `).bind(status, receipt_notes || null, paymentId),
+    c.env.DB.prepare(`
+      INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
+      VALUES (?, ?, 'payment.status', 'payment', ?, ?)
+    `).bind(
+      crypto.randomUUID(),
+      user.userId,
+      paymentId,
+      JSON.stringify({ previous_status: payment.status, new_status: status })
+    ),
   ];
 
   // Si le paiement devient confirmé et est rattaché à une expédition
@@ -1198,6 +1298,10 @@ adminRouter.patch("/payments/:id/status", zValidator("json", updatePaymentStatus
    ========================================================================== */
 
 adminRouter.get("/tasks", async (c) => {
+  if (!checkPermission(c, "tasks.manage") && !checkPermission(c, "dashboard.view")) {
+    return c.json({ error: "Permission insuffisante (tasks.manage requise)." }, 403);
+  }
+
   const { results: tasks } = await c.env.DB.prepare(`
     SELECT 
       t.id, t.title, t.description, t.category, t.priority, t.status, t.due_date, t.created_at,
@@ -1212,15 +1316,19 @@ adminRouter.get("/tasks", async (c) => {
 });
 
 const createTaskSchema = z.object({
-  title: z.string().min(2, "Titre requis"),
-  description: z.string().optional(),
+  title: z.string().min(2, "Titre requis").max(200),
+  description: z.string().max(1000).optional(),
   category: z.enum(["GENERAL", "MISSING_INFO", "QUOTE_PREP", "PAYMENT_CHECK", "WAREHOUSE_CHECK"]).default("GENERAL"),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
-  assigned_to_user_id: z.string().optional(),
-  due_date: z.string().optional(),
+  assigned_to_user_id: z.string().max(80).optional(),
+  due_date: z.string().max(40).optional(),
 });
 
 adminRouter.post("/tasks", zValidator("json", createTaskSchema), async (c) => {
+  if (!checkPermission(c, "tasks.manage")) {
+    return c.json({ error: "Permission insuffisante (tasks.manage requise)." }, 403);
+  }
+
   const user = c.get("user");
   const data = c.req.valid("json");
   const taskId = crypto.randomUUID();
@@ -1243,6 +1351,10 @@ adminRouter.post("/tasks", zValidator("json", createTaskSchema), async (c) => {
 });
 
 adminRouter.patch("/tasks/:id/status", zValidator("json", z.object({ status: z.enum(["TODO", "IN_PROGRESS", "DONE", "CANCELLED"]) })), async (c) => {
+  if (!checkPermission(c, "tasks.manage")) {
+    return c.json({ error: "Permission insuffisante (tasks.manage requise)." }, 403);
+  }
+
   const id = c.req.param("id");
   const { status } = c.req.valid("json");
 
@@ -1258,6 +1370,9 @@ adminRouter.patch("/tasks/:id/status", zValidator("json", z.object({ status: z.e
    ========================================================================== */
 
 adminRouter.get("/settings", async (c) => {
+  if (!checkPermission(c, "settings.manage") && !checkPermission(c, "dashboard.view")) {
+    return c.json({ error: "Permission insuffisante." }, 403);
+  }
   const { results: settings } = await c.env.DB.prepare(`SELECT key, value FROM business_settings`).all();
   const map: Record<string, string> = {};
   for (const s of settings as any[]) {
@@ -1266,7 +1381,7 @@ adminRouter.get("/settings", async (c) => {
   return c.json({ settings: map });
 });
 
-adminRouter.put("/settings", zValidator("json", z.record(z.string(), z.string())), async (c) => {
+adminRouter.put("/settings", zValidator("json", z.record(z.string().max(80), z.string().max(1000))), async (c) => {
   const user = c.get("user");
   if (!user.isSuperAdmin && !checkPermission(c, "settings.manage")) {
     return c.json({ error: "Permission insuffisante (settings.manage requise)." }, 403);
@@ -1313,7 +1428,7 @@ adminRouter.get("/audit-logs", async (c) => {
 });
 
 /* ==========================================================================
-   13. EXPORT CSV (Shipments)
+   13. EXPORT CSV (Shipments - Protégé contre l'injection de formules CSV/DDE)
    ========================================================================== */
 
 adminRouter.get("/exports/shipments.csv", async (c) => {
@@ -1336,7 +1451,22 @@ adminRouter.get("/exports/shipments.csv", async (c) => {
 
   const header = "Numéro Suivi,Statut,Client,Téléphone,Origine,Destination,Mode,Colis,Poids (kg),Volume (m3),Prix,Devise,Paiement,Date Création\n";
   const lines = (rows as any[]).map((r) => {
-    return `"${r.tracking_number}","${r.current_status}","${r.client_name.replace(/"/g, '""')}","${r.client_phone}","${r.origin_country}","${r.destination_country}","${r.shipping_mode}",${r.total_parcels_count},${r.total_weight_kg},${r.total_volume_cbm},${(r.final_price_minor || 0) / 100},"${r.currency}","${r.payment_status}","${r.created_at}"`;
+    return [
+      sanitizeCsvCell(r.tracking_number),
+      sanitizeCsvCell(r.current_status),
+      sanitizeCsvCell(r.client_name),
+      sanitizeCsvCell(r.client_phone),
+      sanitizeCsvCell(r.origin_country),
+      sanitizeCsvCell(r.destination_country),
+      sanitizeCsvCell(r.shipping_mode),
+      Number(r.total_parcels_count) || 0,
+      Number(r.total_weight_kg) || 0,
+      Number(r.total_volume_cbm) || 0,
+      ((Number(r.final_price_minor) || 0) / 100).toFixed(2),
+      sanitizeCsvCell(r.currency),
+      sanitizeCsvCell(r.payment_status),
+      sanitizeCsvCell(r.created_at),
+    ].join(",");
   });
 
   const csv = header + lines.join("\n");
@@ -1344,6 +1474,7 @@ adminRouter.get("/exports/shipments.csv", async (c) => {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="roum_shipments_${new Date().toISOString().slice(0, 10)}.csv"`,
+      "Cache-Control": "no-store",
     },
   });
 });

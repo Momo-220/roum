@@ -132,6 +132,11 @@ export async function verifyJwt<T = Record<string, unknown>>(token: string, secr
   if (!isValid) return null;
 
   try {
+    const headerJson = new TextDecoder().decode(base64UrlDecode(headerB64));
+    const header = JSON.parse(headerJson) as { alg?: string; typ?: string };
+    if (header.alg !== "HS256" || header.typ !== "JWT") {
+      return null;
+    }
     const payloadJson = new TextDecoder().decode(base64UrlDecode(payloadB64));
     return JSON.parse(payloadJson) as T;
   } catch {
@@ -183,3 +188,64 @@ function constantTimeCompare(a: string, b: string): boolean {
   }
   return result === 0;
 }
+
+/**
+ * Résout la clé secrète JWT de manière sécurisée.
+ * En production, exige impérativement une clé `JWT_SECRET` forte (>= 32 caractères).
+ */
+export function resolveJwtSecret(env: { JWT_SECRET?: string; ENVIRONMENT?: string }): string {
+  if (env.JWT_SECRET && env.JWT_SECRET.trim().length >= 32) {
+    return env.JWT_SECRET.trim();
+  }
+  if (env.ENVIRONMENT === "production") {
+    throw new Error("Configuration de sécurité critique : JWT_SECRET manquant ou inférieur à 32 caractères en production.");
+  }
+  return "roum-default-dev-secret-key-32chars!";
+}
+
+/**
+ * Limiteur de débit (Rate Limiter) en mémoire par fenêtre glissante (Anti-Bruteforce & Anti-Spam).
+ */
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+
+export function checkRateLimit(
+  key: string,
+  maxAttempts: number,
+  windowMs: number
+): { allowed: boolean; retryAfterSec: number } {
+  const now = Date.now();
+  // Nettoyage opportuniste des entrées expirées
+  if (rateLimitStore.size > 2000) {
+    for (const [k, v] of rateLimitStore.entries()) {
+      if (now > v.resetAt) rateLimitStore.delete(k);
+    }
+  }
+
+  const entry = rateLimitStore.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitStore.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true, retryAfterSec: 0 };
+  }
+
+  if (entry.count >= maxAttempts) {
+    const retryAfterSec = Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
+    return { allowed: false, retryAfterSec };
+  }
+
+  entry.count += 1;
+  return { allowed: true, retryAfterSec: 0 };
+}
+
+export function resetRateLimit(key: string): void {
+  rateLimitStore.delete(key);
+}
+
+/**
+ * Neutralise les formules tableur (CSV Injection / DDE) et échappe proprement une cellule CSV.
+ */
+export function sanitizeCsvCell(value: unknown): string {
+  const raw = String(value ?? "").replace(/[\r\n]+/g, " ").trim();
+  const safe = /^[=+\-@|\t]/.test(raw) ? `'${raw}` : raw;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
+

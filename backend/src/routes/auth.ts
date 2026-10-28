@@ -1,23 +1,53 @@
 import { Hono } from "hono";
+import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { SUPER_ADMIN_ROLE_ID } from "../shared";
-import { verifyPassword, signJwt, verifyJwt } from "../crypto";
+import {
+  verifyPassword,
+  signJwt,
+  verifyJwt,
+  resolveJwtSecret,
+  checkRateLimit,
+  resetRateLimit,
+} from "../crypto";
 import type { Env, UserSession } from "../types";
 
 export const authRouter = new Hono<{ Bindings: Env }>();
 
 const loginSchema = z.object({
-  email: z.string().email("Email invalide"),
-  password: z.string().min(1, "Mot de passe requis"),
+  email: z.string().email("Email invalide").max(160),
+  password: z.string().min(1, "Mot de passe requis").max(256),
 });
 
 /**
- * 1. Connexion (Login)
+ * 1. Connexion (Login) protégée contre le bruteforce
  */
 authRouter.post("/login", zValidator("json", loginSchema), async (c) => {
   const { email, password } = c.req.valid("json");
-  const jwtSecret = c.env.JWT_SECRET || "roum-default-dev-secret-key-32chars!";
+  const clientIp =
+    c.req.header("CF-Connecting-IP") ||
+    c.req.header("X-Forwarded-For")?.split(",")[0]?.trim() ||
+    "local-ip";
+  const normalizedEmail = email.trim().toLowerCase();
+  const rateKeyIp = `login:${clientIp}:${normalizedEmail}`;
+  const rateKeyAccount = `login:account:${normalizedEmail}`;
+
+  // Protection Anti-Bruteforce double : max 5 essais par IP ET max 10 essais par compte sur 15 minutes
+  const rateCheckIp = checkRateLimit(rateKeyIp, 5, 15 * 60 * 1000);
+  const rateCheckAccount = checkRateLimit(rateKeyAccount, 10, 15 * 60 * 1000);
+  if (!rateCheckIp.allowed || !rateCheckAccount.allowed) {
+    const retrySec = Math.max(rateCheckIp.retryAfterSec, rateCheckAccount.retryAfterSec);
+    c.header("Retry-After", String(retrySec));
+    return c.json(
+      {
+        error: `Trop de tentatives de connexion. Veuillez patienter ${Math.ceil(retrySec / 60)} minute(s) avant de réessayer.`,
+      },
+      429
+    );
+  }
+
+  const jwtSecret = resolveJwtSecret(c.env);
 
   // Recherche de l'utilisateur actif
   const user = await c.env.DB.prepare(`
@@ -49,6 +79,10 @@ authRouter.post("/login", zValidator("json", loginSchema), async (c) => {
     return c.json({ error: "Identifiants invalides ou compte inactif." }, 401);
   }
 
+  // Réinitialise le compteur d'échecs après authentification réussie
+  resetRateLimit(rateKeyIp);
+  resetRateLimit(rateKeyAccount);
+
   const isSuperAdmin = user.role_id === SUPER_ADMIN_ROLE_ID;
 
   // Lecture des permissions en base
@@ -64,14 +98,27 @@ authRouter.post("/login", zValidator("json", loginSchema), async (c) => {
   const permissions = isSuperAdmin ? ["*"] : permRows.map((r) => r.permission_code);
   const allowedStatuses = isSuperAdmin ? ["*"] : statusRows.map((r) => r.status_code);
 
+  const nowMs = Date.now();
+  const ttlMs = 1000 * 60 * 60 * 12; // 12 heures (au lieu de 7 jours)
   const tokenPayload = {
     sub: user.id,
     email: user.email,
     roleId: user.role_id,
-    exp: Date.now() + 1000 * 60 * 60 * 24 * 7, // 7 jours
+    iat: nowMs,
+    jti: crypto.randomUUID(),
+    exp: nowMs + ttlMs,
   };
 
   const token = await signJwt(tokenPayload, jwtSecret);
+
+  // Cookie HttpOnly sécurisé contre le vol XSS
+  setCookie(c, "roum_session", token, {
+    httpOnly: true,
+    secure: c.env.ENVIRONMENT === "production",
+    sameSite: "Strict",
+    path: "/",
+    maxAge: 60 * 60 * 12,
+  });
 
   const session: UserSession = {
     userId: user.id,
@@ -97,12 +144,33 @@ authRouter.post("/login", zValidator("json", loginSchema), async (c) => {
  */
 authRouter.get("/me", async (c) => {
   const authHeader = c.req.header("Authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  const cookieToken = getCookie(c, "roum_session");
+  const token =
+    authHeader && authHeader.startsWith("Bearer ")
+      ? authHeader.substring(7)
+      : cookieToken;
+
+  if (!token) {
     return c.json({ error: "Non authentifié." }, 401);
   }
 
-  const token = authHeader.substring(7);
-  const jwtSecret = c.env.JWT_SECRET || "roum-default-dev-secret-key-32chars!";
+  // Session locale de développement (uniquement hors production)
+  if (token === "roum_local_admin_session" && c.env.ENVIRONMENT !== "production") {
+    const devSession: UserSession = {
+      userId: "user-superadmin-01",
+      email: "ceo@roumtransit.com",
+      fullName: "Madame Marouba",
+      roleId: SUPER_ADMIN_ROLE_ID,
+      roleName: "CEO",
+      isSuperAdmin: true,
+      hubLocation: "Abidjan / Bamako",
+      permissions: ["*"],
+      allowedStatuses: ["*"],
+    };
+    return c.json({ user: devSession });
+  }
+
+  const jwtSecret = resolveJwtSecret(c.env);
   const payload = await verifyJwt<{ sub: string; exp: number }>(token, jwtSecret);
 
   if (!payload || !payload.sub || Date.now() > payload.exp) {
@@ -158,4 +226,12 @@ authRouter.get("/me", async (c) => {
   };
 
   return c.json({ user: session });
+});
+
+/**
+ * 3. Déconnexion (invalidation du cookie HttpOnly)
+ */
+authRouter.post("/logout", (c) => {
+  deleteCookie(c, "roum_session", { path: "/" });
+  return c.json({ success: true });
 });

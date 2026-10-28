@@ -55,6 +55,7 @@ import {
   Camera,
   Upload,
   UserCheck,
+  Wallet,
 } from "lucide-react";
 import RouteGlobe from "@/components/RouteGlobe";
 import { CircularFlag } from "@/components/CircularFlag";
@@ -271,15 +272,15 @@ function getFriendlyStatus(code: string, originalLabel?: string): { icon: string
 export function formatRequestType(type?: string): string {
   switch (type) {
     case "ALIBABA":
-      return "Achat & Sourcing Alibaba / 1688";
+      return "Sourcing Alibaba";
     case "SUPPLIER_TRANSIT":
-      return "Transit Fournisseur Direct";
+      return "Transit Direct";
     case "PARCEL_SHIPPING":
-      return "Expédition de Colis";
+      return "Envoi Colis";
     case "TRACKING_HELP":
-      return "Assistance Suivi Colis";
+      return "Suivi Colis";
     case "CONTACT":
-      return "Demande de Contact";
+      return "Contact Client";
     default:
       return type ? type.replace(/_/g, " ") : "Demande";
   }
@@ -290,6 +291,45 @@ export function formatShipmentStatus(status?: string, label?: string): string {
   if (!status) return "Enregistré";
   const friendly = getFriendlyStatus(status);
   return friendly.label || status.replace(/_/g, " ");
+}
+
+export function formatShipmentStatusShort(status?: string): string {
+  switch (status) {
+    case "DRAFT":
+      return "Enregistré";
+    case "RECEIVED_AT_HUB":
+      return "Reçu au Hub";
+    case "PACKED_READY":
+      return "Prêt départ";
+    case "IN_TRANSIT":
+      return "En transit";
+    case "CUSTOMS_HOLD":
+      return "En douane";
+    case "ARRIVED_DESTINATION":
+      return "Arrivé agence";
+    case "READY_FOR_PICKUP":
+    case "READY_PICKUP":
+      return "Prêt retrait";
+    case "OUT_FOR_DELIVERY":
+      return "En livraison";
+    case "DELIVERED":
+      return "Livré";
+    case "INCIDENT":
+      return "Incident";
+    case "CANCELLED":
+      return "Annulé";
+    default:
+      return "En cours";
+  }
+}
+
+export function formatShippingModeShort(modeName?: string, modeId?: string): string {
+  const raw = (modeName || "").toLowerCase();
+  if (modeId === "SEA_LCL" || raw.includes("maritime") || raw.includes("bateau")) return "Maritime (CBM)";
+  if (modeId === "ROAD_STANDARD" || raw.includes("terrestre")) return "Terrestre";
+  if (modeId === "AIR_STANDARD" || raw.includes("standard")) return "Aérien Standard";
+  if (modeId === "AIR_EXPRESS" || raw.includes("express") || raw.includes("aérien")) return "Aérien Express";
+  return modeName || "Aérien Express";
 }
 
 export function formatTaskCategory(category?: string): string {
@@ -1544,7 +1584,7 @@ export default function AdminPage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [profileForm, setProfileForm] = useState({
     fullName: "Madame Marouba",
-    roleName: "CEO · Direction Générale",
+    roleName: "CEO",
     phone: "+225 07 00 00 00 00",
     email: "ceo@roumtransit.com",
     avatarUrl: "",
@@ -1557,22 +1597,23 @@ export default function AdminPage() {
         const saved = localStorage.getItem("roum_profile_data");
         if (saved) {
           const parsed = JSON.parse(saved);
+          const cleanRole = (parsed.roleName || "CEO").replace(/\s*·?\s*direction\s+g[eé]n[eé]rale/gi, "").trim() || "CEO";
           setUser((curr) => {
             const baseUser: UserSession = curr || {
               userId: "user-ceo-marouba",
               email: parsed.email || "ceo@roumtransit.com",
               fullName: parsed.fullName || "Madame Marouba",
               roleId: "CEO",
-              roleName: parsed.roleName || "CEO · Direction Générale",
+              roleName: cleanRole,
               isSuperAdmin: true,
-              hubLocation: "Direction Générale Abidjan / Bamako",
+              hubLocation: "Abidjan / Bamako",
               permissions: ["*"],
               allowedStatuses: ["*"],
             };
             return {
               ...baseUser,
               fullName: parsed.fullName || baseUser.fullName,
-              roleName: parsed.roleName || baseUser.roleName,
+              roleName: cleanRole,
               avatarUrl: parsed.avatarUrl || baseUser.avatarUrl,
               phone: parsed.phone || baseUser.phone,
               email: parsed.email || baseUser.email,
@@ -1580,7 +1621,7 @@ export default function AdminPage() {
           });
           setProfileForm({
             fullName: parsed.fullName || "Madame Marouba",
-            roleName: parsed.roleName || "CEO · Direction Générale",
+            roleName: cleanRole,
             phone: parsed.phone || "+225 07 00 00 00 00",
             email: parsed.email || "ceo@roumtransit.com",
             avatarUrl: parsed.avatarUrl || "",
@@ -1600,12 +1641,12 @@ export default function AdminPage() {
         roleId: "CEO",
         roleName: profileForm.roleName,
         isSuperAdmin: true,
-        hubLocation: "Direction Générale Abidjan / Bamako",
+        hubLocation: "Abidjan / Bamako",
         permissions: ["*"],
         allowedStatuses: ["*"],
       }),
       fullName: profileForm.fullName.trim() || "Madame Marouba",
-      roleName: profileForm.roleName.trim() || "CEO · Direction Générale",
+      roleName: profileForm.roleName.trim() || "CEO",
       phone: profileForm.phone,
       email: profileForm.email,
       avatarUrl: profileForm.avatarUrl || user?.avatarUrl || null,
@@ -2101,9 +2142,9 @@ export default function AdminPage() {
         email: "ceo@roumtransit.com",
         fullName: "Madame Marouba",
         roleId: "CEO",
-        roleName: "CEO · Direction Générale",
+        roleName: "CEO",
         isSuperAdmin: true,
-        hubLocation: "Direction Générale Abidjan / Bamako",
+        hubLocation: "Abidjan / Bamako",
         permissions: ["*"],
         allowedStatuses: ["*"],
       };
@@ -2137,7 +2178,7 @@ export default function AdminPage() {
           setUser({
             ...data.user,
             fullName: data.user?.fullName === "Directeur Général" ? "Madame Marouba" : (data.user?.fullName || "Madame Marouba"),
-            roleName: data.user?.roleName === "Super Admin" ? "CEO · Direction Générale" : (data.user?.roleName || "CEO · Direction Générale"),
+            roleName: data.user?.roleName === "Super Admin" ? "CEO" : ((data.user?.roleName || "CEO").replace(/\s*·?\s*direction\s+g[eé]n[eé]rale/gi, "").trim() || "CEO"),
           });
           loadDashboardData(data.token);
           setLoginLoading(false);
@@ -2154,9 +2195,9 @@ export default function AdminPage() {
       email: email || "ceo@roumtransit.com",
       fullName: "Madame Marouba",
       roleId: "CEO",
-      roleName: "CEO · Direction Générale",
+      roleName: "CEO",
       isSuperAdmin: true,
-      hubLocation: "Direction Générale Abidjan / Bamako",
+      hubLocation: "Abidjan / Bamako",
       permissions: ["*"],
       allowedStatuses: ["*"],
     };
@@ -3266,7 +3307,7 @@ export default function AdminPage() {
         )}
 
         {/* Navigation Sidebar Moderne et Aérée (Sections Rôles & Collaborateurs Retirées) */}
-        <nav style={{ display: "flex", flexDirection: "column", gap: "9px", flex: 1 }}>
+        <nav style={{ display: "flex", flexDirection: "column", gap: "6px", flex: 1 }}>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -3275,28 +3316,20 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab(item.id as any)}
+                  className={`sidebar-nav-btn ${isActive ? "active" : ""}`}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
                     justifyContent: isSidebarCollapsed ? "center" : "space-between",
                     gap: isSidebarCollapsed ? 0 : "10px",
-                    width: "100%",
-                    padding: isSidebarCollapsed ? "10px 0" : "10px 14px",
-                    borderRadius: "12px",
-                    border: "none",
-                    background: isActive ? "#FFFFFF" : "transparent",
-                    color: isActive ? "var(--text-main)" : "var(--text-secondary)",
-                    fontWeight: isActive ? "700" : "500",
-                    boxShadow: isActive ? "0 2px 8px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02)" : "none",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    fontSize: "0.86rem",
-                    transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
+                    padding: isSidebarCollapsed ? "10px 0" : "9px 12px",
                   }}
                 >
-                  <span style={{ display: "flex", alignItems: "center", gap: "9px", position: "relative" }}>
-                    <Icon size={16} />
-                    {!isSidebarCollapsed && item.label}
+                  <span style={{ display: "flex", alignItems: "center", gap: "10px", position: "relative" }}>
+                    <Icon
+                      size={16}
+                      strokeWidth={isActive ? 2.1 : 1.75}
+                      color={isActive ? "#FFFFFF" : "currentColor"}
+                    />
+                    {!isSidebarCollapsed && <span>{item.label}</span>}
                     {isSidebarCollapsed && item.badge && item.badge > 0 && (
                       <span
                         style={{
@@ -3306,22 +3339,13 @@ export default function AdminPage() {
                           width: "7px",
                           height: "7px",
                           borderRadius: "50%",
-                          background: "var(--brown-dark)",
+                          background: isActive ? "#EAACA1" : "var(--brown-dark)",
                         }}
                       />
                     )}
                   </span>
                   {!isSidebarCollapsed && item.badge && item.badge > 0 && (
-                    <span
-                      style={{
-                        background: "var(--brown-dark)",
-                        color: "#FAF8F5",
-                        fontSize: "0.68rem",
-                        padding: "1px 6px",
-                        borderRadius: "var(--radius-full)",
-                        fontWeight: "700",
-                      }}
-                    >
+                    <span className="sidebar-nav-badge">
                       {item.badge}
                     </span>
                   )}
@@ -3337,31 +3361,23 @@ export default function AdminPage() {
           })}
 
           {/* Paramètres & Audit */}
-          <div className="sidebar-item" style={{ position: "relative", marginTop: "14px" }}>
+          <div className="sidebar-item" style={{ position: "relative", marginTop: "12px" }}>
             <button
               type="button"
               onClick={() => setActiveTab("settings")}
+              className={`sidebar-nav-btn ${activeTab === "settings" ? "active" : ""}`}
               style={{
-                display: "flex",
-                alignItems: "center",
                 justifyContent: isSidebarCollapsed ? "center" : "flex-start",
                 gap: isSidebarCollapsed ? 0 : "10px",
-                width: "100%",
-                padding: isSidebarCollapsed ? "10px 0" : "10px 14px",
-                borderRadius: "12px",
-                border: "none",
-                background: activeTab === "settings" ? "#FFFFFF" : "transparent",
-                color: activeTab === "settings" ? "var(--text-main)" : "var(--text-secondary)",
-                fontWeight: activeTab === "settings" ? "700" : "500",
-                boxShadow: activeTab === "settings" ? "0 2px 8px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02)" : "none",
-                cursor: "pointer",
-                textAlign: "left",
-                fontSize: "0.86rem",
-                transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
+                padding: isSidebarCollapsed ? "10px 0" : "9px 12px",
               }}
             >
-              <Settings size={16} color={activeTab === "settings" ? "var(--brown-dark)" : "var(--text-muted)"} />
-              {!isSidebarCollapsed && "Paramètres & Audit"}
+              <Settings
+                size={16}
+                strokeWidth={activeTab === "settings" ? 2.1 : 1.75}
+                color={activeTab === "settings" ? "#FFFFFF" : "currentColor"}
+              />
+              {!isSidebarCollapsed && <span>Paramètres & Audit</span>}
             </button>
             {isSidebarCollapsed && (
               <span className="sidebar-tooltip">Paramètres & Audit</span>
@@ -3385,6 +3401,8 @@ export default function AdminPage() {
               style={{
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "space-between",
+                gap: "8px",
                 padding: "10px 12px",
                 background: "var(--bg-app)",
                 borderRadius: "14px",
@@ -3397,16 +3415,16 @@ export default function AdminPage() {
               <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flex: 1 }}>
                 <div
                   style={{
-                    width: "38px",
-                    height: "38px",
+                    width: "36px",
+                    height: "36px",
                     borderRadius: "50%",
-                    background: user?.avatarUrl ? "transparent" : "var(--rose-primary)",
-                    color: "#1A100C",
+                    background: user?.avatarUrl ? "transparent" : "var(--brown-dark)",
+                    color: "#FFFFFF",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     fontWeight: "800",
-                    fontSize: "0.9rem",
+                    fontSize: "0.88rem",
                     overflow: "hidden",
                     border: "1.5px solid var(--border-light)",
                     flexShrink: 0,
@@ -3418,15 +3436,27 @@ export default function AdminPage() {
                     (user?.fullName || "M").charAt(0)
                   )}
                 </div>
-                <div style={{ lineHeight: 1.3, minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div style={{ lineHeight: 1.25, minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: "0.84rem", fontWeight: "700", color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {user?.fullName || "Madame Marouba"}
                   </div>
-                  <div style={{ fontSize: "0.68rem", fontWeight: "800", color: "var(--rose-deep)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                    {user?.roleName || "CEO · DIRECTION GÉNÉRALE"}
+                  <div style={{ fontSize: "0.68rem", fontWeight: "700", color: "var(--brown-dark)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    {(user?.roleName || "CEO").replace(/\s*·?\s*direction\s+g[eé]n[eé]rale/gi, "").trim() || "CEO"}
                   </div>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsSidebarCollapsed(true);
+                }}
+                className="btn btn-secondary"
+                style={{ width: "28px", height: "28px", padding: 0, borderRadius: "50%", justifyContent: "center", flexShrink: 0 }}
+                title="Rétracter la barre latérale"
+              >
+                <PanelLeftClose size={14} />
+              </button>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
@@ -3436,8 +3466,8 @@ export default function AdminPage() {
                   width: "36px",
                   height: "36px",
                   borderRadius: "50%",
-                  background: user?.avatarUrl ? "transparent" : "var(--rose-primary)",
-                  color: "#1A100C",
+                  background: user?.avatarUrl ? "transparent" : "var(--brown-dark)",
+                  color: "#FFFFFF",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -3467,40 +3497,17 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* Réduire / Dérouler le menu & Déconnexion */}
+          {/* Déconnexion */}
           {!isSidebarCollapsed ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <button
-                type="button"
-                onClick={() => setIsSidebarCollapsed(true)}
-                className="btn btn-secondary"
-                style={{
-                  width: "100%",
-                  justifyContent: "center",
-                  gap: "6px",
-                  fontSize: "0.8rem",
-                  padding: "7px 10px",
-                  borderRadius: "10px",
-                  background: "var(--bg-subtle)",
-                  color: "var(--text-secondary)",
-                  border: "1px solid var(--border-light)",
-                  fontWeight: "600",
-                }}
-                title="Réduire la barre latérale"
-              >
-                <PanelLeftClose size={14} />
-                Réduire le menu
-              </button>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="btn btn-secondary"
-                style={{ width: "100%", justifyContent: "center", gap: "6px", fontSize: "0.8rem", padding: "7px 10px", borderRadius: "10px" }}
-              >
-                <LogOut size={14} />
-                Déconnexion
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="btn btn-secondary"
+              style={{ width: "100%", justifyContent: "center", gap: "6px", fontSize: "0.82rem", padding: "8px", borderRadius: "10px" }}
+            >
+              <LogOut size={14} />
+              Déconnexion
+            </button>
           ) : (
             <div className="sidebar-item" style={{ position: "relative", display: "flex", justifyContent: "center" }}>
               <button
@@ -3534,7 +3541,7 @@ export default function AdminPage() {
           }}
         >
           <div>
-            <h2 style={{ fontSize: "1.45rem", fontWeight: "800", color: "var(--text-main)" }}>
+            <h2 className="roum-brush-title" style={{ fontSize: "1.48rem", fontWeight: "800" }}>
               {activeTab === "assistant" && "Assistant Roum"}
               {activeTab === "dashboard" && "Tableau de Bord"}
               {activeTab === "requests" && "Demandes & Sourcing"}
@@ -3545,10 +3552,10 @@ export default function AdminPage() {
               {activeTab === "tasks" && "Tâches Opérationnelles"}
               {activeTab === "settings" && "Paramètres & Audit"}
             </h2>
-            <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", marginTop: "2px" }}>
+            <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", marginTop: "4px" }}>
               {activeTab === "assistant"
                 ? "Supervision des opérations, actions prioritaires et requêtes directes"
-                : "ROUM TRANSIT · Direction Générale & Gestion Opérationnelle"}
+                : "Gestion Opérationnelle"}
             </p>
           </div>
 
@@ -3597,30 +3604,6 @@ export default function AdminPage() {
               </button>
             )}
 
-            {activeTab === "finances" && (
-              <button
-                type="button"
-                onClick={() => setShowRecordPaymentModal({})}
-                className="btn btn-primary"
-                style={{ padding: "8px 16px", fontSize: "0.82rem", gap: "6px" }}
-              >
-                <Plus size={14} />
-                Consigner Paiement
-              </button>
-            )}
-
-            {activeTab === "tasks" && (
-              <button
-                type="button"
-                onClick={() => setShowCreateTaskModal(true)}
-                className="btn btn-primary"
-                style={{ padding: "8px 16px", fontSize: "0.82rem", gap: "6px" }}
-              >
-                <Plus size={14} />
-                Nouvelle Tâche
-              </button>
-            )}
-
             {activeTab === "tariffs" && (
               <button
                 type="button"
@@ -3638,120 +3621,122 @@ export default function AdminPage() {
 
         {/* 0. ASSISTANT ROUM : VUE PLEINE PAGE SOBRE, ÉPURÉE ET MINIMALISTE */}
         {activeTab === "assistant" && (
-          <div key="assistant" className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <div key="assistant" className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             {/* LIGNE DE SYNTHÈSE OPÉRATIONNELLE SOBRE (4 Cartes KPI Minimalistes) */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                gap: "14px",
-              }}
-            >
+            <div className="kpi-grid-4">
               {/* Carte 1 : Contrôle Caisse */}
               <div
-                style={{
-                  background: "#FFFFFF",
-                  border: "1px solid var(--border-light)",
-                  borderRadius: "14px",
-                  padding: "16px 18px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "6px",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-                }}
+                className="ios-metric-card"
+                onClick={() => setActiveTab("finances")}
+                style={{ cursor: "pointer" }}
               >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--text-secondary)" }}>
-                    Contrôle Caisse
+                <div className="metric-card-header">
+                  <div className="metric-card-label">
+                    <span className="metric-icon-box">
+                      <Wallet size={15} strokeWidth={1.8} />
+                    </span>
+                    <span className="metric-card-title">
+                      Contrôle Caisse
+                    </span>
+                  </div>
+                  <span className={`ios-trend-pill ${pendingPaymentsList.length > 0 ? "ios-trend-pill-gold" : "ios-trend-pill-up"}`}>
+                    {pendingPaymentsList.length > 0 ? "À vérifier" : "À jour"}
                   </span>
-                  <DollarSign size={16} color="var(--brown-dark)" />
                 </div>
-                <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "var(--text-main)" }}>
-                  {pendingPaymentsList.length} en attente
-                </div>
-                <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-                  Total : {formatCurrencyPrice(pendingPaymentsList.reduce((acc, p) => acc + (p.amount_minor || 0), 0), "FCFA")}
+                <div className="metric-card-body">
+                  <div className="metric-card-value">
+                    {pendingPaymentsList.length} {pendingPaymentsList.length > 1 ? "paiements" : "paiement"}
+                  </div>
+                  <div className="metric-card-sub">
+                    {formatCurrencyPrice(pendingPaymentsList.reduce((acc, p) => acc + (p.amount_minor || 0), 0), "FCFA")} à contrôler
+                  </div>
                 </div>
               </div>
 
               {/* Carte 2 : Pesées au Hub */}
               <div
-                style={{
-                  background: "#FFFFFF",
-                  border: "1px solid var(--border-light)",
-                  borderRadius: "14px",
-                  padding: "16px 18px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "6px",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-                }}
+                className="ios-metric-card"
+                onClick={() => setActiveTab("shipments")}
+                style={{ cursor: "pointer" }}
               >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--text-secondary)" }}>
-                    Pesées Magasin Hub
+                <div className="metric-card-header">
+                  <div className="metric-card-label">
+                    <span className="metric-icon-box">
+                      <Scale size={15} strokeWidth={1.8} />
+                    </span>
+                    <span className="metric-card-title">
+                      Pesées au Hub
+                    </span>
+                  </div>
+                  <span className="ios-trend-pill ios-trend-pill-neutral">
+                    Magasin
                   </span>
-                  <Scale size={16} color="var(--brown-dark)" />
                 </div>
-                <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "var(--text-main)" }}>
-                  {pendingWeighingsList.length} colis
-                </div>
-                <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-                  Colis réceptionnés sans pesée officielle
+                <div className="metric-card-body">
+                  <div className="metric-card-value">
+                    {pendingWeighingsList.length} colis
+                  </div>
+                  <div className="metric-card-sub">
+                    Sans pesée officielle enregistrée
+                  </div>
                 </div>
               </div>
 
               {/* Carte 3 : Demandes Reçues */}
               <div
-                style={{
-                  background: "#FFFFFF",
-                  border: "1px solid var(--border-light)",
-                  borderRadius: "14px",
-                  padding: "16px 18px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "6px",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-                }}
+                className="ios-metric-card"
+                onClick={() => setActiveTab("requests")}
+                style={{ cursor: "pointer" }}
               >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--text-secondary)" }}>
-                    Demandes & Sourcing
+                <div className="metric-card-header">
+                  <div className="metric-card-label">
+                    <span className="metric-icon-box">
+                      <Inbox size={15} strokeWidth={1.8} />
+                    </span>
+                    <span className="metric-card-title">
+                      Sourcing Client
+                    </span>
+                  </div>
+                  <span className="ios-trend-pill ios-trend-pill-gold">
+                    Cotation
                   </span>
-                  <Inbox size={16} color="var(--brown-dark)" />
                 </div>
-                <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "var(--text-main)" }}>
-                  {pendingRequestsList.length} dossiers
-                </div>
-                <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-                  Alibaba et transit en attente de cotation
+                <div className="metric-card-body">
+                  <div className="metric-card-value">
+                    {pendingRequestsList.length} {pendingRequestsList.length > 1 ? "dossiers" : "dossier"}
+                  </div>
+                  <div className="metric-card-sub">
+                    Demandes Alibaba, 1688 & transit
+                  </div>
                 </div>
               </div>
 
               {/* Carte 4 : Actions Internes */}
               <div
-                style={{
-                  background: "#FFFFFF",
-                  border: "1px solid var(--border-light)",
-                  borderRadius: "14px",
-                  padding: "16px 18px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "6px",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-                }}
+                className="ios-metric-card"
+                onClick={() => setActiveTab("tasks")}
+                style={{ cursor: "pointer" }}
               >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--text-secondary)" }}>
-                    Urgences d&apos;Équipe
+                <div className="metric-card-header">
+                  <div className="metric-card-label">
+                    <span className="metric-icon-box">
+                      <CheckSquare size={15} strokeWidth={1.8} />
+                    </span>
+                    <span className="metric-card-title">
+                      Tâches Urgentes
+                    </span>
+                  </div>
+                  <span className="ios-trend-pill ios-trend-pill-neutral">
+                    Priorités
                   </span>
-                  <CheckSquare size={16} color="var(--brown-dark)" />
                 </div>
-                <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "var(--text-main)" }}>
-                  {urgentTasksList.length} tâches
-                </div>
-                <div style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-                  Priorités opérationnelles non closes
+                <div className="metric-card-body">
+                  <div className="metric-card-value">
+                    {urgentTasksList.length} {urgentTasksList.length > 1 ? "tâches" : "tâche"}
+                  </div>
+                  <div className="metric-card-sub">
+                    Opérations prioritaires d&apos;équipe
+                  </div>
                 </div>
               </div>
             </div>
@@ -3760,375 +3745,281 @@ export default function AdminPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1.15fr 0.85fr",
-                gap: "24px",
+                gridTemplateColumns: "1.1fr 0.9fr",
+                gap: "20px",
                 alignItems: "start",
               }}
             >
-              {/* COLONNE GAUCHE : ACTIONS REQUISES & TRAÇABILITÉ ÉQUIPE */}
+              {/* COLONNE GAUCHE : ACTIONS REQUISES (SANS DÉPASSEMENT) */}
               <div
+                className="card-clean"
                 style={{
                   background: "#FFFFFF",
-                  borderRadius: "18px",
-                  border: "1px solid var(--border-light)",
-                  padding: "22px",
+                  borderRadius: "22px",
+                  padding: "22px 24px",
                   display: "flex",
                   flexDirection: "column",
                   gap: "18px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                  minWidth: 0,
+                  overflow: "hidden",
                 }}
               >
-                {/* Barre d'onglets sobres gauche */}
+                {/* En-tête sobre Actions Requises */}
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    borderBottom: "1px solid var(--border-light)",
-                    paddingBottom: "12px",
+                    borderBottom: "1px solid rgba(42, 24, 16, 0.07)",
+                    paddingBottom: "14px",
+                    gap: "10px",
                   }}
                 >
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <button
-                      type="button"
-                      onClick={() => setAgentTab("alerts")}
-                      style={{
-                        padding: "6px 14px",
-                        borderRadius: "8px",
-                        border: "none",
-                        background: agentTab === "alerts" ? "var(--bg-subtle)" : "transparent",
-                        color: agentTab === "alerts" ? "var(--text-main)" : "var(--text-secondary)",
-                        fontWeight: agentTab === "alerts" ? "700" : "500",
-                        fontSize: "0.82rem",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                      }}
-                    >
-                      <AlertCircle size={14} color={agentTab === "alerts" ? "var(--brown-dark)" : "currentColor"} />
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                    <span className="metric-icon-box">
+                      <AlertCircle size={15} strokeWidth={1.8} />
+                    </span>
+                    <h3 style={{ fontSize: "0.96rem", fontWeight: "800", color: "var(--text-main)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       Actions Requises
-                      {totalAgentAlerts > 0 && (
-                        <span
-                          style={{
-                            background: "var(--brown-dark)",
-                            color: "#FFFFFF",
-                            fontSize: "0.65rem",
-                            fontWeight: "700",
-                            padding: "1px 6px",
-                            borderRadius: "9999px",
-                          }}
-                        >
-                          {totalAgentAlerts}
-                        </span>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setAgentTab("activity")}
-                      style={{
-                        padding: "6px 14px",
-                        borderRadius: "8px",
-                        border: "none",
-                        background: agentTab === "activity" ? "var(--bg-subtle)" : "transparent",
-                        color: agentTab === "activity" ? "var(--text-main)" : "var(--text-secondary)",
-                        fontWeight: agentTab === "activity" ? "700" : "500",
-                        fontSize: "0.82rem",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                      }}
-                    >
-                      <Clock size={14} />
-                      Journal de l&apos;Équipe ({auditLogs.length})
-                    </button>
+                    </h3>
+                    {totalAgentAlerts > 0 && (
+                      <span
+                        style={{
+                          background: "var(--brown-dark)",
+                          color: "#FFFFFF",
+                          fontSize: "0.66rem",
+                          fontWeight: "700",
+                          padding: "2px 7px",
+                          borderRadius: "9999px",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {totalAgentAlerts}
+                      </span>
+                    )}
                   </div>
 
-                  <span style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>
-                    {agentTab === "alerts" ? "Trié par priorité" : "Dernières actions"}
+                  <span className="ios-trend-pill ios-trend-pill-neutral">
+                    Trié par priorité
                   </span>
                 </div>
 
                 {/* VUE ACTIONS REQUISES */}
-                {agentTab === "alerts" && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                    {totalAgentAlerts === 0 ? (
-                      <div
-                        style={{
-                          padding: "36px 20px",
-                          textAlign: "center",
-                          background: "var(--bg-subtle)",
-                          borderRadius: "14px",
-                          border: "1px solid var(--border-light)",
-                        }}
-                      >
-                        <CheckCircle2 size={36} color="var(--brown-dark)" style={{ margin: "0 auto 10px auto" }} />
-                        <div style={{ fontSize: "0.95rem", fontWeight: "700", color: "var(--text-main)", marginBottom: "4px" }}>
-                          Toutes les opérations sont à jour
-                        </div>
-                        <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0 }}>
-                          Aucun paiement en attente, aucune pesée en suspens, aucune demande non traitée.
-                        </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {totalAgentAlerts === 0 ? (
+                    <div
+                      style={{
+                        padding: "36px 20px",
+                        textAlign: "center",
+                        background: "var(--bg-subtle)",
+                        borderRadius: "14px",
+                        border: "1px solid var(--border-light)",
+                      }}
+                    >
+                      <CheckCircle2 size={36} color="var(--brown-dark)" style={{ margin: "0 auto 10px auto" }} />
+                      <div style={{ fontSize: "0.95rem", fontWeight: "700", color: "var(--text-main)", marginBottom: "4px" }}>
+                        Toutes les opérations sont à jour
                       </div>
-                    ) : (
-                      <>
-                        {/* 1. Paiements caisse en attente */}
-                        {pendingPaymentsList.length > 0 && (
-                          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                            <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
-                              <DollarSign size={14} color="var(--brown-dark)" />
-                              Paiements en attente de validation ({pendingPaymentsList.length})
-                            </div>
-                            <div style={{ display: "grid", gap: "8px" }}>
-                              {pendingPaymentsList.map((p) => (
-                                <div
-                                  key={p.id}
-                                  style={{
-                                    padding: "12px 14px",
-                                    borderRadius: "10px",
-                                    border: "1px solid var(--border-light)",
-                                    background: "#FFFFFF",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "space-between",
-                                    gap: "12px",
-                                  }}
-                                >
-                                  <div>
-                                    <div style={{ fontWeight: "700", fontSize: "0.86rem", color: "var(--text-main)" }}>
-                                      {p.client_name || "Client"} · {formatCurrencyPrice(p.amount_minor || 0, "FCFA")}
-                                    </div>
-                                    <div style={{ fontSize: "0.74rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-                                      Mode : <strong>{p.payment_method}</strong> · Réf : {p.transaction_reference || p.reference || "N/A"}
-                                    </div>
+                      <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0 }}>
+                        Aucun paiement en attente, aucune pesée en suspens, aucune demande non traitée.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* 1. Paiements caisse en attente */}
+                      {pendingPaymentsList.length > 0 && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <DollarSign size={14} color="var(--brown-dark)" />
+                            Paiements en attente de validation ({pendingPaymentsList.length})
+                          </div>
+                          <div style={{ display: "grid", gap: "8px" }}>
+                            {pendingPaymentsList.map((p) => (
+                              <div
+                                key={p.id}
+                                style={{
+                                  padding: "12px 14px",
+                                  borderRadius: "12px",
+                                  border: "1px solid var(--border-light)",
+                                  background: "#FAF8F5",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  gap: "12px",
+                                }}
+                              >
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ fontWeight: "700", fontSize: "0.85rem", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {p.client_name || "Client"} · {formatCurrencyPrice(p.amount_minor || 0, "FCFA")}
                                   </div>
-                                  <div style={{ display: "flex", gap: "6px" }}>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleConfirmPayment(p.id)}
-                                      className="btn btn-primary"
-                                      style={{ padding: "5px 12px", fontSize: "0.76rem" }}
-                                    >
-                                      Valider
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleCancelPayment(p.id)}
-                                      className="btn btn-secondary"
-                                      style={{ padding: "5px 10px", fontSize: "0.76rem" }}
-                                    >
-                                      Rejeter
-                                    </button>
+                                  <div style={{ fontSize: "0.73rem", color: "var(--text-secondary)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    Mode : <strong>{p.payment_method}</strong> · Réf : {p.transaction_reference || p.reference || "N/A"}
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* 2. Pesées magasin hub */}
-                        {pendingWeighingsList.length > 0 && (
-                          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                            <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
-                              <Scale size={14} color="var(--brown-dark)" />
-                              Colis au hub sans pesée officielle ({pendingWeighingsList.length})
-                            </div>
-                            <div style={{ display: "grid", gap: "8px" }}>
-                              {pendingWeighingsList.map((s) => (
-                                <div
-                                  key={s.id}
-                                  style={{
-                                    padding: "12px 14px",
-                                    borderRadius: "10px",
-                                    border: "1px solid var(--border-light)",
-                                    background: "#FFFFFF",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "space-between",
-                                    gap: "12px",
-                                  }}
-                                >
-                                  <div>
-                                    <div style={{ fontWeight: "700", fontSize: "0.86rem", color: "var(--text-main)" }}>
-                                      {s.tracking_number} · {s.client_name}
-                                    </div>
-                                    <div style={{ fontSize: "0.74rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-                                      Trajet : {s.origin_country} ➔ {s.destination_country} ({s.shipping_mode_name || "Aérien"})
-                                    </div>
-                                  </div>
+                                <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
                                   <button
                                     type="button"
-                                    onClick={() => handleOpenIntakeModal(s)}
-                                    className="btn btn-secondary"
-                                    style={{ padding: "5px 12px", fontSize: "0.76rem", gap: "4px" }}
-                                  >
-                                    <Scale size={13} /> Peser
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* 3. Demandes sourcing reçues */}
-                        {pendingRequestsList.length > 0 && (
-                          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                            <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
-                              <Inbox size={14} color="var(--brown-dark)" />
-                              Demandes en attente de cotation ({pendingRequestsList.length})
-                            </div>
-                            <div style={{ display: "grid", gap: "8px" }}>
-                              {pendingRequestsList.map((r) => (
-                                <div
-                                  key={r.id}
-                                  style={{
-                                    padding: "12px 14px",
-                                    borderRadius: "10px",
-                                    border: "1px solid var(--border-light)",
-                                    background: "#FFFFFF",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "space-between",
-                                    gap: "12px",
-                                  }}
-                                >
-                                  <div>
-                                    <div style={{ fontWeight: "700", fontSize: "0.86rem", color: "var(--text-main)" }}>
-                                      {r.reference} · {r.client_name}
-                                    </div>
-                                    <div style={{ fontSize: "0.74rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-                                      Type : <strong>{formatRequestType(r.request_type)}</strong> · {r.origin_country || "Chine"} ➔ {r.destination_country || "Afrique"}
-                                    </div>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenRequestDetail(r)}
+                                    onClick={() => handleConfirmPayment(p.id)}
                                     className="btn btn-primary"
-                                    style={{ padding: "5px 12px", fontSize: "0.76rem" }}
+                                    style={{ padding: "5px 12px", fontSize: "0.75rem" }}
                                   >
-                                    Traiter
+                                    Valider
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCancelPayment(p.id)}
+                                    className="btn btn-secondary"
+                                    style={{ padding: "5px 10px", fontSize: "0.75rem" }}
+                                  >
+                                    Rejeter
                                   </button>
                                 </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* 4. Tâches urgentes */}
-                        {urgentTasksList.length > 0 && (
-                          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                            <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
-                              <CheckSquare size={14} color="var(--brown-dark)" />
-                              Tâches prioritaires d&apos;équipe ({urgentTasksList.length})
-                            </div>
-                            <div style={{ display: "grid", gap: "8px" }}>
-                              {urgentTasksList.map((t) => (
-                                <div
-                                  key={t.id}
-                                  style={{
-                                    padding: "10px 14px",
-                                    borderRadius: "10px",
-                                    border: "1px solid var(--border-light)",
-                                    background: "#FFFFFF",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "space-between",
-                                    gap: "12px",
-                                  }}
-                                >
-                                  <div>
-                                    <div style={{ fontWeight: "700", fontSize: "0.86rem", color: "var(--text-main)" }}>
-                                      {t.title}
-                                    </div>
-                                    <div style={{ fontSize: "0.74rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-                                      Assigné à : {t.assigned_to_name || "Équipe"}
-                                    </div>
-                                  </div>
-                                  <span
-                                    style={{
-                                      fontSize: "0.7rem",
-                                      padding: "2px 8px",
-                                      borderRadius: "4px",
-                                      background: "var(--bg-subtle)",
-                                      color: "var(--brown-dark)",
-                                      fontWeight: "700",
-                                      border: "1px solid var(--border-light)",
-                                    }}
-                                  >
-                                    {t.priority}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {/* VUE JOURNAL D'ÉQUIPE */}
-                {agentTab === "activity" && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                    {auditLogs.length === 0 ? (
-                      <div style={{ padding: "30px", textAlign: "center", color: "var(--text-muted)", fontSize: "0.82rem" }}>
-                        Aucune action enregistrée pour le moment aujourd&apos;hui.
-                      </div>
-                    ) : (
-                      auditLogs.slice(0, 20).map((log, idx) => (
-                        <div
-                          key={log.id || idx}
-                          style={{
-                            display: "flex",
-                            gap: "12px",
-                            padding: "10px 14px",
-                            background: "var(--bg-subtle)",
-                            borderRadius: "10px",
-                            border: "1px solid var(--border-light)",
-                            fontSize: "0.82rem",
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: "28px",
-                              height: "28px",
-                              borderRadius: "6px",
-                              background: "#FFFFFF",
-                              border: "1px solid var(--border-light)",
-                              color: "var(--brown-dark)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontWeight: "700",
-                              fontSize: "0.72rem",
-                              flexShrink: 0,
-                            }}
-                          >
-                            {log.user_name ? log.user_name.charAt(0).toUpperCase() : "A"}
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <strong style={{ color: "var(--text-main)" }}>
-                                {log.user_name || "Collaborateur"} ({log.user_role || "Agent"})
-                              </strong>
-                              <span style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>
-                                {log.created_at
-                                  ? new Date(log.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
-                                  : "Récemment"}
-                              </span>
-                            </div>
-                            <div style={{ marginTop: "3px", color: "var(--text-secondary)", fontSize: "0.78rem" }}>
-                              <strong>{log.action}</strong> {log.entity_type ? `· ${log.entity_type}` : ""}{" "}
-                              {log.details ? `— ${log.details}` : ""}
-                            </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                      ))
-                    )}
-                  </div>
-                )}
+                      )}
+
+                      {/* 2. Pesées magasin hub */}
+                      {pendingWeighingsList.length > 0 && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <Scale size={14} color="var(--brown-dark)" />
+                            Colis au hub sans pesée officielle ({pendingWeighingsList.length})
+                          </div>
+                          <div style={{ display: "grid", gap: "8px" }}>
+                            {pendingWeighingsList.map((s) => (
+                              <div
+                                key={s.id}
+                                style={{
+                                  padding: "12px 14px",
+                                  borderRadius: "12px",
+                                  border: "1px solid var(--border-light)",
+                                  background: "#FAF8F5",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  gap: "12px",
+                                }}
+                              >
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ fontWeight: "700", fontSize: "0.85rem", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {s.tracking_number} · {s.client_name}
+                                  </div>
+                                  <div style={{ fontSize: "0.73rem", color: "var(--text-secondary)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    Trajet : {s.origin_country} ➔ {s.destination_country} ({formatShippingModeShort(s.shipping_mode_name, s.shipping_mode_id)})
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenIntakeModal(s)}
+                                  className="btn btn-secondary"
+                                  style={{ padding: "5px 12px", fontSize: "0.75rem", gap: "5px", flexShrink: 0, background: "#FFFFFF" }}
+                                >
+                                  <Scale size={13} /> Peser
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 3. Demandes sourcing reçues */}
+                      {pendingRequestsList.length > 0 && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <Inbox size={14} color="var(--brown-dark)" />
+                            Demandes en attente de cotation ({pendingRequestsList.length})
+                          </div>
+                          <div style={{ display: "grid", gap: "8px" }}>
+                            {pendingRequestsList.map((r) => (
+                              <div
+                                key={r.id}
+                                style={{
+                                  padding: "12px 14px",
+                                  borderRadius: "12px",
+                                  border: "1px solid var(--border-light)",
+                                  background: "#FAF8F5",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  gap: "12px",
+                                }}
+                              >
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ fontWeight: "700", fontSize: "0.85rem", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {r.reference} · {r.client_name}
+                                  </div>
+                                  <div style={{ fontSize: "0.73rem", color: "var(--text-secondary)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    Type : <strong>{formatRequestType(r.request_type)}</strong> · {r.origin_country || "Chine"} ➔ {r.destination_country || "Afrique"}
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenRequestDetail(r)}
+                                  className="btn btn-primary"
+                                  style={{ padding: "5px 12px", fontSize: "0.75rem", flexShrink: 0 }}
+                                >
+                                  Traiter
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 4. Tâches urgentes */}
+                      {urgentTasksList.length > 0 && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <CheckSquare size={14} color="var(--brown-dark)" />
+                            Tâches prioritaires d&apos;équipe ({urgentTasksList.length})
+                          </div>
+                          <div style={{ display: "grid", gap: "8px" }}>
+                            {urgentTasksList.map((t) => (
+                              <div
+                                key={t.id}
+                                style={{
+                                  padding: "10px 14px",
+                                  borderRadius: "12px",
+                                  border: "1px solid var(--border-light)",
+                                  background: "#FAF8F5",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  gap: "12px",
+                                }}
+                              >
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ fontWeight: "700", fontSize: "0.85rem", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {t.title}
+                                  </div>
+                                  <div style={{ fontSize: "0.73rem", color: "var(--text-secondary)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    Assigné à : {t.assigned_to_name || "Équipe"}
+                                  </div>
+                                </div>
+                                <span
+                                  style={{
+                                    fontSize: "0.68rem",
+                                    padding: "2px 8px",
+                                    borderRadius: "9999px",
+                                    background: "#FFFFFF",
+                                    color: "var(--brown-dark)",
+                                    fontWeight: "700",
+                                    border: "1px solid rgba(42, 24, 16, 0.1)",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {formatTaskPriority(t.priority)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* COLONNE DROITE : CHAT STYLE APPLE IOS AVEC ANIMATION DE TYPING FLUIDE */}
@@ -4139,21 +4030,28 @@ export default function AdminPage() {
                     <div
                       style={{
                         position: "relative",
-                        width: "38px",
-                        height: "38px",
+                        width: "40px",
+                        height: "40px",
                         borderRadius: "50%",
-                        background: "linear-gradient(135deg, #EFA99F 0%, #D87B6F 100%)",
+                        background: "#FFFFFF",
+                        border: "1.5px solid var(--border-light)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: "#1A100C",
-                        fontWeight: "800",
-                        fontSize: "0.82rem",
-                        boxShadow: "0 2px 8px rgba(239, 169, 159, 0.45)",
+                        boxShadow: "0 2px 6px rgba(42, 24, 16, 0.08)",
                         flexShrink: 0,
                       }}
                     >
-                      RT
+                      <img
+                        src="/images/roum-logo-tight.png"
+                        alt="Roum Transit"
+                        style={{
+                          width: "84%",
+                          height: "84%",
+                          objectFit: "contain",
+                          display: "block",
+                        }}
+                      />
                       <span
                         style={{
                           position: "absolute",
@@ -4171,14 +4069,15 @@ export default function AdminPage() {
                     <div style={{ display: "flex", flexDirection: "column" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                         <span style={{ fontWeight: "700", fontSize: "0.92rem", color: "#000000", letterSpacing: "-0.015em" }}>
-                          Roum Assistant
+                          Roum Secrétaire
                         </span>
                         <span
                           style={{
                             fontSize: "0.65rem",
-                            background: "rgba(0, 122, 255, 0.1)",
-                            color: "#007AFF",
-                            fontWeight: "600",
+                            background: "#F6F3EE",
+                            color: "var(--brown-dark)",
+                            border: "1px solid rgba(42, 24, 16, 0.1)",
+                            fontWeight: "700",
                             padding: "1px 6px",
                             borderRadius: "10px",
                           }}
@@ -4195,7 +4094,7 @@ export default function AdminPage() {
                           gap: "5px",
                         }}
                       >
-                        En ligne · Données D1 en direct
+                        En ligne
                       </span>
                     </div>
                   </div>
@@ -4290,7 +4189,7 @@ export default function AdminPage() {
                             fontWeight: "500",
                           }}
                         >
-                          {msg.sender === "user" ? "Vous" : "Roum Assistant"} · {msg.time}
+                          {msg.sender === "user" ? "Vous" : "Roum Secrétaire"} · {msg.time}
                         </div>
 
                         {msg.sender === "user" ? (
@@ -4314,7 +4213,7 @@ export default function AdminPage() {
                   {isAgentThinking && (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "3px" }}>
                       <div style={{ fontSize: "0.68rem", color: "#8E8E93", padding: "0 6px", fontWeight: "500" }}>
-                        Roum Assistant tape...
+                        Roum Secrétaire tape...
                       </div>
                       <div className="ios-typing-indicator">
                         <span className="ios-typing-dot" />
@@ -4361,125 +4260,121 @@ export default function AdminPage() {
         {/* 1. TABLEAU DE BORD : CONSOLE HAUTE LOGISTIQUE & THÉÂTRE OPÉRATIONNEL SYNCHRONISÉ */}
         {activeTab === "dashboard" && (
           <div key="dashboard" className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            {/* TIER 1 : CARTES MÉTRIQUES EXÉCUTIVES STYLE IOS (Inspiration ACRU / Skymetrics) */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                  gap: "16px",
-                }}
-              >
-                <div className="ios-metric-card">
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--text-secondary)" }}>
-                      En Transit Actif
-                    </span>
+            {/* TIER 1 : 4 INDICATEURS CLÉS ESSENTIELS (Grille Symétrique Épurée sur 1 ligne) */}
+              <div className="kpi-grid-4">
+                <div
+                  className="ios-metric-card"
+                  onClick={() => setDashboardFilter("IN_TRANSIT")}
+                  style={{ cursor: "pointer" }}
+                  title="Filtrer les colis en transit actif"
+                >
+                  <div className="metric-card-header">
+                    <div className="metric-card-label">
+                      <span className="metric-icon-box">
+                        <Package size={15} strokeWidth={1.8} />
+                      </span>
+                      <span className="metric-card-title">
+                        En Transit Actif
+                      </span>
+                    </div>
                     <span className="ios-trend-pill ios-trend-pill-up">
                       <span className="live-pulse" style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#059669" }} />
                       Actif
                     </span>
                   </div>
-                  <div>
-                    <div style={{ fontSize: "1.9rem", fontWeight: "800", color: "var(--text-main)", lineHeight: "1.1", letterSpacing: "-0.02em" }} className="tabular-nums">
-                      {shipments.filter((s) => s.current_status === "IN_TRANSIT").length || stats?.active_shipments || 8}
+                  <div className="metric-card-body">
+                    <div className="metric-card-value">
+                      {shipments.filter((s) => s.current_status === "IN_TRANSIT").length || stats?.active_shipments || 8} dossiers
                     </div>
-                    <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginTop: "6px" }}>
-                      {shipments.filter((s) => s.current_status === "IN_TRANSIT").reduce((acc, s) => acc + (Number(s.total_weight_kg) || 0), 0).toLocaleString("fr-FR")} kg en cours
-                    </div>
-                  </div>
-                </div>
-
-                <div className="ios-metric-card">
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--text-secondary)" }}>
-                      Voie Aérienne Express
-                    </span>
-                    <span className="ios-trend-pill ios-trend-pill-neutral">
-                      <Plane size={11} /> Vol direct
-                    </span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "1.9rem", fontWeight: "800", color: "var(--text-main)", lineHeight: "1.1", letterSpacing: "-0.02em" }} className="tabular-nums">
-                      {shipments.filter((s) => (s.shipping_mode_name || "").includes("Aérien") || (s.shipping_mode_name || "").includes("Express") || s.shipping_mode_id === "AIR_EXPRESS").length || 10}
-                    </div>
-                    <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginTop: "6px" }}>
-                      Chine / Golfe → Afrique
+                    <div className="metric-card-sub">
+                      {shipments.filter((s) => s.current_status === "IN_TRANSIT").reduce((acc, s) => acc + (Number(s.total_weight_kg) || 0), 0).toLocaleString("fr-FR")} kg en acheminement
                     </div>
                   </div>
                 </div>
 
-                <div className="ios-metric-card">
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--text-secondary)" }}>
-                      Demandes de Sourcing
-                    </span>
+                <div
+                  className="ios-metric-card"
+                  onClick={() => setActiveTab("requests")}
+                  style={{ cursor: "pointer" }}
+                  title="Ouvrir les demandes de sourcing"
+                >
+                  <div className="metric-card-header">
+                    <div className="metric-card-label">
+                      <span className="metric-icon-box">
+                        <Inbox size={15} strokeWidth={1.8} />
+                      </span>
+                      <span className="metric-card-title">
+                        Sourcing Client
+                      </span>
+                    </div>
                     <span className="ios-trend-pill ios-trend-pill-gold">
                       En cours
                     </span>
                   </div>
-                  <div>
-                    <div style={{ fontSize: "1.9rem", fontWeight: "800", color: "var(--text-main)", lineHeight: "1.1", letterSpacing: "-0.02em" }} className="tabular-nums">
-                      {stats?.pending_requests ?? (requestsList.length > 0 ? requestsList.filter((r) => r.status === "NEW" || r.status === "IN_REVIEW").length : 3)}
+                  <div className="metric-card-body">
+                    <div className="metric-card-value">
+                      {stats?.pending_requests ?? (requestsList.length > 0 ? requestsList.filter((r) => r.status === "NEW" || r.status === "IN_REVIEW").length : 3)} demandes
                     </div>
-                    <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginTop: "6px" }}>
-                      Alibaba, 1688 & usines
+                    <div className="metric-card-sub">
+                      Achats Alibaba, 1688 & usines
                     </div>
                   </div>
                 </div>
 
-                <div className="ios-metric-card">
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--text-secondary)" }}>
-                      Colis Livrés
-                    </span>
+                <div
+                  className="ios-metric-card"
+                  onClick={() => setDashboardFilter("DELIVERED")}
+                  style={{ cursor: "pointer" }}
+                  title="Filtrer les colis livrés"
+                >
+                  <div className="metric-card-header">
+                    <div className="metric-card-label">
+                      <span className="metric-icon-box">
+                        <ShieldCheck size={15} strokeWidth={1.8} />
+                      </span>
+                      <span className="metric-card-title">
+                        Colis Livrés
+                      </span>
+                    </div>
                     <span className="ios-trend-pill ios-trend-pill-up">
-                      <ShieldCheck size={11} /> 100%
+                      100%
                     </span>
                   </div>
-                  <div>
-                    <div style={{ fontSize: "1.9rem", fontWeight: "800", color: "var(--state-success-text)", lineHeight: "1.1", letterSpacing: "-0.02em" }} className="tabular-nums">
-                      {shipments.filter((s) => s.current_status === "DELIVERED").length || stats?.delivered_shipments || 5}
+                  <div className="metric-card-body">
+                    <div className="metric-card-value">
+                      {shipments.filter((s) => s.current_status === "DELIVERED").length || stats?.delivered_shipments || 5} livrés
                     </div>
-                    <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginTop: "6px" }}>
-                      Remis en mains propres
+                    <div className="metric-card-sub">
+                      Remis en mains propres aux clients
                     </div>
                   </div>
                 </div>
 
-                <div className="ios-metric-card">
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--text-secondary)" }}>
-                      Paiements & Caisse
-                    </span>
+                <div
+                  className="ios-metric-card"
+                  onClick={() => setActiveTab("finances")}
+                  style={{ cursor: "pointer" }}
+                  title="Ouvrir Paiements & Caisse"
+                >
+                  <div className="metric-card-header">
+                    <div className="metric-card-label">
+                      <span className="metric-icon-box">
+                        <Wallet size={15} strokeWidth={1.8} />
+                      </span>
+                      <span className="metric-card-title">
+                        Trésorerie Caisse
+                      </span>
+                    </div>
                     <span className="ios-trend-pill ios-trend-pill-up">
                       Sécurisé
                     </span>
                   </div>
-                  <div>
-                    <div style={{ fontSize: "1.9rem", fontWeight: "800", color: "var(--text-main)", lineHeight: "1.1", letterSpacing: "-0.02em" }} className="tabular-nums">
+                  <div className="metric-card-body">
+                    <div className="metric-card-value">
                       {formatCurrencyPrice(stats?.total_payments_minor || (paymentsList.length > 0 ? paymentsList.reduce((acc, p) => acc + (p.amount_minor || 0), 0) : 358540000), "FCFA")}
                     </div>
-                    <div style={{ fontSize: "0.76rem", color: "var(--state-success-text)", marginTop: "6px" }}>
-                      Règlements encaissés
-                    </div>
-                  </div>
-                </div>
-
-                <div className="ios-metric-card">
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--text-secondary)" }}>
-                      Transactions Effectuées
-                    </span>
-                    <span className="ios-trend-pill ios-trend-pill-up">
-                      <CheckCircle2 size={11} /> Confirmées
-                    </span>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "1.9rem", fontWeight: "800", color: "var(--text-main)", lineHeight: "1.1", letterSpacing: "-0.02em" }} className="tabular-nums">
-                      {paymentsList.length || 14}
-                    </div>
-                    <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginTop: "6px" }}>
-                      Total règlements enregistrés
+                    <div className="metric-card-sub">
+                      {paymentsList.length || 8} règlements clients confirmés
                     </div>
                   </div>
                 </div>
@@ -4490,7 +4385,7 @@ export default function AdminPage() {
                 className="operational-theatre-grid"
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "minmax(0, 1.4fr) 340px",
+                  gridTemplateColumns: "minmax(0, 1.4fr) 356px",
                   gap: "16px",
                   alignItems: "stretch",
                 }}
@@ -4514,65 +4409,54 @@ export default function AdminPage() {
                 <div
                   className="card-clean"
                   style={{
-                    padding: "22px 24px",
+                    padding: "20px 22px",
                     display: "flex",
                     flexDirection: "column",
-                    gap: "16px",
+                    gap: "14px",
                     background: "#FFFFFF",
                     borderRadius: "22px",
-                    border: "1px solid rgba(59, 34, 24, 0.08)",
-                    boxShadow: "0 10px 30px rgba(42, 24, 16, 0.04)",
+                    border: "1px solid rgba(42, 24, 16, 0.08)",
+                    boxShadow: "0 8px 28px -4px rgba(42, 24, 16, 0.04)",
                   }}
                 >
                   {activeShipment ? (
                     <>
                       {/* Entête Fiche Colis */}
-                      <div style={{ paddingBottom: "12px", borderBottom: "1px solid rgba(59, 34, 24, 0.08)" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginBottom: "8px" }}>
-                          <span style={{ fontSize: "0.72rem", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--brown-light)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                      <div style={{ paddingBottom: "14px", borderBottom: "1px solid rgba(42, 24, 16, 0.07)", display: "flex", flexDirection: "column", gap: "8px" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "8px" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.7rem", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--brown-light)" }}>
+                            <span className="live-pulse" style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#059669" }} />
                             Fiche Colis en direct
                           </span>
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            {selectedShipment && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedShipment(null);
-                                  setGlobeFocusTarget(null);
-                                }}
-                                style={{
-                                  background: "var(--bg-app)",
-                                  border: "1px solid var(--border-light)",
-                                  borderRadius: "9999px",
-                                  padding: "3px 10px",
-                                  fontSize: "0.68rem",
-                                  fontWeight: "700",
-                                  color: "var(--brown-dark)",
-                                  cursor: "pointer",
-                                  transition: "all 0.15s ease",
-                                }}
-                                title="Réafficher l'ensemble des flux du réseau sur le globe"
-                              >
-                                Tous les flux
-                              </button>
-                            )}
-                            <span
-                              className={`badge-clean ${
-                                activeShipment.current_status === "DELIVERED"
-                                  ? "badge-delivered"
-                                  : activeShipment.current_status === "IN_TRANSIT"
-                                  ? "badge-transit"
-                                  : "badge-draft"
-                              }`}
-                              style={{ fontSize: "0.72rem", padding: "3px 10px", borderRadius: "9999px", fontWeight: "700" }}
+                          {selectedShipment && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedShipment(null);
+                                setGlobeFocusTarget(null);
+                              }}
+                              style={{
+                                background: "var(--bg-app)",
+                                border: "1px solid var(--border-light)",
+                                borderRadius: "9999px",
+                                padding: "3px 10px",
+                                fontSize: "0.68rem",
+                                fontWeight: "700",
+                                color: "var(--brown-dark)",
+                                cursor: "pointer",
+                                transition: "all 0.15s ease",
+                                whiteSpace: "nowrap",
+                              }}
+                              title="Réafficher l'ensemble des flux du réseau sur le globe"
                             >
-                              {activeShipment.status_label || (activeShipment.current_status === "IN_TRANSIT" ? "En cours d'acheminement" : activeShipment.current_status === "DELIVERED" ? "Livré au client" : "Reçu au magasin")}
-                            </span>
-                          </div>
+                              Tous les flux
+                            </button>
+                          )}
                         </div>
 
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "6px" }}>
-                          <div style={{ fontSize: "1.2rem", fontWeight: "800", color: "var(--brown-dark)", letterSpacing: "-0.01em" }} className="tabular-nums">
+                        {/* Numéro de suivi & Bouton Copier */}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                          <div style={{ fontSize: "1.22rem", fontWeight: "800", color: "var(--brown-dark)", letterSpacing: "-0.015em" }} className="tabular-nums">
                             {activeShipment.tracking_number}
                           </div>
                           <button
@@ -4580,8 +4464,8 @@ export default function AdminPage() {
                             onClick={() => handleCopyTracking(activeShipment.tracking_number)}
                             title="Copier le numéro de suivi"
                             style={{
-                              background: copiedTracking ? "rgba(40, 167, 69, 0.1)" : "var(--bg-app)",
-                              border: "1px solid " + (copiedTracking ? "#28A745" : "var(--border-light)"),
+                              background: copiedTracking ? "rgba(40, 167, 69, 0.1)" : "#F7F5F2",
+                              border: "1px solid " + (copiedTracking ? "#28A745" : "rgba(42, 24, 16, 0.08)"),
                               borderRadius: "9999px",
                               padding: "4px 10px",
                               cursor: "pointer",
@@ -4598,144 +4482,182 @@ export default function AdminPage() {
                             {copiedTracking ? "Copié !" : "Copier"}
                           </button>
                         </div>
+
+                        {/* Statut en dessous à la ligne (jamais écrasé) */}
+                        <div>
+                          <span
+                            className={`badge-clean ${
+                              activeShipment.current_status === "DELIVERED"
+                                ? "badge-delivered"
+                                : activeShipment.current_status === "IN_TRANSIT"
+                                ? "badge-transit"
+                                : "badge-draft"
+                            }`}
+                            style={{ fontSize: "0.73rem", padding: "4px 12px", borderRadius: "9999px", fontWeight: "700", display: "inline-flex", alignItems: "center" }}
+                          >
+                            {activeShipment.status_label || (activeShipment.current_status === "IN_TRANSIT" ? "En cours d'acheminement" : activeShipment.current_status === "DELIVERED" ? "Livré au client" : "Reçu au magasin")}
+                          </span>
+                        </div>
                       </div>
 
-                      {/* Trajet & Mode de transport */}
-                      <div style={{ padding: "12px 14px", background: "linear-gradient(135deg, #FAF8F5 0%, #F5F0EA 100%)", borderRadius: "14px", border: "1px solid rgba(59, 34, 24, 0.08)" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                          <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em" }}>
-                            Trajet de livraison
+                      {/* Trajet & Mode de transport (Style Bordereau Épuré, Zéro Dépassement) */}
+                      <div style={{ padding: "12px 14px", background: "#FAF8F5", borderRadius: "14px", border: "1px solid rgba(42, 24, 16, 0.07)", overflow: "hidden" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "8px", minWidth: 0 }}>
+                          <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            Corridor
                           </span>
-                          <div style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.74rem", color: "var(--brown-light)", fontWeight: "700" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.68rem", color: "var(--brown-dark)", fontWeight: "700", background: "#FFFFFF", padding: "2px 8px", borderRadius: "9999px", border: "1px solid rgba(42, 24, 16, 0.08)", whiteSpace: "nowrap", flexShrink: 0 }}>
                             {(activeShipment.shipping_mode_name || "").includes("Aérien") || activeShipment.shipping_mode_id === "AIR_EXPRESS" ? (
                               <>
-                                <Plane size={13} style={{ color: "var(--brown-dark)" }} /> Aérien Express
+                                <Plane size={11} strokeWidth={1.8} /> Aérien Express
                               </>
                             ) : (
                               <>
-                                <Ship size={13} style={{ color: "var(--brown-dark)" }} /> Fret Maritime
+                                <Ship size={11} strokeWidth={1.8} /> Fret Maritime
                               </>
                             )}
-                          </div>
+                          </span>
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.92rem", fontWeight: "800", color: "var(--text-main)" }}>
-                          <span>{activeShipment.origin_country || "Chine"}</span>
-                          <span style={{ color: "var(--brown-light)", fontSize: "0.85rem", padding: "0 6px" }}>➔</span>
-                          <span>{activeShipment.destination_country || "Afrique"}</span>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", minWidth: 0 }}>
+                          <span style={{ fontSize: "0.84rem", fontWeight: "800", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {activeShipment.origin_country || "Chine"}
+                          </span>
+                          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "4px", minWidth: "20px" }}>
+                            <div style={{ flex: 1, height: "1px", borderTop: "1px dashed rgba(122, 74, 40, 0.35)" }} />
+                            <span style={{ color: "var(--brown-light)", fontSize: "0.75rem", lineHeight: 1 }}>→</span>
+                            <div style={{ flex: 1, height: "1px", borderTop: "1px dashed rgba(122, 74, 40, 0.35)" }} />
+                          </div>
+                          <span style={{ fontSize: "0.84rem", fontWeight: "800", color: "var(--brown-dark)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {activeShipment.destination_country || "Afrique"}
+                          </span>
                         </div>
                       </div>
 
                       {/* Client Destinataire & Contact direct WhatsApp */}
-                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <span style={{ fontSize: "0.68rem", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>
-                          Client Destinataire
-                        </span>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "#FFFFFF", borderRadius: "12px", border: "1px solid var(--border-light)" }}>
-                          <div>
-                            <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--text-main)" }}>
-                              {activeShipment.client_name || "Client Partenaire"}
-                            </div>
-                            <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "1px" }} className="tabular-nums">
-                              {activeShipment.client_phone || "+223 ..."}
-                            </div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", background: "#FFFFFF", borderRadius: "13px", border: "1px solid var(--border-light)" }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: "0.65rem", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "2px" }}>
+                            Client Destinataire
                           </div>
-                          {activeShipment.client_phone && (
-                            <a
-                              href={getWhatsAppUrl(activeShipment.client_phone, activeShipment.tracking_number, activeShipment.client_name)}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                textDecoration: "none",
-                                transition: "transform 0.15s ease",
-                              }}
-                              title="Ouvrir WhatsApp direct pour informer le client"
-                            >
-                              <WhatsAppLogo size={32} />
-                            </a>
-                          )}
+                          <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {activeShipment.client_name || "Client Partenaire"}
+                          </div>
+                          <div style={{ fontSize: "0.73rem", color: "var(--text-muted)", marginTop: "1px" }} className="tabular-nums">
+                            {activeShipment.client_phone || "+223 ..."}
+                          </div>
                         </div>
+                        {activeShipment.client_phone && (
+                          <a
+                            href={getWhatsAppUrl(activeShipment.client_phone, activeShipment.tracking_number, activeShipment.client_name)}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              textDecoration: "none",
+                              transition: "transform 0.15s ease",
+                              flexShrink: 0,
+                            }}
+                            title="Ouvrir WhatsApp direct pour informer le client"
+                          >
+                            <WhatsAppLogo size={32} />
+                          </a>
+                        )}
                       </div>
 
                       {/* Métriques Poids & Colis */}
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                        <div style={{ padding: "10px 12px", background: "var(--bg-app)", borderRadius: "12px", border: "1px solid rgba(59, 34, 24, 0.06)" }}>
-                          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700" }}>Poids Total</div>
-                          <div style={{ fontSize: "1.05rem", fontWeight: "800", color: "var(--brown-dark)", marginTop: "2px" }} className="tabular-nums">
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                        <div style={{ padding: "9px 12px", background: "#F8F7F5", borderRadius: "12px", border: "1px solid rgba(42, 24, 16, 0.06)" }}>
+                          <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.04em" }}>Poids Total</div>
+                          <div style={{ fontSize: "1rem", fontWeight: "800", color: "var(--brown-dark)", marginTop: "2px" }} className="tabular-nums">
                             {activeShipment.total_weight_kg || activeShipment.weight_kg || 0} kg
                           </div>
                         </div>
-                        <div style={{ padding: "10px 12px", background: "var(--bg-app)", borderRadius: "12px", border: "1px solid rgba(59, 34, 24, 0.06)" }}>
-                          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700" }}>Nombre de colis</div>
-                          <div style={{ fontSize: "1.05rem", fontWeight: "800", color: "var(--brown-dark)", marginTop: "2px" }} className="tabular-nums">
+                        <div style={{ padding: "9px 12px", background: "#F8F7F5", borderRadius: "12px", border: "1px solid rgba(42, 24, 16, 0.06)" }}>
+                          <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.04em" }}>Colisage</div>
+                          <div style={{ fontSize: "1rem", fontWeight: "800", color: "var(--brown-dark)", marginTop: "2px" }} className="tabular-nums">
                             {activeShipment.total_parcels_count || 1} colis
                           </div>
                         </div>
                       </div>
 
-                      {/* Progression des Étapes avec ligne continue */}
+                      {/* Progression des Étapes avec ligne verticale continue */}
                       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                          <span style={{ fontSize: "0.68rem", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>
+                          <span style={{ fontSize: "0.66rem", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>
                             Progression de livraison
                           </span>
-                          <span style={{ fontSize: "0.72rem", fontWeight: "800", color: "#EA580C", background: "rgba(234, 88, 12, 0.1)", padding: "2px 8px", borderRadius: "9999px" }}>
-                            Étape {getShipmentPhase(activeShipment.current_status)} sur 5
+                          <span style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--brown-dark)", background: "#F6F3EE", padding: "2px 8px", borderRadius: "9999px", border: "1px solid rgba(42, 24, 16, 0.08)" }}>
+                            Étape {getShipmentPhase(activeShipment.current_status)} / 5
                           </span>
                         </div>
                         {(() => {
                           const currentPhase = getShipmentPhase(activeShipment.current_status);
                           const phases = [
-                            "1. Reçu au magasin départ",
-                            "2. Contrôlé et emballé",
-                            "3. En vol / En mer vers l'Afrique",
-                            "4. Arrivé en agence locale",
-                            "5. Livré au client",
+                            "Reçu au magasin départ",
+                            "Contrôlé et emballé",
+                            "En vol / En mer vers l'Afrique",
+                            "Arrivé en agence locale",
+                            "Livré au client",
                           ];
                           return (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "14px", background: "#FFFFFF", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
+                            <div style={{ display: "flex", flexDirection: "column", padding: "12px 14px", background: "#FFFFFF", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
                               {phases.map((label, idx) => {
                                 const phaseNumber = idx + 1;
                                 const isDone = phaseNumber < currentPhase;
                                 const isCurrent = phaseNumber === currentPhase;
+                                const isLast = idx === phases.length - 1;
                                 return (
-                                  <div key={label} style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "0.76rem" }}>
+                                  <div key={label} style={{ display: "flex", alignItems: "flex-start", gap: "10px", position: "relative", paddingBottom: isLast ? 0 : "10px" }}>
+                                    {!isLast && (
+                                      <div
+                                        style={{
+                                          position: "absolute",
+                                          left: "4.5px",
+                                          top: "12px",
+                                          bottom: 0,
+                                          width: "1.5px",
+                                          background: isDone ? "#059669" : "rgba(42, 24, 16, 0.12)",
+                                        }}
+                                      />
+                                    )}
                                     <span
                                       style={{
                                         width: "10px",
                                         height: "10px",
+                                        marginTop: "3px",
                                         borderRadius: "50%",
                                         background: isDone
                                           ? "#059669"
                                           : isCurrent
-                                          ? "#EA580C"
-                                          : "rgba(59, 34, 24, 0.15)",
-                                        border: isCurrent ? "2px solid #FFF" : "none",
-                                        boxShadow: isCurrent ? "0 0 0 3px rgba(234, 88, 12, 0.35)" : "none",
+                                          ? "var(--brown-dark)"
+                                          : "#E5E7EB",
+                                        boxShadow: isCurrent ? "0 0 0 3px rgba(42, 24, 16, 0.16)" : "none",
                                         flexShrink: 0,
+                                        zIndex: 1,
                                       }}
                                     />
-                                    <span
-                                      style={{
-                                        fontWeight: isCurrent ? "800" : isDone ? "600" : "400",
-                                        color: isCurrent ? "var(--brown-dark)" : isDone ? "var(--text-main)" : "var(--text-muted)",
-                                        flex: 1,
-                                      }}
-                                    >
-                                      {label}
-                                    </span>
-                                    {isCurrent && (
-                                      <span style={{ fontSize: "0.66rem", fontWeight: "800", color: "#EA580C", textTransform: "uppercase", letterSpacing: "0.04em", background: "rgba(234, 88, 12, 0.1)", padding: "2px 6px", borderRadius: "4px" }}>
-                                        En cours
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flex: 1, gap: "6px", fontSize: "0.75rem", lineHeight: 1.25 }}>
+                                      <span
+                                        style={{
+                                          fontWeight: isCurrent ? "800" : isDone ? "600" : "400",
+                                          color: isCurrent ? "var(--brown-dark)" : isDone ? "var(--text-main)" : "var(--text-muted)",
+                                        }}
+                                      >
+                                        {label}
                                       </span>
-                                    )}
-                                    {isDone && (
-                                      <span style={{ color: "#059669", fontSize: "0.72rem", fontWeight: "700" }}>
-                                        ✓
-                                      </span>
-                                    )}
+                                      {isCurrent && (
+                                        <span style={{ fontSize: "0.62rem", fontWeight: "800", color: "var(--brown-dark)", textTransform: "uppercase", letterSpacing: "0.04em", background: "#F6F3EE", padding: "2px 6px", borderRadius: "4px", flexShrink: 0 }}>
+                                          En cours
+                                        </span>
+                                      )}
+                                      {isDone && (
+                                        <span style={{ color: "#059669", fontSize: "0.72rem", fontWeight: "700", flexShrink: 0 }}>
+                                          ✓
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 );
                               })}
@@ -4745,7 +4667,7 @@ export default function AdminPage() {
                       </div>
 
                       {/* Boutons d'action rapide */}
-                      <div style={{ marginTop: "auto", display: "flex", gap: "8px" }}>
+                      <div style={{ marginTop: "auto", display: "flex", gap: "8px", paddingTop: "2px" }}>
                         <button
                           type="button"
                           onClick={() => setShowStatusModal(activeShipment)}
@@ -4775,7 +4697,7 @@ export default function AdminPage() {
               </div>
 
               {/* TIER 3 : GRAND REGISTRE OPÉRATIONNEL SYNCHRONISÉ */}
-              <div className="card-clean" style={{ padding: "24px", background: "#FFFFFF" }}>
+              <div className="card-clean" style={{ padding: "22px 24px", background: "#FFFFFF", borderRadius: "22px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "14px", marginBottom: "18px" }}>
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -4786,8 +4708,8 @@ export default function AdminPage() {
                         {filteredDashboardShipments.length} dossiers
                       </span>
                     </div>
-                    <p style={{ fontSize: "0.76rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>
-                      Cliquez sur une expédition pour la centrer sur le globe 3D sans effet parasite.
+                    <p style={{ fontSize: "0.76rem", color: "var(--text-muted)", margin: "3px 0 0 0" }}>
+                      Cliquez sur une expédition pour l&apos;inspecter et la localiser sur le globe 3D.
                     </p>
                   </div>
 
@@ -4833,10 +4755,9 @@ export default function AdminPage() {
                           fontSize: "0.8rem",
                           border: "1px solid var(--border-light)",
                           borderRadius: "var(--radius-full)",
-                          background: "#FFFFFF",
+                          background: "#FAFAFB",
                           width: "220px",
                           outline: "none",
-                          boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
                         }}
                       />
                     </div>
@@ -4845,69 +4766,68 @@ export default function AdminPage() {
 
                 {/* Tableau */}
                 <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                  <table className="table-clean">
                     <thead>
-                      <tr style={{ borderBottom: "1px solid rgba(59, 34, 24, 0.08)", textAlign: "left", color: "var(--text-muted)", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                        <th style={{ padding: "10px 12px" }}>N° Dossier</th>
-                        <th style={{ padding: "10px 12px" }}>Client</th>
-                        <th style={{ padding: "10px 12px" }}>Corridor</th>
-                        <th style={{ padding: "10px 12px" }}>Mode</th>
-                        <th style={{ padding: "10px 12px" }}>Poids / Colis</th>
-                        <th style={{ padding: "10px 12px" }}>Statut Opérationnel</th>
-                        <th style={{ padding: "10px 12px" }}>Règlement</th>
-                        <th style={{ padding: "10px 12px", textAlign: "right" }}>Radar 3D</th>
+                      <tr>
+                        <th style={{ borderTopLeftRadius: "10px" }}>N° Dossier</th>
+                        <th>Client</th>
+                        <th>Corridor</th>
+                        <th>Mode</th>
+                        <th>Poids / Colis</th>
+                        <th>Statut</th>
+                        <th>Règlement</th>
+                        <th className="col-right" style={{ borderTopRightRadius: "10px" }}>Radar 3D</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredDashboardShipments.map((s) => {
                         const isSelected = activeShipment?.id === s.id;
+                        const shortMode = formatShippingModeShort(s.shipping_mode_name, s.shipping_mode_id);
                         return (
                           <tr
                             key={s.id}
                             onClick={() => handleSelectShipment(s)}
-                            className={isSelected ? "active-row-highlight" : ""}
-                            style={{
-                              borderBottom: "1px solid rgba(59, 34, 24, 0.05)",
-                              cursor: "pointer",
-                              transition: "background-color 0.15s ease",
-                            }}
+                            className={`table-row-clean ${isSelected ? "active-row-highlight" : ""}`}
+                            style={{ cursor: "pointer" }}
                           >
-                            <td style={{ padding: "12px" }}>
-                              <div style={{ fontWeight: "800", color: "var(--brown-dark)", display: "flex", alignItems: "center", gap: "6px" }}>
-                                {s.tracking_number}
+                            <td>
+                              <div style={{ fontWeight: "800", fontSize: "0.8rem", color: "var(--brown-dark)", display: "inline-flex", alignItems: "center", gap: "6px" }} className="tabular-nums">
+                                <span>{s.tracking_number}</span>
                                 {isSelected && (
-                                  <span style={{ fontSize: "0.65rem", padding: "1px 5px", background: "var(--brown-dark)", color: "#FFF", borderRadius: "3px" }}>
+                                  <span style={{ fontSize: "0.62rem", padding: "2px 6px", background: "var(--brown-dark)", color: "#FFF", borderRadius: "9999px", fontWeight: "700" }}>
                                     Actif
                                   </span>
                                 )}
                               </div>
                             </td>
-                            <td style={{ padding: "12px" }}>
-                              <div style={{ fontWeight: "600", color: "var(--text-main)" }}>{s.client_name}</div>
-                              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{s.client_phone}</div>
+                            <td>
+                              <div style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "0.82rem" }}>{s.client_name}</div>
+                              <div style={{ fontSize: "0.71rem", color: "var(--text-muted)" }} className="tabular-nums">{s.client_phone}</div>
                             </td>
-                            <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                            <td>
+                              <div className="corridor-pill-clean">
                                 <span>{s.origin_country || "Chine"}</span>
-                                <span style={{ color: "var(--brown-light)", fontSize: "0.75rem" }}>→</span>
-                                <strong>{s.destination_country || "Afrique"}</strong>
+                                <span style={{ color: "var(--brown-light)", fontSize: "0.7rem" }}>→</span>
+                                <strong style={{ color: "var(--brown-dark)" }}>{s.destination_country || "Afrique"}</strong>
                               </div>
                             </td>
-                            <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                                {(s.shipping_mode_name || "").includes("Aérien") || s.shipping_mode_id === "AIR_EXPRESS" ? (
-                                  <Plane size={13} color="var(--brown-light)" />
-                                ) : (
+                            <td style={{ color: "var(--text-secondary)" }}>
+                              <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontWeight: "600", fontSize: "0.78rem" }}>
+                                {shortMode.includes("Maritime") ? (
                                   <Ship size={13} color="var(--brown-light)" />
+                                ) : shortMode.includes("Terrestre") ? (
+                                  <Truck size={13} color="var(--brown-light)" />
+                                ) : (
+                                  <Plane size={13} color="var(--brown-light)" />
                                 )}
-                                <span>{s.shipping_mode_name || (s.shipping_mode_id === "AIR_EXPRESS" ? "Aérien Express" : "Maritime Cargo")}</span>
+                                <span>{shortMode}</span>
                               </div>
                             </td>
-                            <td style={{ padding: "12px" }}>
-                              <div className="tabular-nums" style={{ fontWeight: "700" }}>{s.total_weight_kg || 0} kg</div>
-                              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{s.total_parcels_count || 1} colis</div>
+                            <td>
+                              <div className="tabular-nums" style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "0.8rem" }}>{s.total_weight_kg || 0} kg</div>
+                              <div style={{ fontSize: "0.71rem", color: "var(--text-muted)" }}>{s.total_parcels_count || 1} colis</div>
                             </td>
-                            <td style={{ padding: "12px" }}>
+                            <td>
                               <span
                                 className={`badge-clean ${
                                   s.current_status === "DELIVERED"
@@ -4916,16 +4836,17 @@ export default function AdminPage() {
                                     ? "badge-transit"
                                     : "badge-draft"
                                 }`}
+                                title={formatShipmentStatus(s.current_status, s.status_label)}
                               >
-                                {formatShipmentStatus(s.current_status, s.status_label)}
+                                {formatShipmentStatusShort(s.current_status)}
                               </span>
                             </td>
-                            <td style={{ padding: "12px" }}>
+                            <td>
                               <span className={`badge-clean ${s.payment_status === "PAID" ? "badge-delivered" : "badge-draft"}`}>
                                 {s.payment_status === "PAID" ? "Payé" : "En attente"}
                               </span>
                             </td>
-                            <td style={{ padding: "12px", textAlign: "right" }}>
+                            <td className="col-right">
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -4933,20 +4854,22 @@ export default function AdminPage() {
                                   handleSelectShipment(s);
                                 }}
                                 style={{
-                                  background: isSelected ? "var(--brown-dark)" : "var(--bg-app)",
+                                  background: isSelected ? "var(--brown-dark)" : "#FFFFFF",
                                   color: isSelected ? "#FFFFFF" : "var(--brown-dark)",
-                                  border: "1px solid var(--border-light)",
-                                  borderRadius: "var(--radius-sm)",
-                                  padding: "4px 8px",
+                                  border: isSelected ? "1px solid var(--brown-dark)" : "1px solid var(--border-light)",
+                                  borderRadius: "9999px",
+                                  padding: "4px 10px",
                                   fontSize: "0.72rem",
-                                  fontWeight: "600",
+                                  fontWeight: "700",
                                   cursor: "pointer",
                                   display: "inline-flex",
                                   alignItems: "center",
-                                  gap: "4px",
+                                  gap: "5px",
+                                  whiteSpace: "nowrap",
+                                  transition: "all 0.15s ease",
                                 }}
                               >
-                                <Compass size={12} /> Centrer
+                                <Compass size={12} /> {isSelected ? "Ciblé" : "Centrer"}
                               </button>
                             </td>
                           </tr>
@@ -4965,14 +4888,14 @@ export default function AdminPage() {
               </div>
 
               {/* TIER 4 : TÂCHES OPÉRATIONNELLES PRIORITAIRES (HAIRLINE COMPACT) */}
-              <div className="desk-hairline-card" style={{ padding: "18px 20px", background: "#FFFFFF" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <div className="card-clean" style={{ padding: "20px 24px", background: "#FFFFFF", borderRadius: "22px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <h3 style={{ fontSize: "0.95rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0 }}>
+                    <h3 style={{ fontSize: "0.98rem", fontWeight: "800", color: "var(--text-main)", margin: 0 }}>
                       Tâches Prioritaires
                     </h3>
-                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                      ({tasksList.filter((t) => t.status !== "DONE").length} en attente)
+                    <span className="ios-trend-pill ios-trend-pill-neutral">
+                      {tasksList.filter((t) => t.status !== "DONE").length} en attente
                     </span>
                   </div>
                   <button
@@ -4984,86 +4907,108 @@ export default function AdminPage() {
                   </button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "10px" }}>
-                  {tasksList.slice(0, 4).map((t) => (
-                    <div
-                      key={t.id}
-                      style={{
-                        padding: "10px 14px",
-                        background: "var(--bg-app)",
-                        border: "1px solid rgba(59, 34, 24, 0.06)",
-                        borderRadius: "var(--radius-sm)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={t.status === "DONE"}
-                        onChange={() => handleToggleTaskStatus(t.id, t.status)}
-                        style={{ cursor: "pointer", accentColor: "var(--brown-dark)" }}
-                      />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: "0.82rem", fontWeight: "600", textDecoration: t.status === "DONE" ? "line-through" : "none", color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {t.title}
-                        </div>
-                        {t.due_date && (
-                          <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                            Échéance : {t.due_date}
-                          </div>
-                        )}
-                      </div>
-                      <span
+                  {tasksList.slice(0, 4).map((t) => {
+                    const isDone = t.status === "DONE";
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => handleToggleTaskStatus(t.id, t.status)}
                         style={{
-                          fontSize: "0.65rem",
-                          fontWeight: "700",
-                          padding: "2px 6px",
-                          borderRadius: "4px",
-                          background: t.priority === "URGENT" ? "var(--state-danger-bg)" : "rgba(59, 34, 24, 0.06)",
-                          color: t.priority === "URGENT" ? "var(--state-danger-text)" : "var(--text-secondary)",
-                          border: `1px solid ${t.priority === "URGENT" ? "var(--state-danger-border)" : "transparent"}`,
-                          flexShrink: 0,
+                          padding: "11px 14px",
+                          background: isDone ? "#FAFAFC" : "#FAF9F7",
+                          border: "1px solid rgba(42, 24, 16, 0.07)",
+                          borderRadius: "13px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "11px",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
                         }}
                       >
-                        {formatTaskPriority(t.priority)}
-                      </span>
-                    </div>
-                  ))}
+                        <span
+                          style={{
+                            width: "18px",
+                            height: "18px",
+                            borderRadius: "50%",
+                            border: isDone ? "none" : "1.5px solid #D1D5DB",
+                            background: isDone ? "var(--brown-dark)" : "#FFFFFF",
+                            color: "#FFFFFF",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {isDone && <Check size={11} strokeWidth={3} />}
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: "0.82rem", fontWeight: "700", textDecoration: isDone ? "line-through" : "none", color: isDone ? "var(--text-muted)" : "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {t.title}
+                          </div>
+                          {t.due_date && (
+                            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                              Échéance : {t.due_date}
+                            </div>
+                          )}
+                        </div>
+                        <span
+                          style={{
+                            fontSize: "0.65rem",
+                            fontWeight: "700",
+                            padding: "2px 7px",
+                            borderRadius: "9999px",
+                            background: t.priority === "URGENT" ? "#FEF2F2" : "#FFFFFF",
+                            color: t.priority === "URGENT" ? "#DC2626" : "var(--text-secondary)",
+                            border: `1px solid ${t.priority === "URGENT" ? "rgba(220, 38, 38, 0.25)" : "var(--border-light)"}`,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {formatTaskPriority(t.priority)}
+                        </span>
+                      </div>
+                    );
+                  })}
                   {tasksList.length === 0 && (
                     <div style={{ color: "var(--text-muted)", fontSize: "0.78rem", padding: "10px 0" }}>
                       Toutes les tâches sont terminées.
                     </div>
                   )}
+                </div>
               </div>
-            </div>
           </div>
         )}
 
         {/* 2. DEMANDES REÇUES */}
         {activeTab === "requests" && (
-          <div key="requests" className="animate-fade-in card-clean" style={{ padding: "20px" }}>
-            <div style={{ marginBottom: "16px" }}>
-              <input
-                type="text"
-                placeholder="Rechercher par référence, client, téléphone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-clean"
-                style={{ maxWidth: "380px" }}
-              />
+          <div key="requests" className="animate-fade-in card-clean" style={{ padding: "22px 24px", borderRadius: "22px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "18px" }}>
+              <div style={{ position: "relative", width: "100%", maxWidth: "360px" }}>
+                <Search size={14} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                <input
+                  type="text"
+                  placeholder="Rechercher par référence, client, téléphone..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="input-clean"
+                  style={{ paddingLeft: "36px", borderRadius: "9999px", background: "#FAFAFB" }}
+                />
+              </div>
+              <span className="ios-trend-pill ios-trend-pill-neutral">
+                {requestsList.length} demandes enregistrées
+              </span>
             </div>
 
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
+              <table className="table-clean">
                 <thead>
-                  <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-secondary)" }}>
-                    <th style={{ padding: "10px 12px" }}>Référence</th>
-                    <th style={{ padding: "10px 12px" }}>Type</th>
-                    <th style={{ padding: "10px 12px" }}>Client</th>
-                    <th style={{ padding: "10px 12px" }}>Trajet</th>
-                    <th style={{ padding: "10px 12px" }}>Poids/Infos</th>
-                    <th style={{ padding: "10px 12px" }}>Statut</th>
-                    <th style={{ padding: "10px 12px" }}>Action</th>
+                  <tr>
+                    <th style={{ borderTopLeftRadius: "10px" }}>Référence</th>
+                    <th>Type</th>
+                    <th>Client</th>
+                    <th>Trajet</th>
+                    <th>Poids / Vol.</th>
+                    <th>Statut</th>
+                    <th className="col-right" style={{ borderTopRightRadius: "10px" }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -5075,59 +5020,71 @@ export default function AdminPage() {
                       r.client_phone?.includes(searchTerm)
                     )
                     .map((r) => (
-                      <tr key={r.id} className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
-                        <td style={{ padding: "12px", fontWeight: "700" }}>
+                      <tr key={r.id} className="table-row-clean">
+                        <td>
                           <button
                             type="button"
                             onClick={() => handleOpenRequestDetail(r)}
+                            className="tabular-nums"
                             style={{
                               background: "none",
                               border: "none",
                               color: "var(--brown-dark)",
-                              fontWeight: "700",
+                              fontWeight: "800",
+                              fontSize: "0.79rem",
                               cursor: "pointer",
-                              textDecoration: "underline",
                               padding: 0,
-                              font: "inherit",
+                              fontFamily: "inherit",
                               textAlign: "left",
+                              whiteSpace: "nowrap",
                             }}
                             title="Voir les détails et articles"
                           >
                             {r.reference}
                           </button>
                         </td>
-                        <td style={{ padding: "12px" }}>
+                        <td>
                           <span className="badge-clean badge-draft">
                             {formatRequestType(r.request_type)}
                           </span>
                         </td>
-                        <td style={{ padding: "12px" }}>
-                          <div style={{ fontWeight: "600", color: "var(--text-main)" }}>{r.client_name}</div>
-                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{r.client_phone}</div>
+                        <td>
+                          <div style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "0.82rem" }}>{r.client_name}</div>
+                          <div style={{ fontSize: "0.71rem", color: "var(--text-muted)" }} className="tabular-nums">{r.client_phone}</div>
                         </td>
-                        <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
-                          {r.origin_country || "Chine"} → {r.destination_country || "Afrique"}
+                        <td>
+                          <div className="corridor-pill-clean">
+                            <span>{r.origin_country || "Chine"}</span>
+                            <span style={{ color: "var(--brown-light)", fontSize: "0.7rem" }}>→</span>
+                            <strong style={{ color: "var(--brown-dark)" }}>{r.destination_country || "Afrique"}</strong>
+                          </div>
                         </td>
-                        <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
-                          {r.estimated_weight_kg ? `${r.estimated_weight_kg} kg` : "—"}
-                          {r.estimated_cbm ? ` · ${r.estimated_cbm} m³` : ""}
+                        <td className="tabular-nums">
+                          <div style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "0.8rem" }}>
+                            {r.estimated_weight_kg ? `${r.estimated_weight_kg} kg` : "—"}
+                          </div>
+                          {r.estimated_cbm ? (
+                            <div style={{ fontSize: "0.71rem", color: "var(--text-muted)" }}>
+                              {r.estimated_cbm} m³
+                            </div>
+                          ) : null}
                         </td>
-                        <td style={{ padding: "12px" }}>
+                        <td>
                           {(() => {
                             const badgeStyle = (() => {
                               switch (r.status) {
                                 case "NEW":
-                                  return { bg: "#EFF6FF", color: "#1D4ED8", border: "rgba(59, 130, 246, 0.35)", stroke: "%231D4ED8" };
+                                  return { bg: "#EFF6FF", color: "#1D4ED8", border: "rgba(59, 130, 246, 0.28)", stroke: "%231D4ED8" };
                                 case "IN_REVIEW":
-                                  return { bg: "#F5F3FF", color: "#6D28D9", border: "rgba(139, 92, 246, 0.35)", stroke: "%236D28D9" };
+                                  return { bg: "#F5F3FF", color: "#6D28D9", border: "rgba(139, 92, 246, 0.28)", stroke: "%236D28D9" };
                                 case "QUOTE_SENT":
-                                  return { bg: "#FFFBEB", color: "#B45309", border: "rgba(245, 158, 11, 0.35)", stroke: "%23B45309" };
+                                  return { bg: "#FFFBEB", color: "#B45309", border: "rgba(245, 158, 11, 0.28)", stroke: "%23B45309" };
                                 case "CONVERTED":
-                                  return { bg: "#ECFDF5", color: "#047857", border: "rgba(16, 185, 129, 0.35)", stroke: "%23047857" };
+                                  return { bg: "#ECFDF5", color: "#047857", border: "rgba(16, 185, 129, 0.28)", stroke: "%23047857" };
                                 case "CANCELLED":
-                                  return { bg: "#FEF2F2", color: "#DC2626", border: "rgba(239, 68, 68, 0.35)", stroke: "%23DC2626" };
+                                  return { bg: "#FEF2F2", color: "#DC2626", border: "rgba(239, 68, 68, 0.28)", stroke: "%23DC2626" };
                                 default:
-                                  return { bg: "#F3F4F6", color: "#4B5563", border: "rgba(107, 114, 128, 0.35)", stroke: "%234B5563" };
+                                  return { bg: "#F3F4F6", color: "#4B5563", border: "rgba(107, 114, 128, 0.28)", stroke: "%234B5563" };
                               }
                             })();
                             return (
@@ -5136,39 +5093,31 @@ export default function AdminPage() {
                                 onChange={(e) => handleUpdateRequestStatus(r.id, e.target.value)}
                                 className="status-select-pill"
                                 style={{
-                                  background: badgeStyle.bg,
+                                  backgroundColor: badgeStyle.bg,
                                   color: badgeStyle.color,
                                   borderColor: badgeStyle.border,
-                                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='${badgeStyle.stroke}' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+                                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='${badgeStyle.stroke}' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+                                  backgroundRepeat: "no-repeat",
+                                  backgroundPosition: "right 10px center",
+                                  backgroundSize: "10px 10px",
                                 }}
                               >
                                 <option value="NEW" style={{ background: "#FFFFFF", color: "#111827" }}>NOUVEAU</option>
                                 <option value="IN_REVIEW" style={{ background: "#FFFFFF", color: "#111827" }}>EN ANALYSE</option>
                                 <option value="QUOTE_SENT" style={{ background: "#FFFFFF", color: "#111827" }}>DEVIS ENVOYÉ</option>
-                                <option value="CONVERTED" style={{ background: "#FFFFFF", color: "#111827" }}>CONVERTI EN COLIS</option>
+                                <option value="CONVERTED" style={{ background: "#FFFFFF", color: "#111827" }}>CONVERTI</option>
                                 <option value="CLOSED" style={{ background: "#FFFFFF", color: "#111827" }}>CLÔTURÉ</option>
                                 <option value="CANCELLED" style={{ background: "#FFFFFF", color: "#111827" }}>ANNULÉ</option>
                               </select>
                             );
                           })()}
                         </td>
-                        <td style={{ padding: "12px" }}>
-                          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                        <td className="col-right">
+                          <div style={{ display: "inline-flex", gap: "6px", alignItems: "center", justifyContent: "flex-end" }}>
                             <button
                               type="button"
                               onClick={() => setEditingRequest(r)}
-                              className="btn btn-secondary"
-                              style={{
-                                width: "28px",
-                                height: "28px",
-                                padding: 0,
-                                borderRadius: "8px",
-                                color: "var(--accent-gold-dark)",
-                                borderColor: "var(--accent-gold)",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
+                              className="btn-icon-clean"
                               title="Modifier la demande"
                             >
                               <Edit3 size={13} />
@@ -5177,7 +5126,7 @@ export default function AdminPage() {
                               type="button"
                               onClick={() => handleOpenRequestDetail(r)}
                               className="btn btn-secondary"
-                              style={{ padding: "5px 9px", fontSize: "0.75rem" }}
+                              style={{ padding: "4px 10px", fontSize: "0.73rem", height: "28px" }}
                             >
                               Articles
                             </button>
@@ -5186,7 +5135,7 @@ export default function AdminPage() {
                                 type="button"
                                 onClick={() => handleOpenConvertModal(r)}
                                 className="btn btn-primary"
-                                style={{ padding: "5px 9px", fontSize: "0.75rem" }}
+                                style={{ padding: "4px 10px", fontSize: "0.73rem", height: "28px" }}
                               >
                                 Convertir
                               </button>
@@ -5197,7 +5146,7 @@ export default function AdminPage() {
                               )}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
+                              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none", flexShrink: 0 }}
                               title="Message WhatsApp pré-rempli"
                             >
                               <WhatsAppLogo size={28} />
@@ -5221,17 +5170,20 @@ export default function AdminPage() {
 
         {/* 3. EXPÉDITIONS & COLIS */}
         {activeTab === "shipments" && (
-          <div key="shipments" className="animate-fade-in card-clean" style={{ padding: "20px" }}>
+          <div key="shipments" className="animate-fade-in card-clean" style={{ padding: "22px 24px", borderRadius: "22px" }}>
             <div style={{ display: "flex", gap: "12px", marginBottom: "18px", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", flex: 1 }}>
-                <input
-                  type="text"
-                  placeholder="Rechercher par n° suivi, client, téléphone..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="input-clean"
-                  style={{ maxWidth: "320px" }}
-                />
+                <div style={{ position: "relative", width: "100%", maxWidth: "320px" }}>
+                  <Search size={14} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                  <input
+                    type="text"
+                    placeholder="Rechercher par n° suivi, client, téléphone..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="input-clean"
+                    style={{ paddingLeft: "36px", borderRadius: "9999px", background: "#FAFAFB" }}
+                  />
+                </div>
 
                 {/* SÉLECTEUR EN PILLS SOBRE & ÉPURÉ (Demande Audio 2) */}
                 <div className="pill-selector">
@@ -5284,17 +5236,17 @@ export default function AdminPage() {
             </div>
 
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
+              <table className="table-clean">
                 <thead>
-                  <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-secondary)" }}>
-                    <th style={{ padding: "10px 12px" }}>N° Suivi</th>
-                    <th style={{ padding: "10px 12px" }}>Client</th>
-                    <th style={{ padding: "10px 12px" }}>Liaison</th>
-                    <th style={{ padding: "10px 12px" }}>Mode</th>
-                    <th style={{ padding: "10px 12px" }}>Colis / Poids</th>
-                    <th style={{ padding: "10px 12px" }}>Statut</th>
-                    <th style={{ padding: "10px 12px" }}>Paiement</th>
-                    <th style={{ padding: "10px 12px" }}>Actions</th>
+                  <tr>
+                    <th style={{ borderTopLeftRadius: "10px" }}>N° Suivi</th>
+                    <th>Client</th>
+                    <th>Liaison</th>
+                    <th>Mode</th>
+                    <th>Colis / Poids</th>
+                    <th>Statut</th>
+                    <th>Paiement</th>
+                    <th className="col-right" style={{ borderTopRightRadius: "10px" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -5311,119 +5263,125 @@ export default function AdminPage() {
                       }
                       return true;
                     })
-                    .map((s) => (
-                      <tr key={s.id} className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
-                        <td style={{ padding: "12px" }}>
-                          <Link
-                            href={`/tracking/${s.tracking_number}`}
-                            target="_blank"
-                            style={{ fontWeight: "700", color: "var(--brown-dark)", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                          >
-                            {s.tracking_number}
-                            <ExternalLink size={11} />
-                          </Link>
-                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                            {new Date(s.created_at).toLocaleDateString("fr-FR")}
-                          </div>
-                        </td>
-                        <td style={{ padding: "12px" }}>
-                          <div style={{ fontWeight: "600", color: "var(--text-main)" }}>{s.client_name}</div>
-                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{s.client_phone}</div>
-                        </td>
-                        <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
-                          {s.origin_country} → {s.destination_country}
-                        </td>
-                        <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
-                          {s.shipping_mode_name}
-                        </td>
-                        <td style={{ padding: "12px" }}>
-                          <div>{s.total_parcels_count} colis</div>
-                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                            {s.total_weight_kg} kg{s.total_volume_cbm ? ` · ${s.total_volume_cbm} m³` : ""}
-                          </div>
-                        </td>
-                        <td style={{ padding: "12px" }}>
-                          <span
-                            className={`badge-clean ${
-                              s.current_status === "DELIVERED"
-                                ? "badge-delivered"
-                                : s.current_status === "IN_TRANSIT"
-                                ? "badge-transit"
-                                : "badge-draft"
-                            }`}
-                          >
-                            {formatShipmentStatus(s.current_status, s.status_label)}
-                          </span>
-                        </td>
-                        <td style={{ padding: "12px" }}>
-                          <span className={`badge-clean ${s.payment_status === "PAID" ? "badge-delivered" : "badge-draft"}`}>
-                            {s.payment_status === "PAID" ? "Réglé" : s.payment_status === "PARTIAL" ? "Acompte" : "En attente"}
-                          </span>
-                        </td>
-                        <td style={{ padding: "12px" }}>
-                          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                            <button
-                              type="button"
-                              onClick={() => setEditingShipment(s)}
-                              className="btn btn-secondary"
-                              style={{
-                                width: "28px",
-                                height: "28px",
-                                padding: 0,
-                                borderRadius: "8px",
-                                color: "var(--accent-gold-dark)",
-                                borderColor: "var(--accent-gold)",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                              title="Modifier tous les champs de l'expédition"
+                    .map((s) => {
+                      const shortMode = formatShippingModeShort(s.shipping_mode_name, s.shipping_mode_id);
+                      return (
+                        <tr key={s.id} className="table-row-clean">
+                          <td>
+                            <Link
+                              href={`/tracking/${s.tracking_number}`}
+                              target="_blank"
+                              style={{ fontWeight: "800", fontSize: "0.79rem", color: "var(--brown-dark)", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                              className="tabular-nums"
                             >
-                              <Edit3 size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenIntakeModal(s)}
-                              className="btn btn-secondary"
-                              style={{ padding: "4px 8px", fontSize: "0.75rem" }}
-                              title="Pesée réelle et réception physique au magasin"
+                              <span>{s.tracking_number}</span>
+                              <ExternalLink size={11} />
+                            </Link>
+                            <div style={{ fontSize: "0.69rem", color: "var(--text-muted)" }} className="tabular-nums">
+                              {new Date(s.created_at).toLocaleDateString("fr-FR")}
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "0.82rem" }}>{s.client_name}</div>
+                            <div style={{ fontSize: "0.71rem", color: "var(--text-muted)" }} className="tabular-nums">{s.client_phone}</div>
+                          </td>
+                          <td>
+                            <div className="corridor-pill-clean">
+                              <span>{s.origin_country}</span>
+                              <span style={{ color: "var(--brown-light)", fontSize: "0.7rem" }}>→</span>
+                              <strong style={{ color: "var(--brown-dark)" }}>{s.destination_country}</strong>
+                            </div>
+                          </td>
+                          <td style={{ color: "var(--text-secondary)", fontWeight: "600", fontSize: "0.77rem" }}>
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                              {shortMode.includes("Maritime") ? (
+                                <Ship size={13} color="var(--brown-light)" />
+                              ) : shortMode.includes("Terrestre") ? (
+                                <Truck size={13} color="var(--brown-light)" />
+                              ) : (
+                                <Plane size={13} color="var(--brown-light)" />
+                              )}
+                              <span>{shortMode}</span>
+                            </div>
+                          </td>
+                          <td className="tabular-nums">
+                            <div style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "0.8rem" }}>{s.total_parcels_count} colis</div>
+                            <div style={{ fontSize: "0.71rem", color: "var(--text-muted)" }}>
+                              {s.total_weight_kg} kg{s.total_volume_cbm ? ` · ${s.total_volume_cbm} m³` : ""}
+                            </div>
+                          </td>
+                          <td>
+                            <span
+                              className={`badge-clean ${
+                                s.current_status === "DELIVERED"
+                                  ? "badge-delivered"
+                                  : s.current_status === "IN_TRANSIT"
+                                  ? "badge-transit"
+                                  : "badge-draft"
+                              }`}
+                              title={formatShipmentStatus(s.current_status, s.status_label)}
                             >
-                              Pesée Hub
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenShipmentDetail(s)}
-                              className="btn btn-secondary"
-                              style={{ padding: "4px 8px", fontSize: "0.75rem" }}
-                              title="Historique complet des jalons et paiements"
-                            >
-                              Historique
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setShowStatusModal(s)}
-                              className="btn btn-secondary"
-                              style={{ padding: "4px 8px", fontSize: "0.75rem" }}
-                              title="Mettre à jour l'étape de suivi"
-                            >
-                              Jalon
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setShowPrintLabelModal(s)}
-                              className="btn btn-secondary"
-                              style={{ padding: "4px 8px", fontSize: "0.75rem" }}
-                              title="Imprimer bordereau"
-                            >
-                              <Printer size={13} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              {formatShipmentStatusShort(s.current_status)}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`badge-clean ${s.payment_status === "PAID" ? "badge-delivered" : "badge-draft"}`}>
+                              {s.payment_status === "PAID" ? "Réglé" : s.payment_status === "PARTIAL" ? "Acompte" : "En attente"}
+                            </span>
+                          </td>
+                          <td className="col-right">
+                            <div style={{ display: "inline-flex", gap: "5px", alignItems: "center", justifyContent: "flex-end" }}>
+                              <button
+                                type="button"
+                                onClick={() => setEditingShipment(s)}
+                                className="btn-icon-clean"
+                                title="Modifier tous les champs de l'expédition"
+                              >
+                                <Edit3 size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenIntakeModal(s)}
+                                className="btn btn-secondary"
+                                style={{ padding: "4px 9px", fontSize: "0.72rem", height: "28px" }}
+                                title="Pesée réelle et réception physique au magasin"
+                              >
+                                Pesée
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenShipmentDetail(s)}
+                                className="btn btn-secondary"
+                                style={{ padding: "4px 9px", fontSize: "0.72rem", height: "28px" }}
+                                title="Historique complet des jalons et paiements"
+                              >
+                                Historique
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setShowStatusModal(s)}
+                                className="btn btn-secondary"
+                                style={{ padding: "4px 9px", fontSize: "0.72rem", height: "28px" }}
+                                title="Mettre à jour l'étape de suivi"
+                              >
+                                Jalon
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setShowPrintLabelModal(s)}
+                                className="btn-icon-clean"
+                                title="Imprimer bordereau"
+                              >
+                                <Printer size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   {shipments.length === 0 && (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: "center", padding: "24px", color: "var(--text-dim)" }}>
+                      <td colSpan={8} style={{ textAlign: "center", padding: "28px", color: "var(--text-dim)" }}>
                         Aucune expédition enregistrée.
                       </td>
                     </tr>
@@ -5436,28 +5394,34 @@ export default function AdminPage() {
 
         {/* 4. RÉPERTOIRE DES CLIENTS */}
         {activeTab === "clients" && (
-          <div key="clients" className="animate-fade-in card-clean" style={{ padding: "20px" }}>
-            <div style={{ marginBottom: "16px" }}>
-              <input
-                type="text"
-                placeholder="Rechercher par nom, téléphone, pays..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-clean"
-                style={{ maxWidth: "380px" }}
-              />
+          <div key="clients" className="animate-fade-in card-clean" style={{ padding: "22px 24px", borderRadius: "22px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "18px" }}>
+              <div style={{ position: "relative", width: "100%", maxWidth: "360px" }}>
+                <Search size={14} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                <input
+                  type="text"
+                  placeholder="Rechercher par nom, téléphone, pays..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="input-clean"
+                  style={{ paddingLeft: "36px", borderRadius: "9999px", background: "#FAFAFB" }}
+                />
+              </div>
+              <span className="ios-trend-pill ios-trend-pill-neutral">
+                {clientsList.length} clients partenaires
+              </span>
             </div>
 
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
+              <table className="table-clean">
                 <thead>
-                  <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-secondary)" }}>
-                    <th style={{ padding: "10px 12px" }}>Nom du Client</th>
-                    <th style={{ padding: "10px 12px" }}>WhatsApp / Téléphone</th>
-                    <th style={{ padding: "10px 12px" }}>Email</th>
-                    <th style={{ padding: "10px 12px" }}>Localisation</th>
-                    <th style={{ padding: "10px 12px" }}>Dossiers</th>
-                    <th style={{ padding: "10px 12px", textAlign: "right" }}>Actions</th>
+                  <tr>
+                    <th style={{ borderTopLeftRadius: "10px" }}>Nom du Client</th>
+                    <th>WhatsApp / Téléphone</th>
+                    <th>Email</th>
+                    <th>Localisation</th>
+                    <th>Dossiers</th>
+                    <th className="col-right" style={{ borderTopRightRadius: "10px" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -5469,34 +5433,40 @@ export default function AdminPage() {
                       (c.country || "").toLowerCase().includes(searchTerm.toLowerCase())
                     )
                     .map((c) => (
-                      <tr key={c.id} className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
-                        <td style={{ padding: "12px", fontWeight: "700", color: "var(--text-main)" }}>
-                          {c.full_name}
+                      <tr key={c.id} className="table-row-clean">
+                        <td style={{ fontWeight: "700", color: "var(--text-main)" }}>
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
+                            <span style={{ width: "28px", height: "28px", borderRadius: "50%", background: "#F6F3EE", border: "1px solid rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", fontSize: "0.74rem", fontWeight: "800", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              {(c.full_name || "C").charAt(0).toUpperCase()}
+                            </span>
+                            <span>{c.full_name}</span>
+                          </div>
                         </td>
-                        <td style={{ padding: "12px", color: "var(--brown-dark)", fontWeight: "600" }}>
+                        <td style={{ color: "var(--brown-dark)", fontWeight: "700" }} className="tabular-nums">
                           {c.phone_whatsapp || c.phone || "—"}
                         </td>
-                        <td style={{ padding: "12px", color: "var(--text-muted)" }}>
+                        <td style={{ color: "var(--text-muted)" }}>
                           {c.email || "—"}
                         </td>
-                        <td style={{ padding: "12px", color: "var(--text-secondary)" }}>
-                          {c.city ? `${c.city}, ` : ""}{c.country}
+                        <td style={{ color: "var(--text-secondary)" }}>
+                          <span className="corridor-pill-clean">
+                            {c.city ? `${c.city}, ` : ""}<strong style={{ color: "var(--brown-dark)" }}>{c.country}</strong>
+                          </span>
                         </td>
-                        <td style={{ padding: "12px" }}>
-                          <span style={{ fontWeight: "600", color: "var(--text-secondary)" }}>
+                        <td>
+                          <span className="badge-clean badge-draft">
                             {c.shipments_count || 0} expédition(s)
                           </span>
                         </td>
-                        <td style={{ padding: "12px", textAlign: "right" }}>
-                          <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
+                        <td className="col-right">
+                          <div style={{ display: "inline-flex", gap: "7px", alignItems: "center" }}>
                             <button
                               type="button"
                               onClick={() => setEditingClient(c)}
-                              className="btn btn-secondary"
-                              style={{ width: "28px", height: "28px", padding: 0, borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                              className="btn-icon-clean"
                               title="Modifier la fiche client"
                             >
-                              <Edit size={13} />
+                              <Edit3 size={13} />
                             </button>
                             <a
                               href={`https://wa.me/${(c.phone_whatsapp || c.phone || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
@@ -5504,7 +5474,7 @@ export default function AdminPage() {
                               )}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
+                              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none", flexShrink: 0 }}
                               title="Contacter le client sur WhatsApp"
                             >
                               <WhatsAppLogo size={28} />
@@ -5563,69 +5533,106 @@ export default function AdminPage() {
 
           return (
             <div key="tariffs" className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-              {/* Entête avec Bouton Nouveau Tarif & Info ROUM TRANSIT */}
-              <div className="card-clean" style={{ padding: "22px 28px", borderRadius: "20px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                      <span className="badge-clean badge-transit" style={{ fontSize: "0.72rem", padding: "2px 8px" }}>
-                        N°1 du Groupage Aérien Subsaharien
+              {/* BANDEAU DES 4 CARTES KPI EXÉCUTIVES TARIFS */}
+              <div className="kpi-grid-4">
+                <div className="ios-metric-card">
+                  <div className="metric-card-header">
+                    <div className="metric-card-label">
+                      <span className="metric-icon-box">
+                        <FileText size={15} strokeWidth={1.8} />
                       </span>
-                      <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                        ROUM TRANSIT Wholesale & Boutique
-                      </span>
+                      <span className="metric-card-title">Grille Active</span>
                     </div>
-                    <h2 style={{ fontSize: "1.35rem", fontWeight: "800", color: "var(--brown-dark)", margin: "0 0 4px 0" }}>
-                      Grille Tarifaire d&apos;Expédition & Offres Réelles
-                    </h2>
-                    <p style={{ fontSize: "0.84rem", color: "var(--text-secondary)", margin: 0 }}>
-                      Gérez et créez librement vos tarifs d&apos;un pays à un autre (Chine, Dubaï, Maroc, Paris vers l&apos;Afrique) avec la devise de votre choix.
-                    </p>
+                    <span className="ios-trend-pill ios-trend-pill-up">Officielle</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateTariffModal(true)}
-                    className="btn btn-primary"
-                    style={{ padding: "10px 22px", fontSize: "0.88rem", gap: "8px", borderRadius: "9999px", boxShadow: "0 4px 14px rgba(59, 34, 24, 0.2)" }}
-                  >
-                    <Plus size={16} />
-                    Créer un Nouveau Tarif
-                  </button>
+                  <div className="metric-card-body">
+                    <div className="metric-card-value">{tariffsList.length} tarifs</div>
+                    <div className="metric-card-sub">Forfaits & barèmes configurés</div>
+                  </div>
+                </div>
+
+                <div className="ios-metric-card">
+                  <div className="metric-card-header">
+                    <div className="metric-card-label">
+                      <span className="metric-icon-box">
+                        <Globe size={15} strokeWidth={1.8} />
+                      </span>
+                      <span className="metric-card-title">Corridors Actifs</span>
+                    </div>
+                    <span className="ios-trend-pill ios-trend-pill-neutral">Réseau</span>
+                  </div>
+                  <div className="metric-card-body">
+                    <div className="metric-card-value">{uniqueCorridors} liaisons</div>
+                    <div className="metric-card-sub">Chine, Dubaï, Maroc & Europe</div>
+                  </div>
+                </div>
+
+                <div className="ios-metric-card">
+                  <div className="metric-card-header">
+                    <div className="metric-card-label">
+                      <span className="metric-icon-box">
+                        <Plane size={15} strokeWidth={1.8} />
+                      </span>
+                      <span className="metric-card-title">Fret Aérien</span>
+                    </div>
+                    <span className="ios-trend-pill ios-trend-pill-neutral">4 à 14 j</span>
+                  </div>
+                  <div className="metric-card-body">
+                    <div className="metric-card-value">{airCount} formules</div>
+                    <div className="metric-card-sub">Express, Standard & Spécial</div>
+                  </div>
+                </div>
+
+                <div className="ios-metric-card">
+                  <div className="metric-card-header">
+                    <div className="metric-card-label">
+                      <span className="metric-icon-box">
+                        <Ship size={15} strokeWidth={1.8} />
+                      </span>
+                      <span className="metric-card-title">Fret Maritime</span>
+                    </div>
+                    <span className="ios-trend-pill ios-trend-pill-neutral">CBM</span>
+                  </div>
+                  <div className="metric-card-body">
+                    <div className="metric-card-value">{seaCount} {seaCount > 1 ? "formules" : "formule"}</div>
+                    <div className="metric-card-sub">Groupage conteneur au m³</div>
+                  </div>
                 </div>
               </div>
 
               {/* DISPOSITION ASYMÉTRIQUE ÉLÉGANTE : GROS CARRÉ PRIX PAR DÉFAUT + 2 RECTANGLES À DROITE */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "20px", marginBottom: "22px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "20px" }}>
                 {/* COLONNE GAUCHE : LE GROS CARRÉ DES PRIX PAR DÉFAUT (CHINE & DUBAÏ) */}
                 <div
                   className="card-clean"
                   style={{
-                    padding: "24px",
+                    padding: "22px 24px",
                     borderRadius: "22px",
                     background: "#FFFFFF",
                     border: "1px solid var(--border-light)",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
-                    boxShadow: "0 4px 18px rgba(59, 34, 24, 0.04)",
                   }}
                 >
                   <div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid var(--border-light)" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
-                        <CircularFlag countryCode="CN" size={22} />
-                        <CircularFlag countryCode="AE" size={22} />
-                        <div>
-                          <h3 style={{ fontSize: "1.06rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0 }}>
-                            1. Chine & Dubaï ➔ Afrique
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid var(--border-light)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "9px", minWidth: 0 }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
+                          <CircularFlag countryCode="CN" size={20} />
+                          <CircularFlag countryCode="AE" size={20} />
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <h3 style={{ fontSize: "1.02rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            1. Chine & Dubaï → Afrique
                           </h3>
-                          <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-                            Tarifs par défaut · Hubs Guangzhou, Yiwu, Dubaï
+                          <span style={{ fontSize: "0.73rem", color: "var(--text-muted)", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            Hubs Guangzhou, Yiwu & Dubaï
                           </span>
                         </div>
                       </div>
-                      <span className="badge-clean badge-transit" style={{ fontSize: "0.7rem", padding: "2px 8px" }}>
-                        Prix par défaut
+                      <span className="ios-trend-pill ios-trend-pill-gold">
+                        Par défaut
                       </span>
                     </div>
 
@@ -5648,22 +5655,23 @@ export default function AdminPage() {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "space-between",
-                              padding: "10px 14px",
-                              background: "var(--bg-app)",
+                              gap: "12px",
+                              padding: "11px 14px",
+                              background: "#FAF8F5",
                               borderRadius: "12px",
-                              border: "1px solid var(--border-light)",
+                              border: "1px solid rgba(42, 24, 16, 0.07)",
                             }}
                           >
-                            <div>
-                              <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-main)" }}>{item.name}</div>
-                              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                                Délai : {matchedTariff?.estimated_days_min ? `${matchedTariff.estimated_days_min} à ${matchedTariff.estimated_days_max} jours` : item.delay}
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontSize: "0.84rem", fontWeight: "700", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
+                              <div style={{ fontSize: "0.71rem", color: "var(--text-muted)", marginTop: "1px" }}>
+                                Délai : {matchedTariff?.estimated_days_min ? `${matchedTariff.estimated_days_min} à ${matchedTariff.estimated_days_max} j` : item.delay}
                               </div>
                             </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                              <div style={{ textAlign: "right" }}>
-                                <div style={{ fontSize: "0.92rem", fontWeight: "800", color: "var(--brown-dark)" }}>{currentPrice}</div>
-                                <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)" }}>{item.unit}</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+                              <div style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                                <span style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }} className="tabular-nums">{currentPrice}</span>
+                                <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)", marginLeft: "3px" }}>{item.unit}</span>
                               </div>
                               <button
                                 type="button"
@@ -5687,11 +5695,11 @@ export default function AdminPage() {
                                     });
                                   }
                                 }}
-                                className="btn btn-secondary"
-                                style={{ width: "28px", height: "28px", padding: 0, borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                                className="btn-icon-clean"
+                                style={{ width: "28px", height: "28px" }}
                                 title="Modifier ce tarif"
                               >
-                                <Edit size={13} />
+                                <Edit3 size={13} />
                               </button>
                             </div>
                           </div>
@@ -5704,20 +5712,20 @@ export default function AdminPage() {
                 {/* COLONNE DROITE : LES DEUX RECTANGLES EMPILÉS */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   {/* RECTANGLE 1 (EN HAUT) : 2. GROUPAGE SUBSAHARIEN MAROC */}
-                  <div className="card-clean" style={{ padding: "20px", borderRadius: "18px", background: "#FFFFFF", border: "1px solid var(--border-light)", boxShadow: "0 4px 18px rgba(59, 34, 24, 0.04)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px", paddingBottom: "10px", borderBottom: "1px solid var(--border-light)" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div className="card-clean" style={{ padding: "20px 22px", borderRadius: "20px", background: "#FFFFFF", border: "1px solid var(--border-light)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "12px", paddingBottom: "10px", borderBottom: "1px solid var(--border-light)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
                         <CircularFlag countryCode="MA" size={20} />
-                        <div>
-                          <h4 style={{ fontSize: "0.96rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0 }}>
-                            2. Groupage Aérien Subsaharien (Maroc)
+                        <div style={{ minWidth: 0 }}>
+                          <h4 style={{ fontSize: "0.95rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            2. Groupage Subsaharien (Maroc)
                           </h4>
-                          <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                            Casablanca ➔ 5 Pays Subsahariens · 5 jours garantis
+                          <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            Casablanca → 5 Pays · 5 jours garantis
                           </span>
                         </div>
                       </div>
-                      <span className="badge-clean badge-delivered" style={{ fontSize: "0.68rem", padding: "2px 7px" }}>
+                      <span className="ios-trend-pill ios-trend-pill-up">
                         5 jours
                       </span>
                     </div>
@@ -5725,7 +5733,7 @@ export default function AdminPage() {
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                       {[
                         { dest: "Côte d'Ivoire", flag: "CI", price: "6 500 FCFA", matchKeyword: "ivoire", defaultVal: 6500 },
-                        { dest: "Sénégal, Mali, Burkina Faso", flag: "SN", price: "7 000 FCFA", matchKeyword: "mali", defaultVal: 7000 },
+                        { dest: "Sénégal, Mali, Burkina", flag: "SN", price: "7 000 FCFA", matchKeyword: "mali", defaultVal: 7000 },
                         { dest: "Gabon", flag: "GA", price: "7 500 FCFA", matchKeyword: "gabon", defaultVal: 7500 },
                       ].map((route) => {
                         const matchedTariff = tariffsList.find((t) => (t.origin_country || "").toLowerCase().includes("maroc") && ((t.destination_country || "").toLowerCase().includes(route.matchKeyword) || (t.service_name || "").toLowerCase().includes(route.matchKeyword)));
@@ -5738,18 +5746,19 @@ export default function AdminPage() {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "space-between",
-                              padding: "8px 12px",
-                              background: "var(--bg-app)",
+                              gap: "12px",
+                              padding: "9px 12px",
+                              background: "#FAF8F5",
                               borderRadius: "10px",
-                              border: "1px solid var(--border-light)",
+                              border: "1px solid rgba(42, 24, 16, 0.07)",
                             }}
                           >
-                            <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "7px", minWidth: 0, flex: 1 }}>
                               <CircularFlag countryCode={route.flag} size={16} />
-                              <span style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)" }}>{route.dest}</span>
+                              <span style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{route.dest}</span>
                             </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                              <span style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>{currentPrice} / kg</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0, whiteSpace: "nowrap" }}>
+                              <span style={{ fontSize: "0.86rem", fontWeight: "800", color: "var(--brown-dark)" }} className="tabular-nums">{currentPrice} / kg</span>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -5772,11 +5781,11 @@ export default function AdminPage() {
                                     });
                                   }
                                 }}
-                                className="btn btn-secondary"
-                                style={{ width: "28px", height: "28px", padding: 0, borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                                className="btn-icon-clean"
+                                style={{ width: "28px", height: "28px" }}
                                 title="Modifier ce tarif"
                               >
-                                <Edit size={13} />
+                                <Edit3 size={13} />
                               </button>
                             </div>
                           </div>
@@ -5786,21 +5795,23 @@ export default function AdminPage() {
                   </div>
 
                   {/* RECTANGLE 2 (EN BAS) : 3. LIAISONS BILATÉRALES PARIS ↔ ABIDJAN */}
-                  <div className="card-clean" style={{ padding: "20px", borderRadius: "18px", background: "#FFFFFF", border: "1px solid var(--border-light)", boxShadow: "0 4px 18px rgba(59, 34, 24, 0.04)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px", paddingBottom: "10px", borderBottom: "1px solid var(--border-light)" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <CircularFlag countryCode="FR" size={20} />
-                        <CircularFlag countryCode="CI" size={20} />
-                        <div>
-                          <h4 style={{ fontSize: "0.96rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0 }}>
+                  <div className="card-clean" style={{ padding: "20px 22px", borderRadius: "20px", background: "#FFFFFF", border: "1px solid var(--border-light)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "12px", paddingBottom: "10px", borderBottom: "1px solid var(--border-light)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
+                          <CircularFlag countryCode="FR" size={18} />
+                          <CircularFlag countryCode="CI" size={18} />
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <h4 style={{ fontSize: "0.95rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             3. Liaisons Aériennes (Paris ↔ Abidjan)
                           </h4>
-                          <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                          <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             Agence Bingerville · Expéditions dans les 2 sens
                           </span>
                         </div>
                       </div>
-                      <span className="badge-clean badge-transit" style={{ fontSize: "0.68rem", padding: "2px 7px" }}>
+                      <span className="ios-trend-pill ios-trend-pill-neutral">
                         2 sens
                       </span>
                     </div>
@@ -5821,20 +5832,21 @@ export default function AdminPage() {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "space-between",
-                              padding: "8px 12px",
-                              background: "var(--bg-app)",
+                              gap: "12px",
+                              padding: "9px 12px",
+                              background: "#FAF8F5",
                               borderRadius: "10px",
-                              border: "1px solid var(--border-light)",
+                              border: "1px solid rgba(42, 24, 16, 0.07)",
                             }}
                           >
-                            <div>
-                              <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)" }}>{item.name}</div>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
                               <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Régulier · Agence Bingerville</div>
                             </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0, whiteSpace: "nowrap" }}>
                               <div style={{ textAlign: "right" }}>
-                                <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>{currentPrice}</div>
-                                <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)" }}>{item.unit}</div>
+                                <span style={{ fontSize: "0.86rem", fontWeight: "800", color: "var(--brown-dark)" }} className="tabular-nums">{currentPrice}</span>
+                                <span style={{ fontSize: "0.68rem", color: "var(--text-secondary)", marginLeft: "3px" }}>{item.unit}</span>
                               </div>
                               <button
                                 type="button"
@@ -5858,11 +5870,11 @@ export default function AdminPage() {
                                     });
                                   }
                                 }}
-                                className="btn btn-secondary"
-                                style={{ width: "28px", height: "28px", padding: 0, borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                                className="btn-icon-clean"
+                                style={{ width: "28px", height: "28px" }}
                                 title="Modifier ce tarif"
                               >
-                                <Edit size={13} />
+                                <Edit3 size={13} />
                               </button>
                             </div>
                           </div>
@@ -6007,18 +6019,18 @@ export default function AdminPage() {
               </div>
 
               {/* TABLEAU DES TARIFS STYLE IOS */}
-              <div className="card-clean" style={{ padding: "0", overflow: "hidden", borderRadius: "20px" }}>
+              <div className="card-clean" style={{ padding: "0", overflow: "hidden", borderRadius: "22px", border: "1px solid var(--border-light)" }}>
                 <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
+                  <table className="table-clean">
                     <thead>
-                      <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-secondary)" }}>
-                        <th style={{ padding: "14px 18px" }}>Trajet d&apos;Acheminement</th>
-                        <th style={{ padding: "14px 18px" }}>Type de Service & Mode</th>
-                        <th style={{ padding: "14px 18px" }}>Prix Unitaire</th>
-                        <th style={{ padding: "14px 18px" }}>Unité de Facturation</th>
-                        <th style={{ padding: "14px 18px" }}>Délai Garanti</th>
-                        <th style={{ padding: "14px 18px" }}>Spécificité / Note</th>
-                        <th style={{ padding: "14px 18px", textAlign: "right" }}>Action</th>
+                      <tr>
+                        <th>Trajet d&apos;Acheminement</th>
+                        <th>Service & Mode</th>
+                        <th>Prix Unitaire</th>
+                        <th>Facturation</th>
+                        <th>Délai Garanti</th>
+                        <th>Spécificité / Note</th>
+                        <th className="col-right">Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -6027,94 +6039,97 @@ export default function AdminPage() {
                           const isSea = t.shipping_mode_type === "SEA" || (t.shipping_mode_name || "").toLowerCase().includes("maritime") || (t.shipping_mode_name || "").toLowerCase().includes("bateau") || (t.pricing_basis === "PER_CBM");
                           const isRoad = t.shipping_mode_type === "ROAD" || (t.shipping_mode_name || "").toLowerCase().includes("terrestre");
                           const isUnit = t.pricing_basis === "PER_UNIT";
-                          const unitLabel = isSea ? "par m³ (CBM)" : isUnit ? "par pièce / pli" : "par kg";
+                          const unitLabel = isSea ? "Par m³ (CBM)" : isUnit ? "Par pièce / pli" : "Par kg";
                           const cleanTag = (t.category_tag || t.shipping_mode_name || "").replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+                          const noteText = t.note || (t.flyer_source ? `Offre : ${t.flyer_source}` : "Tarif standard");
 
                           return (
-                            <tr key={t.id} className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
-                              <td style={{ padding: "14px 18px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                  <CircularFlag countryName={t.origin_country} size={20} />
-                                  <span style={{ fontWeight: "700", color: "var(--text-main)" }}>
-                                    {t.origin_country} {t.origin_city ? `(${t.origin_city})` : ""}
+                            <tr key={t.id} className="table-row-clean">
+                              <td>
+                                <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                                  <CircularFlag countryName={t.origin_country} size={18} />
+                                  <span style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "0.82rem" }}>
+                                    {t.origin_country}
                                   </span>
-                                  <span style={{ color: "var(--brown-light)", fontWeight: "800", fontSize: "0.85rem" }}>➔</span>
-                                  <CircularFlag countryName={t.destination_country} size={20} />
-                                  <span style={{ fontWeight: "800", color: "var(--brown-dark)" }}>
-                                    {t.destination_country} {t.destination_city ? `(${t.destination_city})` : ""}
+                                  <span style={{ color: "var(--brown-light)", fontWeight: "800", fontSize: "0.78rem" }}>➔</span>
+                                  <CircularFlag countryName={t.destination_country} size={18} />
+                                  <span style={{ fontWeight: "800", color: "var(--brown-dark)", fontSize: "0.82rem" }}>
+                                    {t.destination_country}
                                   </span>
                                 </div>
+                                {(t.origin_city || t.destination_city) && (
+                                  <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "2px", paddingLeft: "24px" }}>
+                                    {t.origin_city || t.origin_country} → {t.destination_city || t.destination_country}
+                                  </div>
+                                )}
                               </td>
 
-                              <td style={{ padding: "14px 18px" }}>
+                              <td>
                                 <span
                                   className="badge-clean"
                                   style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "6px",
-                                    fontSize: "0.76rem",
-                                    background: isSea ? "rgba(46, 125, 78, 0.1)" : isRoad ? "rgba(79, 70, 229, 0.1)" : "rgba(234, 88, 12, 0.1)",
-                                    color: isSea ? "#2E7D4E" : isRoad ? "#4F46E5" : "#EA580C",
+                                    background: "#FAF8F5",
+                                    color: "var(--brown-dark)",
+                                    border: "1px solid rgba(42, 24, 16, 0.08)",
                                     fontWeight: "700",
                                     padding: "4px 10px",
                                     borderRadius: "8px",
                                   }}
                                 >
                                   {isSea ? (
-                                    <Ship size={13} />
+                                    <Ship size={13} strokeWidth={1.8} />
                                   ) : isRoad ? (
-                                    <Truck size={13} />
+                                    <Truck size={13} strokeWidth={1.8} />
                                   ) : cleanTag.includes("Express") ? (
-                                    <Zap size={13} />
+                                    <Zap size={13} strokeWidth={1.8} />
                                   ) : cleanTag.includes("Batterie") || cleanTag.includes("Complément") ? (
-                                    <BatteryCharging size={13} />
+                                    <BatteryCharging size={13} strokeWidth={1.8} />
                                   ) : cleanTag.includes("High-Tech") || cleanTag.includes("PC") || cleanTag.includes("ordinateur") ? (
-                                    <Laptop size={13} />
+                                    <Laptop size={13} strokeWidth={1.8} />
                                   ) : cleanTag.includes("Cosmétique") ? (
-                                    <Package size={13} />
+                                    <Package size={13} strokeWidth={1.8} />
                                   ) : cleanTag.includes("Document") || cleanTag.includes("Pli") ? (
-                                    <FileText size={13} />
+                                    <FileText size={13} strokeWidth={1.8} />
                                   ) : cleanTag.includes("Divers") ? (
-                                    <ShoppingBag size={13} />
+                                    <ShoppingBag size={13} strokeWidth={1.8} />
                                   ) : (
-                                    <Plane size={13} />
+                                    <Plane size={13} strokeWidth={1.8} />
                                   )}
                                   <span>{cleanTag}</span>
                                 </span>
                               </td>
 
-                              <td style={{ padding: "14px 18px" }}>
-                                <div style={{ fontWeight: "800", fontSize: "0.98rem", color: "var(--brown-dark)" }}>
+                              <td>
+                                <div style={{ fontWeight: "800", fontSize: "0.88rem", color: "var(--brown-dark)", fontVariantNumeric: "tabular-nums" }}>
                                   {formatCurrencyPrice(t.price_per_unit_minor, t.currency)} {isSea ? "/ m³" : isUnit ? "" : "/ kg"}
                                 </div>
                                 {t.secondary_display && (
-                                  <div style={{ fontSize: "0.72rem", color: "#7C3AED", fontWeight: "700", marginTop: "2px" }}>
+                                  <div style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: "600", marginTop: "1px" }}>
                                     {t.secondary_display}
                                   </div>
                                 )}
                               </td>
 
-                              <td style={{ padding: "14px 18px", color: "var(--text-secondary)", fontSize: "0.82rem" }}>
+                              <td style={{ color: "var(--text-secondary)", fontSize: "0.78rem", fontWeight: "500" }}>
                                 {unitLabel}
                               </td>
 
-                              <td style={{ padding: "14px 18px" }}>
-                                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.78rem", color: "var(--text-main)", fontWeight: "600", background: "var(--bg-app)", padding: "3px 8px", borderRadius: "6px" }}>
+                              <td>
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.74rem", color: "var(--text-main)", fontWeight: "600", background: "var(--bg-app)", padding: "3px 9px", borderRadius: "9999px", border: "1px solid var(--border-light)", whiteSpace: "nowrap" }}>
                                   <Clock size={12} style={{ color: "var(--brown-light)" }} />
                                   {t.estimated_days_min && t.estimated_days_max
                                     ? t.estimated_days_min === t.estimated_days_max
                                       ? `${t.estimated_days_min} jours`
-                                      : `${t.estimated_days_min} à ${t.estimated_days_max} jours`
-                                    : "3 à 7 jours"}
+                                      : `${t.estimated_days_min} à ${t.estimated_days_max} j`
+                                    : "3 à 7 j"}
                                 </span>
                               </td>
 
-                              <td style={{ padding: "14px 18px", color: "var(--text-muted)", fontSize: "0.76rem", maxWidth: "220px" }}>
-                                {t.note || (t.flyer_source ? `Offre : ${t.flyer_source}` : "Tarif standard")}
+                              <td style={{ color: "var(--text-muted)", fontSize: "0.75rem", maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis" }} title={noteText}>
+                                {noteText}
                               </td>
 
-                              <td style={{ padding: "14px 18px", textAlign: "right" }}>
+                              <td className="col-right">
                                 <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                                   <button
                                     type="button"
@@ -6123,20 +6138,19 @@ export default function AdminPage() {
                                       price_per_unit: t.price_per_unit || (t.price_per_unit_minor / 100),
                                       minimum_charge: t.minimum_charge || (t.minimum_charge_minor / 100),
                                     })}
-                                    className="btn btn-secondary"
-                                    style={{ width: "32px", height: "32px", padding: 0, borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                                    className="btn-icon-clean"
                                     title="Modifier ce tarif"
                                   >
-                                    <Edit size={14} />
+                                    <Edit3 size={13} />
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteTariff(t.id)}
-                                    className="btn btn-secondary"
-                                    style={{ width: "32px", height: "32px", padding: 0, color: "#C53030", borderColor: "rgba(197, 48, 48, 0.2)", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                                    className="btn-icon-clean"
+                                    style={{ color: "#C53030", borderColor: "rgba(197, 48, 48, 0.2)" }}
                                     title="Supprimer ce tarif"
                                   >
-                                    <Trash2 size={14} />
+                                    <Trash2 size={13} />
                                   </button>
                                 </div>
                               </td>
@@ -6168,53 +6182,121 @@ export default function AdminPage() {
           const cashTotalMinor = confirmedPayments.filter((p: any) => (p.payment_method || "").toUpperCase().includes("CASH") || (p.payment_method || "").toUpperCase().includes("ESPÈCE")).reduce((acc: number, p: any) => acc + (p.amount_minor || 0), 0);
 
           return (
-            <div key="finances" className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
+            <div key="finances" className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
               {/* BANDEAU DES 4 CARTES KPI EXÉCUTIVES */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "16px" }}>
-                <div className="card-clean" style={{ padding: "18px 20px", borderRadius: "18px", background: "#FFFFFF", border: "1px solid var(--border-light)" }}>
-                  <div style={{ fontSize: "0.72rem", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Encaissé & Confirmé</div>
-                  <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "var(--state-success-text)", margin: "4px 0" }}>
-                    {formatCurrencyPrice(stats?.total_payments_minor || confirmedTotalMinor, "FCFA")}
+              <div className="kpi-grid-4">
+                <div className="ios-metric-card">
+                  <div className="metric-card-header">
+                    <div className="metric-card-label">
+                      <span className="metric-icon-box">
+                        <ShieldCheck size={15} strokeWidth={1.8} />
+                      </span>
+                      <span className="metric-card-title">Total Encaissé</span>
+                    </div>
+                    <span className="ios-trend-pill ios-trend-pill-up">{confirmedPayments.length} reçus</span>
                   </div>
-                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{confirmedPayments.length} règlement(s) certifié(s)</div>
+                  <div className="metric-card-body">
+                    <div className="metric-card-value">
+                      {formatCurrencyPrice(stats?.total_payments_minor || confirmedTotalMinor, "FCFA")}
+                    </div>
+                    <div className="metric-card-sub">
+                      Recettes confirmées en caisse
+                    </div>
+                  </div>
                 </div>
 
-                <div className="card-clean" style={{ padding: "18px 20px", borderRadius: "18px", background: "#FFFFFF", border: "1px solid var(--border-light)" }}>
-                  <div style={{ fontSize: "0.72rem", fontWeight: "700", color: "#B45309", textTransform: "uppercase", letterSpacing: "0.05em" }}>En Attente de Contrôle Caisse</div>
-                  <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "#B45309", margin: "4px 0" }}>
-                    {formatCurrencyPrice(pendingTotalMinor, "FCFA")}
+                <div className="ios-metric-card">
+                  <div className="metric-card-header">
+                    <div className="metric-card-label">
+                      <span className="metric-icon-box">
+                        <Clock size={15} strokeWidth={1.8} />
+                      </span>
+                      <span className="metric-card-title">Contrôle Caisse</span>
+                    </div>
+                    <span className={`ios-trend-pill ${pendingPayments.length > 0 ? "ios-trend-pill-gold" : "ios-trend-pill-up"}`}>
+                      {pendingPayments.length > 0 ? `${pendingPayments.length} à valider` : "À jour"}
+                    </span>
                   </div>
-                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{pendingPayments.length} paiement(s) à vérifier</div>
+                  <div className="metric-card-body">
+                    <div className="metric-card-value">
+                      {formatCurrencyPrice(pendingTotalMinor, "FCFA")}
+                    </div>
+                    <div className="metric-card-sub">
+                      {pendingPayments.length > 0 ? `${pendingPayments.length} transaction(s) en attente` : "Aucun règlement en attente"}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="card-clean" style={{ padding: "18px 20px", borderRadius: "18px", background: "#FFFFFF", border: "1px solid var(--border-light)" }}>
-                  <div style={{ fontSize: "0.72rem", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Volume Mobile Money & Wave</div>
-                  <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "#0284C7", margin: "4px 0" }}>
-                    {formatCurrencyPrice(waveTotalMinor, "FCFA")}
+                <div className="ios-metric-card">
+                  <div className="metric-card-header">
+                    <div className="metric-card-label">
+                      <span className="metric-icon-box">
+                        <Zap size={15} strokeWidth={1.8} />
+                      </span>
+                      <span className="metric-card-title">Mobile Money</span>
+                    </div>
+                    <span className="ios-trend-pill ios-trend-pill-neutral">Instantané</span>
                   </div>
-                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Transferts mobiles instantanés</div>
+                  <div className="metric-card-body">
+                    <div className="metric-card-value">
+                      {formatCurrencyPrice(waveTotalMinor, "FCFA")}
+                    </div>
+                    <div className="metric-card-sub">
+                      Wave & Orange Money validés
+                    </div>
+                  </div>
                 </div>
 
-                <div className="card-clean" style={{ padding: "18px 20px", borderRadius: "18px", background: "#FFFFFF", border: "1px solid var(--border-light)" }}>
-                  <div style={{ fontSize: "0.72rem", fontWeight: "700", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Volume Espèces (Comptoirs)</div>
-                  <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "var(--brown-dark)", margin: "4px 0" }}>
-                    {formatCurrencyPrice(cashTotalMinor, "FCFA")}
+                <div className="ios-metric-card">
+                  <div className="metric-card-header">
+                    <div className="metric-card-label">
+                      <span className="metric-icon-box">
+                        <Wallet size={15} strokeWidth={1.8} />
+                      </span>
+                      <span className="metric-card-title">Espèces Guichet</span>
+                    </div>
+                    <span className="ios-trend-pill ios-trend-pill-neutral">Comptoirs</span>
                   </div>
-                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Encaisses agences Bamako & Abidjan</div>
+                  <div className="metric-card-body">
+                    <div className="metric-card-value">
+                      {formatCurrencyPrice(cashTotalMinor, "FCFA")}
+                    </div>
+                    <div className="metric-card-sub">
+                      Versements physiques en agence
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* TABLEAU 1 SÉPARÉ : EN ATTENTE DE CONTRÔLE CAISSE */}
-              <div className="card-clean" style={{ padding: "0", overflow: "hidden", borderRadius: "20px", border: "1px solid var(--border-light)", background: "#FFFFFF" }}>
-                <div style={{ padding: "16px 22px", background: "#FFFFFF", borderBottom: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#D97706" }} />
+              {/* TABLEAU 1 : EN ATTENTE DE CONTRÔLE CAISSE (Compact si 0, Tableau complet si > 0) */}
+              {pendingPayments.length === 0 ? (
+                <div
+                  className="card-clean"
+                  style={{
+                    padding: "16px 22px",
+                    borderRadius: "18px",
+                    background: "#FFFFFF",
+                    border: "1px solid rgba(42, 24, 16, 0.07)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: "12px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <span className="metric-icon-box">
+                      <CheckCircle2 size={18} strokeWidth={1.8} />
+                    </span>
                     <div>
-                      <h3 style={{ fontSize: "1.05rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0 }}>
-                        Paiements en Attente de Contrôle Caisse ({pendingPayments.length})
-                      </h3>
-                      <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: 0 }}>
-                        Transactions signalées par les clients ou agences nécessitant la validation de la Direction
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <h3 style={{ fontSize: "0.94rem", fontWeight: "800", color: "var(--text-main)", margin: 0 }}>
+                          Contrôle Caisse à jour
+                        </h3>
+                        <span className="ios-trend-pill ios-trend-pill-up">0 en attente</span>
+                      </div>
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
+                        Toutes les transactions signalées par les clients ou agences ont été vérifiées par la Direction.
                       </p>
                     </div>
                   </div>
@@ -6222,57 +6304,84 @@ export default function AdminPage() {
                     type="button"
                     onClick={() => setShowRecordPaymentModal({})}
                     className="btn btn-primary"
-                    style={{ padding: "6px 14px", fontSize: "0.78rem", gap: "5px", borderRadius: "8px" }}
+                    style={{ padding: "8px 16px", fontSize: "0.8rem", gap: "6px" }}
                   >
-                    <Plus size={13} /> Consigner un Paiement
+                    <Plus size={14} /> Consigner un Paiement
                   </button>
                 </div>
+              ) : (
+                <div className="card-clean" style={{ padding: "0", overflow: "hidden", borderRadius: "22px", border: "1px solid var(--border-light)", background: "#FFFFFF" }}>
+                  <div style={{ padding: "18px 24px", background: "#FFFFFF", borderBottom: "1px solid rgba(42, 24, 16, 0.07)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <span className="metric-icon-box">
+                        <Clock size={18} strokeWidth={1.8} />
+                      </span>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <h3 style={{ fontSize: "1rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0 }}>
+                            Paiements en Attente de Contrôle Caisse
+                          </h3>
+                          <span className="ios-trend-pill ios-trend-pill-gold">{pendingPayments.length} à valider</span>
+                        </div>
+                        <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
+                          Transactions signalées par les clients ou agences nécessitant la validation de la Direction
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowRecordPaymentModal({})}
+                      className="btn btn-primary"
+                      style={{ padding: "8px 16px", fontSize: "0.8rem", gap: "6px" }}
+                    >
+                      <Plus size={14} /> Consigner un Paiement
+                    </button>
+                  </div>
 
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
-                    <thead>
-                      <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-secondary)" }}>
-                        <th style={{ padding: "12px 16px" }}>Date</th>
-                        <th style={{ padding: "12px 16px" }}>Client</th>
-                        <th style={{ padding: "12px 16px" }}>N° Dossier</th>
-                        <th style={{ padding: "12px 16px" }}>Montant Déclaré</th>
-                        <th style={{ padding: "12px 16px" }}>Méthode</th>
-                        <th style={{ padding: "12px 16px" }}>Réf. Transaction</th>
-                        <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions de Contrôle</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pendingPayments.length > 0 ? (
-                        pendingPayments.map((p: any) => (
-                          <tr key={p.id} className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
-                            <td style={{ padding: "12px 16px", color: "var(--text-muted)" }}>
+                  <div style={{ overflowX: "auto" }}>
+                    <table className="table-clean">
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Client</th>
+                          <th>N° Dossier</th>
+                          <th>Montant Déclaré</th>
+                          <th>Méthode</th>
+                          <th>Réf. Transaction</th>
+                          <th className="col-right">Actions de Contrôle</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingPayments.map((p: any) => (
+                          <tr key={p.id} className="table-row-clean">
+                            <td style={{ color: "var(--text-muted)" }} className="tabular-nums">
                               {new Date(p.recorded_at || p.created_at || Date.now()).toLocaleDateString("fr-FR")}
                             </td>
-                            <td style={{ padding: "12px 16px", fontWeight: "700", color: "var(--text-main)" }}>
+                            <td style={{ fontWeight: "700", color: "var(--text-main)" }}>
                               <div>{p.client_name}</div>
-                              {p.client_phone && <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{p.client_phone}</div>}
+                              {p.client_phone && <div style={{ fontSize: "0.71rem", color: "var(--text-muted)" }} className="tabular-nums">{p.client_phone}</div>}
                             </td>
-                            <td style={{ padding: "12px 16px", color: "var(--brown-dark)", fontWeight: "700" }}>
+                            <td style={{ color: "var(--brown-dark)", fontWeight: "800", fontSize: "0.79rem" }} className="tabular-nums">
                               {p.tracking_number || "—"}
                             </td>
-                            <td style={{ padding: "12px 16px", fontWeight: "800", color: "#B45309" }}>
+                            <td style={{ fontWeight: "800", color: "#B45309" }} className="tabular-nums">
                               {formatCurrencyPrice(p.amount_minor, p.currency || "FCFA")}
                             </td>
-                            <td style={{ padding: "12px 16px" }}>
+                            <td>
                               <span className="badge-clean badge-draft">
                                 {p.payment_method === "ORANGE_MONEY" ? "Orange Money" : p.payment_method === "WAVE" ? "Wave" : p.payment_method === "CASH" ? "Espèces" : p.payment_method || "Mobile"}
                               </span>
                             </td>
-                            <td style={{ padding: "12px 16px", fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+                            <td style={{ fontSize: "0.77rem", color: "var(--text-secondary)" }}>
                               {p.reference_code || "Manuel"}
                             </td>
-                            <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                            <td className="col-right">
                               <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
                                 <button
                                   type="button"
                                   onClick={() => handleConfirmPayment(p.id)}
                                   className="btn btn-primary"
-                                  style={{ padding: "5px 12px", fontSize: "0.74rem", background: "var(--state-success-text)", borderRadius: "8px" }}
+                                  style={{ padding: "4px 10px", fontSize: "0.73rem", height: "28px", background: "var(--state-success-text)", borderColor: "var(--state-success-text)" }}
                                   title="Valider la réception"
                                 >
                                   Valider
@@ -6283,17 +6392,16 @@ export default function AdminPage() {
                                     ...p,
                                     amount: p.amount || (p.amount_minor / 100),
                                   })}
-                                  className="btn btn-secondary"
-                                  style={{ width: "28px", height: "28px", padding: 0, borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                                  className="btn-icon-clean"
                                   title="Modifier ce paiement"
                                 >
-                                  <Edit size={13} />
+                                  <Edit3 size={13} />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleCancelPayment(p.id)}
                                   className="btn btn-secondary"
-                                  style={{ padding: "5px 9px", fontSize: "0.74rem", color: "#C53030", borderColor: "rgba(197, 48, 48, 0.2)", borderRadius: "8px" }}
+                                  style={{ padding: "4px 10px", fontSize: "0.73rem", height: "28px", color: "#C53030", borderColor: "rgba(197, 48, 48, 0.2)" }}
                                   title="Rejeter"
                                 >
                                   Rejeter
@@ -6301,29 +6409,26 @@ export default function AdminPage() {
                               </div>
                             </td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={7} style={{ padding: "26px", textAlign: "center", color: "var(--text-muted)" }}>
-                            Aucun paiement en attente de validation. Tous les encaissements sont à jour !
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* TABLEAU 2 SÉPARÉ : HISTORIQUE DES ENCAISSEMENTS CONFIRMÉS */}
-              <div className="card-clean" style={{ padding: "0", overflow: "hidden", borderRadius: "20px", border: "1px solid var(--border-light)", background: "#FFFFFF" }}>
-                <div style={{ padding: "16px 22px", borderBottom: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+              <div className="card-clean" style={{ padding: "0", overflow: "hidden", borderRadius: "22px", border: "1px solid var(--border-light)", background: "#FFFFFF" }}>
+                <div style={{ padding: "18px 24px", borderBottom: "1px solid rgba(42, 24, 16, 0.07)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#10B981" }} />
+                    <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#059669" }} />
                     <div>
-                      <h3 style={{ fontSize: "1.05rem", fontWeight: "800", color: "var(--text-main)", margin: 0 }}>
-                        Historique des Encaissements Confirmés & Validés ({confirmedPayments.length})
-                      </h3>
-                      <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <h3 style={{ fontSize: "1.02rem", fontWeight: "800", color: "var(--text-main)", margin: 0 }}>
+                          Historique des Encaissements Confirmés & Validés
+                        </h3>
+                        <span className="ios-trend-pill ios-trend-pill-neutral">{confirmedPayments.length} règlements</span>
+                      </div>
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
                         Fonds réceptionnés et comptabilisés dans le livre de caisse ROUM TRANSIT
                       </p>
                     </div>
@@ -6331,66 +6436,65 @@ export default function AdminPage() {
                 </div>
 
                 <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.86rem" }}>
+                  <table className="table-clean">
                     <thead>
-                      <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-secondary)" }}>
-                        <th style={{ padding: "12px 16px" }}>Date</th>
-                        <th style={{ padding: "12px 16px" }}>Client Payeur</th>
-                        <th style={{ padding: "12px 16px" }}>Dossier Associé</th>
-                        <th style={{ padding: "12px 16px" }}>Montant Encaissé</th>
-                        <th style={{ padding: "12px 16px" }}>Canal / Méthode</th>
-                        <th style={{ padding: "12px 16px" }}>Réf. Caisse</th>
-                        <th style={{ padding: "12px 16px" }}>Statut</th>
-                        <th style={{ padding: "12px 16px", textAlign: "right" }}>Action</th>
+                      <tr>
+                        <th>Date</th>
+                        <th>Client Payeur</th>
+                        <th>Dossier Associé</th>
+                        <th>Montant Encaissé</th>
+                        <th>Canal / Méthode</th>
+                        <th>Réf. Caisse</th>
+                        <th>Statut</th>
+                        <th className="col-right">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {confirmedPayments.length > 0 ? (
                         confirmedPayments.map((p: any) => (
-                          <tr key={p.id} className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
-                            <td style={{ padding: "12px 16px", color: "var(--text-muted)" }}>
+                          <tr key={p.id} className="table-row-clean">
+                            <td style={{ color: "var(--text-muted)" }} className="tabular-nums">
                               {new Date(p.recorded_at || p.created_at || Date.now()).toLocaleDateString("fr-FR")}
                             </td>
-                            <td style={{ padding: "12px 16px", fontWeight: "700", color: "var(--text-main)" }}>
+                            <td style={{ fontWeight: "700", color: "var(--text-main)" }}>
                               <div>{p.client_name}</div>
-                              {p.client_phone && <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{p.client_phone}</div>}
+                              {p.client_phone && <div style={{ fontSize: "0.71rem", color: "var(--text-muted)" }} className="tabular-nums">{p.client_phone}</div>}
                             </td>
-                            <td style={{ padding: "12px 16px", color: "var(--brown-dark)", fontWeight: "700" }}>
+                            <td style={{ color: "var(--brown-dark)", fontWeight: "800", fontSize: "0.79rem" }} className="tabular-nums">
                               {p.tracking_number || "—"}
                             </td>
-                            <td style={{ padding: "12px 16px", fontWeight: "800", color: "var(--state-success-text)" }}>
+                            <td style={{ fontWeight: "800", color: "var(--state-success-text)" }} className="tabular-nums">
                               {formatCurrencyPrice(p.amount_minor, p.currency || "FCFA")}
                             </td>
-                            <td style={{ padding: "12px 16px" }}>
+                            <td>
                               <span className="badge-clean badge-delivered">
-                                {p.payment_method === "ORANGE_MONEY" ? "Orange Money" : p.payment_method === "WAVE" ? "Wave" : p.payment_method === "CASH" ? "Espèces" : p.payment_method === "BANK_TRANSFER" ? "Virement Bancaire" : p.payment_method || "Validé"}
+                                {p.payment_method === "ORANGE_MONEY" ? "Orange Money" : p.payment_method === "WAVE" ? "Wave" : p.payment_method === "CASH" ? "Espèces" : p.payment_method === "BANK_TRANSFER" ? "Virement" : p.payment_method || "Validé"}
                               </span>
                             </td>
-                            <td style={{ padding: "12px 16px", fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+                            <td style={{ fontSize: "0.77rem", color: "var(--text-secondary)", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis" }}>
                               <div>{p.reference_code || "Certifié"}</div>
                               {p.receipt_notes && (
-                                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontStyle: "italic" }}>
+                                <div style={{ fontSize: "0.69rem", color: "var(--text-muted)", fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis" }} title={p.receipt_notes}>
                                   {p.receipt_notes}
                                 </div>
                               )}
                             </td>
-                            <td style={{ padding: "12px 16px" }}>
+                            <td>
                               <span className="badge-clean badge-delivered" style={{ fontSize: "0.72rem" }}>
                                 ✓ Encaissé
                               </span>
                             </td>
-                            <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                            <td className="col-right">
                               <button
                                 type="button"
                                 onClick={() => setEditingPayment({
                                   ...p,
                                   amount: p.amount || (p.amount_minor / 100),
                                 })}
-                                className="btn btn-secondary"
-                                style={{ width: "28px", height: "28px", padding: 0, borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+                                className="btn-icon-clean"
                                 title="Modifier ce paiement"
                               >
-                                <Edit size={13} />
+                                <Edit3 size={13} />
                               </button>
                             </td>
                           </tr>
@@ -6426,41 +6530,61 @@ export default function AdminPage() {
           return (
             <div key="tasks" className="animate-fade-in" style={{ maxWidth: "1200px", margin: "0 auto", width: "100%", display: "flex", flexDirection: "column", gap: "20px" }}>
               {/* Entête & Compteurs Métriques */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px" }}>
-                <div className="card-clean" style={{ padding: "18px 22px", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div>
-                    <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: "600", textTransform: "uppercase" }}>Tâches Actives</span>
-                    <div style={{ fontSize: "1.45rem", fontWeight: "800", color: "var(--brown-dark)", marginTop: "2px" }}>{pendingCount}</div>
+              <div className="kpi-grid-3">
+                <div className="ios-metric-card">
+                  <div className="metric-card-header">
+                    <div className="metric-card-label">
+                      <span className="metric-icon-box">
+                        <CheckSquare size={15} strokeWidth={1.8} />
+                      </span>
+                      <span className="metric-card-title">Tâches Actives</span>
+                    </div>
+                    <span className="ios-trend-pill ios-trend-pill-neutral">En cours</span>
                   </div>
-                  <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "var(--bg-app)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--brown-dark)" }}>
-                    <CheckSquare size={18} />
-                  </div>
-                </div>
-
-                <div className="card-clean" style={{ padding: "18px 22px", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid var(--border-light)" }}>
-                  <div>
-                    <span style={{ fontSize: "0.74rem", color: "#DC2626", fontWeight: "700", textTransform: "uppercase" }}>Urgentes & Critiques</span>
-                    <div style={{ fontSize: "1.45rem", fontWeight: "800", color: "#DC2626", marginTop: "2px" }}>{urgentCount}</div>
-                  </div>
-                  <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center", color: "#DC2626" }}>
-                    <Flame size={18} />
+                  <div className="metric-card-body">
+                    <div className="metric-card-value">{pendingCount} {pendingCount > 1 ? "tâches" : "tâche"}</div>
+                    <div className="metric-card-sub">Opérations assignées à l&apos;équipe</div>
                   </div>
                 </div>
 
-                <div className="card-clean" style={{ padding: "18px 22px", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid var(--border-light)" }}>
-                  <div>
-                    <span style={{ fontSize: "0.74rem", color: "#059669", fontWeight: "700", textTransform: "uppercase" }}>Terminées</span>
-                    <div style={{ fontSize: "1.45rem", fontWeight: "800", color: "#059669", marginTop: "2px" }}>{doneCount}</div>
+                <div className="ios-metric-card">
+                  <div className="metric-card-header">
+                    <div className="metric-card-label">
+                      <span className="metric-icon-box">
+                        <Flame size={15} strokeWidth={1.8} />
+                      </span>
+                      <span className="metric-card-title">Urgences</span>
+                    </div>
+                    <span className={`ios-trend-pill ${urgentCount > 0 ? "ios-trend-pill-gold" : "ios-trend-pill-up"}`}>
+                      {urgentCount > 0 ? "Prioritaire" : "RAS"}
+                    </span>
                   </div>
-                  <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "#ECFDF5", display: "flex", alignItems: "center", justifyContent: "center", color: "#059669" }}>
-                    <CheckCircle2 size={18} />
+                  <div className="metric-card-body">
+                    <div className="metric-card-value">{urgentCount} {urgentCount > 1 ? "urgences" : "urgence"}</div>
+                    <div className="metric-card-sub">Traitement immédiat requis</div>
+                  </div>
+                </div>
+
+                <div className="ios-metric-card">
+                  <div className="metric-card-header">
+                    <div className="metric-card-label">
+                      <span className="metric-icon-box">
+                        <CheckCircle2 size={15} strokeWidth={1.8} />
+                      </span>
+                      <span className="metric-card-title">Terminées</span>
+                    </div>
+                    <span className="ios-trend-pill ios-trend-pill-up">Clôturées</span>
+                  </div>
+                  <div className="metric-card-body">
+                    <div className="metric-card-value">{doneCount} {doneCount > 1 ? "accomplies" : "accomplie"}</div>
+                    <div className="metric-card-sub">Missions validées et archivées</div>
                   </div>
                 </div>
               </div>
 
               {/* Barre de filtres & Action d'ajout */}
-              <div className="card-clean" style={{ padding: "14px 20px", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <div className="card-clean" style={{ padding: "14px 20px", borderRadius: "18px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+                <div className="pill-selector">
                   {[
                     { id: "ALL" as const, label: `Toutes (${tasksList.length})` },
                     { id: "URGENT" as const, label: `Urgentes (${urgentCount})` },
@@ -6471,18 +6595,7 @@ export default function AdminPage() {
                       key={filterItem.id}
                       type="button"
                       onClick={() => setTaskFilter(filterItem.id)}
-                      style={{
-                        padding: "6px 14px",
-                        borderRadius: "9999px",
-                        fontSize: "0.78rem",
-                        fontWeight: taskFilter === filterItem.id ? "700" : "500",
-                        border: "1px solid",
-                        borderColor: taskFilter === filterItem.id ? "var(--brown-dark)" : "var(--border-light)",
-                        background: taskFilter === filterItem.id ? "var(--brown-dark)" : "#FFFFFF",
-                        color: taskFilter === filterItem.id ? "#FFFFFF" : "var(--text-secondary)",
-                        cursor: "pointer",
-                        transition: "all 0.15s ease",
-                      }}
+                      className={`pill-option ${taskFilter === filterItem.id ? "pill-option-active" : ""}`}
                     >
                       {filterItem.label}
                     </button>
@@ -6611,19 +6724,11 @@ export default function AdminPage() {
                           <button
                             type="button"
                             onClick={() => setEditingTask(t)}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              color: "var(--accent-gold-dark)",
-                              cursor: "pointer",
-                              padding: "4px 6px",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
+                            className="btn-icon-clean"
+                            style={{ width: "26px", height: "26px" }}
                             title="Modifier la tâche"
                           >
-                            <Edit3 size={14} />
+                            <Edit3 size={13} />
                           </button>
                           <button
                             type="button"
@@ -6633,7 +6738,7 @@ export default function AdminPage() {
                               border: "none",
                               color: isDone ? "var(--text-muted)" : "var(--brown-dark)",
                               fontSize: "0.74rem",
-                              fontWeight: "600",
+                              fontWeight: "700",
                               cursor: "pointer",
                               padding: "2px 6px",
                             }}
@@ -6959,8 +7064,8 @@ export default function AdminPage() {
                               Wave Côte d&apos;Ivoire & Sénégal
                             </div>
                             {isEditing ? (
-                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700" }}>
-                                ✏️ Modification en cours
+                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                <Edit3 size={10} /> Modification en cours
                               </span>
                             ) : (
                               <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
@@ -7102,8 +7207,8 @@ export default function AdminPage() {
                               Orange Money (OM CI / UEMOA)
                             </div>
                             {isEditing ? (
-                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700" }}>
-                                ✏️ Modification en cours
+                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                <Edit3 size={10} /> Modification en cours
                               </span>
                             ) : (
                               <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
@@ -7230,8 +7335,8 @@ export default function AdminPage() {
                               Compte Bancaire Officiel (RIB / IBAN FCFA)
                             </div>
                             {isEditing ? (
-                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700" }}>
-                                ✏️ Modification en cours
+                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                <Edit3 size={10} /> Modification en cours
                               </span>
                             ) : (
                               <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
@@ -7380,19 +7485,16 @@ export default function AdminPage() {
                         transition: "all 0.2s ease",
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                            <AlipayLogo size={32} />
-                            <WeChatPayLogo size={32} />
-                          </div>
-                          <div>
-                            <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
-                              Sourcing Chine & Devises Internationales
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                          <AlipayLogo size={34} />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              Sourcing Chine & Devises
                             </div>
                             {isEditing ? (
-                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700" }}>
-                                ✏️ Modification en cours
+                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                <Edit3 size={10} /> Modification en cours
                               </span>
                             ) : (
                               <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
@@ -7534,8 +7636,8 @@ export default function AdminPage() {
                               Mentions Légales sur les Reçus
                             </div>
                             {isEditing ? (
-                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700" }}>
-                                ✏️ Modification en cours
+                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                <Edit3 size={10} /> Modification en cours
                               </span>
                             ) : (
                               <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
@@ -7663,31 +7765,56 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="card-clean" style={{ padding: "20px" }}>
-              <h3 style={{ fontSize: "1.05rem", marginBottom: "14px" }}>Journal d&apos;Audit</h3>
+            <div className="card-clean" style={{ padding: "0", overflow: "hidden", borderRadius: "22px", border: "1px solid var(--border-light)" }}>
+              <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--border-light)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF" }}>
+                <div>
+                  <h3 style={{ fontSize: "1.02rem", fontWeight: "700", margin: "0 0 2px 0", color: "var(--text-main)" }}>Journal d&apos;Audit</h3>
+                  <p style={{ fontSize: "0.76rem", color: "var(--text-muted)", margin: 0 }}>Historique des opérations et modifications sur la plateforme</p>
+                </div>
+                <span className="badge-clean" style={{ background: "#FAF9F7", border: "1px solid var(--border-light)", color: "var(--text-secondary)" }}>
+                  {auditLogs.length} entrées
+                </span>
+              </div>
               <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                <table className="table-clean">
                   <thead>
-                    <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-secondary)" }}>
-                      <th style={{ padding: "8px 10px" }}>Date</th>
-                      <th style={{ padding: "8px 10px" }}>Auteur</th>
-                      <th style={{ padding: "8px 10px" }}>Action</th>
-                      <th style={{ padding: "8px 10px" }}>Entité</th>
-                      <th style={{ padding: "8px 10px" }}>Détails</th>
+                    <tr>
+                      <th>Date</th>
+                      <th>Auteur</th>
+                      <th>Action</th>
+                      <th>Entité</th>
+                      <th>Détails</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {auditLogs.map((l) => (
-                      <tr key={l.id} className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
-                        <td style={{ padding: "10px", color: "var(--text-muted)" }}>
-                          {new Date(l.created_at).toLocaleString("fr-FR")}
-                        </td>
-                        <td style={{ padding: "10px", fontWeight: "600" }}>{l.user_name || "Système"}</td>
-                        <td style={{ padding: "10px", color: "var(--brown-dark)", fontWeight: "600" }}>{formatAuditAction(l.action)}</td>
-                        <td style={{ padding: "10px", color: "var(--text-secondary)" }}>{formatAuditEntity(l.entity_type)}</td>
-                        <td style={{ padding: "10px", color: "var(--text-muted)" }}>{l.details_json || "—"}</td>
-                      </tr>
-                    ))}
+                    {auditLogs.map((l) => {
+                      let cleanDetails = l.details_json || "—";
+                      if (typeof cleanDetails === "string" && cleanDetails.startsWith("{")) {
+                        try {
+                          const parsed = JSON.parse(cleanDetails);
+                          cleanDetails = Object.entries(parsed)
+                            .map(([k, v]) => `${k}: ${v}`)
+                            .join(" · ");
+                        } catch {}
+                      }
+                      return (
+                        <tr key={l.id} className="table-row-clean">
+                          <td style={{ color: "var(--text-muted)" }} className="tabular-nums">
+                            {new Date(l.created_at).toLocaleString("fr-FR")}
+                          </td>
+                          <td style={{ fontWeight: "600", color: "var(--text-main)" }}>{l.user_name || "Système"}</td>
+                          <td>
+                            <span className="badge-clean badge-draft" style={{ color: "var(--brown-dark)", fontWeight: "700" }}>
+                              {formatAuditAction(l.action)}
+                            </span>
+                          </td>
+                          <td style={{ color: "var(--text-secondary)", fontWeight: "500" }}>{formatAuditEntity(l.entity_type)}</td>
+                          <td style={{ color: "var(--text-muted)", fontSize: "0.76rem", maxWidth: "320px", overflow: "hidden", textOverflow: "ellipsis" }} title={cleanDetails}>
+                            {cleanDetails}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -8201,37 +8328,37 @@ export default function AdminPage() {
               </div>
 
               {showRequestDetailModal.items && showRequestDetailModal.items.length > 0 ? (
-                <div style={{ overflowX: "auto", border: "1px solid var(--border-light)", borderRadius: "8px" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                <div style={{ overflowX: "auto", border: "1px solid var(--border-light)", borderRadius: "12px" }}>
+                  <table className="table-clean">
                     <thead>
-                      <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-secondary)" }}>
-                        <th style={{ padding: "8px 10px" }}>Article</th>
-                        <th style={{ padding: "8px 10px" }}>Quantité</th>
-                        <th style={{ padding: "8px 10px" }}>Variantes</th>
-                        <th style={{ padding: "8px 10px" }}>Lien Fournisseur</th>
+                      <tr>
+                        <th>Article</th>
+                        <th>Quantité</th>
+                        <th>Variantes</th>
+                        <th className="col-right">Lien Fournisseur</th>
                       </tr>
                     </thead>
                     <tbody>
                       {showRequestDetailModal.items.map((it: any, idx: number) => (
-                        <tr key={it.id || idx} style={{ borderBottom: "1px solid var(--border-light)" }}>
-                          <td style={{ padding: "10px", fontWeight: "600", color: "var(--text-main)" }}>
+                        <tr key={it.id || idx} className="table-row-clean">
+                          <td style={{ fontWeight: "700", color: "var(--text-main)" }}>
                             {it.product_name}
                           </td>
-                          <td style={{ padding: "10px" }}>
+                          <td className="tabular-nums" style={{ fontWeight: "600" }}>
                             {it.quantity} pcs
                           </td>
-                          <td style={{ padding: "10px", color: "var(--text-secondary)" }}>
+                          <td style={{ color: "var(--text-secondary)", maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {it.variants_description || "—"}
                           </td>
-                          <td style={{ padding: "10px" }}>
+                          <td className="col-right">
                             {it.product_url ? (
                               <a
                                 href={it.product_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                style={{ color: "var(--brown-dark)", textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: "3px" }}
+                                style={{ color: "var(--brown-dark)", fontWeight: "700", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }}
                               >
-                                Ouvrir le lien <ExternalLink size={10} />
+                                Ouvrir <ExternalLink size={11} />
                               </a>
                             ) : (
                               "—"
@@ -8625,7 +8752,7 @@ export default function AdminPage() {
           {
             label: "Chine Express (12 000 F)",
             countryCode: "CN",
-            icon: <Zap size={13} style={{ color: "#EA580C" }} />,
+            icon: <Zap size={13} style={{ color: "var(--brown-dark)" }} />,
             data: {
               origin_country: "Chine",
               origin_city: "Guangzhou",
@@ -8645,7 +8772,7 @@ export default function AdminPage() {
           {
             label: "Chine Normale (10 000 F)",
             countryCode: "CN",
-            icon: <Plane size={13} style={{ color: "var(--brown-light)" }} />,
+            icon: <Plane size={13} style={{ color: "var(--brown-dark)" }} />,
             data: {
               origin_country: "Chine",
               origin_city: "Guangzhou",
@@ -8665,7 +8792,7 @@ export default function AdminPage() {
           {
             label: "Batteries & Compléments (14 000 F)",
             countryCode: "CN",
-            icon: <BatteryCharging size={13} style={{ color: "#2E7D4E" }} />,
+            icon: <BatteryCharging size={13} style={{ color: "var(--brown-dark)" }} />,
             data: {
               origin_country: "Chine",
               origin_city: "Guangzhou",
@@ -8685,7 +8812,7 @@ export default function AdminPage() {
           {
             label: "Pièces Ordinateur (50 000 F)",
             countryCode: "CN",
-            icon: <Laptop size={13} style={{ color: "#3B82F6" }} />,
+            icon: <Laptop size={13} style={{ color: "var(--brown-dark)" }} />,
             data: {
               origin_country: "Chine",
               origin_city: "Guangzhou",
@@ -8725,7 +8852,7 @@ export default function AdminPage() {
           {
             label: "Maroc Subsaharien (6 500 F)",
             countryCode: "MA",
-            icon: <Award size={13} style={{ color: "#2E7D4E" }} />,
+            icon: <Award size={13} style={{ color: "var(--brown-dark)" }} />,
             data: {
               origin_country: "Maroc",
               origin_city: "Casablanca",
@@ -8745,7 +8872,7 @@ export default function AdminPage() {
           {
             label: "Paris ➔ Abidjan Divers (8 500 F / 12 €)",
             countryCode: "FR",
-            icon: <ShoppingBag size={13} style={{ color: "#7C3AED" }} />,
+            icon: <ShoppingBag size={13} style={{ color: "var(--brown-dark)" }} />,
             data: {
               origin_country: "France",
               origin_city: "Paris",
@@ -8765,7 +8892,7 @@ export default function AdminPage() {
           {
             label: "Paris ➔ Abidjan Cosmétique (9 000 F / 14 €)",
             countryCode: "FR",
-            icon: <Package size={13} style={{ color: "#7C3AED" }} />,
+            icon: <Package size={13} style={{ color: "var(--brown-dark)" }} />,
             data: {
               origin_country: "France",
               origin_city: "Paris",
@@ -8785,7 +8912,7 @@ export default function AdminPage() {
           {
             label: "Paris ➔ Abidjan Document (13 000 F / 20 €)",
             countryCode: "FR",
-            icon: <FileText size={13} style={{ color: "#3B82F6" }} />,
+            icon: <FileText size={13} style={{ color: "var(--brown-dark)" }} />,
             data: {
               origin_country: "France",
               origin_city: "Paris",
