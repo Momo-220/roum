@@ -1466,6 +1466,37 @@ export default function AdminPage() {
   const [allStatuses, setAllStatuses] = useState<any[]>([]);
   const [companySettings, setCompanySettings] = useState<Record<string, string>>(DEFAULT_COMPANY_SETTINGS);
   const [settingsSaved, setSettingsSaved] = useState(false);
+  const [editingPaymentCard, setEditingPaymentCard] = useState<string | null>(null);
+  const [backupSettings, setBackupSettings] = useState<Record<string, string> | null>(null);
+
+  const handleStartEditPaymentCard = (cardKey: string) => {
+    setBackupSettings({ ...companySettings });
+    setEditingPaymentCard(cardKey);
+  };
+
+  const handleCancelEditPaymentCard = () => {
+    if (backupSettings) {
+      setCompanySettings(backupSettings);
+    }
+    setEditingPaymentCard(null);
+  };
+
+  const handleSaveEditPaymentCard = async (cardKey: string, cardLabel: string) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
+    }
+    triggerToast(`Coordonnées ${cardLabel} enregistrées avec succès !`, "Moyens de Paiement");
+    setEditingPaymentCard(null);
+    if (token) {
+      try {
+        await fetch("/api/admin/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(companySettings),
+        });
+      } catch {}
+    }
+  };
 
   // Synchronisation continue vers le stockage permanent du navigateur (Anti-perte)
   useEffect(() => {
@@ -6885,490 +6916,830 @@ export default function AdminPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "18px" }}>
                 {/* 1. Wave Côte d'Ivoire & Sénégal */}
-                <div style={{ padding: "18px", background: "#FFFFFF", borderRadius: "16px", border: "1px solid var(--border-light)", boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <WaveLogo size={34} />
-                      <div>
-                        <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
-                          Wave Côte d&apos;Ivoire & Sénégal
+                {(() => {
+                  const isEditing = editingPaymentCard === "wave";
+                  return (
+                    <div
+                      style={{
+                        padding: "18px",
+                        background: "#FFFFFF",
+                        borderRadius: "16px",
+                        border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
+                        boxShadow: isEditing ? "0 8px 24px rgba(42, 24, 16, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <WaveLogo size={34} />
+                          <div>
+                            <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
+                              Wave Côte d&apos;Ivoire & Sénégal
+                            </div>
+                            {isEditing ? (
+                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700" }}>
+                                ✏️ Modification en cours
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                                Sans Frais Client
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
-                          Sans Frais Client
-                        </span>
+                        {isEditing ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <button
+                              type="button"
+                              onClick={handleCancelEditPaymentCard}
+                              className="btn btn-secondary"
+                              style={{
+                                padding: "5px 10px",
+                                fontSize: "0.74rem",
+                                fontWeight: "600",
+                                borderRadius: "8px",
+                                border: "1px solid var(--border-light)",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEditPaymentCard("wave", "Wave")}
+                              className="btn btn-primary"
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                padding: "5px 12px",
+                                fontSize: "0.74rem",
+                                fontWeight: "700",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <Check size={13} />
+                              Enregistrer
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditPaymentCard("wave")}
+                            className="btn btn-secondary"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              padding: "5px 12px",
+                              fontSize: "0.74rem",
+                              fontWeight: "700",
+                              borderRadius: "8px",
+                              border: "1px solid var(--border-light)",
+                              background: "var(--bg-subtle)",
+                              cursor: "pointer",
+                              color: "var(--brown-dark)",
+                            }}
+                            title="Modifier ce compte Wave"
+                          >
+                            <Edit3 size={13} />
+                            Modifier
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ display: "grid", gap: "10px" }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Numéro Compte Wave</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_wave_ci || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_wave_ci: e.target.value })}
+                            className="input-clean"
+                            placeholder="+225 01 53 63 85 69"
+                            style={{
+                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              cursor: isEditing ? "text" : "default",
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Nom du Compte Wave</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_wave_name || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_wave_name: e.target.value })}
+                            className="input-clean"
+                            placeholder="ROUM TRANSIT SARL"
+                            style={{
+                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              cursor: isEditing ? "text" : "default",
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Lien / QR Code Marchand</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_wave_merchant || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_wave_merchant: e.target.value })}
+                            className="input-clean"
+                            placeholder="wave.me/roumtransit"
+                            style={{
+                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              cursor: isEditing ? "text" : "default",
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (typeof window !== "undefined") {
-                          localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
-                        }
-                        triggerToast("Coordonnées Wave enregistrées avec succès !", "Moyens de Paiement");
-                        if (token) {
-                          try {
-                            await fetch("/api/admin/settings", {
-                              method: "PUT",
-                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                              body: JSON.stringify(companySettings),
-                            });
-                          } catch {}
-                        }
-                      }}
-                      className="btn btn-secondary"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "5px",
-                        padding: "5px 12px",
-                        fontSize: "0.74rem",
-                        fontWeight: "700",
-                        borderRadius: "8px",
-                        border: "1px solid var(--border-light)",
-                        background: "var(--bg-subtle)",
-                        cursor: "pointer",
-                        color: "var(--brown-dark)",
-                      }}
-                      title="Enregistrer et valider ce compte Wave"
-                    >
-                      <Edit3 size={13} />
-                      Modifier
-                    </button>
-                  </div>
-                  <div style={{ display: "grid", gap: "10px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Numéro Compte Wave</label>
-                      <input
-                        type="text"
-                        value={companySettings.payment_wave_ci || ""}
-                        onChange={(e) => setCompanySettings({ ...companySettings, payment_wave_ci: e.target.value })}
-                        className="input-clean"
-                        placeholder="+225 01 53 63 85 69"
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Nom du Compte Wave</label>
-                      <input
-                        type="text"
-                        value={companySettings.payment_wave_name || ""}
-                        onChange={(e) => setCompanySettings({ ...companySettings, payment_wave_name: e.target.value })}
-                        className="input-clean"
-                        placeholder="ROUM TRANSIT SARL"
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Lien / QR Code Marchand</label>
-                      <input
-                        type="text"
-                        value={companySettings.payment_wave_merchant || ""}
-                        onChange={(e) => setCompanySettings({ ...companySettings, payment_wave_merchant: e.target.value })}
-                        className="input-clean"
-                        placeholder="wave.me/roumtransit"
-                      />
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 {/* 2. Orange Money */}
-                <div style={{ padding: "18px", background: "#FFFFFF", borderRadius: "16px", border: "1px solid var(--border-light)", boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <OrangeMoneyLogo size={34} />
-                      <div>
-                        <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
-                          Orange Money (OM CI / UEMOA)
+                {(() => {
+                  const isEditing = editingPaymentCard === "orange";
+                  return (
+                    <div
+                      style={{
+                        padding: "18px",
+                        background: "#FFFFFF",
+                        borderRadius: "16px",
+                        border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
+                        boxShadow: isEditing ? "0 8px 24px rgba(42, 24, 16, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <OrangeMoneyLogo size={34} />
+                          <div>
+                            <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
+                              Orange Money (OM CI / UEMOA)
+                            </div>
+                            {isEditing ? (
+                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700" }}>
+                                ✏️ Modification en cours
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                                Code Marchand & Transfert
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
-                          Code Marchand & Transfert
-                        </span>
+                        {isEditing ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <button
+                              type="button"
+                              onClick={handleCancelEditPaymentCard}
+                              className="btn btn-secondary"
+                              style={{
+                                padding: "5px 10px",
+                                fontSize: "0.74rem",
+                                fontWeight: "600",
+                                borderRadius: "8px",
+                                border: "1px solid var(--border-light)",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEditPaymentCard("orange", "Orange Money")}
+                              className="btn btn-primary"
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                padding: "5px 12px",
+                                fontSize: "0.74rem",
+                                fontWeight: "700",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <Check size={13} />
+                              Enregistrer
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditPaymentCard("orange")}
+                            className="btn btn-secondary"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              padding: "5px 12px",
+                              fontSize: "0.74rem",
+                              fontWeight: "700",
+                              borderRadius: "8px",
+                              border: "1px solid var(--border-light)",
+                              background: "var(--bg-subtle)",
+                              cursor: "pointer",
+                              color: "var(--brown-dark)",
+                            }}
+                            title="Modifier ce compte Orange Money"
+                          >
+                            <Edit3 size={13} />
+                            Modifier
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ display: "grid", gap: "10px" }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Code Marchand OM / Numéro</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_orange_money_ci || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_orange_money_ci: e.target.value })}
+                            className="input-clean"
+                            placeholder="#144*389278# / +225 07 48 29 11 00"
+                            style={{
+                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              cursor: isEditing ? "text" : "default",
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Nom Enregistré Orange Money</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_orange_name || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_orange_name: e.target.value })}
+                            className="input-clean"
+                            placeholder="ROUM TRANSIT INTERNATIONAL"
+                            style={{
+                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              cursor: isEditing ? "text" : "default",
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (typeof window !== "undefined") {
-                          localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
-                        }
-                        triggerToast("Coordonnées Orange Money enregistrées avec succès !", "Moyens de Paiement");
-                        if (token) {
-                          try {
-                            await fetch("/api/admin/settings", {
-                              method: "PUT",
-                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                              body: JSON.stringify(companySettings),
-                            });
-                          } catch {}
-                        }
-                      }}
-                      className="btn btn-secondary"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "5px",
-                        padding: "5px 12px",
-                        fontSize: "0.74rem",
-                        fontWeight: "700",
-                        borderRadius: "8px",
-                        border: "1px solid var(--border-light)",
-                        background: "var(--bg-subtle)",
-                        cursor: "pointer",
-                        color: "var(--brown-dark)",
-                      }}
-                      title="Enregistrer et valider ce compte Orange Money"
-                    >
-                      <Edit3 size={13} />
-                      Modifier
-                    </button>
-                  </div>
-                  <div style={{ display: "grid", gap: "10px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Code Marchand OM / Numéro</label>
-                      <input
-                        type="text"
-                        value={companySettings.payment_orange_money_ci || ""}
-                        onChange={(e) => setCompanySettings({ ...companySettings, payment_orange_money_ci: e.target.value })}
-                        className="input-clean"
-                        placeholder="#144*389278# / +225 07 48 29 11 00"
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Nom Enregistré Orange Money</label>
-                      <input
-                        type="text"
-                        value={companySettings.payment_orange_name || ""}
-                        onChange={(e) => setCompanySettings({ ...companySettings, payment_orange_name: e.target.value })}
-                        className="input-clean"
-                        placeholder="ROUM TRANSIT INTERNATIONAL"
-                      />
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 {/* 3. MTN MoMo / Moov Money */}
-                <div style={{ padding: "18px", background: "#FFFFFF", borderRadius: "16px", border: "1px solid var(--border-light)", boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                        <MtnMomoLogo size={32} />
-                        <MoovMoneyLogo size={32} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
-                          MTN MoMo & Moov Money
-                        </div>
-                        <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
-                          MoMo Pay & Direct
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (typeof window !== "undefined") {
-                          localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
-                        }
-                        triggerToast("Coordonnées MTN & Moov enregistrées avec succès !", "Moyens de Paiement");
-                        if (token) {
-                          try {
-                            await fetch("/api/admin/settings", {
-                              method: "PUT",
-                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                              body: JSON.stringify(companySettings),
-                            });
-                          } catch {}
-                        }
-                      }}
-                      className="btn btn-secondary"
+                {(() => {
+                  const isEditing = editingPaymentCard === "momo";
+                  return (
+                    <div
                       style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "5px",
-                        padding: "5px 12px",
-                        fontSize: "0.74rem",
-                        fontWeight: "700",
-                        borderRadius: "8px",
-                        border: "1px solid var(--border-light)",
-                        background: "var(--bg-subtle)",
-                        cursor: "pointer",
-                        color: "var(--brown-dark)",
+                        padding: "18px",
+                        background: "#FFFFFF",
+                        borderRadius: "16px",
+                        border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
+                        boxShadow: isEditing ? "0 8px 24px rgba(42, 24, 16, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        transition: "all 0.2s ease",
                       }}
-                      title="Enregistrer et valider MTN MoMo et Moov Money"
                     >
-                      <Edit3 size={13} />
-                      Modifier
-                    </button>
-                  </div>
-                  <div style={{ display: "grid", gap: "10px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Identifiant MoMo / Téléphone</label>
-                      <input
-                        type="text"
-                        value={companySettings.payment_mtn_momo_ci || ""}
-                        onChange={(e) => setCompanySettings({ ...companySettings, payment_mtn_momo_ci: e.target.value })}
-                        className="input-clean"
-                        placeholder="MOMO-749201 / +225 05 94 32 10 05"
-                      />
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                            <MtnMomoLogo size={32} />
+                            <MoovMoneyLogo size={32} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
+                              MTN MoMo & Moov Money
+                            </div>
+                            {isEditing ? (
+                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700" }}>
+                                ✏️ Modification en cours
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                                MoMo Pay & Direct
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {isEditing ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <button
+                              type="button"
+                              onClick={handleCancelEditPaymentCard}
+                              className="btn btn-secondary"
+                              style={{
+                                padding: "5px 10px",
+                                fontSize: "0.74rem",
+                                fontWeight: "600",
+                                borderRadius: "8px",
+                                border: "1px solid var(--border-light)",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEditPaymentCard("momo", "MTN & Moov")}
+                              className="btn btn-primary"
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                padding: "5px 12px",
+                                fontSize: "0.74rem",
+                                fontWeight: "700",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <Check size={13} />
+                              Enregistrer
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditPaymentCard("momo")}
+                            className="btn btn-secondary"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              padding: "5px 12px",
+                              fontSize: "0.74rem",
+                              fontWeight: "700",
+                              borderRadius: "8px",
+                              border: "1px solid var(--border-light)",
+                              background: "var(--bg-subtle)",
+                              cursor: "pointer",
+                              color: "var(--brown-dark)",
+                            }}
+                            title="Modifier MTN MoMo et Moov Money"
+                          >
+                            <Edit3 size={13} />
+                            Modifier
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ display: "grid", gap: "10px" }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Identifiant MoMo / Téléphone</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_mtn_momo_ci || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_mtn_momo_ci: e.target.value })}
+                            className="input-clean"
+                            placeholder="MOMO-749201 / +225 05 94 32 10 05"
+                            style={{
+                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              cursor: isEditing ? "text" : "default",
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Moov Money (Numéro direct)</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_moov_money || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_moov_money: e.target.value })}
+                            className="input-clean"
+                            placeholder="+225 01 02 03 04 05"
+                            style={{
+                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              cursor: isEditing ? "text" : "default",
+                            }}
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Moov Money (Numéro direct)</label>
-                      <input
-                        type="text"
-                        value={companySettings.payment_moov_money || ""}
-                        onChange={(e) => setCompanySettings({ ...companySettings, payment_moov_money: e.target.value })}
-                        className="input-clean"
-                        placeholder="+225 01 02 03 04 05"
-                      />
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 {/* 4. Compte Bancaire Officiel (RIB / IBAN FCFA BACI) */}
-                <div style={{ padding: "18px", background: "#FFFFFF", borderRadius: "16px", border: "1px solid var(--border-light)", boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <BankBaciLogo size={34} />
-                      <div>
-                        <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
-                          Compte Bancaire Officiel (RIB / IBAN FCFA)
+                {(() => {
+                  const isEditing = editingPaymentCard === "bank";
+                  return (
+                    <div
+                      style={{
+                        padding: "18px",
+                        background: "#FFFFFF",
+                        borderRadius: "16px",
+                        border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
+                        boxShadow: isEditing ? "0 8px 24px rgba(42, 24, 16, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <BankBaciLogo size={34} />
+                          <div>
+                            <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
+                              Compte Bancaire Officiel (RIB / IBAN FCFA)
+                            </div>
+                            {isEditing ? (
+                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700" }}>
+                                ✏️ Modification en cours
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                                Banque Atlantique (BACI) · Zone UEMOA
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
-                          Banque Atlantique (BACI) · Zone UEMOA
-                        </span>
+                        {isEditing ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <button
+                              type="button"
+                              onClick={handleCancelEditPaymentCard}
+                              className="btn btn-secondary"
+                              style={{
+                                padding: "5px 10px",
+                                fontSize: "0.74rem",
+                                fontWeight: "600",
+                                borderRadius: "8px",
+                                border: "1px solid var(--border-light)",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEditPaymentCard("bank", "Compte Bancaire")}
+                              className="btn btn-primary"
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                padding: "5px 12px",
+                                fontSize: "0.74rem",
+                                fontWeight: "700",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <Check size={13} />
+                              Enregistrer
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditPaymentCard("bank")}
+                            className="btn btn-secondary"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              padding: "5px 12px",
+                              fontSize: "0.74rem",
+                              fontWeight: "700",
+                              borderRadius: "8px",
+                              border: "1px solid var(--border-light)",
+                              background: "var(--bg-subtle)",
+                              cursor: "pointer",
+                              color: "var(--brown-dark)",
+                            }}
+                            title="Modifier ce compte bancaire"
+                          >
+                            <Edit3 size={13} />
+                            Modifier
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ display: "grid", gap: "10px" }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Établissement Bancaire</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_bank_name || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_bank_name: e.target.value })}
+                            className="input-clean"
+                            placeholder="Banque Atlantique Côte d'Ivoire (BACI)"
+                            style={{
+                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              cursor: isEditing ? "text" : "default",
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Titulaire du Compte</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_bank_account_holder || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_bank_account_holder: e.target.value })}
+                            className="input-clean"
+                            placeholder="ROUM TRANSIT INTERNATIONAL SARL"
+                            style={{
+                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              cursor: isEditing ? "text" : "default",
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>RIB / Clé IBAN</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_bank_rib || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_bank_rib: e.target.value })}
+                            className="input-clean"
+                            placeholder="CI092 01001 012345678901 24"
+                            style={{
+                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              cursor: isEditing ? "text" : "default",
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Code BIC / SWIFT</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_bank_swift || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_bank_swift: e.target.value })}
+                            className="input-clean"
+                            placeholder="ATBKCIAB"
+                            style={{
+                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              cursor: isEditing ? "text" : "default",
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (typeof window !== "undefined") {
-                          localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
-                        }
-                        triggerToast("Coordonnées bancaires enregistrées avec succès !", "Moyens de Paiement");
-                        if (token) {
-                          try {
-                            await fetch("/api/admin/settings", {
-                              method: "PUT",
-                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                              body: JSON.stringify(companySettings),
-                            });
-                          } catch {}
-                        }
-                      }}
-                      className="btn btn-secondary"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "5px",
-                        padding: "5px 12px",
-                        fontSize: "0.74rem",
-                        fontWeight: "700",
-                        borderRadius: "8px",
-                        border: "1px solid var(--border-light)",
-                        background: "var(--bg-subtle)",
-                        cursor: "pointer",
-                        color: "var(--brown-dark)",
-                      }}
-                      title="Enregistrer et valider ce compte bancaire"
-                    >
-                      <Edit3 size={13} />
-                      Modifier
-                    </button>
-                  </div>
-                  <div style={{ display: "grid", gap: "10px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Établissement Bancaire</label>
-                      <input
-                        type="text"
-                        value={companySettings.payment_bank_name || ""}
-                        onChange={(e) => setCompanySettings({ ...companySettings, payment_bank_name: e.target.value })}
-                        className="input-clean"
-                        placeholder="Banque Atlantique Côte d'Ivoire (BACI)"
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Titulaire du Compte</label>
-                      <input
-                        type="text"
-                        value={companySettings.payment_bank_account_holder || ""}
-                        onChange={(e) => setCompanySettings({ ...companySettings, payment_bank_account_holder: e.target.value })}
-                        className="input-clean"
-                        placeholder="ROUM TRANSIT INTERNATIONAL SARL"
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>RIB / Clé IBAN</label>
-                      <input
-                        type="text"
-                        value={companySettings.payment_bank_rib || ""}
-                        onChange={(e) => setCompanySettings({ ...companySettings, payment_bank_rib: e.target.value })}
-                        className="input-clean"
-                        placeholder="CI092 01001 012345678901 24"
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Code BIC / SWIFT</label>
-                      <input
-                        type="text"
-                        value={companySettings.payment_bank_swift || ""}
-                        onChange={(e) => setCompanySettings({ ...companySettings, payment_bank_swift: e.target.value })}
-                        className="input-clean"
-                        placeholder="ATBKCIAB"
-                      />
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 {/* 5. Règlements Internationaux (Chine Alipay / WeChat & Europe SEPA) */}
-                <div style={{ padding: "18px", background: "#FFFFFF", borderRadius: "16px", border: "1px solid var(--border-light)", boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                        <AlipayLogo size={32} />
-                        <WeChatPayLogo size={32} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
-                          Sourcing Chine & Devises Internationales
-                        </div>
-                        <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
-                          Alipay · WeChat · SEPA Euro
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (typeof window !== "undefined") {
-                          localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
-                        }
-                        triggerToast("Comptes internationaux enregistrés avec succès !", "Moyens de Paiement");
-                        if (token) {
-                          try {
-                            await fetch("/api/admin/settings", {
-                              method: "PUT",
-                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                              body: JSON.stringify(companySettings),
-                            });
-                          } catch {}
-                        }
-                      }}
-                      className="btn btn-secondary"
+                {(() => {
+                  const isEditing = editingPaymentCard === "china";
+                  return (
+                    <div
                       style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "5px",
-                        padding: "5px 12px",
-                        fontSize: "0.74rem",
-                        fontWeight: "700",
-                        borderRadius: "8px",
-                        border: "1px solid var(--border-light)",
-                        background: "var(--bg-subtle)",
-                        cursor: "pointer",
-                        color: "var(--brown-dark)",
+                        padding: "18px",
+                        background: "#FFFFFF",
+                        borderRadius: "16px",
+                        border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
+                        boxShadow: isEditing ? "0 8px 24px rgba(42, 24, 16, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        transition: "all 0.2s ease",
                       }}
-                      title="Enregistrer et valider les comptes internationaux"
                     >
-                      <Edit3 size={13} />
-                      Modifier
-                    </button>
-                  </div>
-                  <div style={{ display: "grid", gap: "10px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Alipay / WeChat Pay (Chine)</label>
-                      <input
-                        type="text"
-                        value={companySettings.payment_alipay_china || ""}
-                        onChange={(e) => setCompanySettings({ ...companySettings, payment_alipay_china: e.target.value })}
-                        className="input-clean"
-                        placeholder="pay@roumtransit-china.com"
-                      />
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                            <AlipayLogo size={32} />
+                            <WeChatPayLogo size={32} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
+                              Sourcing Chine & Devises Internationales
+                            </div>
+                            {isEditing ? (
+                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700" }}>
+                                ✏️ Modification en cours
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                                Alipay · WeChat · SEPA Euro
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {isEditing ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <button
+                              type="button"
+                              onClick={handleCancelEditPaymentCard}
+                              className="btn btn-secondary"
+                              style={{
+                                padding: "5px 10px",
+                                fontSize: "0.74rem",
+                                fontWeight: "600",
+                                borderRadius: "8px",
+                                border: "1px solid var(--border-light)",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEditPaymentCard("china", "Comptes Internationaux")}
+                              className="btn btn-primary"
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                padding: "5px 12px",
+                                fontSize: "0.74rem",
+                                fontWeight: "700",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <Check size={13} />
+                              Enregistrer
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditPaymentCard("china")}
+                            className="btn btn-secondary"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              padding: "5px 12px",
+                              fontSize: "0.74rem",
+                              fontWeight: "700",
+                              borderRadius: "8px",
+                              border: "1px solid var(--border-light)",
+                              background: "var(--bg-subtle)",
+                              cursor: "pointer",
+                              color: "var(--brown-dark)",
+                            }}
+                            title="Modifier les comptes internationaux"
+                          >
+                            <Edit3 size={13} />
+                            Modifier
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ display: "grid", gap: "10px" }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Alipay / WeChat Pay (Chine)</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_alipay_china || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_alipay_china: e.target.value })}
+                            className="input-clean"
+                            placeholder="pay@roumtransit-china.com"
+                            style={{
+                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              cursor: isEditing ? "text" : "default",
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Virement Bancaire Euro (SEPA)</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_euro_sepa || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_euro_sepa: e.target.value })}
+                            className="input-clean"
+                            placeholder="FR76 3000 4001 2345 6789 0123 456"
+                            style={{
+                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              cursor: isEditing ? "text" : "default",
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Caisse Espèces aux Guichets</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_cash_desks || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_cash_desks: e.target.value })}
+                            className="input-clean"
+                            placeholder="Agence Abidjan Bingerville & Hub Guangzhou"
+                            style={{
+                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              cursor: isEditing ? "text" : "default",
+                            }}
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Virement Bancaire Euro (SEPA)</label>
-                      <input
-                        type="text"
-                        value={companySettings.payment_euro_sepa || ""}
-                        onChange={(e) => setCompanySettings({ ...companySettings, payment_euro_sepa: e.target.value })}
-                        className="input-clean"
-                        placeholder="FR76 3000 4001 2345 6789 0123 456"
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Caisse Espèces aux Guichets</label>
-                      <input
-                        type="text"
-                        value={companySettings.payment_cash_desks || ""}
-                        onChange={(e) => setCompanySettings({ ...companySettings, payment_cash_desks: e.target.value })}
-                        className="input-clean"
-                        placeholder="Agence Abidjan Bingerville & Hub Guangzhou"
-                      />
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 {/* 6. Mentions Légales sur les Reçus */}
-                <div style={{ padding: "18px", background: "#FFFFFF", borderRadius: "16px", border: "1px solid var(--border-light)", boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <ReceiptSealLogo size={34} />
-                      <div>
-                        <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
-                          Mentions Légales sur les Reçus
+                {(() => {
+                  const isEditing = editingPaymentCard === "receipt";
+                  return (
+                    <div
+                      style={{
+                        padding: "18px",
+                        background: "#FFFFFF",
+                        borderRadius: "16px",
+                        border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
+                        boxShadow: isEditing ? "0 8px 24px rgba(42, 24, 16, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <ReceiptSealLogo size={34} />
+                          <div>
+                            <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
+                              Mentions Légales sur les Reçus
+                            </div>
+                            {isEditing ? (
+                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700" }}>
+                                ✏️ Modification en cours
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                                Bordereaux de Caisse Officiels
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
-                          Bordereaux de Caisse Officiels
-                        </span>
+                        {isEditing ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <button
+                              type="button"
+                              onClick={handleCancelEditPaymentCard}
+                              className="btn btn-secondary"
+                              style={{
+                                padding: "5px 10px",
+                                fontSize: "0.74rem",
+                                fontWeight: "600",
+                                borderRadius: "8px",
+                                border: "1px solid var(--border-light)",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEditPaymentCard("receipt", "Mentions Légales")}
+                              className="btn btn-primary"
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                padding: "5px 12px",
+                                fontSize: "0.74rem",
+                                fontWeight: "700",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <Check size={13} />
+                              Enregistrer
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditPaymentCard("receipt")}
+                            className="btn btn-secondary"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              padding: "5px 12px",
+                              fontSize: "0.74rem",
+                              fontWeight: "700",
+                              borderRadius: "8px",
+                              border: "1px solid var(--border-light)",
+                              background: "var(--bg-subtle)",
+                              cursor: "pointer",
+                              color: "var(--brown-dark)",
+                            }}
+                            title="Modifier cette clause légale"
+                          >
+                            <Edit3 size={13} />
+                            Modifier
+                          </button>
+                        )}
+                      </div>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: "600" }}>
+                          Clause officielle imprimée sur les reçus
+                        </label>
+                        <textarea
+                          rows={4}
+                          readOnly={!isEditing}
+                          value={companySettings.payment_receipt_terms || ""}
+                          onChange={(e) => setCompanySettings({ ...companySettings, payment_receipt_terms: e.target.value })}
+                          className="input-clean"
+                          style={{
+                            fontSize: "0.8rem",
+                            lineHeight: "1.4",
+                            background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                            cursor: isEditing ? "text" : "default",
+                          }}
+                        />
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (typeof window !== "undefined") {
-                          localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
-                        }
-                        triggerToast("Clauses de reçus enregistrées avec succès !", "Moyens de Paiement");
-                        if (token) {
-                          try {
-                            await fetch("/api/admin/settings", {
-                              method: "PUT",
-                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                              body: JSON.stringify(companySettings),
-                            });
-                          } catch {}
-                        }
-                      }}
-                      className="btn btn-secondary"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "5px",
-                        padding: "5px 12px",
-                        fontSize: "0.74rem",
-                        fontWeight: "700",
-                        borderRadius: "8px",
-                        border: "1px solid var(--border-light)",
-                        background: "var(--bg-subtle)",
-                        cursor: "pointer",
-                        color: "var(--brown-dark)",
-                      }}
-                      title="Enregistrer et valider cette clause légale"
-                    >
-                      <Edit3 size={13} />
-                      Modifier
-                    </button>
-                  </div>
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: "600" }}>
-                      Clause officielle imprimée sur les reçus
-                    </label>
-                    <textarea
-                      rows={4}
-                      value={companySettings.payment_receipt_terms || ""}
-                      onChange={(e) => setCompanySettings({ ...companySettings, payment_receipt_terms: e.target.value })}
-                      className="input-clean"
-                      style={{ fontSize: "0.8rem", lineHeight: "1.4" }}
-                    />
-                  </div>
-                </div>
+                  );
+                })()}
               </div>
 
               {/* Bouton d'Enregistrement Principal */}
