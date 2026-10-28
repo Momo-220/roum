@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { message, context, history } = body;
+    const { message, context, history, userFullName } = body;
+    const bossName = (userFullName && typeof userFullName === "string" && userFullName.trim()) ? userFullName.trim() : "Madame Marouba";
 
     const apiKey = process.env.GEMINI_API_KEY;
 
@@ -51,7 +52,8 @@ export async function POST(req: Request) {
     }
 
     const systemInstruction = `Tu es l Assistant Opérationnel de Roum Transit, transitaire international de premier plan (Chine, Maroc, Dubaï, Côte d Ivoire et Afrique Subsaharienne).
-Tu dialogues directement avec le gérant ou directeur général de l entreprise.
+Tu dialogues directement avec ${bossName}, CEO et Directrice Générale de l entreprise.
+Adresse-toi toujours à elle en disant ${bossName} avec le plus grand respect, loyauté et professionnalisme.
 
 RÈGLES D'EXPRESSION ET D'ATTITUDE (IMPÉRATIF) :
 1. Ton ton est résolument humain, chaleureux, posé, respectueux et professionnel. Tu t'exprimes comme un directeur d'exploitation dévoué et rigoureux qui connaît chaque dossier de l'entreprise.

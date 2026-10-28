@@ -53,9 +53,22 @@ import {
   ArrowUp,
   Edit,
   Edit3,
+  Camera,
+  Upload,
+  UserCheck,
 } from "lucide-react";
 import RouteGlobe from "@/components/RouteGlobe";
 import { CircularFlag } from "@/components/CircularFlag";
+import {
+  WaveLogo,
+  OrangeMoneyLogo,
+  MtnMomoLogo,
+  MoovMoneyLogo,
+  BankBaciLogo,
+  AlipayLogo,
+  WeChatPayLogo,
+  ReceiptSealLogo,
+} from "@/components/PaymentLogos";
 import {
   STRATEGIC_HUBS,
   AFRICAN_COUNTRIES,
@@ -75,6 +88,8 @@ interface UserSession {
   hubLocation: string | null;
   permissions: string[];
   allowedStatuses: string[];
+  avatarUrl?: string | null;
+  phone?: string;
 }
 
 const GLOBAL_HUBS = [
@@ -1495,6 +1510,102 @@ export default function AdminPage() {
   const [editingPayment, setEditingPayment] = useState<any | null>(null);
   const [editingTask, setEditingTask] = useState<any | null>(null);
 
+  // Modale Profil Madame Marouba (CEO) & Photo
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [profileForm, setProfileForm] = useState({
+    fullName: "Madame Marouba",
+    roleName: "CEO · Direction Générale",
+    phone: "+225 07 00 00 00 00",
+    email: "ceo@roumtransit.com",
+    avatarUrl: "",
+  });
+
+  // Chargement du profil sauvegardé
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("roum_profile_data");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setUser((curr) => {
+            const baseUser: UserSession = curr || {
+              userId: "user-ceo-marouba",
+              email: parsed.email || "ceo@roumtransit.com",
+              fullName: parsed.fullName || "Madame Marouba",
+              roleId: "CEO",
+              roleName: parsed.roleName || "CEO · Direction Générale",
+              isSuperAdmin: true,
+              hubLocation: "Direction Générale Abidjan / Bamako",
+              permissions: ["*"],
+              allowedStatuses: ["*"],
+            };
+            return {
+              ...baseUser,
+              fullName: parsed.fullName || baseUser.fullName,
+              roleName: parsed.roleName || baseUser.roleName,
+              avatarUrl: parsed.avatarUrl || baseUser.avatarUrl,
+              phone: parsed.phone || baseUser.phone,
+              email: parsed.email || baseUser.email,
+            };
+          });
+          setProfileForm({
+            fullName: parsed.fullName || "Madame Marouba",
+            roleName: parsed.roleName || "CEO · Direction Générale",
+            phone: parsed.phone || "+225 07 00 00 00 00",
+            email: parsed.email || "ceo@roumtransit.com",
+            avatarUrl: parsed.avatarUrl || "",
+          });
+        }
+      } catch {}
+    }
+  }, []);
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    const updatedUser: UserSession = {
+      ...(user || {
+        userId: "user-ceo-marouba",
+        email: profileForm.email,
+        fullName: profileForm.fullName,
+        roleId: "CEO",
+        roleName: profileForm.roleName,
+        isSuperAdmin: true,
+        hubLocation: "Direction Générale Abidjan / Bamako",
+        permissions: ["*"],
+        allowedStatuses: ["*"],
+      }),
+      fullName: profileForm.fullName.trim() || "Madame Marouba",
+      roleName: profileForm.roleName.trim() || "CEO · Direction Générale",
+      phone: profileForm.phone,
+      email: profileForm.email,
+      avatarUrl: profileForm.avatarUrl || user?.avatarUrl || null,
+    };
+
+    setUser(updatedUser);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("roum_profile_data", JSON.stringify(updatedUser));
+    }
+    triggerToast("Votre profil et photo ont été mis à jour avec succès !", "Profil Direction");
+    setShowProfileModal(false);
+  };
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        triggerToast("Veuillez choisir une photo de taille inférieure à 5 Mo.", "Photo de profil", "error");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        setProfileForm((prev) => ({ ...prev, avatarUrl: base64 }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Recherche & filtres
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -1515,16 +1626,32 @@ export default function AdminPage() {
   const [agentTab, setAgentTab] = useState<"alerts" | "activity">("alerts");
   const [chatMessages, setChatMessages] = useState<
     Array<{ sender: "user" | "agent"; text: string; time: string }>
-  >([
+  >(() => [
     {
       sender: "agent",
-      text: "Bonjour Madame Marouba. Votre console de direction ROUM TRANSIT est opérationnelle.\nToutes vos expéditions, caisses et demandes de transit sont synchronisées en direct. Comment puis-je vous assister aujourd'hui ?",
+      text: `Bonjour ${user?.fullName || "Madame Marouba"}. Votre console de direction ROUM TRANSIT est opérationnelle.\nToutes vos expéditions, caisses et demandes de transit sont synchronisées en direct. Comment puis-je vous assister aujourd'hui ?`,
       time: "En direct",
     },
   ]);
   const [chatInput, setChatInput] = useState("");
   const [isAgentThinking, setIsAgentThinking] = useState(false);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const boss = user?.fullName || "Madame Marouba";
+    setChatMessages((prev) => {
+      if (prev.length === 1 && prev[0].sender === "agent") {
+        return [
+          {
+            sender: "agent",
+            text: `Bonjour ${boss}. Votre console de direction ROUM TRANSIT est opérationnelle.\nToutes vos expéditions, caisses et demandes de transit sont synchronisées en direct. Comment puis-je vous assister aujourd'hui ?`,
+            time: "En direct",
+          },
+        ];
+      }
+      return prev;
+    });
+  }, [user?.fullName]);
 
   const scrollToChatBottom = (smooth = true) => {
     if (chatMessagesEndRef.current) {
@@ -1599,6 +1726,7 @@ export default function AdminPage() {
           message: q,
           context: liveContext,
           history: chatMessages.slice(-6),
+          userFullName: user?.fullName || "Madame Marouba",
         }),
       });
 
@@ -3215,28 +3343,108 @@ export default function AdminPage() {
         {/* Profil Madame Marouba (CEO) & Bas de Barre Latérale */}
         <div style={{ borderTop: "1px solid var(--border-light)", paddingTop: "14px", display: "flex", flexDirection: "column", gap: "10px" }}>
           {!isSidebarCollapsed ? (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", background: "rgba(59, 34, 24, 0.04)", borderRadius: "12px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
-                <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "var(--brown-dark)", color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", fontSize: "0.85rem" }}>
-                  M
+            <div
+              onClick={() => setShowProfileModal(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "8px 10px",
+                background: "var(--bg-app)",
+                borderRadius: "12px",
+                border: "1px solid var(--border-light)",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+              title="Cliquer pour modifier votre profil & photo officielle"
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "9px", minWidth: 0 }}>
+                <div
+                  style={{
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "50%",
+                    background: user?.avatarUrl ? "transparent" : "var(--brown-dark)",
+                    color: "#FFFFFF",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: "800",
+                    fontSize: "0.85rem",
+                    overflow: "hidden",
+                    border: "1.5px solid var(--border-light)",
+                    flexShrink: 0,
+                  }}
+                >
+                  {user?.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    (user?.fullName || "M").charAt(0)
+                  )}
                 </div>
-                <div style={{ lineHeight: 1.2 }}>
-                  <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)" }}>Madame Marouba</div>
-                  <div style={{ fontSize: "0.68rem", fontWeight: "700", color: "var(--brown-dark)", textTransform: "uppercase", letterSpacing: "0.04em" }}>CEO · Direction</div>
+                <div style={{ lineHeight: 1.2, minWidth: 0 }}>
+                  <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {user?.fullName || "Madame Marouba"}
+                  </div>
+                  <div style={{ fontSize: "0.68rem", fontWeight: "700", color: "var(--brown-dark)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                    {user?.roleName || "CEO · Direction"}
+                  </div>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsSidebarCollapsed(true)}
-                className="btn btn-secondary"
-                style={{ width: "28px", height: "28px", padding: 0, borderRadius: "50%", justifyContent: "center", opacity: 0.7 }}
-                title="Rétracter la barre latérale"
-              >
-                <PanelLeftClose size={14} />
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowProfileModal(true);
+                  }}
+                  className="btn btn-secondary"
+                  style={{ width: "26px", height: "26px", padding: 0, borderRadius: "50%", justifyContent: "center" }}
+                  title="Modifier mon profil & photo"
+                >
+                  <Edit size={12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsSidebarCollapsed(true);
+                  }}
+                  className="btn btn-secondary"
+                  style={{ width: "26px", height: "26px", padding: 0, borderRadius: "50%", justifyContent: "center", opacity: 0.7 }}
+                  title="Rétracter la barre latérale"
+                >
+                  <PanelLeftClose size={13} />
+                </button>
+              </div>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+              <div
+                onClick={() => setShowProfileModal(true)}
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "50%",
+                  background: user?.avatarUrl ? "transparent" : "var(--brown-dark)",
+                  color: "#FFFFFF",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: "800",
+                  fontSize: "0.88rem",
+                  overflow: "hidden",
+                  cursor: "pointer",
+                  border: "2px solid var(--border-light)",
+                }}
+                title={`Profil : ${user?.fullName || "Madame Marouba"} (Cliquer pour modifier)`}
+              >
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  (user?.fullName || "M").charAt(0)
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => setIsSidebarCollapsed(false)}
@@ -5913,7 +6121,7 @@ export default function AdminPage() {
                   <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{confirmedPayments.length} règlement(s) certifié(s)</div>
                 </div>
 
-                <div className="card-clean" style={{ padding: "18px 20px", borderRadius: "18px", background: "#FFFFFF", border: pendingPayments.length > 0 ? "1px solid rgba(217, 119, 6, 0.3)" : "1px solid var(--border-light)" }}>
+                <div className="card-clean" style={{ padding: "18px 20px", borderRadius: "18px", background: "#FFFFFF", border: "1px solid var(--border-light)" }}>
                   <div style={{ fontSize: "0.72rem", fontWeight: "700", color: "#B45309", textTransform: "uppercase", letterSpacing: "0.05em" }}>En Attente de Contrôle Caisse</div>
                   <div style={{ fontSize: "1.4rem", fontWeight: "800", color: "#B45309", margin: "4px 0" }}>
                     {formatCurrencyPrice(pendingTotalMinor, "FCFA")}
@@ -5939,8 +6147,8 @@ export default function AdminPage() {
               </div>
 
               {/* TABLEAU 1 SÉPARÉ : EN ATTENTE DE CONTRÔLE CAISSE */}
-              <div className="card-clean" style={{ padding: "0", overflow: "hidden", borderRadius: "20px", border: "1px solid rgba(217, 119, 6, 0.25)", background: "#FFFFFF" }}>
-                <div style={{ padding: "16px 22px", background: "rgba(217, 119, 6, 0.04)", borderBottom: "1px solid rgba(217, 119, 6, 0.15)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+              <div className="card-clean" style={{ padding: "0", overflow: "hidden", borderRadius: "20px", border: "1px solid var(--border-light)", background: "#FFFFFF" }}>
+                <div style={{ padding: "16px 22px", background: "#FFFFFF", borderBottom: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#D97706" }} />
                     <div>
@@ -6173,7 +6381,7 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div className="card-clean" style={{ padding: "18px 22px", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid rgba(220, 38, 38, 0.2)" }}>
+                <div className="card-clean" style={{ padding: "18px 22px", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid var(--border-light)" }}>
                   <div>
                     <span style={{ fontSize: "0.74rem", color: "#DC2626", fontWeight: "700", textTransform: "uppercase" }}>Urgentes & Critiques</span>
                     <div style={{ fontSize: "1.45rem", fontWeight: "800", color: "#DC2626", marginTop: "2px" }}>{urgentCount}</div>
@@ -6183,7 +6391,7 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div className="card-clean" style={{ padding: "18px 22px", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
+                <div className="card-clean" style={{ padding: "18px 22px", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid var(--border-light)" }}>
                   <div>
                     <span style={{ fontSize: "0.74rem", color: "#059669", fontWeight: "700", textTransform: "uppercase" }}>Terminées</span>
                     <div style={{ fontSize: "1.45rem", fontWeight: "800", color: "#059669", marginTop: "2px" }}>{doneCount}</div>
@@ -6660,7 +6868,7 @@ export default function AdminPage() {
             </div>
 
             {/* CARTE 3 : COORDONNÉES DES DIFFÉRENTS MOYENS DE PAIEMENT & COMPTES DE TRANSIT */}
-            <div className="card-clean" style={{ padding: "26px", borderRadius: "20px" }}>
+            <div className="card-clean" style={{ padding: "26px", borderRadius: "20px", background: "#FFFFFF", border: "1px solid var(--border-light)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px", borderBottom: "1px solid var(--border-light)", paddingBottom: "14px" }}>
                 <div>
                   <h3 style={{ fontSize: "1.15rem", fontWeight: "800", color: "var(--brown-dark)", margin: "0 0 3px 0" }}>
@@ -6676,15 +6884,56 @@ export default function AdminPage() {
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "18px" }}>
-                {/* Wave Côte d'Ivoire & Sénégal */}
-                <div style={{ padding: "18px", background: "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(240,249,255,0.85))", borderRadius: "16px", border: "1px solid rgba(0, 153, 255, 0.2)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                    <span style={{ fontSize: "0.88rem", fontWeight: "800", color: "#0284C7", display: "flex", alignItems: "center", gap: "6px" }}>
-                      🌊 Wave Côte d&apos;Ivoire & Sénégal
-                    </span>
-                    <span style={{ fontSize: "0.7rem", background: "rgba(2, 132, 199, 0.12)", color: "#0284C7", padding: "2px 8px", borderRadius: "9999px", fontWeight: "700" }}>
-                      Sans Frais
-                    </span>
+                {/* 1. Wave Côte d'Ivoire & Sénégal */}
+                <div style={{ padding: "18px", background: "#FFFFFF", borderRadius: "16px", border: "1px solid var(--border-light)", boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <WaveLogo size={34} />
+                      <div>
+                        <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
+                          Wave Côte d&apos;Ivoire & Sénégal
+                        </div>
+                        <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                          Sans Frais Client
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (typeof window !== "undefined") {
+                          localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
+                        }
+                        triggerToast("Coordonnées Wave enregistrées avec succès !", "Moyens de Paiement");
+                        if (token) {
+                          try {
+                            await fetch("/api/admin/settings", {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                              body: JSON.stringify(companySettings),
+                            });
+                          } catch {}
+                        }
+                      }}
+                      className="btn btn-secondary"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "5px 12px",
+                        fontSize: "0.74rem",
+                        fontWeight: "700",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border-light)",
+                        background: "var(--bg-subtle)",
+                        cursor: "pointer",
+                        color: "var(--brown-dark)",
+                      }}
+                      title="Enregistrer et valider ce compte Wave"
+                    >
+                      <Edit3 size={13} />
+                      Modifier
+                    </button>
                   </div>
                   <div style={{ display: "grid", gap: "10px" }}>
                     <div>
@@ -6720,15 +6969,56 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Orange Money */}
-                <div style={{ padding: "18px", background: "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,247,237,0.85))", borderRadius: "16px", border: "1px solid rgba(234, 88, 12, 0.2)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                    <span style={{ fontSize: "0.88rem", fontWeight: "800", color: "#EA580C", display: "flex", alignItems: "center", gap: "6px" }}>
-                      🟠 Orange Money (OM CI / UEMOA)
-                    </span>
-                    <span style={{ fontSize: "0.7rem", background: "rgba(234, 88, 12, 0.12)", color: "#EA580C", padding: "2px 8px", borderRadius: "9999px", fontWeight: "700" }}>
-                      Code Marchand
-                    </span>
+                {/* 2. Orange Money */}
+                <div style={{ padding: "18px", background: "#FFFFFF", borderRadius: "16px", border: "1px solid var(--border-light)", boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <OrangeMoneyLogo size={34} />
+                      <div>
+                        <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
+                          Orange Money (OM CI / UEMOA)
+                        </div>
+                        <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                          Code Marchand & Transfert
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (typeof window !== "undefined") {
+                          localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
+                        }
+                        triggerToast("Coordonnées Orange Money enregistrées avec succès !", "Moyens de Paiement");
+                        if (token) {
+                          try {
+                            await fetch("/api/admin/settings", {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                              body: JSON.stringify(companySettings),
+                            });
+                          } catch {}
+                        }
+                      }}
+                      className="btn btn-secondary"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "5px 12px",
+                        fontSize: "0.74rem",
+                        fontWeight: "700",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border-light)",
+                        background: "var(--bg-subtle)",
+                        cursor: "pointer",
+                        color: "var(--brown-dark)",
+                      }}
+                      title="Enregistrer et valider ce compte Orange Money"
+                    >
+                      <Edit3 size={13} />
+                      Modifier
+                    </button>
                   </div>
                   <div style={{ display: "grid", gap: "10px" }}>
                     <div>
@@ -6754,15 +7044,59 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* MTN Mobile Money */}
-                <div style={{ padding: "18px", background: "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(254,252,232,0.85))", borderRadius: "16px", border: "1px solid rgba(202, 138, 4, 0.2)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                    <span style={{ fontSize: "0.88rem", fontWeight: "800", color: "#CA8A04", display: "flex", alignItems: "center", gap: "6px" }}>
-                      🟡 MTN MoMo / Moov Money
-                    </span>
-                    <span style={{ fontSize: "0.7rem", background: "rgba(202, 138, 4, 0.12)", color: "#CA8A04", padding: "2px 8px", borderRadius: "9999px", fontWeight: "700" }}>
-                      MoMo Pay
-                    </span>
+                {/* 3. MTN MoMo / Moov Money */}
+                <div style={{ padding: "18px", background: "#FFFFFF", borderRadius: "16px", border: "1px solid var(--border-light)", boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                        <MtnMomoLogo size={32} />
+                        <MoovMoneyLogo size={32} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
+                          MTN MoMo & Moov Money
+                        </div>
+                        <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                          MoMo Pay & Direct
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (typeof window !== "undefined") {
+                          localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
+                        }
+                        triggerToast("Coordonnées MTN & Moov enregistrées avec succès !", "Moyens de Paiement");
+                        if (token) {
+                          try {
+                            await fetch("/api/admin/settings", {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                              body: JSON.stringify(companySettings),
+                            });
+                          } catch {}
+                        }
+                      }}
+                      className="btn btn-secondary"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "5px 12px",
+                        fontSize: "0.74rem",
+                        fontWeight: "700",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border-light)",
+                        background: "var(--bg-subtle)",
+                        cursor: "pointer",
+                        color: "var(--brown-dark)",
+                      }}
+                      title="Enregistrer et valider MTN MoMo et Moov Money"
+                    >
+                      <Edit3 size={13} />
+                      Modifier
+                    </button>
                   </div>
                   <div style={{ display: "grid", gap: "10px" }}>
                     <div>
@@ -6788,15 +7122,56 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Compte Bancaire Officiel (Virement FCFA / UEMOA) */}
-                <div style={{ padding: "18px", background: "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(245,243,255,0.85))", borderRadius: "16px", border: "1px solid rgba(124, 58, 237, 0.2)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                    <span style={{ fontSize: "0.88rem", fontWeight: "800", color: "#7C3AED", display: "flex", alignItems: "center", gap: "6px" }}>
-                      🏛️ Compte Bancaire Officiel (RIB / IBAN FCFA)
-                    </span>
-                    <span style={{ fontSize: "0.7rem", background: "rgba(124, 58, 237, 0.12)", color: "#7C3AED", padding: "2px 8px", borderRadius: "9999px", fontWeight: "700" }}>
-                      Banque UEMOA
-                    </span>
+                {/* 4. Compte Bancaire Officiel (RIB / IBAN FCFA BACI) */}
+                <div style={{ padding: "18px", background: "#FFFFFF", borderRadius: "16px", border: "1px solid var(--border-light)", boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <BankBaciLogo size={34} />
+                      <div>
+                        <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
+                          Compte Bancaire Officiel (RIB / IBAN FCFA)
+                        </div>
+                        <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                          Banque Atlantique (BACI) · Zone UEMOA
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (typeof window !== "undefined") {
+                          localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
+                        }
+                        triggerToast("Coordonnées bancaires enregistrées avec succès !", "Moyens de Paiement");
+                        if (token) {
+                          try {
+                            await fetch("/api/admin/settings", {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                              body: JSON.stringify(companySettings),
+                            });
+                          } catch {}
+                        }
+                      }}
+                      className="btn btn-secondary"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "5px 12px",
+                        fontSize: "0.74rem",
+                        fontWeight: "700",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border-light)",
+                        background: "var(--bg-subtle)",
+                        cursor: "pointer",
+                        color: "var(--brown-dark)",
+                      }}
+                      title="Enregistrer et valider ce compte bancaire"
+                    >
+                      <Edit3 size={13} />
+                      Modifier
+                    </button>
                   </div>
                   <div style={{ display: "grid", gap: "10px" }}>
                     <div>
@@ -6842,15 +7217,59 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Règlements Internationaux (Chine & Europe) */}
-                <div style={{ padding: "18px", background: "var(--bg-app)", borderRadius: "16px", border: "1px solid var(--border-light)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                    <span style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)", display: "flex", alignItems: "center", gap: "6px" }}>
-                      🌏 Sourcing Chine & Euro SEPA
-                    </span>
-                    <span style={{ fontSize: "0.7rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "2px 8px", borderRadius: "9999px", fontWeight: "700" }}>
-                      Devises USD / EUR / CNY
-                    </span>
+                {/* 5. Règlements Internationaux (Chine Alipay / WeChat & Europe SEPA) */}
+                <div style={{ padding: "18px", background: "#FFFFFF", borderRadius: "16px", border: "1px solid var(--border-light)", boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                        <AlipayLogo size={32} />
+                        <WeChatPayLogo size={32} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
+                          Sourcing Chine & Devises Internationales
+                        </div>
+                        <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                          Alipay · WeChat · SEPA Euro
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (typeof window !== "undefined") {
+                          localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
+                        }
+                        triggerToast("Comptes internationaux enregistrés avec succès !", "Moyens de Paiement");
+                        if (token) {
+                          try {
+                            await fetch("/api/admin/settings", {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                              body: JSON.stringify(companySettings),
+                            });
+                          } catch {}
+                        }
+                      }}
+                      className="btn btn-secondary"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "5px 12px",
+                        fontSize: "0.74rem",
+                        fontWeight: "700",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border-light)",
+                        background: "var(--bg-subtle)",
+                        cursor: "pointer",
+                        color: "var(--brown-dark)",
+                      }}
+                      title="Enregistrer et valider les comptes internationaux"
+                    >
+                      <Edit3 size={13} />
+                      Modifier
+                    </button>
                   </div>
                   <div style={{ display: "grid", gap: "10px" }}>
                     <div>
@@ -6886,15 +7305,56 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Mentions de Facturation */}
-                <div style={{ padding: "18px", background: "var(--bg-app)", borderRadius: "16px", border: "1px solid var(--border-light)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                    <span style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)", display: "flex", alignItems: "center", gap: "6px" }}>
-                      📄 Mentions Légales sur les Reçus
-                    </span>
-                    <span style={{ fontSize: "0.7rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "2px 8px", borderRadius: "9999px", fontWeight: "700" }}>
-                      Reçu Caisse
-                    </span>
+                {/* 6. Mentions Légales sur les Reçus */}
+                <div style={{ padding: "18px", background: "#FFFFFF", borderRadius: "16px", border: "1px solid var(--border-light)", boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <ReceiptSealLogo size={34} />
+                      <div>
+                        <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
+                          Mentions Légales sur les Reçus
+                        </div>
+                        <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                          Bordereaux de Caisse Officiels
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (typeof window !== "undefined") {
+                          localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
+                        }
+                        triggerToast("Clauses de reçus enregistrées avec succès !", "Moyens de Paiement");
+                        if (token) {
+                          try {
+                            await fetch("/api/admin/settings", {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                              body: JSON.stringify(companySettings),
+                            });
+                          } catch {}
+                        }
+                      }}
+                      className="btn btn-secondary"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "5px 12px",
+                        fontSize: "0.74rem",
+                        fontWeight: "700",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border-light)",
+                        background: "var(--bg-subtle)",
+                        cursor: "pointer",
+                        color: "var(--brown-dark)",
+                      }}
+                      title="Enregistrer et valider cette clause légale"
+                    >
+                      <Edit3 size={13} />
+                      Modifier
+                    </button>
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: "600" }}>
@@ -9126,6 +9586,299 @@ export default function AdminPage() {
                 </button>
                 <button type="submit" className="btn btn-primary" style={{ padding: "8px 22px", borderRadius: "9999px" }}>
                   <Check size={14} /> Enregistrer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODALE : PROFIL DE DIRECTION GÉNÉRALE (MADAME MAROUBA) */}
+      {showProfileModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(28, 24, 21, 0.6)",
+            backdropFilter: "blur(8px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "20px",
+          }}
+        >
+          <div
+            className="card-clean animate-fade-in"
+            style={{
+              maxWidth: "520px",
+              width: "100%",
+              maxHeight: "92vh",
+              overflowY: "auto",
+              borderRadius: "24px",
+              padding: "28px 30px",
+              background: "#FFFFFF",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.22)",
+              border: "1px solid var(--border-light)",
+            }}
+          >
+            {/* Entête Modale */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "20px",
+                borderBottom: "1px solid var(--border-light)",
+                paddingBottom: "14px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div
+                  style={{
+                    width: "42px",
+                    height: "42px",
+                    borderRadius: "12px",
+                    background: "var(--bg-subtle)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--brown-dark)",
+                  }}
+                >
+                  <UserCheck size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: "1.2rem", fontWeight: "800", color: "var(--brown-dark)", margin: "0 0 2px 0" }}>
+                    Mon Profil de Direction
+                  </h3>
+                  <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0 }}>
+                    Identité exécutive & synchronisation de votre assistant IA
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowProfileModal(false)}
+                style={{
+                  background: "var(--bg-app)",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "var(--text-muted)",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} style={{ display: "grid", gap: "18px" }}>
+              {/* Photo de profil & téléversement */}
+              <div
+                style={{
+                  padding: "18px",
+                  borderRadius: "18px",
+                  background: "var(--bg-app)",
+                  border: "1px solid var(--border-light)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "18px",
+                }}
+              >
+                <div
+                  style={{
+                    width: "74px",
+                    height: "74px",
+                    borderRadius: "50%",
+                    background: profileForm.avatarUrl ? "transparent" : "var(--brown-dark)",
+                    color: "#FFFFFF",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "1.6rem",
+                    fontWeight: "800",
+                    overflow: "hidden",
+                    border: "2px solid var(--border-light)",
+                    flexShrink: 0,
+                    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.08)",
+                  }}
+                >
+                  {profileForm.avatarUrl ? (
+                    <img
+                      src={profileForm.avatarUrl}
+                      alt="Photo officielle"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    (profileForm.fullName || "M").charAt(0)
+                  )}
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--brown-dark)", marginBottom: "4px" }}>
+                    Photo Officielle de Direction
+                  </div>
+                  <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginBottom: "10px", lineHeight: "1.3" }}>
+                    Formats acceptés : JPG, PNG, WEBP.
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <input
+                      type="file"
+                      ref={avatarInputRef}
+                      accept="image/*"
+                      onChange={handleAvatarFileChange}
+                      style={{ display: "none" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => avatarInputRef.current?.click()}
+                      className="btn btn-primary"
+                      style={{
+                        padding: "6px 14px",
+                        fontSize: "0.76rem",
+                        borderRadius: "9999px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      <Camera size={13} />
+                      Choisir une photo
+                    </button>
+                    {profileForm.avatarUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setProfileForm((prev) => ({ ...prev, avatarUrl: "" }))}
+                        className="btn btn-secondary"
+                        style={{
+                          padding: "6px 12px",
+                          fontSize: "0.74rem",
+                          borderRadius: "9999px",
+                          color: "#DC2626",
+                        }}
+                      >
+                        Retirer
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Formulaire Textuel */}
+              <div style={{ display: "grid", gap: "12px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", marginBottom: "4px" }}>
+                    Nom & Prénom Officiel
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={profileForm.fullName}
+                    onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
+                    className="input-clean"
+                    placeholder="Madame Marouba"
+                    style={{ fontSize: "0.9rem", fontWeight: "600" }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", marginBottom: "4px" }}>
+                    Titre & Fonction au sein de ROUM TRANSIT
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={profileForm.roleName}
+                    onChange={(e) => setProfileForm({ ...profileForm, roleName: e.target.value })}
+                    className="input-clean"
+                    placeholder="CEO · Direction Générale"
+                    style={{ fontSize: "0.85rem" }}
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", marginBottom: "4px" }}>
+                      Téléphone Professionnel
+                    </label>
+                    <input
+                      type="text"
+                      value={profileForm.phone}
+                      onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                      className="input-clean"
+                      placeholder="+225 07 00 00 00 00"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", marginBottom: "4px" }}>
+                      Email Professionnel
+                    </label>
+                    <input
+                      type="email"
+                      value={profileForm.email}
+                      onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                      className="input-clean"
+                      placeholder="ceo@roumtransit.com"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Encadré d'information IA & Plateforme */}
+              <div
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: "14px",
+                  background: "var(--bg-subtle)",
+                  border: "1px solid var(--border-light)",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "10px",
+                }}
+              >
+                <Sparkles size={16} color="var(--accent-gold)" style={{ marginTop: "2px", flexShrink: 0 }} />
+                <div style={{ fontSize: "0.74rem", color: "var(--text-secondary)", lineHeight: "1.4" }}>
+                  Toute modification de votre nom ou de votre photo s&apos;applique instantanément dans votre barre latérale et synchronise votre Assistant IA pour qu&apos;il s&apos;adresse à vous avec ce nouveau nom.
+                </div>
+              </div>
+
+              {/* Boutons d'Action */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: "10px",
+                  paddingTop: "14px",
+                  borderTop: "1px solid var(--border-light)",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowProfileModal(false)}
+                  className="btn btn-secondary"
+                  style={{ padding: "8px 18px", borderRadius: "9999px" }}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{
+                    padding: "8px 22px",
+                    borderRadius: "9999px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <Check size={14} />
+                  Enregistrer mon Profil
                 </button>
               </div>
             </form>
