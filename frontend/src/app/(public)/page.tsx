@@ -225,6 +225,22 @@ export default function HomePage() {
         }}
       >
         <div className="container" style={{ maxWidth: "860px" }}>
+          {/* Logo Officiel Imposant */}
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "28px" }}>
+            <img
+              src="/images/roum-logo.jpg"
+              alt="Logo Officiel Roum Transit"
+              style={{
+                width: "100%",
+                maxWidth: "280px",
+                height: "auto",
+                borderRadius: "20px",
+                boxShadow: "0 14px 34px rgba(0, 0, 0, 0.16)",
+                display: "block",
+              }}
+            />
+          </div>
+
           {/* Badge Top */}
           <div
             style={{

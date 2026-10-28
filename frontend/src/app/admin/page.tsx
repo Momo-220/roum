@@ -2493,29 +2493,26 @@ export default function AdminPage() {
             padding: "36px 32px",
           }}
         >
-          <div style={{ textAlign: "center", marginBottom: "28px" }}>
-            <div
-              style={{
-                width: "44px",
-                height: "44px",
-                borderRadius: "var(--radius-sm)",
-                background: "var(--brown-dark)",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#FAF8F5",
-                fontWeight: "800",
-                fontSize: "1.2rem",
-                marginBottom: "14px",
-              }}
-            >
-              RT
+          <div style={{ textAlign: "center", marginBottom: "26px" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "18px" }}>
+              <img
+                src="/images/roum-logo.jpg"
+                alt="Logo Officiel Roum Transit"
+                style={{
+                  width: "100%",
+                  maxWidth: "260px",
+                  height: "auto",
+                  borderRadius: "16px",
+                  boxShadow: "0 10px 28px rgba(0, 0, 0, 0.18)",
+                  display: "block",
+                }}
+              />
             </div>
-            <h1 style={{ fontSize: "1.3rem", fontWeight: "800", marginBottom: "4px" }}>
-              ROUM TRANSIT
+            <h1 style={{ fontSize: "1.25rem", fontWeight: "800", marginBottom: "4px", color: "var(--text-main)" }}>
+              Espace de Gestion
             </h1>
             <p style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>
-              Espace de gestion réservé à l&apos;équipe Roum Transit.
+              Direction & Opérations Roum Transit
             </p>
           </div>
 
@@ -2647,29 +2644,24 @@ export default function AdminPage() {
         {!isSidebarCollapsed ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 6px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <div
+              <img
+                src="/images/roum-logo.jpg"
+                alt="Logo Roum Transit"
                 style={{
-                  width: "34px",
-                  height: "34px",
-                  borderRadius: "var(--radius-sm)",
-                  background: "var(--brown-dark)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#FAF8F5",
-                  fontWeight: "800",
-                  fontSize: "1rem",
+                  height: "42px",
+                  width: "auto",
+                  borderRadius: "8px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                  display: "block",
                   flexShrink: 0,
                 }}
-              >
-                RT
-              </div>
+              />
               <div>
                 <div style={{ fontWeight: "800", fontSize: "0.98rem", color: "var(--text-main)", lineHeight: "1.1" }}>
                   ROUM TRANSIT
                 </div>
                 <div style={{ fontSize: "0.64rem", fontWeight: "700", color: "var(--brown-light)", letterSpacing: "0.08em" }}>
-                  GESTION INTERNE
+                  DIRECTION & GESTION
                 </div>
               </div>
             </div>
@@ -2685,22 +2677,18 @@ export default function AdminPage() {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
-            <div
+            <img
+              src="/images/roum-logo.jpg"
+              alt="Logo Roum Transit"
               style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "var(--radius-sm)",
-                background: "var(--brown-dark)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#FAF8F5",
-                fontWeight: "800",
-                fontSize: "1.05rem",
+                width: "38px",
+                height: "38px",
+                objectFit: "cover",
+                borderRadius: "10px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                display: "block",
               }}
-            >
-              RT
-            </div>
+            />
             <button
               type="button"
               onClick={() => setIsSidebarCollapsed(false)}
@@ -6781,10 +6769,22 @@ export default function AdminPage() {
       {showPrintLabelModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
           <div className="card-clean" style={{ maxWidth: "480px", width: "100%", padding: "30px", background: "#FFFFFF", color: "#1C1815" }}>
-            <div style={{ borderBottom: "1px solid #E8E2D8", paddingBottom: "10px", marginBottom: "14px", display: "flex", justifyContent: "space-between" }}>
-              <div>
-                <div style={{ fontWeight: "800", fontSize: "1.15rem" }}>ROUM TRANSIT</div>
-                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>BORDEREAU D&apos;EXPÉDITION</div>
+            <div style={{ borderBottom: "1px solid #E8E2D8", paddingBottom: "12px", marginBottom: "14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <img
+                  src="/images/roum-logo.jpg"
+                  alt="Logo Roum Transit"
+                  style={{
+                    height: "44px",
+                    width: "auto",
+                    borderRadius: "8px",
+                    display: "block",
+                  }}
+                />
+                <div>
+                  <div style={{ fontWeight: "800", fontSize: "1.1rem" }}>ROUM TRANSIT</div>
+                  <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", letterSpacing: "0.05em" }}>BORDEREAU OFFICIEL D&apos;EXPÉDITION</div>
+                </div>
               </div>
               <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "right" }}>
                 {new Date().toLocaleDateString("fr-FR")}

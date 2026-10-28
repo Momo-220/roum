@@ -38,22 +38,17 @@ export default function PublicLayout({
               textDecoration: "none",
             }}
           >
-            <div
+            <img
+              src="/images/roum-logo.jpg"
+              alt="Logo Officiel Roum Transit"
               style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
-                background: "var(--brown-dark)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#FAF8F5",
-                fontWeight: "800",
-                fontSize: "1.15rem",
+                height: "56px",
+                width: "auto",
+                borderRadius: "12px",
+                boxShadow: "0 4px 14px rgba(0,0,0,0.14)",
+                display: "block",
               }}
-            >
-              RT
-            </div>
+            />
             <div>
               <div
                 style={{
@@ -144,9 +139,19 @@ export default function PublicLayout({
             }}
           >
             <div>
-              <h4 style={{ color: "var(--text-main)", marginBottom: "14px", fontSize: "1.05rem" }}>
-                ROUM TRANSIT
-              </h4>
+              <img
+                src="/images/roum-logo.jpg"
+                alt="Logo Officiel Roum Transit"
+                style={{
+                  width: "100%",
+                  maxWidth: "200px",
+                  height: "auto",
+                  borderRadius: "14px",
+                  boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+                  marginBottom: "16px",
+                  display: "block",
+                }}
+              />
               <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", lineHeight: "1.6" }}>
                 Spécialiste du transport par voie maritime, aérienne et de l&apos;approvisionnement international
                 au départ de la Chine, Dubaï et du Maroc vers l&apos;Afrique de l&apos;Ouest et Centrale.
