@@ -2496,15 +2496,15 @@ export default function AdminPage() {
           <div style={{ textAlign: "center", marginBottom: "26px" }}>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: "18px" }}>
               <img
-                src="/images/roum-logo.jpg"
+                src="/images/roum-logo-tight.png"
                 alt="Logo Officiel Roum Transit"
                 style={{
                   width: "100%",
                   maxWidth: "260px",
                   height: "auto",
-                  borderRadius: "16px",
-                  boxShadow: "0 10px 28px rgba(0, 0, 0, 0.18)",
+                  objectFit: "contain",
                   display: "block",
+                  filter: "drop-shadow(0 8px 18px rgba(0, 0, 0, 0.08))",
                 }}
               />
             </div>
@@ -2645,13 +2645,12 @@ export default function AdminPage() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 6px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <img
-                src="/images/roum-logo.jpg"
+                src="/images/roum-logo-tight.png"
                 alt="Logo Roum Transit"
                 style={{
-                  height: "42px",
+                  height: "44px",
                   width: "auto",
-                  borderRadius: "8px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                  objectFit: "contain",
                   display: "block",
                   flexShrink: 0,
                 }}
@@ -2678,14 +2677,12 @@ export default function AdminPage() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
             <img
-              src="/images/roum-logo.jpg"
+              src="/images/roum-logo-tight.png"
               alt="Logo Roum Transit"
               style={{
-                width: "38px",
-                height: "38px",
-                objectFit: "cover",
-                borderRadius: "10px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                width: "40px",
+                height: "40px",
+                objectFit: "contain",
                 display: "block",
               }}
             />
@@ -6772,12 +6769,12 @@ export default function AdminPage() {
             <div style={{ borderBottom: "1px solid #E8E2D8", paddingBottom: "12px", marginBottom: "14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <img
-                  src="/images/roum-logo.jpg"
+                  src="/images/roum-logo-tight.png"
                   alt="Logo Roum Transit"
                   style={{
-                    height: "44px",
+                    height: "46px",
                     width: "auto",
-                    borderRadius: "8px",
+                    objectFit: "contain",
                     display: "block",
                   }}
                 />

@@ -39,13 +39,12 @@ export default function PublicLayout({
             }}
           >
             <img
-              src="/images/roum-logo.jpg"
+              src="/images/roum-logo-tight.png"
               alt="Logo Officiel Roum Transit"
               style={{
-                height: "56px",
+                height: "58px",
                 width: "auto",
-                borderRadius: "12px",
-                boxShadow: "0 4px 14px rgba(0,0,0,0.14)",
+                objectFit: "contain",
                 display: "block",
               }}
             />
@@ -140,14 +139,13 @@ export default function PublicLayout({
           >
             <div>
               <img
-                src="/images/roum-logo.jpg"
+                src="/images/roum-logo-tight.png"
                 alt="Logo Officiel Roum Transit"
                 style={{
                   width: "100%",
-                  maxWidth: "200px",
+                  maxWidth: "210px",
                   height: "auto",
-                  borderRadius: "14px",
-                  boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+                  objectFit: "contain",
                   marginBottom: "16px",
                   display: "block",
                 }}
