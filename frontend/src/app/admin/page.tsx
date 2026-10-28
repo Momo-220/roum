@@ -62,8 +62,6 @@ import { CircularFlag } from "@/components/CircularFlag";
 import {
   WaveLogo,
   OrangeMoneyLogo,
-  MtnMomoLogo,
-  MoovMoneyLogo,
   BankBaciLogo,
   AlipayLogo,
   WeChatPayLogo,
@@ -3376,24 +3374,31 @@ export default function AdminPage() {
           {!isSidebarCollapsed ? (
             <div
               onClick={() => setShowProfileModal(true)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "var(--brown-dark)";
+                e.currentTarget.style.boxShadow = "0 3px 10px rgba(42, 24, 16, 0.08)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "var(--border-light)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "space-between",
-                padding: "8px 10px",
+                padding: "10px 12px",
                 background: "var(--bg-app)",
-                borderRadius: "12px",
+                borderRadius: "14px",
                 border: "1px solid var(--border-light)",
                 cursor: "pointer",
-                transition: "all 0.15s ease",
+                transition: "all 0.18s ease",
               }}
               title="Cliquer pour modifier votre profil & photo officielle"
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "9px", minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flex: 1 }}>
                 <div
                   style={{
-                    width: "34px",
-                    height: "34px",
+                    width: "38px",
+                    height: "38px",
                     borderRadius: "50%",
                     background: user?.avatarUrl ? "transparent" : "var(--brown-dark)",
                     color: "#FFFFFF",
@@ -3401,7 +3406,7 @@ export default function AdminPage() {
                     alignItems: "center",
                     justifyContent: "center",
                     fontWeight: "800",
-                    fontSize: "0.85rem",
+                    fontSize: "0.9rem",
                     overflow: "hidden",
                     border: "1.5px solid var(--border-light)",
                     flexShrink: 0,
@@ -3413,40 +3418,14 @@ export default function AdminPage() {
                     (user?.fullName || "M").charAt(0)
                   )}
                 </div>
-                <div style={{ lineHeight: 1.2, minWidth: 0 }}>
-                  <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div style={{ lineHeight: 1.3, minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {user?.fullName || "Madame Marouba"}
                   </div>
                   <div style={{ fontSize: "0.68rem", fontWeight: "700", color: "var(--brown-dark)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                    {user?.roleName || "CEO · Direction"}
+                    {user?.roleName || "CEO · DIRECTION GÉNÉRALE"}
                   </div>
                 </div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowProfileModal(true);
-                  }}
-                  className="btn btn-secondary"
-                  style={{ width: "26px", height: "26px", padding: 0, borderRadius: "50%", justifyContent: "center" }}
-                  title="Modifier mon profil & photo"
-                >
-                  <Edit size={12} />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsSidebarCollapsed(true);
-                  }}
-                  className="btn btn-secondary"
-                  style={{ width: "26px", height: "26px", padding: 0, borderRadius: "50%", justifyContent: "center", opacity: 0.7 }}
-                  title="Rétracter la barre latérale"
-                >
-                  <PanelLeftClose size={13} />
-                </button>
               </div>
             </div>
           ) : (
@@ -5127,19 +5106,19 @@ export default function AdminPage() {
                               onClick={() => setEditingRequest(r)}
                               className="btn btn-secondary"
                               style={{
-                                padding: "5px 9px",
-                                fontSize: "0.75rem",
+                                width: "28px",
+                                height: "28px",
+                                padding: 0,
+                                borderRadius: "8px",
                                 color: "var(--accent-gold-dark)",
                                 borderColor: "var(--accent-gold)",
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: "4px",
-                                fontWeight: "600",
+                                justifyContent: "center",
                               }}
                               title="Modifier la demande"
                             >
-                              <Edit3 size={12} />
-                              Modifier
+                              <Edit3 size={13} />
                             </button>
                             <button
                               type="button"
@@ -5336,19 +5315,19 @@ export default function AdminPage() {
                               onClick={() => setEditingShipment(s)}
                               className="btn btn-secondary"
                               style={{
-                                padding: "4px 8px",
-                                fontSize: "0.75rem",
+                                width: "28px",
+                                height: "28px",
+                                padding: 0,
+                                borderRadius: "8px",
                                 color: "var(--accent-gold-dark)",
                                 borderColor: "var(--accent-gold)",
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: "4px",
-                                fontWeight: "600",
+                                justifyContent: "center",
                               }}
                               title="Modifier tous les champs de l'expédition"
                             >
-                              <Edit3 size={12} />
-                              Modifier
+                              <Edit3 size={13} />
                             </button>
                             <button
                               type="button"
@@ -5462,10 +5441,10 @@ export default function AdminPage() {
                               type="button"
                               onClick={() => setEditingClient(c)}
                               className="btn btn-secondary"
-                              style={{ padding: "5px 12px", fontSize: "0.76rem", gap: "4px" }}
+                              style={{ width: "28px", height: "28px", padding: 0, borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                               title="Modifier la fiche client"
                             >
-                              <Edit size={12} /> Modifier
+                              <Edit size={13} />
                             </button>
                             <a
                               href={`https://wa.me/${(c.phone_whatsapp || c.phone || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
@@ -5657,11 +5636,10 @@ export default function AdminPage() {
                                   }
                                 }}
                                 className="btn btn-secondary"
-                                style={{ padding: "5px 10px", fontSize: "0.74rem", gap: "4px", borderRadius: "8px" }}
+                                style={{ width: "28px", height: "28px", padding: 0, borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                                 title="Modifier ce tarif"
                               >
-                                <Edit size={12} />
-                                Modifier
+                                <Edit size={13} />
                               </button>
                             </div>
                           </div>
@@ -5743,11 +5721,10 @@ export default function AdminPage() {
                                   }
                                 }}
                                 className="btn btn-secondary"
-                                style={{ padding: "4px 9px", fontSize: "0.72rem", gap: "4px", borderRadius: "8px" }}
+                                style={{ width: "28px", height: "28px", padding: 0, borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                                 title="Modifier ce tarif"
                               >
-                                <Edit size={11} />
-                                Modifier
+                                <Edit size={13} />
                               </button>
                             </div>
                           </div>
@@ -5830,11 +5807,10 @@ export default function AdminPage() {
                                   }
                                 }}
                                 className="btn btn-secondary"
-                                style={{ padding: "4px 9px", fontSize: "0.72rem", gap: "4px", borderRadius: "8px" }}
+                                style={{ width: "28px", height: "28px", padding: 0, borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                                 title="Modifier ce tarif"
                               >
-                                <Edit size={11} />
-                                Modifier
+                                <Edit size={13} />
                               </button>
                             </div>
                           </div>
@@ -6096,20 +6072,19 @@ export default function AdminPage() {
                                       minimum_charge: t.minimum_charge || (t.minimum_charge_minor / 100),
                                     })}
                                     className="btn btn-secondary"
-                                    style={{ padding: "6px 12px", fontSize: "0.74rem", borderRadius: "8px", gap: "4px" }}
+                                    style={{ width: "32px", height: "32px", padding: 0, borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                                     title="Modifier ce tarif"
                                   >
-                                    <Edit size={13} />
-                                    Modifier
+                                    <Edit size={14} />
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteTariff(t.id)}
                                     className="btn btn-secondary"
-                                    style={{ padding: "6px 10px", color: "#C53030", borderColor: "rgba(197, 48, 48, 0.2)", fontSize: "0.74rem", borderRadius: "8px" }}
+                                    style={{ width: "32px", height: "32px", padding: 0, color: "#C53030", borderColor: "rgba(197, 48, 48, 0.2)", borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                                     title="Supprimer ce tarif"
                                   >
-                                    <Trash2 size={13} />
+                                    <Trash2 size={14} />
                                   </button>
                                 </div>
                               </td>
@@ -6257,11 +6232,10 @@ export default function AdminPage() {
                                     amount: p.amount || (p.amount_minor / 100),
                                   })}
                                   className="btn btn-secondary"
-                                  style={{ padding: "5px 10px", fontSize: "0.74rem", gap: "4px", borderRadius: "8px" }}
+                                  style={{ width: "28px", height: "28px", padding: 0, borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                                   title="Modifier ce paiement"
                                 >
-                                  <Edit size={12} />
-                                  Modifier
+                                  <Edit size={13} />
                                 </button>
                                 <button
                                   type="button"
@@ -6361,11 +6335,10 @@ export default function AdminPage() {
                                   amount: p.amount || (p.amount_minor / 100),
                                 })}
                                 className="btn btn-secondary"
-                                style={{ padding: "5px 12px", fontSize: "0.74rem", gap: "4px", borderRadius: "8px" }}
+                                style={{ width: "28px", height: "28px", padding: 0, borderRadius: "8px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                                 title="Modifier ce paiement"
                               >
-                                <Edit size={12} />
-                                Modifier
+                                <Edit size={13} />
                               </button>
                             </td>
                           </tr>
@@ -6590,18 +6563,15 @@ export default function AdminPage() {
                               background: "none",
                               border: "none",
                               color: "var(--accent-gold-dark)",
-                              fontSize: "0.74rem",
-                              fontWeight: "700",
                               cursor: "pointer",
-                              padding: "2px 6px",
+                              padding: "4px 6px",
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: "3px",
+                              justifyContent: "center",
                             }}
                             title="Modifier la tâche"
                           >
-                            <Edit3 size={12} />
-                            Modifier
+                            <Edit3 size={14} />
                           </button>
                           <button
                             type="button"
@@ -6991,10 +6961,10 @@ export default function AdminPage() {
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: "5px",
-                              padding: "5px 12px",
-                              fontSize: "0.74rem",
-                              fontWeight: "700",
+                              justifyContent: "center",
+                              width: "32px",
+                              height: "32px",
+                              padding: 0,
                               borderRadius: "8px",
                               border: "1px solid var(--border-light)",
                               background: "var(--bg-subtle)",
@@ -7003,8 +6973,7 @@ export default function AdminPage() {
                             }}
                             title="Modifier ce compte Wave"
                           >
-                            <Edit3 size={13} />
-                            Modifier
+                            <Edit3 size={15} />
                           </button>
                         )}
                       </div>
@@ -7135,10 +7104,10 @@ export default function AdminPage() {
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: "5px",
-                              padding: "5px 12px",
-                              fontSize: "0.74rem",
-                              fontWeight: "700",
+                              justifyContent: "center",
+                              width: "32px",
+                              height: "32px",
+                              padding: 0,
                               borderRadius: "8px",
                               border: "1px solid var(--border-light)",
                               background: "var(--bg-subtle)",
@@ -7147,8 +7116,7 @@ export default function AdminPage() {
                             }}
                             title="Modifier ce compte Orange Money"
                           >
-                            <Edit3 size={13} />
-                            Modifier
+                            <Edit3 size={15} />
                           </button>
                         )}
                       </div>
@@ -7188,139 +7156,7 @@ export default function AdminPage() {
                   );
                 })()}
 
-                {/* 3. MTN MoMo / Moov Money */}
-                {(() => {
-                  const isEditing = editingPaymentCard === "momo";
-                  return (
-                    <div
-                      style={{
-                        padding: "18px",
-                        background: "#FFFFFF",
-                        borderRadius: "16px",
-                        border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
-                        boxShadow: isEditing ? "0 8px 24px rgba(42, 24, 16, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
-                        transition: "all 0.2s ease",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                            <MtnMomoLogo size={32} />
-                            <MoovMoneyLogo size={32} />
-                          </div>
-                          <div>
-                            <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
-                              MTN MoMo & Moov Money
-                            </div>
-                            {isEditing ? (
-                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700" }}>
-                                ✏️ Modification en cours
-                              </span>
-                            ) : (
-                              <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
-                                MoMo Pay & Direct
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {isEditing ? (
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <button
-                              type="button"
-                              onClick={handleCancelEditPaymentCard}
-                              className="btn btn-secondary"
-                              style={{
-                                padding: "5px 10px",
-                                fontSize: "0.74rem",
-                                fontWeight: "600",
-                                borderRadius: "8px",
-                                border: "1px solid var(--border-light)",
-                                cursor: "pointer",
-                              }}
-                            >
-                              Annuler
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleSaveEditPaymentCard("momo", "MTN & Moov")}
-                              className="btn btn-primary"
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                padding: "5px 12px",
-                                fontSize: "0.74rem",
-                                fontWeight: "700",
-                                borderRadius: "8px",
-                                cursor: "pointer",
-                              }}
-                            >
-                              <Check size={13} />
-                              Enregistrer
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleStartEditPaymentCard("momo")}
-                            className="btn btn-secondary"
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "5px",
-                              padding: "5px 12px",
-                              fontSize: "0.74rem",
-                              fontWeight: "700",
-                              borderRadius: "8px",
-                              border: "1px solid var(--border-light)",
-                              background: "var(--bg-subtle)",
-                              cursor: "pointer",
-                              color: "var(--brown-dark)",
-                            }}
-                            title="Modifier MTN MoMo et Moov Money"
-                          >
-                            <Edit3 size={13} />
-                            Modifier
-                          </button>
-                        )}
-                      </div>
-                      <div style={{ display: "grid", gap: "10px" }}>
-                        <div>
-                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Identifiant MoMo / Téléphone</label>
-                          <input
-                            type="text"
-                            readOnly={!isEditing}
-                            value={companySettings.payment_mtn_momo_ci || ""}
-                            onChange={(e) => setCompanySettings({ ...companySettings, payment_mtn_momo_ci: e.target.value })}
-                            className="input-clean"
-                            placeholder="MOMO-749201 / +225 05 94 32 10 05"
-                            style={{
-                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
-                              cursor: isEditing ? "text" : "default",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Moov Money (Numéro direct)</label>
-                          <input
-                            type="text"
-                            readOnly={!isEditing}
-                            value={companySettings.payment_moov_money || ""}
-                            onChange={(e) => setCompanySettings({ ...companySettings, payment_moov_money: e.target.value })}
-                            className="input-clean"
-                            placeholder="+225 01 02 03 04 05"
-                            style={{
-                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
-                              cursor: isEditing ? "text" : "default",
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* 4. Compte Bancaire Officiel (RIB / IBAN FCFA BACI) */}
+                {/* 3. Compte Bancaire Officiel (RIB / IBAN FCFA BACI) */}
                 {(() => {
                   const isEditing = editingPaymentCard === "bank";
                   return (
@@ -7396,10 +7232,10 @@ export default function AdminPage() {
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: "5px",
-                              padding: "5px 12px",
-                              fontSize: "0.74rem",
-                              fontWeight: "700",
+                              justifyContent: "center",
+                              width: "32px",
+                              height: "32px",
+                              padding: 0,
                               borderRadius: "8px",
                               border: "1px solid var(--border-light)",
                               background: "var(--bg-subtle)",
@@ -7408,8 +7244,7 @@ export default function AdminPage() {
                             }}
                             title="Modifier ce compte bancaire"
                           >
-                            <Edit3 size={13} />
-                            Modifier
+                            <Edit3 size={15} />
                           </button>
                         )}
                       </div>
@@ -7479,7 +7314,7 @@ export default function AdminPage() {
                   );
                 })()}
 
-                {/* 5. Règlements Internationaux (Chine Alipay / WeChat & Europe SEPA) */}
+                {/* 4. Règlements Internationaux (Chine Alipay / WeChat & Europe SEPA) */}
                 {(() => {
                   const isEditing = editingPaymentCard === "china";
                   return (
@@ -7558,10 +7393,10 @@ export default function AdminPage() {
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: "5px",
-                              padding: "5px 12px",
-                              fontSize: "0.74rem",
-                              fontWeight: "700",
+                              justifyContent: "center",
+                              width: "32px",
+                              height: "32px",
+                              padding: 0,
                               borderRadius: "8px",
                               border: "1px solid var(--border-light)",
                               background: "var(--bg-subtle)",
@@ -7570,8 +7405,7 @@ export default function AdminPage() {
                             }}
                             title="Modifier les comptes internationaux"
                           >
-                            <Edit3 size={13} />
-                            Modifier
+                            <Edit3 size={15} />
                           </button>
                         )}
                       </div>
@@ -7626,7 +7460,7 @@ export default function AdminPage() {
                   );
                 })()}
 
-                {/* 6. Mentions Légales sur les Reçus */}
+                {/* 5. Mentions Légales sur les Reçus */}
                 {(() => {
                   const isEditing = editingPaymentCard === "receipt";
                   return (
@@ -7702,10 +7536,10 @@ export default function AdminPage() {
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: "5px",
-                              padding: "5px 12px",
-                              fontSize: "0.74rem",
-                              fontWeight: "700",
+                              justifyContent: "center",
+                              width: "32px",
+                              height: "32px",
+                              padding: 0,
                               borderRadius: "8px",
                               border: "1px solid var(--border-light)",
                               background: "var(--bg-subtle)",
@@ -7714,8 +7548,7 @@ export default function AdminPage() {
                             }}
                             title="Modifier cette clause légale"
                           >
-                            <Edit3 size={13} />
-                            Modifier
+                            <Edit3 size={15} />
                           </button>
                         )}
                       </div>
@@ -9858,9 +9691,8 @@ export default function AdminPage() {
                   >
                     <option value="WAVE">Wave Côte d&apos;Ivoire</option>
                     <option value="ORANGE_MONEY">Orange Money</option>
-                    <option value="MTN_MOMO">MTN MoMo</option>
                     <option value="CASH">Espèces au Guichet</option>
-                    <option value="BANK_TRANSFER">Virement Bancaire</option>
+                    <option value="BANK_TRANSFER">Virement Bancaire (BACI)</option>
                   </select>
                 </div>
               </div>
