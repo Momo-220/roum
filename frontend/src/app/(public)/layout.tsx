@@ -40,38 +40,14 @@ export default function PublicLayout({
           >
             <img
               src="/images/roum-logo-tight.png"
-              alt="Logo Officiel Roum Transit"
+              alt="Roum Transit"
               style={{
-                height: "58px",
+                height: "64px",
                 width: "auto",
                 objectFit: "contain",
                 display: "block",
               }}
             />
-            <div>
-              <div
-                style={{
-                  fontSize: "1.2rem",
-                  fontWeight: "800",
-                  letterSpacing: "-0.01em",
-                  color: "var(--text-main)",
-                  lineHeight: "1.1",
-                }}
-              >
-                ROUM TRANSIT
-              </div>
-              <div
-                style={{
-                  fontSize: "0.68rem",
-                  fontWeight: "700",
-                  color: "var(--brown-light)",
-                  letterSpacing: "0.15em",
-                  textTransform: "uppercase",
-                }}
-              >
-                WHOLESALE & BOUTIQUE
-              </div>
-            </div>
           </Link>
 
           {/* Navigation Links */}

@@ -1196,6 +1196,155 @@ const DEFAULT_COMPANY_SETTINGS: Record<string, string> = {
   payment_receipt_terms: "Tout paiement doit faire l'objet d'un reçu ou bordereau officiel validé en caisse avant remise ou livraison des colis.",
 };
 
+const DEFAULT_REQUESTS = [
+  {
+    id: "req-01",
+    reference: "REQ-ALIBABA-2610-001",
+    client_id: "cli-02",
+    client_name: "Koffi & Fils Import",
+    client_phone: "+225 07 88 99 11",
+    client_email: "koffi.import@gmail.com",
+    request_type: "ALIBABA",
+    origin_country: "Chine",
+    origin_city: "Guangzhou",
+    destination_country: "Côte d'Ivoire",
+    destination_city: "Abidjan",
+    shipping_mode_id: "AIR_EXPRESS",
+    description: "Sourcing & commande de 50 trottinettes électriques 350W pliables + casques de protection sur Alibaba. Contrôle qualité usine requis avant expédition.",
+    estimated_weight_kg: 480.0,
+    estimated_cbm: 2.8,
+    supplier_name: "Guangzhou E-Vehicle Tech Co., Ltd",
+    status: "IN_REVIEW",
+    assigned_to_user_id: "user-superadmin-01",
+    admin_notes: "Fournisseur contacté sur WeChat, proforma en négociation.",
+    items_count: 50,
+    items: [
+      { id: "item-01", description: "Trottinettes électriques 350W pliables", quantity: 50, unit_price: 180, currency: "USD", product_url: "https://alibaba.com/product/trottinette-350w" },
+      { id: "item-02", description: "Casques de protection renforcés", quantity: 50, unit_price: 15, currency: "USD" }
+    ],
+    created_at: "2026-10-26 14:00:00",
+    updated_at: "2026-10-27 09:30:00",
+  },
+  {
+    id: "req-02",
+    reference: "REQ-ALIBABA-2610-002",
+    client_id: "cli-03",
+    client_name: "Boutique Glamour Dakar",
+    client_phone: "+221 77 34 56 78",
+    client_email: "glamour.dakar@gmail.com",
+    request_type: "ALIBABA",
+    origin_country: "Chine",
+    origin_city: "Yiwu",
+    destination_country: "Sénégal",
+    destination_city: "Dakar",
+    shipping_mode_id: "AIR_STANDARD",
+    description: "Achat groupé textile et confections de robes de soirée sur 1688 Yiwu, 250 pièces assorties.",
+    estimated_weight_kg: 115.0,
+    estimated_cbm: 0.75,
+    supplier_name: "Yiwu Fashion Garments Factory",
+    status: "NEW",
+    assigned_to_user_id: "user-superadmin-01",
+    admin_notes: "Liens 1688 reçus, calcul des frais d'achat et commission 5% en cours.",
+    items_count: 250,
+    items: [
+      { id: "item-03", description: "Robes de soirée assorties dentelle & satin", quantity: 250, unit_price: 35, currency: "CNY", product_url: "https://1688.com/product/robes-soiree-yiwu" }
+    ],
+    created_at: "2026-10-27 11:15:00",
+    updated_at: "2026-10-27 11:15:00",
+  },
+  {
+    id: "req-03",
+    reference: "REQ-TRANSIT-2610-003",
+    client_id: "cli-05",
+    client_name: "Mali Tech Distribution",
+    client_phone: "+223 70 11 22 33",
+    client_email: "malitech@afribone.net.ml",
+    request_type: "SUPPLIER_TRANSIT",
+    origin_country: "Chine",
+    origin_city: "Shenzhen",
+    destination_country: "Mali",
+    destination_city: "Bamako",
+    shipping_mode_id: "AIR_EXPRESS",
+    description: "Réception chez fournisseur à Shenzhen de 60 cartes mères industrielles et écrans PC. Groupage aérien express vers Bamako.",
+    estimated_weight_kg: 42.0,
+    estimated_cbm: 0.35,
+    supplier_name: "Shenzhen Micro Electronics Ltd",
+    status: "QUOTE_SENT",
+    assigned_to_user_id: "user-superadmin-01",
+    admin_notes: "Devis express envoyé sur WhatsApp (+223). En attente accord client.",
+    items_count: 60,
+    items: [
+      { id: "item-04", description: "Cartes mères industrielles B550", quantity: 30, unit_price: 85, currency: "USD" },
+      { id: "item-05", description: "Écrans d'affichage haute définition 24 pouces", quantity: 30, unit_price: 95, currency: "USD" }
+    ],
+    created_at: "2026-10-27 15:20:00",
+    updated_at: "2026-10-27 18:00:00",
+  },
+  {
+    id: "req-04",
+    reference: "REQ-PARCEL-2610-004",
+    client_id: "cli-04",
+    client_name: "Cosmétiques Bio Bingerville",
+    client_phone: "+225 05 12 34 56",
+    client_email: "contact@biobingerville.ci",
+    request_type: "PARCEL_SHIPPING",
+    origin_country: "France",
+    origin_city: "Paris",
+    destination_country: "Côte d'Ivoire",
+    destination_city: "Abidjan",
+    shipping_mode_id: "AIR_STANDARD",
+    description: "Expédition régulière bimensuelle de cosmétiques, crèmes de beauté et savons clarifiants Paris ↔ Abidjan.",
+    estimated_weight_kg: 35.0,
+    estimated_cbm: 0.22,
+    supplier_name: "Laboratoires Dermasoin Paris",
+    status: "NEW",
+    assigned_to_user_id: "user-superadmin-01",
+    admin_notes: "Colis attendu au point de collecte Paris ce vendredi.",
+    items_count: 14,
+    items: [
+      { id: "item-06", description: "Lots crèmes hydratantes visage 200ml", quantity: 20, unit_price: 12, currency: "EUR" },
+      { id: "item-07", description: "Pains de savons clarifiants dermatologiques", quantity: 50, unit_price: 4, currency: "EUR" }
+    ],
+    created_at: "2026-10-28 01:10:00",
+    updated_at: "2026-10-28 01:10:00",
+  },
+];
+
+const DEFAULT_CLIENTS = [
+  { id: "cli-01", full_name: "Aminata Diallo", phone_whatsapp: "+223 76 12 34 56", email: "aminata.diallo@gmail.com", city: "Bamako", country: "Mali", shipments_count: 1, total_spent_minor: 22200000 },
+  { id: "cli-02", full_name: "Ibrahim Traoré", phone_whatsapp: "+225 07 45 67 89", email: "ibrahim.traore@yahoo.fr", city: "Abidjan", country: "Côte d'Ivoire", shipments_count: 1, total_spent_minor: 126000000 },
+  { id: "cli-03", full_name: "Khadija Diop", phone_whatsapp: "+221 77 89 01 23", email: "khadija.diop@orange.sn", city: "Dakar", country: "Sénégal", shipments_count: 1, total_spent_minor: 40800000 },
+  { id: "cli-04", full_name: "Boubacar Cissé", phone_whatsapp: "+224 62 11 22 33", email: "boubacar.cisse@gmail.com", city: "Conakry", country: "Guinée", shipments_count: 1, total_spent_minor: 18200000 },
+  { id: "cli-05", full_name: "Oumar Sidibé", phone_whatsapp: "+223 66 77 88 99", email: "oumar.sidibe@gmail.com", city: "Bamako", country: "Mali", shipments_count: 1, total_spent_minor: 17400000 },
+  { id: "cli-06", full_name: "Fanta Coulibaly", phone_whatsapp: "+228 90 12 34 56", email: "fanta.coulibaly@moov.tg", city: "Lomé", country: "Togo", shipments_count: 1, total_spent_minor: 60000000 },
+  { id: "cli-07", full_name: "Mamadou Camara", phone_whatsapp: "+223 70 88 99 00", email: "mamadou.camara@malitel.ml", city: "Bamako", country: "Mali", shipments_count: 1, total_spent_minor: 7440000 },
+  { id: "cli-08", full_name: "Moussa Konaté", phone_whatsapp: "+223 65 44 33 22", email: "moussa.konate@gmail.com", city: "Bamako", country: "Mali", shipments_count: 1, total_spent_minor: 66500000 },
+  { id: "cli-09", full_name: "Awa Sanogo", phone_whatsapp: "+223 79 00 11 22", email: "awa.sanogo@gmail.com", city: "Bamako", country: "Mali", shipments_count: 0, total_spent_minor: 0 },
+  { id: "cli-10", full_name: "Seydou Keita", phone_whatsapp: "+225 05 66 77 88", email: "seydou.keita@ci.com", city: "Abidjan", country: "Côte d'Ivoire", shipments_count: 0, total_spent_minor: 0 },
+  { id: "cli-11", full_name: "Fatoumata Bamba", phone_whatsapp: "+221 70 33 44 55", email: "fatou.bamba@gmail.com", city: "Dakar", country: "Sénégal", shipments_count: 0, total_spent_minor: 0 },
+  { id: "cli-12", full_name: "Cheick Oumar", phone_whatsapp: "+224 66 55 44 33", email: "cheick.oumar@gn.com", city: "Conakry", country: "Guinée", shipments_count: 0, total_spent_minor: 0 },
+  { id: "cli-13", full_name: "Marie-Claire Kouassi", phone_whatsapp: "+225 01 22 33 44", email: "mc.kouassi@avocat.ci", city: "Abidjan", country: "Côte d'Ivoire", shipments_count: 0, total_spent_minor: 0 },
+  { id: "cli-14", full_name: "Bakary Dembélé", phone_whatsapp: "+223 78 99 88 77", email: "bakary.dembele@sotelma.ml", city: "Bamako", country: "Mali", shipments_count: 0, total_spent_minor: 0 },
+  { id: "cli-15", full_name: "Salif Traoré", phone_whatsapp: "+225 07 88 99 00", email: "salif.traore@boutique.ci", city: "Abidjan", country: "Côte d'Ivoire", shipments_count: 0, total_spent_minor: 0 },
+];
+
+const DEFAULT_PAYMENTS = [
+  { id: "pay-01", shipment_id: "sh-01", client_id: "cli-01", client_name: "Aminata Diallo", amount_minor: 22200000, currency: "FCFA", payment_method: "ORANGE_MONEY", payment_type: "FULL", reference_code: "OM-CI-2610-8841", status: "CONFIRMED", receipt_notes: "Règlement total voie express Chine -> Bamako 18.5kg", recorded_at: "2026-10-25 11:20:00" },
+  { id: "pay-02", shipment_id: "sh-02", client_id: "cli-02", client_name: "Ibrahim Traoré", amount_minor: 126000000, currency: "FCFA", payment_method: "BANK_TRANSFER", payment_type: "FULL", reference_code: "VIR-SGBCI-44910", status: "CONFIRMED", receipt_notes: "Paiement intégral groupage maritime CBM 4.2m3", recorded_at: "2026-10-25 14:45:00" },
+  { id: "pay-03", shipment_id: "sh-03", client_id: "cli-03", client_name: "Khadija Diop", amount_minor: 40800000, currency: "FCFA", payment_method: "WAVE", payment_type: "FULL", reference_code: "WV-SN-2610-9912", status: "CONFIRMED", receipt_notes: "Envol direct Dubaï -> Dakar 34kg", recorded_at: "2026-10-26 09:15:00" },
+  { id: "pay-04", shipment_id: "sh-04", client_id: "cli-04", client_name: "Boubacar Cissé", amount_minor: 18200000, currency: "FCFA", payment_method: "CASH", payment_type: "FULL", reference_code: "ESP-ABJ-00412", status: "CONFIRMED", receipt_notes: "Encaissé en agence Bingerville (Maroc -> Abidjan 28kg)", recorded_at: "2026-10-26 15:30:00" },
+  { id: "pay-05", shipment_id: "sh-05", client_id: "cli-05", client_name: "Oumar Sidibé", amount_minor: 17400000, currency: "FCFA", payment_method: "ORANGE_MONEY", payment_type: "FULL", reference_code: "OM-ML-2610-1123", status: "CONFIRMED", receipt_notes: "Voie Aérienne Chine -> Bamako 14.5kg", recorded_at: "2026-10-27 10:00:00" },
+  { id: "pay-06", shipment_id: "sh-06", client_id: "cli-06", client_name: "Fanta Coulibaly", amount_minor: 60000000, currency: "FCFA", payment_method: "WAVE", payment_type: "FULL", reference_code: "WV-CI-2610-3301", status: "CONFIRMED", receipt_notes: "Conteneur Bateau 2.0 CBM LCL", recorded_at: "2026-10-27 12:40:00" },
+  { id: "pay-07", shipment_id: "sh-07", client_id: "cli-07", client_name: "Mamadou Camara", amount_minor: 7440000, currency: "FCFA", payment_method: "WAVE", payment_type: "FULL", reference_code: "WV-CI-2610-5590", status: "CONFIRMED", receipt_notes: "Voie Express Chine -> Côte d'Ivoire 6.2kg", recorded_at: "2026-10-27 16:10:00" },
+  { id: "pay-08", shipment_id: "sh-08", client_id: "cli-08", client_name: "Moussa Konaté", amount_minor: 66500000, currency: "FCFA", payment_method: "BANK_TRANSFER", payment_type: "FULL", reference_code: "VIR-ECOBANK-7712", status: "CONFIRMED", receipt_notes: "Groupage Aérien Régulier 95kg", recorded_at: "2026-10-27 17:05:00" },
+];
+
+const DEFAULT_TASKS = [
+  { id: "tsk-01", title: "Contrôle pesée & scellés lot CAN-2610-04", description: "Pesée volumétrique, contrôle scanner et scellés de sécurité au magasin central de Guangzhou avant chargement vol cargo.", category: "WAREHOUSE_CHECK", priority: "URGENT", status: "IN_PROGRESS", due_date: "2026-10-28 12:00:00", created_at: "2026-10-27 08:00:00" },
+  { id: "tsk-02", title: "Dédouanement conteneur maritime CBM n°7", description: "Finalisation du dédouanement et bon à enlever au Port Autonome d'Abidjan pour les lots LCL.", category: "GENERAL", priority: "HIGH", status: "TODO", due_date: "2026-10-29 17:00:00", created_at: "2026-10-27 14:30:00" },
+  { id: "tsk-03", title: "Appel validation devis sourcing REQ-01", description: "Contacter Koffi & Fils pour confirmation proforma fournisseur Alibaba et encaissement acompte.", category: "QUOTE_PREP", priority: "MEDIUM", status: "TODO", due_date: "2026-10-28 16:00:00", created_at: "2026-10-27 16:00:00" },
+];
+
 export default function AdminPage() {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<UserSession | null>(null);
@@ -1231,14 +1380,14 @@ export default function AdminPage() {
     total_clients: 15,
     total_payments_minor: 358540000,
   });
-  const [requestsList, setRequestsList] = useState<any[]>([]);
+  const [requestsList, setRequestsList] = useState<any[]>(DEFAULT_REQUESTS);
   const [shipments, setShipments] = useState<any[]>(DEFAULT_15_SHIPMENTS);
-  const [clientsList, setClientsList] = useState<any[]>([]);
+  const [clientsList, setClientsList] = useState<any[]>(DEFAULT_CLIENTS);
   const [tariffsList, setTariffsList] = useState<any[]>(DEFAULT_INITIAL_TARIFFS);
   const [routesList, setRoutesList] = useState<any[]>([]);
   const [modesList, setModesList] = useState<any[]>([]);
-  const [paymentsList, setPaymentsList] = useState<any[]>([]);
-  const [tasksList, setTasksList] = useState<any[]>([]);
+  const [paymentsList, setPaymentsList] = useState<any[]>(DEFAULT_PAYMENTS);
+  const [tasksList, setTasksList] = useState<any[]>(DEFAULT_TASKS);
   const [roles, setRoles] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -1793,18 +1942,36 @@ export default function AdminPage() {
 
       fetch("/api/admin/requests", { headers })
         .then((r) => r.json())
-        .then((d) => d.requests && setRequestsList(d.requests))
-        .catch(() => {});
+        .then((d) => {
+          if (d.requests && d.requests.length > 0) {
+            setRequestsList(d.requests);
+          } else {
+            setRequestsList(DEFAULT_REQUESTS);
+          }
+        })
+        .catch(() => setRequestsList(DEFAULT_REQUESTS));
 
       fetch("/api/admin/clients", { headers })
         .then((r) => r.json())
-        .then((d) => d.clients && setClientsList(d.clients))
-        .catch(() => {});
+        .then((d) => {
+          if (d.clients && d.clients.length > 0) {
+            setClientsList(d.clients);
+          } else {
+            setClientsList(DEFAULT_CLIENTS);
+          }
+        })
+        .catch(() => setClientsList(DEFAULT_CLIENTS));
 
       fetch("/api/admin/tariffs", { headers })
         .then((r) => r.json())
-        .then((d) => d.tariffs && setTariffsList(d.tariffs))
-        .catch(() => {});
+        .then((d) => {
+          if (d.tariffs && d.tariffs.length > 0) {
+            setTariffsList(d.tariffs);
+          } else {
+            setTariffsList(DEFAULT_INITIAL_TARIFFS);
+          }
+        })
+        .catch(() => setTariffsList(DEFAULT_INITIAL_TARIFFS));
       fetch("/api/admin/routes", { headers })
         .then((r) => r.json())
         .then((d) => d.routes && setRoutesList(d.routes))
@@ -1816,13 +1983,25 @@ export default function AdminPage() {
 
       fetch("/api/admin/payments", { headers })
         .then((r) => r.json())
-        .then((d) => d.payments && setPaymentsList(d.payments))
-        .catch(() => {});
+        .then((d) => {
+          if (d.payments && d.payments.length > 0) {
+            setPaymentsList(d.payments);
+          } else {
+            setPaymentsList(DEFAULT_PAYMENTS);
+          }
+        })
+        .catch(() => setPaymentsList(DEFAULT_PAYMENTS));
 
       fetch("/api/admin/tasks", { headers })
         .then((r) => r.json())
-        .then((d) => d.tasks && setTasksList(d.tasks))
-        .catch(() => {});
+        .then((d) => {
+          if (d.tasks && d.tasks.length > 0) {
+            setTasksList(d.tasks);
+          } else {
+            setTasksList(DEFAULT_TASKS);
+          }
+        })
+        .catch(() => setTasksList(DEFAULT_TASKS));
 
       fetch("/api/admin/roles", { headers })
         .then((r) => r.json())
@@ -2080,7 +2259,7 @@ export default function AdminPage() {
   };
 
   const handleOpenRequestDetail = async (reqItem: any) => {
-    setShowRequestDetailModal({ ...reqItem, items: [] });
+    setShowRequestDetailModal({ ...reqItem, items: reqItem.items || [] });
     if (!token) return;
     try {
       const res = await fetch(`/api/admin/requests/${reqItem.id}`, {
@@ -2642,46 +2821,48 @@ export default function AdminPage() {
       >
         {/* En-tête Marque + Bouton Rétractable */}
         {!isSidebarCollapsed ? (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 6px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ position: "relative", padding: "10px 8px 16px 8px", marginBottom: "8px", borderBottom: "1px solid var(--border-light)" }}>
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
               <img
                 src="/images/roum-logo-tight.png"
-                alt="Logo Roum Transit"
+                alt="Roum Transit"
                 style={{
-                  height: "44px",
+                  height: "64px",
                   width: "auto",
+                  maxWidth: "190px",
                   objectFit: "contain",
                   display: "block",
-                  flexShrink: 0,
                 }}
               />
-              <div>
-                <div style={{ fontWeight: "800", fontSize: "0.98rem", color: "var(--text-main)", lineHeight: "1.1" }}>
-                  ROUM TRANSIT
-                </div>
-                <div style={{ fontSize: "0.64rem", fontWeight: "700", color: "var(--brown-light)", letterSpacing: "0.08em" }}>
-                  DIRECTION & GESTION
-                </div>
-              </div>
             </div>
             <button
               type="button"
               onClick={() => setIsSidebarCollapsed(true)}
               className="btn btn-secondary"
-              style={{ width: "30px", height: "30px", padding: 0, borderRadius: "var(--radius-full)", justifyContent: "center" }}
+              style={{
+                position: "absolute",
+                top: "6px",
+                right: "4px",
+                width: "28px",
+                height: "28px",
+                padding: 0,
+                borderRadius: "var(--radius-full)",
+                justifyContent: "center",
+                opacity: 0.6,
+              }}
               title="Rétracter la barre latérale"
             >
-              <PanelLeftClose size={15} />
+              <PanelLeftClose size={14} />
             </button>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "10px 0 14px 0", marginBottom: "8px", borderBottom: "1px solid var(--border-light)" }}>
             <img
               src="/images/roum-logo-tight.png"
-              alt="Logo Roum Transit"
+              alt="Roum Transit"
               style={{
-                width: "40px",
-                height: "40px",
+                width: "48px",
+                height: "auto",
                 objectFit: "contain",
                 display: "block",
               }}
@@ -2690,10 +2871,10 @@ export default function AdminPage() {
               type="button"
               onClick={() => setIsSidebarCollapsed(false)}
               className="btn btn-secondary"
-              style={{ width: "32px", height: "32px", padding: 0, borderRadius: "var(--radius-full)", justifyContent: "center" }}
+              style={{ width: "30px", height: "30px", padding: 0, borderRadius: "var(--radius-full)", justifyContent: "center" }}
               title="Agrandir la barre latérale"
             >
-              <PanelLeftOpen size={15} />
+              <PanelLeftOpen size={14} />
             </button>
           </div>
         )}
@@ -4911,282 +5092,328 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* 3 CARTES OFFICIELLES ISSUES DES FLYERS COMMERCIAUX */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", gap: "22px", marginBottom: "26px" }}>
-                {/* FLYER 1 : CHINE & DUBAÏ ➔ AFRIQUE */}
-                <div
-                  className="pricing-flyer-card"
-                  style={{
-                    background: "linear-gradient(145deg, #FFFFFF 0%, #FFF9F5 100%)",
-                    border: "1px solid rgba(234, 88, 12, 0.18)",
-                    boxShadow: "0 10px 30px rgba(234, 88, 12, 0.06)",
-                  }}
-                >
+              {/* CLASSEMENT ÉPURÉ PAR CATÉGORIES EN TABLEAU */}
+              <div className="card-clean" style={{ padding: "0", overflow: "hidden", borderRadius: "18px", border: "1px solid var(--border-light)", background: "#FFFFFF", marginBottom: "22px" }}>
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#FFFFFF" }}>
                   <div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.74rem", fontWeight: "800", color: "#EA580C", textTransform: "uppercase", letterSpacing: "0.06em", background: "rgba(234, 88, 12, 0.1)", padding: "5px 12px", borderRadius: "9999px" }}>
-                        <CircularFlag countryCode="CN" size={16} />
-                        <CircularFlag countryCode="AE" size={16} />
-                        <span>Chine & Dubaï ➔ Afrique</span>
-                      </span>
-                      <span style={{ fontSize: "0.72rem", fontWeight: "700", color: "#EA580C", background: "#FFFFFF", padding: "3px 10px", borderRadius: "9999px", border: "1px solid rgba(234, 88, 12, 0.15)" }}>
-                        Flyer Officiel
-                      </span>
-                    </div>
-                    <h3 style={{ fontSize: "1.15rem", fontWeight: "800", color: "var(--text-main)", marginBottom: "4px" }}>
-                      Transport & Import-Export
+                    <h3 style={{ fontSize: "1.05rem", fontWeight: "800", color: "var(--text-main)", margin: "0 0 2px 0" }}>
+                      Récapitulatif des Grilles Tarifaires Officielles
                     </h3>
-                    <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "16px", lineHeight: "1.45" }}>
-                      Achat, expédition et livraison depuis Guangzhou, Yiwu et Dubaï jusqu&apos;à chez vous en Afrique.
+                    <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0 }}>
+                      Classement officiel synthétique par catégorie d&apos;acheminement et de prestation
                     </p>
+                  </div>
+                </div>
 
-                    <div style={{ display: "grid", gap: "10px", background: "#FFFFFF", padding: "16px 18px", borderRadius: "16px", border: "1px solid rgba(234, 88, 12, 0.12)", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.84rem" }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "var(--text-secondary)" }}>
-                          <span style={{ width: "26px", height: "26px", borderRadius: "8px", background: "rgba(122, 74, 40, 0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <Plane size={13} style={{ color: "var(--brown-dark)" }} />
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                    <thead>
+                      <tr style={{ background: "var(--bg-subtle)", borderBottom: "1px solid var(--border-light)", textAlign: "left", color: "var(--text-secondary)", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                        <th style={{ padding: "12px 18px" }}>Catégorie & Trajet</th>
+                        <th style={{ padding: "12px 18px" }}>Prestation / Marchandise</th>
+                        <th style={{ padding: "12px 18px" }}>Délai Garanti</th>
+                        <th style={{ padding: "12px 18px" }}>Tarif Officiel</th>
+                        <th style={{ padding: "12px 18px", textAlign: "right" }}>Filtrer</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* CATÉGORIE 1 : TRANSPORT & IMPORT-EXPORT (CHINE & DUBAÏ) */}
+                      <tr style={{ background: "rgba(59, 34, 24, 0.03)", borderTop: "1px solid var(--border-light)", borderBottom: "1px solid var(--border-light)" }}>
+                        <td colSpan={5} style={{ padding: "10px 18px", fontWeight: "800", color: "var(--brown-dark)", fontSize: "0.86rem" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                            <CircularFlag countryCode="CN" size={16} />
+                            <CircularFlag countryCode="AE" size={16} />
+                            <span>1. Transport & Import-Export (Chine & Dubaï ➔ Afrique)</span>
                           </span>
-                          Voie normale (2 semaines)
-                        </span>
-                        <strong style={{ color: "var(--text-main)" }}>10 000 FCFA / kg</strong>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.84rem" }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "#EA580C", fontWeight: "700" }}>
-                          <span style={{ width: "26px", height: "26px", borderRadius: "8px", background: "rgba(234, 88, 12, 0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <Zap size={13} style={{ color: "#EA580C" }} />
-                          </span>
-                          Voie express (4 jours)
-                        </span>
-                        <strong style={{ color: "#EA580C" }}>12 000 FCFA / kg</strong>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.84rem" }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "var(--text-secondary)" }}>
-                          <span style={{ width: "26px", height: "26px", borderRadius: "8px", background: "rgba(46, 125, 78, 0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <BatteryCharging size={13} style={{ color: "#2E7D4E" }} />
-                          </span>
+                        </td>
+                      </tr>
+                      <tr className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)", fontSize: "0.82rem" }}>
+                          Guangzhou, Yiwu, Dubaï
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "600", color: "var(--text-main)" }}>
+                          Voie normale
+                        </td>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)" }}>
+                          2 semaines
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "700", color: "var(--text-main)" }}>
+                          10 000 FCFA / kg
+                        </td>
+                        <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                          <button
+                            type="button"
+                            onClick={() => { setTariffCorridorFilter("CN_AE"); setTariffModeFilter("AIR_NORMAL"); }}
+                            className="btn btn-secondary"
+                            style={{ padding: "4px 10px", fontSize: "0.74rem" }}
+                          >
+                            Afficher
+                          </button>
+                        </td>
+                      </tr>
+                      <tr className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)", fontSize: "0.82rem" }}>
+                          Guangzhou, Yiwu, Dubaï
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "600", color: "var(--text-main)" }}>
+                          Voie express
+                        </td>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)" }}>
+                          4 jours
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "700", color: "var(--text-main)" }}>
+                          12 000 FCFA / kg
+                        </td>
+                        <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                          <button
+                            type="button"
+                            onClick={() => { setTariffCorridorFilter("CN_AE"); setTariffModeFilter("AIR_EXPRESS"); }}
+                            className="btn btn-secondary"
+                            style={{ padding: "4px 10px", fontSize: "0.74rem" }}
+                          >
+                            Afficher
+                          </button>
+                        </td>
+                      </tr>
+                      <tr className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)", fontSize: "0.82rem" }}>
+                          Guangzhou, Yiwu, Dubaï
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "600", color: "var(--text-main)" }}>
                           Batteries & Compléments
-                        </span>
-                        <strong style={{ color: "var(--text-main)" }}>14 000 FCFA / kg</strong>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.84rem" }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "var(--text-secondary)" }}>
-                          <span style={{ width: "26px", height: "26px", borderRadius: "8px", background: "rgba(59, 130, 246, 0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <Laptop size={13} style={{ color: "#3B82F6" }} />
-                          </span>
+                        </td>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)" }}>
+                          2 semaines
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "700", color: "var(--text-main)" }}>
+                          14 000 FCFA / kg
+                        </td>
+                        <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                          <button
+                            type="button"
+                            onClick={() => { setTariffCorridorFilter("CN_AE"); setTariffSearch("Batteries"); }}
+                            className="btn btn-secondary"
+                            style={{ padding: "4px 10px", fontSize: "0.74rem" }}
+                          >
+                            Afficher
+                          </button>
+                        </td>
+                      </tr>
+                      <tr className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)", fontSize: "0.82rem" }}>
+                          Guangzhou, Yiwu, Dubaï
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "600", color: "var(--text-main)" }}>
                           Pièces d&apos;ordinateur
-                        </span>
-                        <strong style={{ color: "var(--text-main)" }}>50 000 FCFA</strong>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.84rem", borderTop: "1px dashed rgba(59, 34, 24, 0.12)", paddingTop: "8px", marginTop: "2px" }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "var(--brown-dark)", fontWeight: "700" }}>
-                          <span style={{ width: "26px", height: "26px", borderRadius: "8px", background: "rgba(42, 24, 16, 0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <Ship size={13} style={{ color: "var(--brown-dark)" }} />
-                          </span>
+                        </td>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)" }}>
+                          Express
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "700", color: "var(--text-main)" }}>
+                          50 000 FCFA / unité
+                        </td>
+                        <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                          <button
+                            type="button"
+                            onClick={() => { setTariffCorridorFilter("CN_AE"); setTariffSearch("Ordinateur"); }}
+                            className="btn btn-secondary"
+                            style={{ padding: "4px 10px", fontSize: "0.74rem" }}
+                          >
+                            Afficher
+                          </button>
+                        </td>
+                      </tr>
+                      <tr className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)", fontSize: "0.82rem" }}>
+                          Guangzhou, Yiwu, Dubaï
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "600", color: "var(--text-main)" }}>
                           Par Bateau (Le CBM)
-                        </span>
-                        <strong style={{ color: "var(--brown-dark)" }}>300 000 FCFA / m³</strong>
-                      </div>
-                    </div>
-                  </div>
+                        </td>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)" }}>
+                          35 - 45 jours
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "700", color: "var(--text-main)" }}>
+                          300 000 FCFA / m³
+                        </td>
+                        <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                          <button
+                            type="button"
+                            onClick={() => { setTariffCorridorFilter("CN_AE"); setTariffModeFilter("SEA_LCL"); }}
+                            className="btn btn-secondary"
+                            style={{ padding: "4px 10px", fontSize: "0.74rem" }}
+                          >
+                            Afficher
+                          </button>
+                        </td>
+                      </tr>
 
-                  <div style={{ marginTop: "18px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTariffCorridorFilter("CN_AE");
-                        setTariffModeFilter("ALL");
-                      }}
-                      style={{
-                        background: tariffCorridorFilter === "CN_AE" ? "#EA580C" : "rgba(234, 88, 12, 0.12)",
-                        color: tariffCorridorFilter === "CN_AE" ? "#FFFFFF" : "#EA580C",
-                        border: "none",
-                        padding: "8px 16px",
-                        borderRadius: "9999px",
-                        fontSize: "0.8rem",
-                        fontWeight: "700",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                      }}
-                    >
-                      {tariffCorridorFilter === "CN_AE" ? "✓ Couloir filtré" : "Filtrer ce couloir ➔"}
-                    </button>
-                    <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: "500" }}>
-                      WhatsApp : +225 01 53 638 569
-                    </span>
-                  </div>
-                </div>
-
-                {/* FLYER 2 : MAROC ➔ AFRIQUE SUBSAHARIENNE */}
-                <div
-                  className="pricing-flyer-card"
-                  style={{
-                    background: "linear-gradient(145deg, #FFFFFF 0%, #F5FAF6 100%)",
-                    border: "1px solid rgba(46, 125, 78, 0.18)",
-                    boxShadow: "0 10px 30px rgba(46, 125, 78, 0.06)",
-                  }}
-                >
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.74rem", fontWeight: "800", color: "#2E7D4E", textTransform: "uppercase", letterSpacing: "0.06em", background: "rgba(46, 125, 78, 0.1)", padding: "5px 12px", borderRadius: "9999px" }}>
-                        <CircularFlag countryCode="MA" size={16} />
-                        <span>Maroc ➔ 5 Pays Subsahariens</span>
-                      </span>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.72rem", fontWeight: "700", color: "#2E7D4E", background: "#FFFFFF", padding: "3px 10px", borderRadius: "9999px", border: "1px solid rgba(46, 125, 78, 0.15)" }}>
-                        <Award size={13} /> N°1 du Groupage
-                      </span>
-                    </div>
-                    <h3 style={{ fontSize: "1.15rem", fontWeight: "800", color: "var(--text-main)", marginBottom: "4px" }}>
-                      Groupage Aérien Subsaharien
-                    </h3>
-                    <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "16px", lineHeight: "1.45" }}>
-                      Nous expédions du Maroc vers Côte d&apos;Ivoire, Burkina Faso, Sénégal, Gabon et Mali.
-                    </p>
-
-                    <div style={{ display: "grid", gap: "10px", background: "#FFFFFF", padding: "16px 18px", borderRadius: "16px", border: "1px solid rgba(46, 125, 78, 0.12)", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-                        <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Tarif officiel au kilo :</span>
-                        <span style={{ fontSize: "1.3rem", fontWeight: "800", color: "#2E7D4E" }}>6 500 F – 7 500 F</span>
-                      </div>
-                      <div style={{ display: "flex", gap: "12px", fontSize: "0.78rem", color: "var(--text-secondary)", alignItems: "center" }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
-                          <Clock size={13} style={{ color: "#2E7D4E" }} /> Délai : <strong>5 jours</strong>
-                        </span>
-                        <span>•</span>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
-                          <ShieldCheck size={13} style={{ color: "#2E7D4E" }} /> Transfert sécurisé
-                        </span>
-                      </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "6px" }}>
-                        <span className="badge-clean" style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "0.72rem", padding: "4px 8px" }}>
-                          <CircularFlag countryCode="CI" size={13} /> Côte d&apos;Ivoire
-                        </span>
-                        <span className="badge-clean" style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "0.72rem", padding: "4px 8px" }}>
-                          <CircularFlag countryCode="BF" size={13} /> Burkina
-                        </span>
-                        <span className="badge-clean" style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "0.72rem", padding: "4px 8px" }}>
-                          <CircularFlag countryCode="SN" size={13} /> Sénégal
-                        </span>
-                        <span className="badge-clean" style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "0.72rem", padding: "4px 8px" }}>
-                          <CircularFlag countryCode="ML" size={13} /> Mali
-                        </span>
-                        <span className="badge-clean" style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "0.72rem", padding: "4px 8px" }}>
-                          <CircularFlag countryCode="GA" size={13} /> Gabon
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ marginTop: "18px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTariffCorridorFilter("MA");
-                        setTariffModeFilter("ALL");
-                      }}
-                      style={{
-                        background: tariffCorridorFilter === "MA" ? "#2E7D4E" : "rgba(46, 125, 78, 0.12)",
-                        color: tariffCorridorFilter === "MA" ? "#FFFFFF" : "#2E7D4E",
-                        border: "none",
-                        padding: "8px 16px",
-                        borderRadius: "9999px",
-                        fontSize: "0.8rem",
-                        fontWeight: "700",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                      }}
-                    >
-                      {tariffCorridorFilter === "MA" ? "✓ Couloir filtré" : "Filtrer ce couloir ➔"}
-                    </button>
-                    <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: "500" }}>
-                      Satisfaction 100% Garantie
-                    </span>
-                  </div>
-                </div>
-
-                {/* FLYER 3 : PARIS ↔ ABIDJAN BILATÉRAL */}
-                <div
-                  className="pricing-flyer-card"
-                  style={{
-                    background: "linear-gradient(145deg, #FFFFFF 0%, #F9F7FD 100%)",
-                    border: "1px solid rgba(124, 58, 237, 0.18)",
-                    boxShadow: "0 10px 30px rgba(124, 58, 237, 0.06)",
-                  }}
-                >
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.74rem", fontWeight: "800", color: "#7C3AED", textTransform: "uppercase", letterSpacing: "0.06em", background: "rgba(124, 58, 237, 0.1)", padding: "5px 12px", borderRadius: "9999px" }}>
-                        <CircularFlag countryCode="FR" size={16} />
-                        <span style={{ fontSize: "0.72rem" }}>↔</span>
-                        <CircularFlag countryCode="CI" size={16} />
-                        <span>Paris ↔ Abidjan (Bilatéral)</span>
-                      </span>
-                      <span style={{ fontSize: "0.72rem", fontWeight: "700", color: "#7C3AED", background: "#FFFFFF", padding: "3px 10px", borderRadius: "9999px", border: "1px solid rgba(124, 58, 237, 0.15)" }}>
-                        Double Devise (F / €)
-                      </span>
-                    </div>
-                    <h3 style={{ fontSize: "1.15rem", fontWeight: "800", color: "var(--text-main)", marginBottom: "4px" }}>
-                      Logistics & Transport France
-                    </h3>
-                    <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "16px", lineHeight: "1.45" }}>
-                      Liaisons aériennes sécurisées dans les 2 sens avec point de retrait à Abidjan Bingerville.
-                    </p>
-
-                    <div style={{ display: "grid", gap: "10px", background: "#FFFFFF", padding: "16px 18px", borderRadius: "16px", border: "1px solid rgba(124, 58, 237, 0.12)", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.84rem" }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "var(--text-secondary)" }}>
-                          <span style={{ width: "26px", height: "26px", borderRadius: "8px", background: "rgba(124, 58, 237, 0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <ShoppingBag size={13} style={{ color: "#7C3AED" }} />
+                      {/* CATÉGORIE 2 : GROUPAGE SUBSAHARIEN (MAROC) */}
+                      <tr style={{ background: "rgba(59, 34, 24, 0.03)", borderTop: "1px solid var(--border-light)", borderBottom: "1px solid var(--border-light)" }}>
+                        <td colSpan={5} style={{ padding: "10px 18px", fontWeight: "800", color: "var(--brown-dark)", fontSize: "0.86rem" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                            <CircularFlag countryCode="MA" size={16} />
+                            <span>2. Groupage Aérien Subsaharien (Maroc ➔ 5 Pays Subsahariens)</span>
                           </span>
+                        </td>
+                      </tr>
+                      <tr className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)", fontSize: "0.82rem" }}>
+                          Maroc ➔ Côte d&apos;Ivoire
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "600", color: "var(--text-main)" }}>
+                          Groupage aérien régulier
+                        </td>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)" }}>
+                          5 jours
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "700", color: "var(--text-main)" }}>
+                          6 500 FCFA / kg
+                        </td>
+                        <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                          <button
+                            type="button"
+                            onClick={() => { setTariffCorridorFilter("MA"); setTariffSearch("Ivoire"); }}
+                            className="btn btn-secondary"
+                            style={{ padding: "4px 10px", fontSize: "0.74rem" }}
+                          >
+                            Afficher
+                          </button>
+                        </td>
+                      </tr>
+                      <tr className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)", fontSize: "0.82rem" }}>
+                          Maroc ➔ Sénégal, Mali, Burkina Faso
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "600", color: "var(--text-main)" }}>
+                          Groupage aérien régulier
+                        </td>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)" }}>
+                          5 jours
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "700", color: "var(--text-main)" }}>
+                          7 000 FCFA / kg
+                        </td>
+                        <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                          <button
+                            type="button"
+                            onClick={() => { setTariffCorridorFilter("MA"); setTariffSearch(""); }}
+                            className="btn btn-secondary"
+                            style={{ padding: "4px 10px", fontSize: "0.74rem" }}
+                          >
+                            Afficher
+                          </button>
+                        </td>
+                      </tr>
+                      <tr className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)", fontSize: "0.82rem" }}>
+                          Maroc ➔ Gabon
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "600", color: "var(--text-main)" }}>
+                          Groupage aérien régulier
+                        </td>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)" }}>
+                          5 jours
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "700", color: "var(--text-main)" }}>
+                          7 500 FCFA / kg
+                        </td>
+                        <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                          <button
+                            type="button"
+                            onClick={() => { setTariffCorridorFilter("MA"); setTariffSearch("Gabon"); }}
+                            className="btn btn-secondary"
+                            style={{ padding: "4px 10px", fontSize: "0.74rem" }}
+                          >
+                            Afficher
+                          </button>
+                        </td>
+                      </tr>
+
+                      {/* CATÉGORIE 3 : PARIS ↔ ABIDJAN */}
+                      <tr style={{ background: "rgba(59, 34, 24, 0.03)", borderTop: "1px solid var(--border-light)", borderBottom: "1px solid var(--border-light)" }}>
+                        <td colSpan={5} style={{ padding: "10px 18px", fontWeight: "800", color: "var(--brown-dark)", fontSize: "0.86rem" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                            <CircularFlag countryCode="FR" size={16} />
+                            <CircularFlag countryCode="CI" size={16} />
+                            <span>3. Liaisons Aériennes Bilatérales (Paris ↔ Abidjan)</span>
+                          </span>
+                        </td>
+                      </tr>
+                      <tr className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)", fontSize: "0.82rem" }}>
+                          Paris ↔ Abidjan (2 sens)
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "600", color: "var(--text-main)" }}>
                           Divers Articles
-                        </span>
-                        <strong style={{ color: "var(--text-main)" }}>8 500 F / 12 € Kg</strong>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.84rem" }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "#7C3AED", fontWeight: "700" }}>
-                          <span style={{ width: "26px", height: "26px", borderRadius: "8px", background: "rgba(124, 58, 237, 0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <Sparkles size={13} style={{ color: "#7C3AED" }} />
-                          </span>
+                        </td>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)" }}>
+                          Régulier (Agence Bingerville)
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "700", color: "var(--text-main)" }}>
+                          8 500 F / 12 € le kg
+                        </td>
+                        <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                          <button
+                            type="button"
+                            onClick={() => { setTariffCorridorFilter("FR_CI"); setTariffSearch("Divers"); }}
+                            className="btn btn-secondary"
+                            style={{ padding: "4px 10px", fontSize: "0.74rem" }}
+                          >
+                            Afficher
+                          </button>
+                        </td>
+                      </tr>
+                      <tr className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)", fontSize: "0.82rem" }}>
+                          Paris ↔ Abidjan (2 sens)
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "600", color: "var(--text-main)" }}>
                           Cosmétique et Liquide
-                        </span>
-                        <strong style={{ color: "#7C3AED" }}>9 000 F / 14 € Kg</strong>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.84rem" }}>
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "var(--text-secondary)" }}>
-                          <span style={{ width: "26px", height: "26px", borderRadius: "8px", background: "rgba(59, 130, 246, 0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <FileText size={13} style={{ color: "#3B82F6" }} />
-                          </span>
+                        </td>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)" }}>
+                          Régulier (Agence Bingerville)
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "700", color: "var(--text-main)" }}>
+                          9 000 F / 14 € le kg
+                        </td>
+                        <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                          <button
+                            type="button"
+                            onClick={() => { setTariffCorridorFilter("FR_CI"); setTariffSearch("Cosmétique"); }}
+                            className="btn btn-secondary"
+                            style={{ padding: "4px 10px", fontSize: "0.74rem" }}
+                          >
+                            Afficher
+                          </button>
+                        </td>
+                      </tr>
+                      <tr className="table-row-clean" style={{ borderBottom: "1px solid var(--border-light)" }}>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)", fontSize: "0.82rem" }}>
+                          Paris ↔ Abidjan (2 sens)
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "600", color: "var(--text-main)" }}>
                           Document Administratif
-                        </span>
-                        <strong style={{ color: "var(--text-main)" }}>13 000 F / 20 €</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ marginTop: "18px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTariffCorridorFilter("FR_CI");
-                        setTariffModeFilter("ALL");
-                      }}
-                      style={{
-                        background: tariffCorridorFilter === "FR_CI" ? "#7C3AED" : "rgba(124, 58, 237, 0.12)",
-                        color: tariffCorridorFilter === "FR_CI" ? "#FFFFFF" : "#7C3AED",
-                        border: "none",
-                        padding: "8px 16px",
-                        borderRadius: "9999px",
-                        fontSize: "0.8rem",
-                        fontWeight: "700",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                      }}
-                    >
-                      {tariffCorridorFilter === "FR_CI" ? "✓ Couloir filtré" : "Filtrer ce couloir ➔"}
-                    </button>
-                    <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontWeight: "500" }}>
-                      Agence : Abidjan Bingerville
-                    </span>
-                  </div>
+                        </td>
+                        <td style={{ padding: "12px 18px", color: "var(--text-secondary)" }}>
+                          Sécurisé (Agence Bingerville)
+                        </td>
+                        <td style={{ padding: "12px 18px", fontWeight: "700", color: "var(--text-main)" }}>
+                          13 000 F / 20 € le pli
+                        </td>
+                        <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                          <button
+                            type="button"
+                            onClick={() => { setTariffCorridorFilter("FR_CI"); setTariffSearch("Document"); }}
+                            className="btn btn-secondary"
+                            style={{ padding: "4px 10px", fontSize: "0.74rem" }}
+                          >
+                            Afficher
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -7816,7 +8043,7 @@ export default function AdminPage() {
               <div style={{ marginBottom: "18px", background: "var(--bg-app)", padding: "12px 14px", borderRadius: "14px", border: "1px solid rgba(59, 34, 24, 0.08)" }}>
                 <div style={{ fontSize: "0.74rem", fontWeight: "700", color: "var(--brown-dark)", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
                   <Sparkles size={13} style={{ color: "var(--brown-light)" }} />
-                  Remplir en 1 clic d&apos;après nos flyers officiels :
+                  Remplir en 1 clic d&apos;après les liaisons officielles :
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                   {FLYER_TEMPLATES.map((tmpl) => (
@@ -8057,7 +8284,7 @@ export default function AdminPage() {
 
                   <div>
                     <label style={{ fontSize: "0.78rem", color: "var(--text-main)", display: "block", marginBottom: "4px", fontWeight: "700" }}>
-                      Marchandise & Préréglages Flyers
+                      Marchandise & Préréglages Standards
                     </label>
                     <select
                       onChange={(e) => {
@@ -8081,7 +8308,7 @@ export default function AdminPage() {
                       className="input-clean"
                       style={{ height: "40px", borderRadius: "10px" }}
                     >
-                      <option value="">Sélectionner une catégorie flyer...</option>
+                      <option value="">Sélectionner une marchandise...</option>
                       {FLYER_PRODUCT_PRESETS.map((p) => (
                         <option key={p.name} value={p.name}>{p.name}</option>
                       ))}

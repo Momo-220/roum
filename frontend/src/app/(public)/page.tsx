@@ -916,7 +916,7 @@ export default function HomePage() {
                       <span>Chine & Dubaï ➔ Afrique</span>
                     </span>
                     <span style={{ fontSize: "0.75rem", fontWeight: "600", color: "var(--text-muted)", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                      <Award size={13} color="#16a34a" /> Flyer Officiel
+                      <Award size={13} color="var(--brown-dark)" /> Tarifs Officiels
                     </span>
                   </div>
                   <h4 style={{ fontSize: "1.05rem", color: "var(--text-main)", marginBottom: "12px" }}>
