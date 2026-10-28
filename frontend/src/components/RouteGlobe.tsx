@@ -9,7 +9,6 @@ import {
   Compass,
   Plane,
   Ship,
-  Sparkles,
   MapPin,
   Clock,
   RotateCcw,

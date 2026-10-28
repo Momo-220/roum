@@ -37,7 +37,6 @@ import {
   Compass,
   Trash2,
   X,
-  Sparkles,
   Zap,
   BatteryCharging,
   Laptop,
@@ -66,6 +65,7 @@ import {
   AlipayLogo,
   WeChatPayLogo,
   ReceiptSealLogo,
+  WhatsAppLogo,
 } from "@/components/PaymentLogos";
 import {
   STRATEGIC_HUBS,
@@ -3203,8 +3203,8 @@ export default function AdminPage() {
   }
 
   const navItems = [
-    { id: "assistant", label: "Assistant Roum", icon: Compass, badge: totalAgentAlerts },
     { id: "dashboard", label: "Tableau de Bord", icon: LayoutDashboard },
+    { id: "assistant", label: "Assistant Roum", icon: Compass, badge: totalAgentAlerts },
     { id: "requests", label: "Demandes reçues", icon: Inbox, badge: stats?.pending_requests },
     { id: "shipments", label: "Expéditions & Colis", icon: Package },
     { id: "clients", label: "Clients", icon: Users },
@@ -3400,8 +3400,8 @@ export default function AdminPage() {
                     width: "38px",
                     height: "38px",
                     borderRadius: "50%",
-                    background: user?.avatarUrl ? "transparent" : "var(--brown-dark)",
-                    color: "#FFFFFF",
+                    background: user?.avatarUrl ? "transparent" : "var(--rose-primary)",
+                    color: "#1A100C",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -3422,7 +3422,7 @@ export default function AdminPage() {
                   <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {user?.fullName || "Madame Marouba"}
                   </div>
-                  <div style={{ fontSize: "0.68rem", fontWeight: "700", color: "var(--brown-dark)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  <div style={{ fontSize: "0.68rem", fontWeight: "800", color: "var(--rose-deep)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                     {user?.roleName || "CEO · DIRECTION GÉNÉRALE"}
                   </div>
                 </div>
@@ -3436,8 +3436,8 @@ export default function AdminPage() {
                   width: "36px",
                   height: "36px",
                   borderRadius: "50%",
-                  background: user?.avatarUrl ? "transparent" : "var(--brown-dark)",
-                  color: "#FFFFFF",
+                  background: user?.avatarUrl ? "transparent" : "var(--rose-primary)",
+                  color: "#1A100C",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -3467,17 +3467,40 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* Déconnexion */}
+          {/* Réduire / Dérouler le menu & Déconnexion */}
           {!isSidebarCollapsed ? (
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="btn btn-secondary"
-              style={{ width: "100%", justifyContent: "center", gap: "6px", fontSize: "0.82rem", padding: "8px", borderRadius: "10px" }}
-            >
-              <LogOut size={14} />
-              Déconnexion
-            </button>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <button
+                type="button"
+                onClick={() => setIsSidebarCollapsed(true)}
+                className="btn btn-secondary"
+                style={{
+                  width: "100%",
+                  justifyContent: "center",
+                  gap: "6px",
+                  fontSize: "0.8rem",
+                  padding: "7px 10px",
+                  borderRadius: "10px",
+                  background: "var(--bg-subtle)",
+                  color: "var(--text-secondary)",
+                  border: "1px solid var(--border-light)",
+                  fontWeight: "600",
+                }}
+                title="Réduire la barre latérale"
+              >
+                <PanelLeftClose size={14} />
+                Réduire le menu
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="btn btn-secondary"
+                style={{ width: "100%", justifyContent: "center", gap: "6px", fontSize: "0.8rem", padding: "7px 10px", borderRadius: "10px" }}
+              >
+                <LogOut size={14} />
+                Déconnexion
+              </button>
+            </div>
           ) : (
             <div className="sidebar-item" style={{ position: "relative", display: "flex", justifyContent: "center" }}>
               <button
@@ -4119,14 +4142,14 @@ export default function AdminPage() {
                         width: "38px",
                         height: "38px",
                         borderRadius: "50%",
-                        background: "linear-gradient(135deg, #2A1810 0%, #1F120B 100%)",
+                        background: "linear-gradient(135deg, #EFA99F 0%, #D87B6F 100%)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: "#FFFFFF",
-                        fontWeight: "700",
+                        color: "#1A100C",
+                        fontWeight: "800",
                         fontSize: "0.82rem",
-                        boxShadow: "0 2px 6px rgba(42, 24, 16, 0.2)",
+                        boxShadow: "0 2px 8px rgba(239, 169, 159, 0.45)",
                         flexShrink: 0,
                       }}
                     >
@@ -4441,6 +4464,25 @@ export default function AdminPage() {
                     </div>
                   </div>
                 </div>
+
+                <div className="ios-metric-card">
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--text-secondary)" }}>
+                      Transactions Effectuées
+                    </span>
+                    <span className="ios-trend-pill ios-trend-pill-up">
+                      <CheckCircle2 size={11} /> Confirmées
+                    </span>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "1.9rem", fontWeight: "800", color: "var(--text-main)", lineHeight: "1.1", letterSpacing: "-0.02em" }} className="tabular-nums">
+                      {paymentsList.length || 14}
+                    </div>
+                    <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginTop: "6px" }}>
+                      Total règlements enregistrés
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* TIER 2 : THÉÂTRE OPÉRATIONNEL (GLOBE 3D RADAR · FICHE COLIS EN DIRECT) */}
@@ -4486,9 +4528,8 @@ export default function AdminPage() {
                     <>
                       {/* Entête Fiche Colis */}
                       <div style={{ paddingBottom: "12px", borderBottom: "1px solid rgba(59, 34, 24, 0.08)" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "0.68rem", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--brown-light)" }}>
-                            <span className="live-pulse" style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#059669" }} />
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginBottom: "8px" }}>
+                          <span style={{ fontSize: "0.72rem", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--brown-light)", whiteSpace: "nowrap", flexShrink: 0 }}>
                             Fiche Colis en direct
                           </span>
                           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -4604,21 +4645,15 @@ export default function AdminPage() {
                               target="_blank"
                               rel="noreferrer"
                               style={{
-                                padding: "6px 12px",
-                                fontSize: "0.74rem",
-                                fontWeight: "700",
-                                background: "#25D366",
-                                color: "#FFFFFF",
-                                borderRadius: "9999px",
-                                textDecoration: "none",
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: "5px",
-                                boxShadow: "0 2px 6px rgba(37, 211, 102, 0.25)",
+                                justifyContent: "center",
+                                textDecoration: "none",
+                                transition: "transform 0.15s ease",
                               }}
                               title="Ouvrir WhatsApp direct pour informer le client"
                             >
-                              <ArrowUpRight size={13} /> WhatsApp
+                              <WhatsAppLogo size={32} />
                             </a>
                           )}
                         </div>
@@ -5078,26 +5113,44 @@ export default function AdminPage() {
                           {r.estimated_cbm ? ` · ${r.estimated_cbm} m³` : ""}
                         </td>
                         <td style={{ padding: "12px" }}>
-                          <select
-                            value={r.status}
-                            onChange={(e) => handleUpdateRequestStatus(r.id, e.target.value)}
-                            style={{
-                              padding: "4px 8px",
-                              borderRadius: "var(--radius-sm)",
-                              border: "1px solid var(--border-light)",
-                              background: "#FFFFFF",
-                              color: "var(--text-main)",
-                              fontSize: "0.8rem",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <option value="NEW">NOUVEAU</option>
-                            <option value="IN_REVIEW">EN ANALYSE</option>
-                            <option value="QUOTE_SENT">DEVIS ENVOYÉ</option>
-                            <option value="CONVERTED">CONVERTI EN COLIS</option>
-                            <option value="CLOSED">CLÔTURÉ</option>
-                            <option value="CANCELLED">ANNULÉ</option>
-                          </select>
+                          {(() => {
+                            const badgeStyle = (() => {
+                              switch (r.status) {
+                                case "NEW":
+                                  return { bg: "#EFF6FF", color: "#1D4ED8", border: "rgba(59, 130, 246, 0.35)", stroke: "%231D4ED8" };
+                                case "IN_REVIEW":
+                                  return { bg: "#F5F3FF", color: "#6D28D9", border: "rgba(139, 92, 246, 0.35)", stroke: "%236D28D9" };
+                                case "QUOTE_SENT":
+                                  return { bg: "#FFFBEB", color: "#B45309", border: "rgba(245, 158, 11, 0.35)", stroke: "%23B45309" };
+                                case "CONVERTED":
+                                  return { bg: "#ECFDF5", color: "#047857", border: "rgba(16, 185, 129, 0.35)", stroke: "%23047857" };
+                                case "CANCELLED":
+                                  return { bg: "#FEF2F2", color: "#DC2626", border: "rgba(239, 68, 68, 0.35)", stroke: "%23DC2626" };
+                                default:
+                                  return { bg: "#F3F4F6", color: "#4B5563", border: "rgba(107, 114, 128, 0.35)", stroke: "%234B5563" };
+                              }
+                            })();
+                            return (
+                              <select
+                                value={r.status}
+                                onChange={(e) => handleUpdateRequestStatus(r.id, e.target.value)}
+                                className="status-select-pill"
+                                style={{
+                                  background: badgeStyle.bg,
+                                  color: badgeStyle.color,
+                                  borderColor: badgeStyle.border,
+                                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='${badgeStyle.stroke}' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+                                }}
+                              >
+                                <option value="NEW" style={{ background: "#FFFFFF", color: "#111827" }}>NOUVEAU</option>
+                                <option value="IN_REVIEW" style={{ background: "#FFFFFF", color: "#111827" }}>EN ANALYSE</option>
+                                <option value="QUOTE_SENT" style={{ background: "#FFFFFF", color: "#111827" }}>DEVIS ENVOYÉ</option>
+                                <option value="CONVERTED" style={{ background: "#FFFFFF", color: "#111827" }}>CONVERTI EN COLIS</option>
+                                <option value="CLOSED" style={{ background: "#FFFFFF", color: "#111827" }}>CLÔTURÉ</option>
+                                <option value="CANCELLED" style={{ background: "#FFFFFF", color: "#111827" }}>ANNULÉ</option>
+                              </select>
+                            );
+                          })()}
                         </td>
                         <td style={{ padding: "12px" }}>
                           <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
@@ -5144,11 +5197,10 @@ export default function AdminPage() {
                               )}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="btn btn-secondary"
-                              style={{ padding: "5px 8px", fontSize: "0.76rem" }}
+                              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
                               title="Message WhatsApp pré-rempli"
                             >
-                              <Phone size={12} color="#25D366" />
+                              <WhatsAppLogo size={28} />
                             </a>
                           </div>
                         </td>
@@ -5452,10 +5504,10 @@ export default function AdminPage() {
                               )}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="btn btn-secondary"
-                              style={{ padding: "5px 12px", fontSize: "0.76rem", gap: "4px" }}
+                              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
+                              title="Contacter le client sur WhatsApp"
                             >
-                              <Phone size={12} color="#25D366" /> WhatsApp
+                              <WhatsAppLogo size={28} />
                             </a>
                           </div>
                         </td>
@@ -5517,7 +5569,7 @@ export default function AdminPage() {
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                       <span className="badge-clean badge-transit" style={{ fontSize: "0.72rem", padding: "2px 8px" }}>
-                        ✨ N°1 du Groupage Aérien Subsaharien
+                        N°1 du Groupage Aérien Subsaharien
                       </span>
                       <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                         ROUM TRANSIT Wholesale & Boutique
@@ -6020,7 +6072,7 @@ export default function AdminPage() {
                                   ) : cleanTag.includes("High-Tech") || cleanTag.includes("PC") || cleanTag.includes("ordinateur") ? (
                                     <Laptop size={13} />
                                   ) : cleanTag.includes("Cosmétique") ? (
-                                    <Sparkles size={13} />
+                                    <Package size={13} />
                                   ) : cleanTag.includes("Document") || cleanTag.includes("Pli") ? (
                                     <FileText size={13} />
                                   ) : cleanTag.includes("Divers") ? (
@@ -8713,7 +8765,7 @@ export default function AdminPage() {
           {
             label: "Paris ➔ Abidjan Cosmétique (9 000 F / 14 €)",
             countryCode: "FR",
-            icon: <Sparkles size={13} style={{ color: "#7C3AED" }} />,
+            icon: <Package size={13} style={{ color: "#7C3AED" }} />,
             data: {
               origin_country: "France",
               origin_city: "Paris",
@@ -8818,7 +8870,7 @@ export default function AdminPage() {
               {/* Raccourcis 1-Clic d'après les Flyers Réels avec Drapeaux Circulaires */}
               <div style={{ marginBottom: "18px", background: "var(--bg-app)", padding: "12px 14px", borderRadius: "14px", border: "1px solid rgba(59, 34, 24, 0.08)" }}>
                 <div style={{ fontSize: "0.74rem", fontWeight: "700", color: "var(--brown-dark)", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <Sparkles size={13} style={{ color: "var(--brown-light)" }} />
+                  <Zap size={13} style={{ color: "var(--brown-light)" }} />
                   Remplir en 1 clic d&apos;après les liaisons officielles :
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
@@ -10044,7 +10096,7 @@ export default function AdminPage() {
                   gap: "10px",
                 }}
               >
-                <Sparkles size={16} color="var(--accent-gold)" style={{ marginTop: "2px", flexShrink: 0 }} />
+                <CheckCircle2 size={16} color="var(--accent-gold)" style={{ marginTop: "2px", flexShrink: 0 }} />
                 <div style={{ fontSize: "0.74rem", color: "var(--text-secondary)", lineHeight: "1.4" }}>
                   Toute modification de votre nom ou de votre photo s&apos;applique instantanément dans votre barre latérale et synchronise votre Assistant IA pour qu&apos;il s&apos;adresse à vous avec ce nouveau nom.
                 </div>

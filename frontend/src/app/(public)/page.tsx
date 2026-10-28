@@ -12,7 +12,7 @@ import {
   Calculator,
   MessageCircle,
   Clock,
-  Sparkles,
+  Package,
   Zap,
   CheckCircle2,
   BatteryCharging,
@@ -884,7 +884,6 @@ export default function HomePage() {
                     marginBottom: "6px",
                   }}
                 >
-                  <Sparkles size={14} />
                   Grilles Tarifaires Officielles En Agence
                 </div>
                 <h3 style={{ fontSize: "1.4rem", color: "var(--text-main)" }}>
@@ -1045,7 +1044,7 @@ export default function HomePage() {
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px dashed var(--border-light)" }}>
                       <span style={{ color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
-                        <Sparkles size={15} color="#db2777" /> Cosmétique & Liquide
+                        <Package size={15} color="#db2777" /> Cosmétique & Liquide
                       </span>
                       <strong style={{ color: "var(--brown-dark)" }}>9 000 F / 14 € kg</strong>
                     </div>
