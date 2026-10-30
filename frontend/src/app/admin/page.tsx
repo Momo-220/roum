@@ -6656,10 +6656,7 @@ export default function AdminPage() {
                               alignItems: "center",
                               justifyContent: "space-between",
                               gap: "10px",
-                              padding: "9px 12px",
-                              background: "#FFFFFF",
-                              borderRadius: "10px",
-                              border: "1px solid var(--border-light)",
+                              padding: "8px 6px",
                             }}
                           >
                             <div style={{ minWidth: 0, flex: 1 }}>
@@ -6768,10 +6765,7 @@ export default function AdminPage() {
                               alignItems: "center",
                               justifyContent: "space-between",
                               gap: "10px",
-                              padding: "9px 12px",
-                              background: "#FFFFFF",
-                              borderRadius: "10px",
-                              border: "1px solid var(--border-light)",
+                              padding: "8px 6px",
                             }}
                           >
                             <div style={{ minWidth: 0, flex: 1 }}>
@@ -6917,10 +6911,7 @@ export default function AdminPage() {
                                   alignItems: "center",
                                   justifyContent: "space-between",
                                   gap: "10px",
-                                  padding: "9px 12px",
-                                  background: "#FFFFFF",
-                                  borderRadius: "10px",
-                                  border: "1px solid var(--border-light)",
+                                  padding: "8px 6px",
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
@@ -6979,10 +6970,7 @@ export default function AdminPage() {
                                   alignItems: "center",
                                   justifyContent: "space-between",
                                   gap: "10px",
-                                  padding: "9px 12px",
-                                  background: "#FFFFFF",
-                                  borderRadius: "10px",
-                                  border: "1px solid var(--border-light)",
+                                  padding: "8px 6px",
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
@@ -7113,10 +7101,7 @@ export default function AdminPage() {
                                 alignItems: "center",
                                 justifyContent: "space-between",
                                 gap: "10px",
-                                padding: "9px 12px",
-                                background: "#FFFFFF",
-                                borderRadius: "10px",
-                                border: "1px solid var(--border-light)",
+                                padding: "8px 6px",
                               }}
                             >
                               <div style={{ display: "flex", alignItems: "center", gap: "7px", minWidth: 0, flex: 1 }}>
