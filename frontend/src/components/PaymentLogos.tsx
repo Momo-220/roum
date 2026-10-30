@@ -6,56 +6,74 @@ const iconFrameStyle = (size: number, round = false): React.CSSProperties => ({
   height: size,
   borderRadius: round ? "50%" : Math.round(size * 0.28),
   background: "#FAF8F5",
-  border: "1px solid rgba(42, 24, 16, 0.14)",
+  border: "1px solid rgba(112, 72, 56, 0.14)",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  color: "var(--brown-dark, #2A1810)",
+  color: "var(--brown-dark, #704838)",
   flexShrink: 0,
   transition: "all 0.16s ease",
 });
 
-// 1. WAVE (SVG Monochrome Sobre)
+// 1. WAVE (Logo Officiel : Pingouin Bleu Authentique)
 export function WaveLogo({ size = 32 }: { size?: number }) {
   return (
-    <div style={iconFrameStyle(size)}>
-      <svg
-        width={Math.round(size * 0.54)}
-        height={Math.round(size * 0.54)}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M2 12c2.5-4 5.5-4 8 0s5.5 4 8 0 3.5-2 4-1" />
-        <path d="M2 17c2.5-4 5.5-4 8 0s5.5 4 8 0 3.5-2 4-1" opacity="0.55" />
-        <circle cx="12" cy="6" r="2" />
-      </svg>
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+        flexShrink: 0,
+        boxShadow: "0 2px 6px rgba(29, 161, 242, 0.25)",
+        background: "#1DA1F2",
+      }}
+    >
+      <img
+        src="/images/payments/wave.png"
+        alt="Wave Penguin"
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+        }}
+      />
     </div>
   );
 }
 
-// 2. ORANGE MONEY (SVG Monochrome Sobre : Double flèche transfert mobile)
+// 2. ORANGE MONEY (Logo Officiel SVG Téléchargé)
 export function OrangeMoneyLogo({ size = 32 }: { size?: number }) {
   return (
-    <div style={iconFrameStyle(size)}>
-      <svg
-        width={Math.round(size * 0.54)}
-        height={Math.round(size * 0.54)}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <rect x="5" y="2" width="14" height="20" rx="2.5" />
-        <path d="M9 9h6l-2-2" />
-        <path d="M15 13H9l2 2" />
-        <line x1="12" y1="18" x2="12.01" y2="18" />
-      </svg>
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: Math.round(size * 0.28),
+        background: "#000000",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+        flexShrink: 0,
+        border: "1px solid rgba(0,0,0,0.06)",
+        boxShadow: "0 2px 6px rgba(255, 102, 0, 0.2)",
+      }}
+    >
+      <img
+        src="/images/payments/orange-money.svg"
+        alt="Orange Money"
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          display: "block",
+        }}
+      />
     </div>
   );
 }
@@ -104,46 +122,67 @@ export function MoovMoneyLogo({ size = 32 }: { size?: number }) {
   );
 }
 
-// 5. BANQUE ATLANTIQUE / BACI / UEMOA (SVG Institutionnel Monochrome)
+// 5. BANQUE ATLANTIQUE / BACI / IBAN (Visuel Réaliste Banque Édifice)
 export function BankBaciLogo({ size = 32 }: { size?: number }) {
   return (
-    <div style={iconFrameStyle(size)}>
-      <svg
-        width={Math.round(size * 0.54)}
-        height={Math.round(size * 0.54)}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <polygon points="12 2 2 7 22 7 12 2" />
-        <line x1="6" y1="11" x2="6" y2="17" />
-        <line x1="10" y1="11" x2="10" y2="17" />
-        <line x1="14" y1="11" x2="14" y2="17" />
-        <line x1="18" y1="11" x2="18" y2="17" />
-        <line x1="3" y1="21" x2="21" y2="21" />
-      </svg>
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: Math.round(size * 0.28),
+        background: "#FAF8F5",
+        border: "1px solid rgba(112, 72, 56, 0.14)",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        overflow: "hidden",
+        padding: "3px",
+        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.04)",
+      }}
+    >
+      <img
+        src="/images/payments/bank-iban.png"
+        alt="IBAN / Banque"
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          display: "block",
+        }}
+      />
     </div>
   );
 }
 
-// 6. ALIPAY (SVG Monochrome Sobre : Caractère '支' épuré)
+export function IbanLogo({ size = 32 }: { size?: number }) {
+  return <BankBaciLogo size={size} />;
+}
+
+// 6. ALIPAY (Logo Officiel : Bleu Cyan & Caractère '支' Blanc Authentique)
 export function AlipayLogo({ size = 32 }: { size?: number }) {
   return (
-    <div style={iconFrameStyle(size)}>
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: Math.round(size * 0.28),
+        background: "#00A1E9",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        overflow: "hidden",
+        boxShadow: "0 2px 6px rgba(0, 161, 233, 0.25)",
+      }}
+    >
       <svg
-        width={Math.round(size * 0.54)}
-        height={Math.round(size * 0.54)}
+        width={Math.round(size * 0.72)}
+        height={Math.round(size * 0.72)}
         viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        fill="#FFFFFF"
       >
-        <path d="M5 6h14M12 3v7M6 10h12M16 10c-1.5 5-5 8.5-10 10M8 12c2.5 3.5 6 6.5 11 8" />
+        <path d="M19.695 15.07c3.426 1.158 4.203 1.22 4.203 1.22V3.846c0-2.124-1.705-3.845-3.81-3.845H3.914C1.808.001.102 1.722.102 3.846v16.31c0 2.123 1.706 3.845 3.813 3.845h16.173c2.105 0 3.81-1.722 3.81-3.845v-.157s-6.19-2.602-9.315-4.119c-2.096 2.602-4.8 4.181-7.607 4.181-4.75 0-6.361-4.19-4.112-6.949.49-.602 1.324-1.175 2.617-1.497 2.025-.502 5.247.313 8.266 1.317a16.796 16.796 0 0 0 1.341-3.302H5.781v-.952h4.799V6.975H4.77v-.953h5.81V3.591s0-.409.411-.409h2.347v2.84h5.744v.951h-5.744v1.704h4.69a19.453 19.453 0 0 1-1.986 5.06c1.424.52 2.702 1.011 3.654 1.333m-13.81-2.032c-.596.06-1.71.325-2.321.869-1.83 1.608-.735 4.55 2.968 4.55 2.151 0 4.301-1.388 5.99-3.61-2.403-1.182-4.438-2.028-6.637-1.809"/>
       </svg>
     </div>
   );
@@ -194,23 +233,33 @@ export function ReceiptSealLogo({ size = 32 }: { size?: number }) {
   );
 }
 
-// 9. WHATSAPP (SVG Monochrome Sobre : Icône vectorielle épurée sans fond vert criard)
-export function WhatsAppLogo({ size = 28 }: { size?: number }) {
+// 9. WHATSAPP OFFICIEL (Véritable logo officiel WhatsApp Green Wikimedia PNG haute fidélité)
+export function WhatsAppLogo({ size = 30 }: { size?: number }) {
   return (
-    <div style={iconFrameStyle(size, true)}>
-      <svg
-        width={Math.round(size * 0.54)}
-        height={Math.round(size * 0.54)}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-        <path d="M9.5 9.5c.3 1.8 1.7 3.2 3.5 3.5l1.2-1.2c.2-.2.5-.2.7-.1.7.3 1.4.5 2.1.6.3 0 .5.3.5.6v1.8c0 .3-.2.6-.6.6C11.6 15.3 8.7 12.4 8.7 7.1c0-.4.3-.6.6-.6h1.8c.3 0 .6.2.6.5.1.7.3 1.4.6 2.1.1.2.1.5-.1.7l-1.2 1.2z" />
-      </svg>
+    <div
+      style={{
+        width: size,
+        height: size,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        filter: "drop-shadow(0 2px 5px rgba(37, 211, 102, 0.28))",
+        transition: "transform 0.16s ease",
+      }}
+    >
+      <img
+        src="/images/whatsapp.png"
+        alt="WhatsApp"
+        width={size}
+        height={size}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          display: "block",
+        }}
+      />
     </div>
   );
 }

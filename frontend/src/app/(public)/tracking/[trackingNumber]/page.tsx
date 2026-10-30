@@ -445,9 +445,9 @@ export default function TrackingResultPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-whatsapp"
-                style={{ padding: "10px 18px", fontSize: "0.86rem" }}
+                style={{ padding: "10px 18px", fontSize: "0.86rem", display: "inline-flex", alignItems: "center", gap: "8px" }}
               >
-                <Phone size={16} />
+                <img src="/images/whatsapp.png" alt="WhatsApp" style={{ width: 18, height: 18, objectFit: "contain", display: "block" }} />
                 Contacter sur WhatsApp
               </a>
             </div>

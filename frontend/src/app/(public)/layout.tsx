@@ -177,9 +177,9 @@ export default function PublicLayout({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-whatsapp"
-                style={{ width: "fit-content", padding: "10px 18px", fontSize: "0.85rem" }}
+                style={{ width: "fit-content", padding: "10px 18px", fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: "8px" }}
               >
-                <Phone size={16} />
+                <img src="/images/whatsapp.png" alt="WhatsApp" style={{ width: 18, height: 18, objectFit: "contain", display: "block" }} />
                 Contacter sur WhatsApp
               </a>
             </div>

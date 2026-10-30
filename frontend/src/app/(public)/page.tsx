@@ -860,9 +860,9 @@ export default function HomePage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-whatsapp"
-                  style={{ width: "100%", padding: "12px", fontSize: "0.9rem" }}
+                  style={{ width: "100%", padding: "12px", fontSize: "0.9rem", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
                 >
-                  <MessageCircle size={18} />
+                  <img src="/images/whatsapp.png" alt="WhatsApp" style={{ width: 18, height: 18, objectFit: "contain", display: "block" }} />
                   Valider ce Devis sur WhatsApp (+225)
                 </a>
               </div>
@@ -1044,7 +1044,7 @@ export default function HomePage() {
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px dashed var(--border-light)" }}>
                       <span style={{ color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
-                        <Package size={15} color="#db2777" /> Cosmétique & Liquide
+                        <Package size={15} color="var(--brown-dark)" /> Cosmétique & Liquide
                       </span>
                       <strong style={{ color: "var(--brown-dark)" }}>9 000 F / 14 € kg</strong>
                     </div>

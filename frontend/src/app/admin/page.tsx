@@ -56,6 +56,9 @@ import {
   Upload,
   UserCheck,
   Wallet,
+  History,
+  TrendingUp,
+  RotateCcw,
 } from "lucide-react";
 import RouteGlobe from "@/components/RouteGlobe";
 import { CircularFlag } from "@/components/CircularFlag";
@@ -63,6 +66,7 @@ import {
   WaveLogo,
   OrangeMoneyLogo,
   BankBaciLogo,
+  IbanLogo,
   AlipayLogo,
   WeChatPayLogo,
   ReceiptSealLogo,
@@ -76,6 +80,7 @@ import {
   DEFAULT_CURRENCY,
   getCountryCodeFromName,
 } from "@/data/countries";
+import { SplashScreen } from "@/components/SplashScreen";
 
 interface UserSession {
   userId: string;
@@ -237,6 +242,123 @@ function formatCurrencyPrice(minor: number, currency: string = "FCFA"): string {
     return `${val.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} DH`;
   }
   return `$${val.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+}
+
+function renderPaymentMethodBadge(method: string = "") {
+  const m = (method || "").toUpperCase();
+  if (m.includes("WAVE")) {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "4px 10px",
+          borderRadius: "9999px",
+          background: "#E0F2FE",
+          border: "1px solid rgba(14, 165, 233, 0.28)",
+          color: "#0369A1",
+          fontSize: "0.74rem",
+          fontWeight: "700",
+          lineHeight: 1,
+          whiteSpace: "nowrap",
+        }}
+      >
+        <WaveLogo size={16} />
+        <span>Wave</span>
+      </span>
+    );
+  }
+  if (m.includes("ORANGE")) {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "4px 10px",
+          borderRadius: "9999px",
+          background: "#FFF7ED",
+          border: "1px solid rgba(249, 115, 22, 0.28)",
+          color: "#C2410C",
+          fontSize: "0.74rem",
+          fontWeight: "700",
+          lineHeight: 1,
+          whiteSpace: "nowrap",
+        }}
+      >
+        <OrangeMoneyLogo size={16} />
+        <span>Orange Money</span>
+      </span>
+    );
+  }
+  if (m.includes("ALIPAY")) {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "4px 10px",
+          borderRadius: "9999px",
+          background: "#E0F2FE",
+          border: "1px solid rgba(0, 161, 233, 0.28)",
+          color: "#0284C7",
+          fontSize: "0.74rem",
+          fontWeight: "700",
+          lineHeight: 1,
+          whiteSpace: "nowrap",
+        }}
+      >
+        <AlipayLogo size={16} />
+        <span>Alipay</span>
+      </span>
+    );
+  }
+  if (m.includes("BANK") || m.includes("VIREMENT") || m.includes("IBAN")) {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "4px 10px",
+          borderRadius: "9999px",
+          background: "#F3F4F6",
+          border: "1px solid rgba(75, 85, 99, 0.22)",
+          color: "#374151",
+          fontSize: "0.74rem",
+          fontWeight: "700",
+          lineHeight: 1,
+          whiteSpace: "nowrap",
+        }}
+      >
+        <IbanLogo size={16} />
+        <span>Virement / IBAN</span>
+      </span>
+    );
+  }
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "6px",
+        padding: "4px 10px",
+        borderRadius: "9999px",
+        background: "#F5F3FF",
+        border: "1px solid rgba(139, 92, 246, 0.22)",
+        color: "#6D28D9",
+        fontSize: "0.74rem",
+        fontWeight: "700",
+        lineHeight: 1,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <Wallet size={13} />
+      <span>{m.includes("CASH") || m.includes("ESP") ? "Espèces" : method || "Paiement"}</span>
+    </span>
+  );
 }
 
 function getFriendlyStatus(code: string, originalLabel?: string): { icon: string; label: string } {
@@ -1156,7 +1278,6 @@ function renderCleanAssistantText(rawText: string) {
 function IOSTypingMessage({
   text,
   isNew,
-  onTick,
 }: {
   text: string;
   isNew: boolean;
@@ -1171,19 +1292,17 @@ function IOSTypingMessage({
       return;
     }
 
-    let current = displayedLength;
+    let current = 0;
     const interval = setInterval(() => {
-      current += 3;
+      current += 7;
       if (current >= text.length) {
         setDisplayedLength(text.length);
         hasFinishedRef.current = true;
         clearInterval(interval);
-        onTick?.();
       } else {
         setDisplayedLength(current);
-        onTick?.();
       }
-    }, 16);
+    }, 12);
 
     return () => clearInterval(interval);
   }, [text, isNew]);
@@ -1192,21 +1311,29 @@ function IOSTypingMessage({
   const isTyping = isNew && !hasFinishedRef.current && displayedLength < text.length;
 
   return (
-    <div style={{ lineHeight: "1.55" }}>
-      {renderCleanAssistantText(displayedText)}
+    <div style={{ position: "relative", lineHeight: "1.55" }}>
+      {/* Espace réservé fixe : fige la hauteur finale dès la première milliseconde pour zéro décalage de page */}
+      <div style={{ visibility: isTyping ? "hidden" : "visible" }}>
+        {renderCleanAssistantText(text)}
+      </div>
+
+      {/* Couche de frappe superposée sans aucun impact sur le flux ni le scroll */}
       {isTyping && (
-        <span
-          style={{
-            display: "inline-block",
-            width: "2px",
-            height: "14px",
-            background: "#007AFF",
-            marginLeft: "2px",
-            verticalAlign: "middle",
-            borderRadius: "1px",
-            animation: "iosCaretBlink 0.7s infinite",
-          }}
-        />
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0 }}>
+          {renderCleanAssistantText(displayedText)}
+          <span
+            style={{
+              display: "inline-block",
+              width: "2px",
+              height: "13px",
+              background: "var(--brown-dark)",
+              marginLeft: "3px",
+              verticalAlign: "middle",
+              borderRadius: "1px",
+              animation: "iosCaretBlink 0.65s infinite",
+            }}
+          />
+        </div>
       )}
     </div>
   );
@@ -1404,6 +1531,7 @@ export default function AdminPage() {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<UserSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSplashDone, setIsSplashDone] = useState(false);
 
   // Formulaire de connexion
   const [email, setEmail] = useState("admin@roumtransit.com");
@@ -1573,6 +1701,25 @@ export default function AdminPage() {
 
   // Modales Générales « Modifier »
   const [editingTariff, setEditingTariff] = useState<any | null>(null);
+  const [saveConfirmationPopup, setSaveConfirmationPopup] = useState<{
+    title: string;
+    subtitle: string;
+    item: {
+      service: string;
+      price: string;
+      route: string;
+      delay?: string;
+      transport?: string;
+    };
+  } | null>(null);
+  const [pendingTariffEdits, setPendingTariffEdits] = useState<Record<string, any>>({});
+  const [initialTariffsBackup, setInitialTariffsBackup] = useState<any[] | null>(null);
+  const [isSavingBatchTariffs, setIsSavingBatchTariffs] = useState(false);
+  const pendingTariffEditsRef = useRef<Record<string, any>>({});
+  useEffect(() => {
+    pendingTariffEditsRef.current = pendingTariffEdits;
+  }, [pendingTariffEdits]);
+
   const [editingShipment, setEditingShipment] = useState<any | null>(null);
   const [editingRequest, setEditingRequest] = useState<any | null>(null);
   const [editingClient, setEditingClient] = useState<any | null>(null);
@@ -1590,19 +1737,34 @@ export default function AdminPage() {
     avatarUrl: "",
   });
 
-  // Chargement du profil sauvegardé
+  // Chargement du profil sauvegardé (normalisé sur Madame Marouba · CEO)
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem("roum_profile_data");
         if (saved) {
           const parsed = JSON.parse(saved);
-          const cleanRole = (parsed.roleName || "CEO").replace(/\s*·?\s*direction\s+g[eé]n[eé]rale/gi, "").trim() || "CEO";
+          const rawName = (parsed.fullName || "").trim();
+          const normalizedName =
+            !rawName ||
+            rawName === "Direction ROUM TRANSIT" ||
+            rawName === "Directeur Général"
+              ? "Madame Marouba"
+              : rawName;
+          const rawRole = (parsed.roleName || "CEO")
+            .replace(/\s*·?\s*direction\s+g[eé]n[eé]rale/gi, "")
+            .trim();
+          const cleanRole =
+            !rawRole ||
+            rawRole.toUpperCase() === "SUPER ADMINISTRATEUR" ||
+            rawRole.toUpperCase() === "SUPER ADMIN"
+              ? "CEO"
+              : rawRole;
           setUser((curr) => {
             const baseUser: UserSession = curr || {
               userId: "user-ceo-marouba",
               email: parsed.email || "ceo@roumtransit.com",
-              fullName: parsed.fullName || "Madame Marouba",
+              fullName: normalizedName,
               roleId: "CEO",
               roleName: cleanRole,
               isSuperAdmin: true,
@@ -1612,27 +1774,46 @@ export default function AdminPage() {
             };
             return {
               ...baseUser,
-              fullName: parsed.fullName || baseUser.fullName,
+              fullName: normalizedName,
               roleName: cleanRole,
               avatarUrl: parsed.avatarUrl || baseUser.avatarUrl,
               phone: parsed.phone || baseUser.phone,
               email: parsed.email || baseUser.email,
             };
           });
+          const savedAvatar = localStorage.getItem("roum_ceo_avatar_photo") || parsed.avatarUrl || "";
           setProfileForm({
-            fullName: parsed.fullName || "Madame Marouba",
+            fullName: normalizedName,
             roleName: cleanRole,
             phone: parsed.phone || "+225 07 00 00 00 00",
             email: parsed.email || "ceo@roumtransit.com",
-            avatarUrl: parsed.avatarUrl || "",
+            avatarUrl: savedAvatar,
           });
         }
       } catch {}
     }
   }, []);
 
+  const openProfileModal = () => {
+    let savedAvatar = "";
+    if (typeof window !== "undefined") {
+      try {
+        savedAvatar = localStorage.getItem("roum_ceo_avatar_photo") || "";
+      } catch {}
+    }
+    setProfileForm({
+      fullName: user?.fullName || "Madame Marouba",
+      roleName: user?.roleName || "CEO",
+      phone: user?.phone || "+225 07 00 00 00 00",
+      email: user?.email || "ceo@roumtransit.com",
+      avatarUrl: user?.avatarUrl || savedAvatar || "",
+    });
+    setShowProfileModal(true);
+  };
+
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
+    const finalAvatar = profileForm.avatarUrl || user?.avatarUrl || null;
     const updatedUser: UserSession = {
       ...(user || {
         userId: "user-ceo-marouba",
@@ -1649,12 +1830,17 @@ export default function AdminPage() {
       roleName: profileForm.roleName.trim() || "CEO",
       phone: profileForm.phone,
       email: profileForm.email,
-      avatarUrl: profileForm.avatarUrl || user?.avatarUrl || null,
+      avatarUrl: finalAvatar,
     };
 
     setUser(updatedUser);
     if (typeof window !== "undefined") {
       localStorage.setItem("roum_profile_data", JSON.stringify(updatedUser));
+      if (finalAvatar) {
+        localStorage.setItem("roum_ceo_avatar_photo", finalAvatar);
+      } else {
+        localStorage.removeItem("roum_ceo_avatar_photo");
+      }
     }
     triggerToast("Votre profil et photo ont été mis à jour avec succès !", "Profil Direction");
     setShowProfileModal(false);
@@ -1663,14 +1849,46 @@ export default function AdminPage() {
   const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        triggerToast("Veuillez choisir une photo de taille inférieure à 5 Mo.", "Photo de profil", "error");
+      if (file.size > 8 * 1024 * 1024) {
+        triggerToast("Veuillez choisir une photo de taille inférieure à 8 Mo.", "Photo de profil", "error");
         return;
       }
       const reader = new FileReader();
       reader.onload = (event) => {
-        const base64 = event.target?.result as string;
-        setProfileForm((prev) => ({ ...prev, avatarUrl: base64 }));
+        const rawData = event.target?.result as string;
+        // Compression par canvas (max 320x320) pour garantir une persistance parfaite dans localStorage sans dépassement de quota
+        const img = new window.Image();
+        img.onload = () => {
+          const maxDim = 320;
+          let width = img.width;
+          let height = img.height;
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL("image/jpeg", 0.88);
+            setProfileForm((prev) => ({ ...prev, avatarUrl: compressed }));
+          } else {
+            setProfileForm((prev) => ({ ...prev, avatarUrl: rawData }));
+          }
+        };
+        img.onerror = () => {
+          setProfileForm((prev) => ({ ...prev, avatarUrl: rawData }));
+        };
+        img.src = rawData;
       };
       reader.readAsDataURL(file);
     }
@@ -1692,48 +1910,12 @@ export default function AdminPage() {
   const [dashboardFilter, setDashboardFilter] = useState<string>("ALL");
   const [dashboardSearch, setDashboardSearch] = useState<string>("");
 
-  // --- ASSISTANT OPÉRATIONNEL ROUM (Supervision temps réel Madame Marouba) ---
+  // --- ASSISTANTE DE DIRECTION ROUM (Design Exécutif Inspiré de l'ADN Marque) ---
+  const [showQuickActionsMenu, setShowQuickActionsMenu] = useState(false);
   const [agentTab, setAgentTab] = useState<"alerts" | "activity">("alerts");
-  const [chatMessages, setChatMessages] = useState<
-    Array<{ sender: "user" | "agent"; text: string; time: string }>
-  >(() => [
-    {
-      sender: "agent",
-      text: `Bonjour ${user?.fullName || "Madame Marouba"}. Votre console de direction ROUM TRANSIT est opérationnelle.\nToutes vos expéditions, caisses et demandes de transit sont synchronisées en direct. Comment puis-je vous assister aujourd'hui ?`,
-      time: "En direct",
-    },
-  ]);
-  const [chatInput, setChatInput] = useState("");
-  const [isAgentThinking, setIsAgentThinking] = useState(false);
-  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const boss = user?.fullName || "Madame Marouba";
-    setChatMessages((prev) => {
-      if (prev.length === 1 && prev[0].sender === "agent") {
-        return [
-          {
-            sender: "agent",
-            text: `Bonjour ${boss}. Votre console de direction ROUM TRANSIT est opérationnelle.\nToutes vos expéditions, caisses et demandes de transit sont synchronisées en direct. Comment puis-je vous assister aujourd'hui ?`,
-            time: "En direct",
-          },
-        ];
-      }
-      return prev;
-    });
-  }, [user?.fullName]);
-
-  const scrollToChatBottom = (smooth = true) => {
-    if (chatMessagesEndRef.current) {
-      chatMessagesEndRef.current.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
-    }
-  };
-
-  useEffect(() => {
-    scrollToChatBottom(true);
-  }, [chatMessages.length, isAgentThinking]);
 
   const pendingPaymentsList = paymentsList.filter((p) => p.status === "PENDING");
+  const pendingAmount = pendingPaymentsList.reduce((acc, p) => acc + (p.amount_minor || 0), 0);
   const pendingWeighingsList = shipments.filter(
     (s) =>
       (s.current_status === "RECEIVED_AT_HUB" || s.current_status === "IN_PREPARATION") &&
@@ -1752,10 +1934,104 @@ export default function AdminPage() {
     pendingRequestsList.length +
     urgentTasksList.length;
 
+  const buildInitialCeoReport = (bossName: string) => {
+    const greeting = bossName || "Madame Marouba";
+    const pAmount = pendingPaymentsList.reduce((acc, p) => acc + (p.amount_minor || 0), 0);
+    const parts: string[] = [];
+    if (pendingPaymentsList.length > 0) {
+      parts.push(`nous avons ${pendingPaymentsList.length} paiement(s) en attente d'approbation en caisse (${formatCurrencyPrice(pAmount, "FCFA")})`);
+    }
+    if (pendingRequestsList.length > 0) {
+      parts.push(`${pendingRequestsList.length} demande(s) de cotation client à arbitrer`);
+    }
+    if (pendingWeighingsList.length > 0) {
+      parts.push(`${pendingWeighingsList.length} colis réceptionné(s) au hub à peser`);
+    }
+    if (urgentTasksList.length > 0) {
+      parts.push(`${urgentTasksList.length} tâche(s) prioritaire(s) à superviser`);
+    }
+
+    if (parts.length === 0) {
+      return `Bonjour ${greeting}, je suis à votre entière disposition. Toutes vos opérations de la journée sont parfaitement synchronisées. Que souhaitez-vous que nous examinions ensemble ?`;
+    }
+
+    return `Bonjour ${greeting}, j'ai préparé l'ensemble de vos dossiers pour aujourd'hui. Pour ce matin, ${parts.join(", et ")}. Je reste entièrement à votre écoute pour traiter chaque dossier selon vos directives.`;
+  };
+
+  const [chatMessages, setChatMessages] = useState<
+    Array<{
+      sender: "user" | "agent";
+      text: string;
+      time: string;
+      actions?: Array<{ label: string; tab?: string; kind?: string }>;
+    }>
+  >(() => [
+    {
+      sender: "agent",
+      text: `Bonjour Madame Marouba, je suis à vos côtés pour la supervision de vos opérations. Vos dossiers de caisse, expéditions et demandes de transit sont synchronisés. Que souhaitez-vous que nous voyions ensemble ?`,
+      time: "En direct",
+      actions: [
+        { label: "Point Caisse", tab: "finances" },
+        { label: "Devis & Cotations", tab: "requests" },
+        { label: "Arrivages Hub", tab: "shipments" },
+      ],
+    },
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const [isAgentThinking, setIsAgentThinking] = useState(false);
+  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+  const chatScrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Met à jour le briefing initial dès que les données opérationnelles sont chargées
+  useEffect(() => {
+    const boss = user?.fullName || "Madame Marouba";
+    setChatMessages((prev) => {
+      if (prev.length === 1 && prev[0].sender === "agent") {
+        return [
+          {
+            sender: "agent",
+            text: buildInitialCeoReport(boss),
+            time: "En direct",
+            actions: [
+              { label: `Valider Caisse (${pendingPaymentsList.length})`, tab: "finances" },
+              { label: `Cotations (${pendingRequestsList.length})`, tab: "requests" },
+              { label: `Pesées Hub (${pendingWeighingsList.length})`, tab: "shipments" },
+              { label: `Urgences (${urgentTasksList.length})`, tab: "tasks" },
+            ],
+          },
+        ];
+      }
+      return prev;
+    });
+  }, [
+    user?.fullName,
+    pendingPaymentsList.length,
+    pendingRequestsList.length,
+    pendingWeighingsList.length,
+    urgentTasksList.length,
+  ]);
+
+  // Scroll strictement confiné à l'intérieur du conteneur de chat (zéro mouvement de la page)
+  const scrollToChatBottom = () => {
+    const el = chatScrollContainerRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "assistant") {
+      requestAnimationFrame(() => {
+        scrollToChatBottom();
+      });
+    }
+  }, [chatMessages.length, isAgentThinking, activeTab]);
+
   const handleAskAgent = async (qText: string) => {
     const q = qText.trim();
     if (!q) return;
 
+    const boss = user?.fullName || "Madame Marouba";
     const userMsg = {
       sender: "user" as const,
       text: q,
@@ -1772,127 +2048,162 @@ export default function AdminPage() {
     const pendingAmount = pendingPaymentsList.reduce((acc, p) => acc + (p.amount_minor || 0), 0);
     const inTransitShipments = shipments.filter((s) => s.current_status === "IN_TRANSIT");
 
-    const liveContext = {
-      confirmedCashTotal: formatCurrencyPrice(confirmed, "FCFA"),
-      pendingPaymentsCount: pendingPaymentsList.length,
-      pendingPaymentsAmount: formatCurrencyPrice(pendingAmount, "FCFA"),
-      pendingWeighingsCount: pendingWeighingsList.length,
-      pendingWeighingsSample: pendingWeighingsList.slice(0, 4).map((s) => `${s.tracking_number} (${s.client_name})`),
-      pendingRequestsCount: pendingRequestsList.length,
-      pendingRequestsSample: pendingRequestsList.slice(0, 4).map((r) => `${r.reference} - ${r.client_name}`),
-      urgentTasksCount: urgentTasksList.length,
-      activeShipmentsCount: inTransitShipments.length,
-      activeShipmentsSample: inTransitShipments.slice(0, 4).map((s) => `${s.tracking_number} (${s.client_name}, ${s.origin_country} vers ${s.destination_country})`),
-      recentActions: auditLogs.slice(0, 4).map((l) => `${l.user_name || "Agent"}: ${l.action}`),
-    };
-
+    const qLower = q.toLowerCase();
     let reply = "";
+    let msgActions: Array<{ label: string; tab?: string; kind?: string }> | undefined = undefined;
 
-    try {
-      const res = await fetch("/api/assistant", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: q,
-          context: liveContext,
-          history: chatMessages.slice(-6),
-          userFullName: user?.fullName || "Madame Marouba",
-        }),
-      });
+    // 1. Moteur d'exécution instantané (~90ms) : rapporte directement les tâches que la CEO doit exécuter
+    await new Promise((r) => setTimeout(r, 90));
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.reply) {
-          reply = data.reply;
-        }
-      }
-    } catch (err) {
-      console.warn("AI API error, fallback to deterministic reply", err);
-    }
-
-    if (!reply) {
-      const qLower = q.toLowerCase();
-      if (
-        qLower.includes("caisse") ||
-        qLower.includes("paiement") ||
-        qLower.includes("argent") ||
-        qLower.includes("finance") ||
-        qLower.includes("encaiss") ||
-        qLower.includes("wave") ||
-        qLower.includes("orange")
-      ) {
-        reply = `Point Caisse & Finances :\n- Total encaissé validé : ${formatCurrencyPrice(confirmed, "FCFA")}\n- En attente de contrôle caisse : ${pendingPaymentsList.length} paiement(s) représentant ${formatCurrencyPrice(pendingAmount, "FCFA")}.\n\n${
-          pendingPaymentsList.length > 0
-            ? "Vous pouvez valider ou rejeter ces règlements dans la colonne de gauche."
-            : "Tous les règlements sont à jour."
-        }`;
-      } else if (
-        qLower.includes("attente") ||
-        qLower.includes("bloqu") ||
-        qLower.includes("faire") ||
-        qLower.includes("urgent") ||
-        qLower.includes("priorit") ||
-        qLower.includes("action")
-      ) {
-        reply = `Actions prioritaires à traiter :\n1. Contrôle Caisse : ${pendingPaymentsList.length} paiement(s) en attente de vérification.\n2. Pesée Magasin Hub : ${pendingWeighingsList.length} colis réceptionné(s) au hub sans pesée officielle.\n3. Demandes Sourcing / Transit : ${pendingRequestsList.length} nouvelle(s) demande(s) en attente d'analyse.\n4. Tâches d'Équipe : ${urgentTasksList.length} tâche(s) urgente(s) non terminée(s).\n\nVous pouvez traiter chacun de ces points directement dans la colonne de gauche.`;
-      } else if (
-        qLower.includes("résumé") ||
-        qLower.includes("resume") ||
-        qLower.includes("journée") ||
-        qLower.includes("journee") ||
-        qLower.includes("bilan") ||
-        qLower.includes("aujourd'hui") ||
-        qLower.includes("activit")
-      ) {
-        const inTransitCount = inTransitShipments.length;
-        const deliveredCount = shipments.filter((s) => s.current_status === "DELIVERED").length;
-        reply = `Bilan Opérationnel en Temps Réel :\n- ${inTransitCount} expéditions en cours d'acheminement (vols & mer).\n- ${deliveredCount} colis déjà livrés aux clients.\n- ${requestsList.length} demandes de sourcing/transit au total.\n- ${totalAgentAlerts} action(s) manuelle(s) requièrent l'attention de l'équipe aujourd'hui.`;
-      } else if (
-        qLower.includes("vol") ||
-        qLower.includes("mer") ||
-        qLower.includes("transit") ||
-        qLower.includes("expedition") ||
-        qLower.includes("expédition") ||
-        qLower.includes("colis")
-      ) {
-        const active = inTransitShipments.slice(0, 4);
-        reply = active.length > 0
-          ? `Expéditions en cours de transit :\n${active
-              .map((s) => `- ${s.tracking_number} (${s.client_name}) : ${s.origin_country} vers ${s.destination_country} [${s.status_label || "En vol/mer"}] - ${s.total_weight_kg || 0} kg`)
-              .join("\n")}\n\nRetrouvez la liste complète dans l'onglet Expéditions & Colis.`
-          : "Aucune expédition en cours de transit actuellement.";
-      } else if (
-        qLower.includes("alibaba") ||
-        qLower.includes("sourcing") ||
-        qLower.includes("demande") ||
-        qLower.includes("fournisseur")
-      ) {
-        reply = pendingRequestsList.length > 0
-          ? `Demandes Sourcing & Transit reçues :\n- ${pendingRequestsList.length} dossier(s) en attente de traitement.\n${pendingRequestsList
-              .slice(0, 3)
-              .map((r) => `- ${r.reference} - ${r.client_name} (${formatRequestType(r.request_type)}) : ${r.origin_country || "Chine"} vers ${r.destination_country || "Afrique"}`)
+    if (
+      qLower.includes("tâche") ||
+      qLower.includes("tache") ||
+      qLower.includes("exécut") ||
+      qLower.includes("execut") ||
+      qLower.includes("rapport") ||
+      qLower.includes("attente") ||
+      qLower.includes("urgent") ||
+      qLower.includes("priorit") ||
+      qLower.includes("action") ||
+      qLower.includes("faire") ||
+      qLower.includes("bilan") ||
+      qLower.includes("jour")
+    ) {
+      reply = `${boss}, voici les ${totalAgentAlerts} tâche(s) qui requièrent votre exécution immédiate :\n1. Validation Caisse : ${pendingPaymentsList.length} règlement(s) en attente d'approbation (${formatCurrencyPrice(pendingAmount, "FCFA")}).\n2. Arbitrage Sourcing : ${pendingRequestsList.length} dossier(s) client à chiffrer (${pendingRequestsList.slice(0, 2).map((r) => r.reference).join(", ") || "aucun"}).\n3. Contrôle Hub : ${pendingWeighingsList.length} colis à peser avant embarquement (${pendingWeighingsList.slice(0, 2).map((s) => s.tracking_number).join(", ") || "aucun"}).\n4. Directives d'Équipe : ${urgentTasksList.length} tâche(s) urgente(s) (${urgentTasksList.slice(0, 2).map((t) => t.title).join(" ; ") || "aucune"}).`;
+      msgActions = [
+        { label: `Exécuter Caisse (${pendingPaymentsList.length})`, tab: "finances" },
+        { label: `Exécuter Sourcing (${pendingRequestsList.length})`, tab: "requests" },
+        { label: `Exécuter Pesées (${pendingWeighingsList.length})`, tab: "shipments" },
+        { label: `Voir Urgences (${urgentTasksList.length})`, tab: "tasks" },
+      ];
+    } else if (
+      qLower.includes("caisse") ||
+      qLower.includes("paiement") ||
+      qLower.includes("argent") ||
+      qLower.includes("finance") ||
+      qLower.includes("encaiss") ||
+      qLower.includes("wave") ||
+      qLower.includes("orange")
+    ) {
+      const details = pendingPaymentsList
+        .slice(0, 3)
+        .map((p, idx) => `${idx + 1}. ${p.client_name || "Client"} : ${formatCurrencyPrice(p.amount_minor || 0, "FCFA")} (${p.payment_method})`)
+        .join("\n");
+      reply =
+        pendingPaymentsList.length > 0
+          ? `Tâches CEO — Validation Caisse (${pendingPaymentsList.length} à exécuter pour ${formatCurrencyPrice(pendingAmount, "FCFA")}) :\n${details}\nTotal déjà validé en caisse : ${formatCurrencyPrice(confirmed, "FCFA")}.`
+          : `Aucune validation de caisse en attente, ${boss}. Trésorerie validée à jour : ${formatCurrencyPrice(confirmed, "FCFA")}.`;
+      msgActions = [{ label: "Ouvrir & Valider la Caisse", tab: "finances" }];
+    } else if (
+      qLower.includes("pesée") ||
+      qLower.includes("pesee") ||
+      qLower.includes("peser") ||
+      qLower.includes("hub") ||
+      qLower.includes("magasin")
+    ) {
+      const details = pendingWeighingsList
+        .slice(0, 3)
+        .map((s, idx) => `${idx + 1}. ${s.tracking_number} (${s.client_name}) — ${s.origin_country} vers ${s.destination_country}`)
+        .join("\n");
+      reply =
+        pendingWeighingsList.length > 0
+          ? `Tâches CEO — Contrôle des Pesées Hub (${pendingWeighingsList.length} colis à régulariser) :\n${details}\nExécutez la pesée officielle dans la colonne de gauche ou dans Expéditions.`
+          : `Tous les colis réceptionnés au hub disposent d'une pesée officielle validée.`;
+      msgActions = [{ label: "Contrôler les Colis au Hub", tab: "shipments" }];
+    } else if (
+      qLower.includes("alibaba") ||
+      qLower.includes("sourcing") ||
+      qLower.includes("demande") ||
+      qLower.includes("cotation") ||
+      qLower.includes("devis")
+    ) {
+      const details = pendingRequestsList
+        .slice(0, 3)
+        .map((r, idx) => `${idx + 1}. ${r.reference} — ${r.client_name} (${formatRequestType(r.request_type)})`)
+        .join("\n");
+      reply =
+        pendingRequestsList.length > 0
+          ? `Tâches CEO — Arbitrage Sourcing & Devis (${pendingRequestsList.length} dossier(s) à valider) :\n${details}`
+          : `Aucun dossier de sourcing en attente d'arbitrage CEO.`;
+      msgActions = [{ label: "Traiter les Demandes", tab: "requests" }];
+    } else if (
+      qLower.includes("vol") ||
+      qLower.includes("mer") ||
+      qLower.includes("transit") ||
+      qLower.includes("expedition") ||
+      qLower.includes("expédition") ||
+      qLower.includes("colis")
+    ) {
+      const active = inTransitShipments.slice(0, 3);
+      reply =
+        active.length > 0
+          ? `Supervision CEO — ${inTransitShipments.length} expédition(s) en transit actif :\n${active
+              .map((s, idx) => `${idx + 1}. ${s.tracking_number} (${s.client_name}) : ${s.origin_country} vers ${s.destination_country} — ${s.total_weight_kg || 0} kg`)
               .join("\n")}`
-          : "Aucune nouvelle demande de sourcing en attente.";
-      } else {
-        const foundShipment = shipments.find(
-          (s) =>
-            s.tracking_number?.toLowerCase().includes(qLower) ||
-            s.client_name?.toLowerCase().includes(qLower) ||
-            s.client_phone?.includes(q)
-        );
-        const foundRequest = requestsList.find(
-          (r) =>
-            r.reference?.toLowerCase().includes(qLower) ||
-            r.client_name?.toLowerCase().includes(qLower)
-        );
+          : "Aucune expédition en transit actif actuellement.";
+      msgActions = [{ label: "Piloter les Expéditions", tab: "shipments" }];
+    } else {
+      // Recherche directe d'un dossier précis (colis ou client)
+      const foundShipment = shipments.find(
+        (s) =>
+          s.tracking_number?.toLowerCase().includes(qLower) ||
+          s.client_name?.toLowerCase().includes(qLower) ||
+          s.client_phone?.includes(q)
+      );
+      const foundRequest = requestsList.find(
+        (r) =>
+          r.reference?.toLowerCase().includes(qLower) ||
+          r.client_name?.toLowerCase().includes(qLower)
+      );
 
-        if (foundShipment) {
-          reply = `Colis trouvé pour « ${q} » :\n- Référence : ${foundShipment.tracking_number}\n- Client : ${foundShipment.client_name} (${foundShipment.client_phone || "Sans téléphone"})\n- Trajet : ${foundShipment.origin_country} vers ${foundShipment.destination_country}\n- Étape : ${formatShipmentStatus(foundShipment.current_status, foundShipment.status_label)}\n- Poids : ${foundShipment.total_weight_kg || 0} kg\n- Règlement : ${foundShipment.payment_status === "PAID" ? "Payé" : "En attente"}`;
-        } else if (foundRequest) {
-          reply = `Demande trouvée pour « ${q} » :\n- Référence : ${foundRequest.reference}\n- Client : ${foundRequest.client_name}\n- Type : ${formatRequestType(foundRequest.request_type)}\n- Statut : ${foundRequest.status}\n- Trajet : ${foundRequest.origin_country || "Chine"} vers ${foundRequest.destination_country || "Afrique"}`;
-        } else {
-          reply = `Vous pouvez interroger en direct :\n- La caisse et les encaissements (tapez "caisse" ou "paiements")\n- Les actions urgentes à faire (tapez "en attente" ou "urgences")\n- Le résumé de la journée (tapez "bilan" ou "résumé")\n- Le suivi d'un colis ou d'un client (tapez un nom comme "Moussa" ou une référence comme "RM-AIR").`;
+      if (foundShipment) {
+        reply = `Dossier Colis ${foundShipment.tracking_number} (${foundShipment.client_name}) :\n- Corridor : ${foundShipment.origin_country} vers ${foundShipment.destination_country}\n- Statut : ${formatShipmentStatus(foundShipment.current_status, foundShipment.status_label)} (${foundShipment.total_weight_kg || 0} kg)\n- Action CEO : ${foundShipment.payment_status === "PAID" ? "Règlement validé, prêt pour livraison" : "Règlement en attente de validation caisse"}.`;
+        msgActions = [{ label: "Voir dans Expéditions", tab: "shipments" }];
+      } else if (foundRequest) {
+        reply = `Dossier Sourcing ${foundRequest.reference} (${foundRequest.client_name}) :\n- Type : ${formatRequestType(foundRequest.request_type)} (${foundRequest.origin_country || "Chine"} vers ${foundRequest.destination_country || "Afrique"})\n- Action CEO : Valider la cotation tarifaire et convertir en expédition.`;
+        msgActions = [{ label: "Exécuter ce Dossier", tab: "requests" }];
+      } else {
+        // Appel ultra-rapide à l'API IA (avec repli instantané sur le rapport d'exécution CEO)
+        const liveContext = {
+          confirmedCashTotal: formatCurrencyPrice(confirmed, "FCFA"),
+          pendingPaymentsCount: pendingPaymentsList.length,
+          pendingPaymentsAmount: formatCurrencyPrice(pendingAmount, "FCFA"),
+          pendingWeighingsCount: pendingWeighingsList.length,
+          pendingWeighingsSample: pendingWeighingsList.slice(0, 4).map((s) => `${s.tracking_number} (${s.client_name})`),
+          pendingRequestsCount: pendingRequestsList.length,
+          pendingRequestsSample: pendingRequestsList.slice(0, 4).map((r) => `${r.reference} - ${r.client_name}`),
+          urgentTasksCount: urgentTasksList.length,
+          activeShipmentsCount: inTransitShipments.length,
+          activeShipmentsSample: inTransitShipments.slice(0, 4).map((s) => `${s.tracking_number} (${s.client_name})`),
+        };
+
+        try {
+          const res = await fetch("/api/assistant", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              message: q,
+              context: liveContext,
+              history: chatMessages.slice(-4),
+              userFullName: boss,
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.reply) {
+              reply = data.reply;
+            }
+          }
+        } catch {}
+
+        if (!reply) {
+          reply = buildInitialCeoReport(boss);
         }
+        msgActions = [
+          { label: `Valider Caisse (${pendingPaymentsList.length})`, tab: "finances" },
+          { label: `Cotations (${pendingRequestsList.length})`, tab: "requests" },
+          { label: `Urgences (${urgentTasksList.length})`, tab: "tasks" },
+        ];
       }
     }
 
@@ -1900,6 +2211,7 @@ export default function AdminPage() {
       sender: "agent" as const,
       text: reply,
       time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+      actions: msgActions,
     };
 
     setChatMessages((prev) => [...prev, agentMsg]);
@@ -1991,6 +2303,51 @@ export default function AdminPage() {
   const [showCreateRoleModal, setShowCreateRoleModal] = useState(false);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [showCreateTariffModal, setShowCreateTariffModal] = useState(false);
+  const [showCreateAirRouteModal, setShowCreateAirRouteModal] = useState(false);
+  const [airRouteForm, setAirRouteForm] = useState({
+    isBilateral: true,
+    origin_country: "France",
+    origin_city: "Paris",
+    destination_country: "Côte d'Ivoire",
+    destination_city: "Abidjan",
+    service_name: "Liaison Aérienne Bilatérale (Paris ↔ Abidjan)",
+    category_tag: "Liaison Aérienne ✈️",
+    pricing_basis: "PER_KG",
+    currency: "FCFA",
+    price_per_unit: 8500,
+    estimated_days_min: 3,
+    estimated_days_max: 5,
+    note: "Expéditions régulières dans les 2 sens · Agence Bingerville",
+  });
+  const [showAddMoroccoCountryModal, setShowAddMoroccoCountryModal] = useState(false);
+  const [moroccoCountryForm, setMoroccoCountryForm] = useState({
+    destination_country: "Sénégal",
+    destination_city: "Dakar",
+    price_per_unit: 7000,
+    currency: "FCFA",
+    estimated_days_min: 5,
+    estimated_days_max: 5,
+    note: "Groupage aérien Maroc 5 jours garantis",
+  });
+  const [customHubs, setCustomHubs] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("roum_custom_hubs");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return [];
+  });
+  const [showAddHubModal, setShowAddHubModal] = useState(false);
+  const [newHubForm, setNewHubForm] = useState({
+    name: "Hub Istanbul (Turquie)",
+    country: "Turquie",
+    countryCode: "TR",
+    city: "Istanbul",
+    address: "Entrepôt Istanbul : Laleli Mah., Fatih, Istanbul, Turquie",
+    shipping_mark: "ROUM-TRANSIT-[NOM_CLIENT]-[DESTINATION]",
+    contact: "+90 530 000 0000",
+  });
 
   // Nouvelles modales opérationnelles (sourcing, réception hub, détails)
   const [showRequestDetailModal, setShowRequestDetailModal] = useState<any | null>(null);
@@ -2110,13 +2467,69 @@ export default function AdminPage() {
   const [tariffCorridorFilter, setTariffCorridorFilter] = useState("ALL");
 
   useEffect(() => {
-    const savedToken = localStorage.getItem("roum_admin_token");
-    if (!savedToken) {
-      setLoading(false);
+    // Persistance durant toute la session ouverte : actualiser la page (F5) ne redemande PAS l'identification.
+    // L'identification n'est demandée qu'à l'ouverture d'une nouvelle session (session fermée) ou après Déconnexion.
+    const activeSessionToken =
+      typeof window !== "undefined" ? sessionStorage.getItem("roum_admin_token") : null;
+    if (activeSessionToken) {
+      setIsSplashDone(true);
+      setToken(activeSessionToken);
+      fetchSession(activeSessionToken);
       return;
     }
-    fetchSession(savedToken);
+    setToken(null);
+    setUser(null);
+    setLoading(false);
   }, []);
+
+  const normalizeCeoUser = (rawUser: any): UserSession => {
+    let savedProfile: any = null;
+    let savedAvatar: string | null = null;
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("roum_profile_data");
+        if (stored) savedProfile = JSON.parse(stored);
+        savedAvatar = localStorage.getItem("roum_ceo_avatar_photo");
+      } catch {}
+    }
+
+    const rawName = (savedProfile?.fullName || rawUser?.fullName || "").trim();
+    const fullName =
+      !rawName ||
+      rawName === "Direction ROUM TRANSIT" ||
+      rawName === "Directeur Général"
+        ? "Madame Marouba"
+        : rawName;
+    const rawRole = (savedProfile?.roleName || rawUser?.roleName || "CEO")
+      .replace(/\s*·?\s*direction\s+g[eé]n[eé]rale/gi, "")
+      .trim();
+    const roleName =
+      !rawRole ||
+      rawRole.toUpperCase() === "SUPER ADMINISTRATEUR" ||
+      rawRole.toUpperCase() === "SUPER ADMIN"
+        ? "CEO"
+        : rawRole;
+
+    const resolvedAvatar =
+      savedAvatar ||
+      savedProfile?.avatarUrl ||
+      rawUser?.avatarUrl ||
+      undefined;
+
+    return {
+      userId: rawUser?.userId || savedProfile?.userId || "user-ceo-marouba",
+      email: savedProfile?.email || rawUser?.email || "ceo@roumtransit.com",
+      fullName,
+      roleId: rawUser?.roleId || "CEO",
+      roleName,
+      isSuperAdmin: true,
+      hubLocation: rawUser?.hubLocation || "Abidjan / Bamako",
+      permissions: rawUser?.permissions || ["*"],
+      allowedStatuses: rawUser?.allowedStatuses || ["*"],
+      avatarUrl: resolvedAvatar,
+      phone: savedProfile?.phone || rawUser?.phone || undefined,
+    };
+  };
 
   const fetchSession = async (jwtToken: string) => {
     try {
@@ -2126,9 +2539,10 @@ export default function AdminPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.user) {
-          setUser(data.user);
+          setUser(normalizeCeoUser(data.user));
           setToken(jwtToken);
           loadDashboardData(jwtToken);
+          setLoading(false);
           return;
         }
       }
@@ -2137,17 +2551,7 @@ export default function AdminPage() {
     }
 
     if (jwtToken) {
-      const fallbackUser: UserSession = {
-        userId: "user-ceo-marouba",
-        email: "ceo@roumtransit.com",
-        fullName: "Madame Marouba",
-        roleId: "CEO",
-        roleName: "CEO",
-        isSuperAdmin: true,
-        hubLocation: "Abidjan / Bamako",
-        permissions: ["*"],
-        allowedStatuses: ["*"],
-      };
+      const fallbackUser = normalizeCeoUser(null);
       setUser(fallbackUser);
       setToken(jwtToken);
       loadDashboardData(jwtToken);
@@ -2173,13 +2577,10 @@ export default function AdminPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.token) {
+          sessionStorage.setItem("roum_admin_token", data.token);
           localStorage.setItem("roum_admin_token", data.token);
           setToken(data.token);
-          setUser({
-            ...data.user,
-            fullName: data.user?.fullName === "Directeur Général" ? "Madame Marouba" : (data.user?.fullName || "Madame Marouba"),
-            roleName: data.user?.roleName === "Super Admin" ? "CEO" : ((data.user?.roleName || "CEO").replace(/\s*·?\s*direction\s+g[eé]n[eé]rale/gi, "").trim() || "CEO"),
-          });
+          setUser(normalizeCeoUser(data.user));
           loadDashboardData(data.token);
           setLoginLoading(false);
           return;
@@ -2190,18 +2591,9 @@ export default function AdminPage() {
     }
 
     // Accès direct sans blocage : ouverture immédiate de l'espace de gestion
-    const fallbackUser: UserSession = {
-      userId: "user-ceo-marouba",
-      email: email || "ceo@roumtransit.com",
-      fullName: "Madame Marouba",
-      roleId: "CEO",
-      roleName: "CEO",
-      isSuperAdmin: true,
-      hubLocation: "Abidjan / Bamako",
-      permissions: ["*"],
-      allowedStatuses: ["*"],
-    };
+    const fallbackUser = normalizeCeoUser({ email: email || "ceo@roumtransit.com" });
     const directToken = "roum_local_admin_session";
+    sessionStorage.setItem("roum_admin_token", directToken);
     localStorage.setItem("roum_admin_token", directToken);
     setToken(directToken);
     setUser(fallbackUser);
@@ -2210,6 +2602,7 @@ export default function AdminPage() {
   };
 
   const handleLogout = () => {
+    sessionStorage.removeItem("roum_admin_token");
     localStorage.removeItem("roum_admin_token");
     setToken(null);
     setUser(null);
@@ -2267,12 +2660,15 @@ export default function AdminPage() {
         .then((r) => r.json())
         .then((d) => {
           if (d.tariffs && d.tariffs.length > 0) {
-            setTariffsList(d.tariffs);
+            setTariffsList((curr) => {
+              if (Object.keys(pendingTariffEditsRef.current).length > 0) return curr;
+              return d.tariffs;
+            });
           } else {
-            setTariffsList(DEFAULT_INITIAL_TARIFFS);
+            setTariffsList((curr) => (curr.length > 0 ? curr : DEFAULT_INITIAL_TARIFFS));
           }
         })
-        .catch(() => setTariffsList(DEFAULT_INITIAL_TARIFFS));
+        .catch(() => setTariffsList((curr) => (curr.length > 0 ? curr : DEFAULT_INITIAL_TARIFFS)));
       fetch("/api/admin/routes", { headers })
         .then((r) => r.json())
         .then((d) => d.routes && setRoutesList(d.routes))
@@ -2884,32 +3280,233 @@ export default function AdminPage() {
       setTariffsList((prev) => [newTariffItem, ...prev]);
       setShowCreateTariffModal(false);
       triggerToast("Nouveau tarif ajouté avec succès !", "Grille Tarifaire");
-
-      if (res.ok) {
-        loadDashboardData(token);
-      }
     } catch {
       setShowCreateTariffModal(false);
       triggerToast("Tarif enregistré en mémoire locale.", "Grille Tarifaire");
     }
   };
 
+  const handleCreateAirRoute = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const priceNum = Number(airRouteForm.price_per_unit || 0);
+    const priceMinor = Math.round(priceNum * 100);
+    const timestamp = Date.now();
+    const newItems: any[] = [];
+
+    const item1 = {
+      id: `tariff-air-${timestamp}-1`,
+      origin_country: airRouteForm.origin_country.trim(),
+      origin_city: airRouteForm.origin_city.trim() || null,
+      destination_country: airRouteForm.destination_country.trim(),
+      destination_city: airRouteForm.destination_city.trim() || null,
+      shipping_mode_name: airRouteForm.service_name.trim() || "Liaison Aérienne Directe",
+      shipping_mode_type: "AIR",
+      category_tag: airRouteForm.category_tag.trim() || "Liaison Aérienne ✈️",
+      pricing_basis: airRouteForm.pricing_basis,
+      currency: airRouteForm.currency,
+      price_per_unit_minor: priceMinor,
+      minimum_charge_minor: priceMinor,
+      price_per_unit: priceNum,
+      estimated_days_min: Number(airRouteForm.estimated_days_min) || 3,
+      estimated_days_max: Number(airRouteForm.estimated_days_max) || 5,
+      note: airRouteForm.note.trim() || (airRouteForm.isBilateral ? "Liaison bilatérale dans les 2 sens" : "Liaison aérienne directe"),
+      is_active: 1,
+    };
+    newItems.push(item1);
+
+    if (airRouteForm.isBilateral) {
+      const item2 = {
+        id: `tariff-air-${timestamp}-2`,
+        origin_country: airRouteForm.destination_country.trim(),
+        origin_city: airRouteForm.destination_city.trim() || null,
+        destination_country: airRouteForm.origin_country.trim(),
+        destination_city: airRouteForm.origin_city.trim() || null,
+        shipping_mode_name: (airRouteForm.service_name.trim() || "Liaison Aérienne") + " (Sens Retour)",
+        shipping_mode_type: "AIR",
+        category_tag: airRouteForm.category_tag.trim() || "Liaison Aérienne ✈️",
+        pricing_basis: airRouteForm.pricing_basis,
+        currency: airRouteForm.currency,
+        price_per_unit_minor: priceMinor,
+        minimum_charge_minor: priceMinor,
+        price_per_unit: priceNum,
+        estimated_days_min: Number(airRouteForm.estimated_days_min) || 3,
+        estimated_days_max: Number(airRouteForm.estimated_days_max) || 5,
+        note: "Liaison bilatérale reliée dans les 2 sens",
+        is_active: 1,
+      };
+      newItems.push(item2);
+    }
+
+    let nextList: any[] = [];
+    setTariffsList((prev) => {
+      nextList = [...newItems, ...prev];
+      return nextList;
+    });
+
+    try {
+      localStorage.setItem("roum_tariffs_data", JSON.stringify(nextList.length > 0 ? nextList : newItems));
+    } catch {}
+
+    try {
+      if (token) {
+        for (const it of newItems) {
+          await fetch("/api/admin/tariffs", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify(it),
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Air route save error:", err);
+    }
+
+    setShowCreateAirRouteModal(false);
+    setSaveConfirmationPopup({
+      title: airRouteForm.isBilateral ? "Liaison Bilatérale Reliée !" : "Liaison Aérienne Créée !",
+      subtitle: airRouteForm.isBilateral
+        ? "Les deux directions (Aller et Retour) ont été créées et enregistrées avec succès en base de données."
+        : "La liaison aérienne a été enregistrée avec succès en base de données.",
+      item: {
+        service: airRouteForm.service_name,
+        price: `${priceNum.toLocaleString()} ${airRouteForm.currency} / kg`,
+        route: `${airRouteForm.origin_country} (${airRouteForm.origin_city}) ➔ ${airRouteForm.destination_country} (${airRouteForm.destination_city})`,
+        delay: `${airRouteForm.estimated_days_min} à ${airRouteForm.estimated_days_max} jours`,
+        transport: "Liaison Aérienne Directe",
+      },
+    });
+  };
+
+  const handleAddMoroccoCountry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const dest = moroccoCountryForm.destination_country.trim();
+    const priceNum = Number(moroccoCountryForm.price_per_unit || 7000);
+    const priceMinor = Math.round(priceNum * 100);
+
+    const newMoroccoTariff = {
+      id: `tariff-ma-custom-${Date.now()}`,
+      service_name: `Groupage vers ${dest}`,
+      origin_country: "Maroc",
+      origin_city: "Casablanca",
+      destination_country: dest,
+      destination_city: moroccoCountryForm.destination_city.trim() || dest,
+      shipping_mode_name: `Groupage Aérien Casablanca ➔ ${dest}`,
+      shipping_mode_type: "AIR",
+      category_tag: "Groupage Maroc",
+      pricing_basis: "PER_KG",
+      transport_mode: "AIR_STANDARD",
+      currency: moroccoCountryForm.currency || "FCFA",
+      price_per_unit: priceNum,
+      price_per_unit_minor: priceMinor,
+      minimum_charge_minor: priceMinor,
+      estimated_days_min: Number(moroccoCountryForm.estimated_days_min || 5),
+      estimated_days_max: Number(moroccoCountryForm.estimated_days_max || 5),
+      note: moroccoCountryForm.note.trim() || "Groupage aérien Casablanca 5 jours garantis",
+      is_active: 1,
+    };
+
+    let nextList: any[] = [];
+    setTariffsList((prev) => {
+      nextList = [newMoroccoTariff, ...prev];
+      return nextList;
+    });
+
+    try {
+      localStorage.setItem("roum_tariffs_data", JSON.stringify(nextList.length > 0 ? nextList : [newMoroccoTariff]));
+    } catch {}
+
+    try {
+      if (token) {
+        await fetch("/api/admin/tariffs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(newMoroccoTariff),
+        });
+      }
+    } catch (err) {
+      console.error("Morocco tariff save error:", err);
+    }
+
+    setShowAddMoroccoCountryModal(false);
+    setSaveConfirmationPopup({
+      title: "Nouvelle Destination Maroc Enregistrée !",
+      subtitle: "La destination a été ajoutée et synchronisée immédiatement avec succès.",
+      item: {
+        service: newMoroccoTariff.service_name,
+        price: `${priceNum.toLocaleString()} ${newMoroccoTariff.currency} / kg`,
+        route: `Maroc (Casablanca) ➔ ${dest}`,
+        delay: `${newMoroccoTariff.estimated_days_min} jours garantis`,
+        transport: "Groupage Subsaharien",
+      },
+    });
+  };
+
+  const handleAddHub = (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = `hub-custom-${Date.now()}`;
+    const countryInfo = [...STRATEGIC_HUBS, ...ALL_WORLD_COUNTRIES].find(
+      (c) => c.name.toLowerCase() === newHubForm.country.toLowerCase()
+    );
+    const code = countryInfo?.code || getCountryCodeFromName(newHubForm.country) || "TR";
+
+    const createdHub = {
+      id,
+      name: newHubForm.name.trim() || `Hub ${newHubForm.city} (${newHubForm.country})`,
+      country: newHubForm.country.trim(),
+      countryCode: code,
+      city: newHubForm.city.trim(),
+      address: newHubForm.address.trim(),
+      shipping_mark: newHubForm.shipping_mark.trim(),
+      contact: newHubForm.contact.trim(),
+    };
+
+    const updated = [...customHubs, createdHub];
+    setCustomHubs(updated);
+    try {
+      localStorage.setItem("roum_custom_hubs", JSON.stringify(updated));
+    } catch {}
+
+    setShowAddHubModal(false);
+    setSaveConfirmationPopup({
+      title: "Nouveau Hub Enregistré !",
+      subtitle: "La plateforme de réception a été ajoutée et configurée avec succès.",
+      item: {
+        service: createdHub.name,
+        price: "Plateforme Active",
+        route: `${createdHub.country} (${createdHub.city})`,
+        delay: "Réception Fournisseurs",
+        transport: "Hub International",
+      },
+    });
+  };
+
+  const handleDeleteHub = (hubId: string) => {
+    const updated = customHubs.filter((h) => h.id !== hubId);
+    setCustomHubs(updated);
+    try {
+      localStorage.setItem("roum_custom_hubs", JSON.stringify(updated));
+    } catch {}
+    triggerToast("Plateforme hub retirée avec succès.", "Hub International");
+  };
+
   const handleDeleteTariff = async (tariffId: string) => {
     if (!token) return;
     setTariffsList((prev) => prev.filter((t) => t.id !== tariffId));
+    setPendingTariffEdits((prev) => {
+      if (!prev[tariffId]) return prev;
+      const copy = { ...prev };
+      delete copy[tariffId];
+      return copy;
+    });
     triggerToast("Tarif retiré de la grille.", "Tarif Supprimé");
 
     try {
-      const res = await fetch(`/api/admin/tariffs/${tariffId}`, {
+      await fetch(`/api/admin/tariffs/${tariffId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-
-      if (res.ok) {
-        loadDashboardData(token);
-      }
     } catch {
       // Échec silencieux car déjà retiré de la liste locale
     }
@@ -2939,44 +3536,169 @@ export default function AdminPage() {
     }
   };
 
-  // --- ACTIONS DES MODALES MODIFIER (ZÉRO PERTE DE DONNÉES) ---
+  // --- ACTIONS DES MODALES MODIFIER (ZÉRO PERTE DE DONNÉES & SAUVEGARDE AUTOMATIQUE DIRECTE) ---
   const handleSaveEditTariff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTariff) return;
-    const priceMinor = Math.round(Number(editingTariff.price_per_unit || 0) * 100);
-    const minChargeMinor = Math.round(Number(editingTariff.minimum_charge || editingTariff.price_per_unit || 0) * 100);
+    const priceNum = Number(editingTariff.price_per_unit || 0);
+    const priceMinor = Math.round(priceNum * 100);
+    const minChargeMinor = Math.round(Number(editingTariff.minimum_charge || priceNum) * 100);
 
     const updatedItem = {
       ...editingTariff,
+      price_per_unit: priceNum,
       price_per_unit_minor: priceMinor,
       minimum_charge_minor: minChargeMinor,
-      price_per_unit: Number(editingTariff.price_per_unit || 0),
+      origin_country: editingTariff.origin_country || "Chine",
+      destination_country: editingTariff.destination_country || "Côte d'Ivoire",
+      currency: editingTariff.currency || "FCFA",
+      _isPendingEdit: false,
     };
 
-    setTariffsList((prev) => prev.map((t) => (t.id === editingTariff.id ? updatedItem : t)));
-    triggerToast("Tarif mis à jour et enregistré !", "Grille Tarifaire");
-    setEditingTariff(null);
+    let nextList: any[] = [];
+    setTariffsList((prev) => {
+      const exists = prev.some((t) => t.id === editingTariff.id);
+      if (exists) {
+        nextList = prev.map((t) => (t.id === editingTariff.id ? updatedItem : t));
+      } else {
+        nextList = [updatedItem, ...prev];
+      }
+      return nextList;
+    });
 
-    if (token) {
-      try {
+    try {
+      localStorage.setItem("roum_tariffs_data", JSON.stringify(nextList.length > 0 ? nextList : [updatedItem]));
+    } catch (e) {
+      console.error("Local storage sync error:", e);
+    }
+
+    try {
+      if (token) {
         await fetch(`/api/admin/tariffs/${editingTariff.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({
-            service_name: editingTariff.service_name,
+            service_name: updatedItem.service_name,
+            origin_country: updatedItem.origin_country,
+            destination_country: updatedItem.destination_country,
+            transport_mode: updatedItem.transport_mode,
             price_per_unit_minor: priceMinor,
             minimum_charge_minor: minChargeMinor,
-            currency: editingTariff.currency,
-            estimated_days_min: editingTariff.estimated_days_min,
-            estimated_days_max: editingTariff.estimated_days_max,
-            note: editingTariff.note,
+            currency: updatedItem.currency || "FCFA",
+            estimated_days_min: updatedItem.estimated_days_min,
+            estimated_days_max: updatedItem.estimated_days_max,
+            note: updatedItem.note,
           }),
         });
-        loadDashboardData(token);
-      } catch {
-        // Cache local déjà persisté
       }
+    } catch (err) {
+      console.error("Auto-save error to backend:", err);
     }
+
+    setEditingTariff(null);
+    setSaveConfirmationPopup({
+      title: "Tarif Enregistré & Synchronisé !",
+      subtitle: "La modification a été enregistrée automatiquement en base de données sans aucune perte.",
+      item: {
+        service: updatedItem.service_name,
+        price: `${priceNum.toLocaleString()} ${updatedItem.currency || "FCFA"}`,
+        route: `${updatedItem.origin_country} ➔ ${updatedItem.destination_country}`,
+        delay: updatedItem.estimated_days_min ? `${updatedItem.estimated_days_min} à ${updatedItem.estimated_days_max || updatedItem.estimated_days_min} jours` : "Délai garanti",
+        transport: updatedItem.transport_mode === "SEA_GROUPAGE" ? "Maritime Groupage" : "Aérien",
+      },
+    });
+  };
+
+  const handleSaveAllPendingTariffs = async () => {
+    const pendingItems = Object.values(pendingTariffEdits);
+    if (pendingItems.length === 0) return;
+    setIsSavingBatchTariffs(true);
+
+    try {
+      if (token) {
+        const res = await fetch("/api/admin/tariffs/batch", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            tariffs: pendingItems.map((t) => ({
+              id: t.id,
+              service_name: t.service_name,
+              price_per_unit_minor: t.price_per_unit_minor,
+              minimum_charge_minor: t.minimum_charge_minor,
+              currency: t.currency,
+              estimated_days_min: t.estimated_days_min,
+              estimated_days_max: t.estimated_days_max,
+              note: t.note,
+              category_tag: t.category_tag,
+            })),
+          }),
+        });
+
+        if (!res.ok) {
+          // Fallback individuel
+          await Promise.all(
+            pendingItems.map((t) =>
+              fetch(`/api/admin/tariffs/${t.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({
+                  service_name: t.service_name,
+                  price_per_unit_minor: t.price_per_unit_minor,
+                  minimum_charge_minor: t.minimum_charge_minor,
+                  currency: t.currency,
+                  estimated_days_min: t.estimated_days_min,
+                  estimated_days_max: t.estimated_days_max,
+                  note: t.note,
+                }),
+              })
+            )
+          );
+        }
+      }
+
+      // Nettoyer l'indicateur d'attente tout en préservant scrupuleusement l'ordre exact à l'écran
+      setTariffsList((prev) =>
+        prev.map((t) => {
+          if (t._isPendingEdit) {
+            const { _isPendingEdit, ...rest } = t;
+            return rest;
+          }
+          return t;
+        })
+      );
+      setPendingTariffEdits({});
+      setInitialTariffsBackup(null);
+
+      try {
+        localStorage.setItem("roum_tariffs_data", JSON.stringify(tariffsList));
+      } catch {}
+
+      triggerToast(`Toutes les ${pendingItems.length} modifications ont été enregistrées avec succès en base !`, "Grille Tarifaire");
+    } catch (err) {
+      console.error("Batch save error:", err);
+      triggerToast("Erreur lors de l'enregistrement simultané des tarifs.", "Erreur");
+    } finally {
+      setIsSavingBatchTariffs(false);
+    }
+  };
+
+  const handleCancelPendingTariffs = () => {
+    if (initialTariffsBackup) {
+      setTariffsList(initialTariffsBackup);
+    } else {
+      setTariffsList((prev) =>
+        prev.map((t) => {
+          if (t._isPendingEdit) {
+            const { _isPendingEdit, ...rest } = t;
+            return rest;
+          }
+          return t;
+        })
+      );
+    }
+    setPendingTariffEdits({});
+    setInitialTariffsBackup(null);
+    triggerToast("Toutes les modifications tarifaires en attente ont été annulées.", "Grille Tarifaire");
   };
 
   const handleSaveEditShipment = async (e: React.FormEvent) => {
@@ -3105,12 +3827,9 @@ export default function AdminPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-app)" }}>
-        <RefreshCw size={28} className="spin" color="var(--brown-dark)" />
-      </div>
-    );
+  // 1. ÉTAPE 1 : SPLASH SCREEN DE DÉMARRAGE
+  if (!isSplashDone) {
+    return <SplashScreen onComplete={() => setIsSplashDone(true)} />;
   }
 
   // ÉCRAN 1 : CONNEXION SOBRE & ÉPURÉE
@@ -3327,7 +4046,7 @@ export default function AdminPage() {
                     <Icon
                       size={16}
                       strokeWidth={isActive ? 2.1 : 1.75}
-                      color={isActive ? "#FFFFFF" : "currentColor"}
+                      color={isActive ? "var(--brown-dark)" : "currentColor"}
                     />
                     {!isSidebarCollapsed && <span>{item.label}</span>}
                     {isSidebarCollapsed && item.badge && item.badge > 0 && (
@@ -3345,7 +4064,7 @@ export default function AdminPage() {
                     )}
                   </span>
                   {!isSidebarCollapsed && item.badge && item.badge > 0 && (
-                    <span className="sidebar-nav-badge">
+                    <span className="sidebar-nav-badge" style={{ color: "#000000", fontWeight: "700" }}>
                       {item.badge}
                     </span>
                   )}
@@ -3375,7 +4094,7 @@ export default function AdminPage() {
               <Settings
                 size={16}
                 strokeWidth={activeTab === "settings" ? 2.1 : 1.75}
-                color={activeTab === "settings" ? "#FFFFFF" : "currentColor"}
+                color={activeTab === "settings" ? "var(--brown-dark)" : "currentColor"}
               />
               {!isSidebarCollapsed && <span>Paramètres & Audit</span>}
             </button>
@@ -3389,24 +4108,22 @@ export default function AdminPage() {
         <div style={{ borderTop: "1px solid var(--border-light)", paddingTop: "14px", display: "flex", flexDirection: "column", gap: "10px" }}>
           {!isSidebarCollapsed ? (
             <div
-              onClick={() => setShowProfileModal(true)}
+              onClick={openProfileModal}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "var(--brown-dark)";
-                e.currentTarget.style.boxShadow = "0 3px 10px rgba(42, 24, 16, 0.08)";
+                e.currentTarget.style.background = "rgba(112, 72, 56, 0.04)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "var(--border-light)";
-                e.currentTarget.style.boxShadow = "none";
+                e.currentTarget.style.background = "transparent";
               }}
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
                 gap: "8px",
-                padding: "10px 12px",
-                background: "var(--bg-app)",
-                borderRadius: "14px",
-                border: "1px solid var(--border-light)",
+                padding: "8px 10px",
+                background: "transparent",
+                borderRadius: "12px",
+                border: "none",
                 cursor: "pointer",
                 transition: "all 0.18s ease",
               }}
@@ -3426,7 +4143,7 @@ export default function AdminPage() {
                     fontWeight: "800",
                     fontSize: "0.88rem",
                     overflow: "hidden",
-                    border: "1.5px solid var(--border-light)",
+                    border: "none",
                     flexShrink: 0,
                   }}
                 >
@@ -3451,8 +4168,20 @@ export default function AdminPage() {
                   e.stopPropagation();
                   setIsSidebarCollapsed(true);
                 }}
-                className="btn btn-secondary"
-                style={{ width: "28px", height: "28px", padding: 0, borderRadius: "50%", justifyContent: "center", flexShrink: 0 }}
+                style={{
+                  width: "28px",
+                  height: "28px",
+                  padding: 0,
+                  borderRadius: "50%",
+                  border: "none",
+                  background: "transparent",
+                  color: "var(--text-muted)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
                 title="Rétracter la barre latérale"
               >
                 <PanelLeftClose size={14} />
@@ -3461,7 +4190,7 @@ export default function AdminPage() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
               <div
-                onClick={() => setShowProfileModal(true)}
+                onClick={openProfileModal}
                 style={{
                   width: "36px",
                   height: "36px",
@@ -3475,7 +4204,7 @@ export default function AdminPage() {
                   fontSize: "0.88rem",
                   overflow: "hidden",
                   cursor: "pointer",
-                  border: "2px solid var(--border-light)",
+                  border: "none",
                 }}
                 title={`Profil : ${user?.fullName || "Madame Marouba"} (Cliquer pour modifier)`}
               >
@@ -3560,15 +4289,7 @@ export default function AdminPage() {
           </div>
 
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <button
-              type="button"
-              onClick={() => token && loadDashboardData(token)}
-              className="btn btn-secondary"
-              style={{ padding: "8px 12px" }}
-              title="Actualiser"
-            >
-              <RefreshCw size={14} className={isRefreshing ? "spin" : ""} />
-            </button>
+
 
             {activeTab === "shipments" && (
               <>
@@ -3619,7 +4340,7 @@ export default function AdminPage() {
         </div>
         )}
 
-        {/* 0. ASSISTANT ROUM : VUE PLEINE PAGE SOBRE, ÉPURÉE ET MINIMALISTE */}
+        {/* 0. ASSISTANT ROUM : VUE INTÉGRALE AVEC KPI, ACTIONS REQUISES & NOUVELLE CONSOLE CHATBOT */}
         {activeTab === "assistant" && (
           <div key="assistant" className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             {/* LIGNE DE SYNTHÈSE OPÉRATIONNELLE SOBRE (4 Cartes KPI Minimalistes) */}
@@ -3741,11 +4462,11 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* CORPS PRINCIPAL : 2 COLONNES (Actions Prioritaires & Journal VS Console de Requête) */}
+            {/* CORPS PRINCIPAL : 2 COLONNES (Actions Prioritaires VS Nouvelle Console Chatbot) */}
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1.1fr 0.9fr",
+                gridTemplateColumns: "1.05fr 0.95fr",
                 gap: "20px",
                 alignItems: "start",
               }}
@@ -3785,16 +4506,13 @@ export default function AdminPage() {
                     {totalAgentAlerts > 0 && (
                       <span
                         style={{
-                          background: "var(--brown-dark)",
-                          color: "#FFFFFF",
-                          fontSize: "0.66rem",
+                          color: "#000000",
+                          fontSize: "0.82rem",
                           fontWeight: "700",
-                          padding: "2px 7px",
-                          borderRadius: "9999px",
                           flexShrink: 0,
                         }}
                       >
-                        {totalAgentAlerts}
+                        ({totalAgentAlerts})
                       </span>
                     )}
                   </div>
@@ -4022,153 +4740,256 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* COLONNE DROITE : CHAT STYLE APPLE IOS AVEC ANIMATION DE TYPING FLUIDE */}
-              <div className="ios-chat-wrapper">
-                {/* En-tête iOS (Navigation bar avec contact, statut & actions) */}
-                <div className="ios-chat-header">
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <div
-                      style={{
-                        position: "relative",
-                        width: "40px",
-                        height: "40px",
-                        borderRadius: "50%",
-                        background: "#FFFFFF",
-                        border: "1.5px solid var(--border-light)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        boxShadow: "0 2px 6px rgba(42, 24, 16, 0.08)",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <img
-                        src="/images/roum-logo-tight.png"
-                        alt="Roum Transit"
-                        style={{
-                          width: "84%",
-                          height: "84%",
-                          objectFit: "contain",
-                          display: "block",
-                        }}
-                      />
-                      <span
-                        style={{
-                          position: "absolute",
-                          bottom: "-1px",
-                          right: "-1px",
-                          width: "10px",
-                          height: "10px",
-                          borderRadius: "50%",
-                          background: "#34C759",
-                          border: "2px solid #FFFFFF",
-                        }}
-                      />
-                    </div>
-
-                    <div style={{ display: "flex", flexDirection: "column" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span style={{ fontWeight: "700", fontSize: "0.92rem", color: "#000000", letterSpacing: "-0.015em" }}>
-                          Roum Secrétaire
-                        </span>
-                        <span
-                          style={{
-                            fontSize: "0.65rem",
-                            background: "#F6F3EE",
-                            color: "var(--brown-dark)",
-                            border: "1px solid rgba(42, 24, 16, 0.1)",
-                            fontWeight: "700",
-                            padding: "1px 6px",
-                            borderRadius: "10px",
-                          }}
-                        >
-                          IA
-                        </span>
-                      </div>
-                      <span
-                        style={{
-                          fontSize: "0.72rem",
-                          color: "#8E8E93",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "5px",
-                        }}
-                      >
-                        En ligne
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setChatMessages([
-                        {
-                          sender: "agent",
-                          text: "Conversation réinitialisée. Comment puis-je vous assister sur les opérations Roum Transit ?",
-                          time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
-                        },
-                      ]);
-                    }}
-                    title="Effacer la discussion"
+              {/* COLONNE DROITE : NOUVEAU DESIGN CHATBOT (Inspiré de la maquette media_1793304447943_bf5cab8b.png) */}
+              <div
+                className="ios-chat-wrapper"
+                style={{
+                  padding: "20px 22px",
+                  display: "flex",
+                  flexDirection: "column",
+                  minHeight: "680px",
+                  height: "740px",
+                  background: "#FFFFFF",
+                  borderRadius: "22px",
+                  border: "1px solid rgba(112, 72, 56, 0.1)",
+                  boxShadow: "0 8px 28px -6px rgba(112, 72, 56, 0.06)",
+                }}
+              >
+                {/* 1. Entête Exécutif Épuré (Salutation Personnalisée inspirée de la maquette) */}
+                <div style={{ textAlign: "center", marginBottom: "16px", flexShrink: 0, paddingTop: "4px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <div
                     style={{
-                      width: "32px",
-                      height: "32px",
+                      width: "38px",
+                      height: "38px",
                       borderRadius: "50%",
-                      border: "none",
-                      background: "#F2F2F7",
-                      color: "#8E8E93",
+                      background: "rgba(140, 88, 67, 0.08)",
+                      border: "1px solid rgba(140, 88, 67, 0.16)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#E5E5EA";
-                      e.currentTarget.style.color = "#1C1C1E";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "#F2F2F7";
-                      e.currentTarget.style.color = "#8E8E93";
+                      color: "var(--brown-dark)",
+                      marginBottom: "8px",
                     }}
                   >
-                    <Trash2 size={14} />
-                  </button>
+                    <UserCheck size={18} strokeWidth={2} />
+                  </div>
+                  <h3
+                    style={{
+                      fontSize: "1.26rem",
+                      fontWeight: "800",
+                      color: "var(--text-main)",
+                      margin: "0 0 4px 0",
+                      letterSpacing: "-0.015em",
+                    }}
+                  >
+                    Bonjour, {user?.fullName || "Madame Marouba"}
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: "0.78rem",
+                      color: "var(--text-muted)",
+                      margin: 0,
+                    }}
+                  >
+                    Que puis-je faire pour vos opérations aujourd&apos;hui ?
+                  </p>
                 </div>
 
-                {/* Suggestions rapides style Apple Pills */}
+                {/* 2. Les 3 Cartes de Suggestions / Actions Immédiates (Style exact de la maquette) */}
                 <div
                   style={{
-                    padding: "10px 16px",
-                    background: "#F2F2F7",
-                    borderBottom: "1px solid #E5E5EA",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    overflowX: "auto",
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gap: "10px",
+                    marginBottom: "16px",
+                    flexShrink: 0,
                   }}
                 >
-                  {[
-                    "Point Caisse",
-                    "Actions urgentes",
-                    "Bilan du jour",
-                    "Expéditions en transit",
-                    "Demandes reçues",
-                  ].map((chip) => (
+                  {/* Carte 1 : Trésorerie */}
+                  <div
+                    className="executive-prompt-card"
+                    style={{
+                      background: "#FAFAFA",
+                      border: "1px solid rgba(42, 24, 16, 0.08)",
+                      borderRadius: "16px",
+                      padding: "12px 10px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      minHeight: "135px",
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "8px",
+                          background: "rgba(120, 77, 60, 0.09)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        <TrendingUp size={14} color="var(--brown-dark)" />
+                      </div>
+                      <div style={{ fontSize: "0.78rem", fontWeight: "700", color: "var(--text-main)", lineHeight: 1.25 }}>
+                        Point Caisse
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)", marginTop: "4px", lineHeight: 1.3 }}>
+                        {pendingPaymentsList.length} paiement(s) à valider.
+                      </div>
+                    </div>
                     <button
-                      key={chip}
                       type="button"
-                      onClick={() => handleAskAgent(chip)}
-                      className="ios-quick-chip"
+                      onClick={() => handleAskAgent("Fais-moi le point complet de la trésorerie et des encaissements en attente.")}
+                      className="prompt-card-btn"
+                      style={{
+                        marginTop: "10px",
+                        width: "100%",
+                        padding: "5px 6px",
+                        borderRadius: "9999px",
+                        border: "1px solid rgba(120, 77, 60, 0.16)",
+                        background: "#FFFFFF",
+                        color: "var(--brown-dark)",
+                        fontSize: "0.70rem",
+                        fontWeight: "700",
+                        cursor: "pointer",
+                      }}
                     >
-                      {chip}
+                      Voir Caisse
                     </button>
-                  ))}
+                  </div>
+
+                  {/* Carte 2 : Pesées Hub */}
+                  <div
+                    className="executive-prompt-card"
+                    style={{
+                      background: "#FAFAFA",
+                      border: "1px solid rgba(42, 24, 16, 0.08)",
+                      borderRadius: "16px",
+                      padding: "12px 10px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      minHeight: "135px",
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "8px",
+                          background: "rgba(120, 77, 60, 0.09)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        <Scale size={14} color="var(--brown-dark)" />
+                      </div>
+                      <div style={{ fontSize: "0.78rem", fontWeight: "700", color: "var(--text-main)", lineHeight: 1.25 }}>
+                        Pesées au Hub
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)", marginTop: "4px", lineHeight: 1.3 }}>
+                        {pendingWeighingsList.length} colis en attente de pesée.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleAskAgent("Quels sont les colis arrivés au magasin sans pesée officielle ?")}
+                      className="prompt-card-btn"
+                      style={{
+                        marginTop: "10px",
+                        width: "100%",
+                        padding: "5px 6px",
+                        borderRadius: "9999px",
+                        border: "1px solid rgba(120, 77, 60, 0.16)",
+                        background: "#FFFFFF",
+                        color: "var(--brown-dark)",
+                        fontSize: "0.70rem",
+                        fontWeight: "700",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Voir Pesées
+                    </button>
+                  </div>
+
+                  {/* Carte 3 : Sourcing & Devis */}
+                  <div
+                    className="executive-prompt-card"
+                    style={{
+                      background: "#FAFAFA",
+                      border: "1px solid rgba(42, 24, 16, 0.08)",
+                      borderRadius: "16px",
+                      padding: "12px 10px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      minHeight: "135px",
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "8px",
+                          background: "rgba(120, 77, 60, 0.09)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        <Inbox size={14} color="var(--brown-dark)" />
+                      </div>
+                      <div style={{ fontSize: "0.78rem", fontWeight: "700", color: "var(--text-main)", lineHeight: 1.25 }}>
+                        Sourcing Client
+                      </div>
+                      <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)", marginTop: "4px", lineHeight: 1.3 }}>
+                        {pendingRequestsList.length} demande(s) à coter.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleAskAgent("Quelles sont les demandes clients en attente de cotation ?")}
+                      className="prompt-card-btn"
+                      style={{
+                        marginTop: "10px",
+                        width: "100%",
+                        padding: "5px 6px",
+                        borderRadius: "9999px",
+                        border: "1px solid rgba(120, 77, 60, 0.16)",
+                        background: "#FFFFFF",
+                        color: "var(--brown-dark)",
+                        fontSize: "0.70rem",
+                        fontWeight: "700",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Voir Devis
+                    </button>
+                  </div>
                 </div>
 
-                {/* Flux de messages style iOS avec animation de frappe */}
-                <div className="ios-messages-scroll">
+                {/* 3. Flux de messages (Scrollable avec bulles soignées & pas de saut d'écran) */}
+                <div
+                  className="ios-messages-scroll"
+                  style={{
+                    flex: 1,
+                    overflowY: "auto",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                    padding: "6px 2px",
+                    minHeight: "160px",
+                  }}
+                >
                   {chatMessages.map((msg, i) => {
                     const isLatestAgent = msg.sender === "agent" && i === chatMessages.length - 1;
                     return (
@@ -4183,42 +5004,79 @@ export default function AdminPage() {
                       >
                         <div
                           style={{
-                            fontSize: "0.68rem",
+                            fontSize: "0.66rem",
                             color: "#8E8E93",
                             padding: "0 6px",
                             fontWeight: "500",
                           }}
                         >
-                          {msg.sender === "user" ? "Vous" : "Roum Secrétaire"} · {msg.time}
+                          {msg.sender === "user" ? "Vous" : "Assistante Roum"} · {msg.time}
                         </div>
 
                         {msg.sender === "user" ? (
-                          <div className="ios-bubble-user">
+                          <div className="ios-bubble-user" style={{ background: "var(--brown-dark)", color: "#FFFFFF" }}>
                             {msg.text}
                           </div>
                         ) : (
-                          <div className="ios-bubble-agent">
+                          <div
+                            className="ios-bubble-agent"
+                            style={{
+                              background: "#FAF8F5",
+                              border: "1px solid rgba(120, 77, 60, 0.1)",
+                              color: "var(--text-main)",
+                              borderRadius: "16px 16px 16px 4px",
+                              padding: "10px 14px",
+                              lineHeight: 1.45,
+                              fontSize: "0.82rem",
+                            }}
+                          >
                             <IOSTypingMessage
                               text={msg.text}
                               isNew={isLatestAgent}
-                              onTick={() => scrollToChatBottom(false)}
+                              onTick={() => scrollToChatBottom()}
                             />
+
+                            {msg.actions && msg.actions.length > 0 && (
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "10px" }}>
+                                {msg.actions.map((act, actIdx) => (
+                                  <button
+                                    key={actIdx}
+                                    type="button"
+                                    onClick={() => {
+                                      if (act.tab) setActiveTab(act.tab as any);
+                                    }}
+                                    className="btn btn-secondary"
+                                    style={{
+                                      padding: "4px 10px",
+                                      fontSize: "0.72rem",
+                                      borderRadius: "9999px",
+                                      background: "#FFFFFF",
+                                      border: "1px solid rgba(120, 77, 60, 0.2)",
+                                      color: "var(--brown-dark)",
+                                      fontWeight: "700",
+                                    }}
+                                  >
+                                    {act.label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
                     );
                   })}
 
-                  {/* Bulle 3 points iOS pendant la réflexion de l'agent */}
+                  {/* Animation 3 points si l'agent réfléchit */}
                   {isAgentThinking && (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "3px" }}>
-                      <div style={{ fontSize: "0.68rem", color: "#8E8E93", padding: "0 6px", fontWeight: "500" }}>
-                        Roum Secrétaire tape...
+                      <div style={{ fontSize: "0.66rem", color: "#8E8E93", padding: "0 6px", fontWeight: "500" }}>
+                        Assistante Roum prépare votre rapport...
                       </div>
-                      <div className="ios-typing-indicator">
-                        <span className="ios-typing-dot" />
-                        <span className="ios-typing-dot" />
-                        <span className="ios-typing-dot" />
+                      <div className="ios-typing-indicator" style={{ background: "#FAF8F5", border: "1px solid rgba(120, 77, 60, 0.1)" }}>
+                        <span className="ios-typing-dot" style={{ background: "var(--brown-dark)" }} />
+                        <span className="ios-typing-dot" style={{ background: "var(--brown-dark)" }} />
+                        <span className="ios-typing-dot" style={{ background: "var(--brown-dark)" }} />
                       </div>
                     </div>
                   )}
@@ -4226,30 +5084,90 @@ export default function AdminPage() {
                   <div ref={chatMessagesEndRef} style={{ height: "1px" }} />
                 </div>
 
-                {/* Barre de saisie capsule style iOS Messages */}
+                {/* 4. Barre de Saisie Capsule Flottante (Exactement inspirée de la maquette) */}
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
                     if (!chatInput.trim() || isAgentThinking) return;
                     handleAskAgent(chatInput);
                   }}
-                  className="ios-input-bar"
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    background: "#FFFFFF",
+                    borderRadius: "9999px",
+                    border: "1px solid rgba(140, 88, 67, 0.2)",
+                    boxShadow: "0 2px 14px rgba(140, 88, 67, 0.06)",
+                    padding: "6px 8px 6px 10px",
+                    gap: "8px",
+                    marginTop: "12px",
+                    flexShrink: 0,
+                  }}
                 >
+                  {/* Bouton Plus / Options à gauche (comme sur la maquette) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChatInput("Fais-moi un récapitulatif exécutif complet des opérations en cours.");
+                    }}
+                    title="Suggestions de synthèse"
+                    style={{
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "50%",
+                      border: "1px solid rgba(140, 88, 67, 0.16)",
+                      background: "#FAF8F5",
+                      color: "var(--brown-dark)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Plus size={14} />
+                  </button>
+
+                  {/* Champ de saisie */}
                   <input
                     type="text"
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    placeholder="Message..."
-                    className="ios-pill-field"
+                    placeholder="Écrivez un message ici..."
                     disabled={isAgentThinking}
+                    style={{
+                      flex: 1,
+                      border: "none",
+                      outline: "none",
+                      background: "transparent",
+                      fontSize: "0.85rem",
+                      color: "var(--text-main)",
+                      padding: "4px 0",
+                    }}
                   />
+
+                  {/* Bouton d'envoi rond flèche vers le haut */}
                   <button
                     type="submit"
                     disabled={!chatInput.trim() || isAgentThinking}
-                    className="ios-send-button"
-                    title="Envoyer le message"
+                    title="Envoyer"
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "50%",
+                      border: "none",
+                      background: !chatInput.trim() || isAgentThinking ? "rgba(140, 88, 67, 0.3)" : "var(--brown-dark)",
+                      color: "#FFFFFF",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: !chatInput.trim() || isAgentThinking ? "default" : "pointer",
+                      transition: "all 0.15s ease",
+                      flexShrink: 0,
+                    }}
                   >
-                    <ArrowUp size={18} strokeWidth={2.6} />
+                    <ArrowUp size={15} strokeWidth={2.4} />
                   </button>
                 </form>
               </div>
@@ -4415,14 +5333,14 @@ export default function AdminPage() {
                     gap: "14px",
                     background: "#FFFFFF",
                     borderRadius: "22px",
-                    border: "1px solid rgba(42, 24, 16, 0.08)",
-                    boxShadow: "0 8px 28px -4px rgba(42, 24, 16, 0.04)",
+                    border: "1px solid rgba(112, 72, 56, 0.08)",
+                    boxShadow: "0 8px 28px -4px rgba(112, 72, 56, 0.04)",
                   }}
                 >
                   {activeShipment ? (
                     <>
                       {/* Entête Fiche Colis */}
-                      <div style={{ paddingBottom: "14px", borderBottom: "1px solid rgba(42, 24, 16, 0.07)", display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div style={{ paddingBottom: "14px", borderBottom: "1px solid rgba(112, 72, 56, 0.07)", display: "flex", flexDirection: "column", gap: "8px" }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "8px" }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.7rem", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--brown-light)" }}>
                             <span className="live-pulse" style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#059669" }} />
@@ -4465,7 +5383,7 @@ export default function AdminPage() {
                             title="Copier le numéro de suivi"
                             style={{
                               background: copiedTracking ? "rgba(40, 167, 69, 0.1)" : "#F7F5F2",
-                              border: "1px solid " + (copiedTracking ? "#28A745" : "rgba(42, 24, 16, 0.08)"),
+                              border: "1px solid " + (copiedTracking ? "#28A745" : "rgba(112, 72, 56, 0.08)"),
                               borderRadius: "9999px",
                               padding: "4px 10px",
                               cursor: "pointer",
@@ -4501,12 +5419,12 @@ export default function AdminPage() {
                       </div>
 
                       {/* Trajet & Mode de transport (Style Bordereau Épuré, Zéro Dépassement) */}
-                      <div style={{ padding: "12px 14px", background: "#FAF8F5", borderRadius: "14px", border: "1px solid rgba(42, 24, 16, 0.07)", overflow: "hidden" }}>
+                      <div style={{ padding: "12px 14px", background: "#FAF8F5", borderRadius: "14px", border: "1px solid rgba(112, 72, 56, 0.07)", overflow: "hidden" }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "8px", minWidth: 0 }}>
                           <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             Corridor
                           </span>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.68rem", color: "var(--brown-dark)", fontWeight: "700", background: "#FFFFFF", padding: "2px 8px", borderRadius: "9999px", border: "1px solid rgba(42, 24, 16, 0.08)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.68rem", color: "var(--brown-dark)", fontWeight: "700", background: "#FFFFFF", padding: "2px 8px", borderRadius: "9999px", border: "1px solid rgba(112, 72, 56, 0.08)", whiteSpace: "nowrap", flexShrink: 0 }}>
                             {(activeShipment.shipping_mode_name || "").includes("Aérien") || activeShipment.shipping_mode_id === "AIR_EXPRESS" ? (
                               <>
                                 <Plane size={11} strokeWidth={1.8} /> Aérien Express
@@ -4568,13 +5486,13 @@ export default function AdminPage() {
 
                       {/* Métriques Poids & Colis */}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                        <div style={{ padding: "9px 12px", background: "#F8F7F5", borderRadius: "12px", border: "1px solid rgba(42, 24, 16, 0.06)" }}>
+                        <div style={{ padding: "9px 12px", background: "#F8F7F5", borderRadius: "12px", border: "1px solid rgba(112, 72, 56, 0.06)" }}>
                           <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.04em" }}>Poids Total</div>
                           <div style={{ fontSize: "1rem", fontWeight: "800", color: "var(--brown-dark)", marginTop: "2px" }} className="tabular-nums">
                             {activeShipment.total_weight_kg || activeShipment.weight_kg || 0} kg
                           </div>
                         </div>
-                        <div style={{ padding: "9px 12px", background: "#F8F7F5", borderRadius: "12px", border: "1px solid rgba(42, 24, 16, 0.06)" }}>
+                        <div style={{ padding: "9px 12px", background: "#F8F7F5", borderRadius: "12px", border: "1px solid rgba(112, 72, 56, 0.06)" }}>
                           <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.04em" }}>Colisage</div>
                           <div style={{ fontSize: "1rem", fontWeight: "800", color: "var(--brown-dark)", marginTop: "2px" }} className="tabular-nums">
                             {activeShipment.total_parcels_count || 1} colis
@@ -4588,7 +5506,7 @@ export default function AdminPage() {
                           <span style={{ fontSize: "0.66rem", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>
                             Progression de livraison
                           </span>
-                          <span style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--brown-dark)", background: "#F6F3EE", padding: "2px 8px", borderRadius: "9999px", border: "1px solid rgba(42, 24, 16, 0.08)" }}>
+                          <span style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--brown-dark)", background: "#F6F3EE", padding: "2px 8px", borderRadius: "9999px", border: "1px solid rgba(112, 72, 56, 0.08)" }}>
                             Étape {getShipmentPhase(activeShipment.current_status)} / 5
                           </span>
                         </div>
@@ -4618,7 +5536,7 @@ export default function AdminPage() {
                                           top: "12px",
                                           bottom: 0,
                                           width: "1.5px",
-                                          background: isDone ? "#059669" : "rgba(42, 24, 16, 0.12)",
+                                          background: isDone ? "#059669" : "rgba(112, 72, 56, 0.12)",
                                         }}
                                       />
                                     )}
@@ -4633,7 +5551,7 @@ export default function AdminPage() {
                                           : isCurrent
                                           ? "var(--brown-dark)"
                                           : "#E5E7EB",
-                                        boxShadow: isCurrent ? "0 0 0 3px rgba(42, 24, 16, 0.16)" : "none",
+                                        boxShadow: isCurrent ? "0 0 0 3px rgba(112, 72, 56, 0.16)" : "none",
                                         flexShrink: 0,
                                         zIndex: 1,
                                       }}
@@ -4742,7 +5660,7 @@ export default function AdminPage() {
                       ))}
                     </div>
 
-                    {/* Barre de recherche iOS Pill */}
+                    {/* Barre de recherche Minimaliste */}
                     <div style={{ position: "relative" }}>
                       <Search size={14} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
                       <input
@@ -4751,12 +5669,13 @@ export default function AdminPage() {
                         value={dashboardSearch}
                         onChange={(e) => setDashboardSearch(e.target.value)}
                         style={{
-                          padding: "7px 14px 7px 34px",
+                          padding: "6px 14px 6px 34px",
                           fontSize: "0.8rem",
                           border: "1px solid var(--border-light)",
-                          borderRadius: "var(--radius-full)",
-                          background: "#FAFAFB",
+                          borderRadius: "8px",
+                          background: "#FFFFFF",
                           width: "220px",
+                          height: "36px",
                           outline: "none",
                         }}
                       />
@@ -4916,7 +5835,7 @@ export default function AdminPage() {
                         style={{
                           padding: "11px 14px",
                           background: isDone ? "#FAFAFC" : "#FAF9F7",
-                          border: "1px solid rgba(42, 24, 16, 0.07)",
+                          border: "1px solid rgba(112, 72, 56, 0.07)",
                           borderRadius: "13px",
                           display: "flex",
                           alignItems: "center",
@@ -5436,7 +6355,7 @@ export default function AdminPage() {
                       <tr key={c.id} className="table-row-clean">
                         <td style={{ fontWeight: "700", color: "var(--text-main)" }}>
                           <div style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
-                            <span style={{ width: "28px", height: "28px", borderRadius: "50%", background: "#F6F3EE", border: "1px solid rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", fontSize: "0.74rem", fontWeight: "800", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ width: "28px", height: "28px", borderRadius: "50%", background: "#F6F3EE", border: "1px solid rgba(112, 72, 56, 0.08)", color: "var(--brown-dark)", fontSize: "0.74rem", fontWeight: "800", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                               {(c.full_name || "C").charAt(0).toUpperCase()}
                             </span>
                             <span>{c.full_name}</span>
@@ -5496,15 +6415,16 @@ export default function AdminPage() {
             if (tariffCorridorFilter !== "ALL") {
               const orig = (t.origin_country || "").toLowerCase();
               const dest = (t.destination_country || "").toLowerCase();
-              if (tariffCorridorFilter === "CN_AE") {
-                const isCnAe = orig.includes("chine") || orig.includes("émirat") || orig.includes("duba");
-                if (!isCnAe) return false;
+              if (tariffCorridorFilter === "CN") {
+                if (!orig.includes("chine") && !dest.includes("chine")) return false;
+              } else if (tariffCorridorFilter === "AE") {
+                if (!orig.includes("émirat") && !orig.includes("duba") && !dest.includes("duba")) return false;
               } else if (tariffCorridorFilter === "MA") {
-                const isMa = orig.includes("maroc") || dest.includes("maroc");
-                if (!isMa) return false;
-              } else if (tariffCorridorFilter === "FR_CI") {
-                const isFrCi = (orig.includes("france") && dest.includes("ivoire")) || (orig.includes("ivoire") && dest.includes("france"));
-                if (!isFrCi) return false;
+                if (!orig.includes("maroc") && !dest.includes("maroc")) return false;
+              } else if (tariffCorridorFilter === "AIR_CUSTOM") {
+                const isAir = t.shipping_mode_type === "AIR" || (t.shipping_mode_name || "").toLowerCase().includes("aérien") || (t.shipping_mode_name || "").toLowerCase().includes("vol");
+                const isOther = !orig.includes("chine") && !orig.includes("émirat") && !orig.includes("duba") && !orig.includes("maroc");
+                if (!isAir && !isOther) return false;
               }
             }
             if (tariffModeFilter !== "ALL") {
@@ -5600,14 +6520,14 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* DISPOSITION ASYMÉTRIQUE ÉLÉGANTE : GROS CARRÉ PRIX PAR DÉFAUT + 2 RECTANGLES À DROITE */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "20px" }}>
-                {/* COLONNE GAUCHE : LE GROS CARRÉ DES PRIX PAR DÉFAUT (CHINE & DUBAÏ) */}
+              {/* DISPOSITION EN 4 CARTES STRATÉGIQUES : CHINE, DUBAÏ, MAROC & LIAISONS AÉRIENNES (CONTRÔLE ABSOLU) */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "20px" }}>
+                {/* 1. CHINE ➔ AFRIQUE */}
                 <div
                   className="card-clean"
                   style={{
-                    padding: "22px 24px",
-                    borderRadius: "22px",
+                    padding: "20px 22px",
+                    borderRadius: "20px",
                     background: "#FFFFFF",
                     border: "1px solid var(--border-light)",
                     display: "flex",
@@ -5616,18 +6536,15 @@ export default function AdminPage() {
                   }}
                 >
                   <div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid var(--border-light)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px", paddingBottom: "10px", borderBottom: "1px solid var(--border-light)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "9px", minWidth: 0 }}>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
-                          <CircularFlag countryCode="CN" size={20} />
-                          <CircularFlag countryCode="AE" size={20} />
-                        </div>
+                        <CircularFlag countryCode="CN" size={20} />
                         <div style={{ minWidth: 0 }}>
-                          <h3 style={{ fontSize: "1.02rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            1. Chine & Dubaï → Afrique
+                          <h3 style={{ fontSize: "1rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            1. Chine ➔ Afrique
                           </h3>
-                          <span style={{ fontSize: "0.73rem", color: "var(--text-muted)", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            Hubs Guangzhou, Yiwu & Dubaï
+                          <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            Hubs Guangzhou & Yiwu · Aérien & Maritime
                           </span>
                         </div>
                       </div>
@@ -5636,16 +6553,21 @@ export default function AdminPage() {
                       </span>
                     </div>
 
-                    {/* Prestations Chine & Dubaï avec Bouton Modifier actif */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                       {[
-                        { key: "normale", name: "Voie normale", delay: "2 semaines", price: "10 000 FCFA", unit: "/ kg", matchKeyword: "normale", defaultVal: 10000 },
-                        { key: "express", name: "Voie express", delay: "4 jours", price: "12 000 FCFA", unit: "/ kg", matchKeyword: "express", defaultVal: 12000 },
-                        { key: "batteries", name: "Batteries & Compléments", delay: "2 semaines", price: "14 000 FCFA", unit: "/ kg", matchKeyword: "batterie", defaultVal: 14000 },
-                        { key: "hightech", name: "Pièces d'ordinateur & High-Tech", delay: "Express", price: "50 000 FCFA", unit: "/ pièce", matchKeyword: "ordinateur", defaultVal: 50000 },
-                        { key: "bateau", name: "Par Bateau (Le CBM conteneur)", delay: "35 - 45 jours", price: "300 000 FCFA", unit: "/ m³", matchKeyword: "bateau", defaultVal: 300000 },
+                        { key: "cn-normale", name: "Voie normale (2 semaines)", delay: "12 à 14 j", price: "10 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-cn-normal", keyword: "normale", defaultVal: 10000 },
+                        { key: "cn-express", name: "Voie express (4 jours)", delay: "4 à 5 j", price: "12 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-cn-express", keyword: "express", defaultVal: 12000 },
+                        { key: "cn-batteries", name: "Batteries & Compléments", delay: "7 à 10 j", price: "14 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-cn-special", keyword: "batterie", defaultVal: 14000 },
+                        { key: "cn-hightech", name: "Pièces d'ordinateur & High-Tech", delay: "Express", price: "50 000 FCFA", unit: "/ pièce", matchId: "tariff-flyer-cn-tech", keyword: "ordinateur", defaultVal: 50000 },
+                        { key: "cn-bateau", name: "Par Bateau (Le CBM conteneur)", delay: "35 - 45 jours", price: "300 000 FCFA", unit: "/ m³", matchId: "tariff-flyer-cn-sea", keyword: "bateau", defaultVal: 300000 },
                       ].map((item) => {
-                        const matchedTariff = tariffsList.find((t) => (t.service_name || "").toLowerCase().includes(item.matchKeyword) || (t.category_tag || "").toLowerCase().includes(item.matchKeyword));
+                        const matchedTariff = tariffsList.find(
+                          (t) =>
+                            (t.origin_country || "").toLowerCase().includes("chine") &&
+                            (t.id === item.matchId ||
+                              (t.service_name || "").toLowerCase().includes(item.keyword) ||
+                              (t.category_tag || "").toLowerCase().includes(item.keyword))
+                        );
                         const currentPrice = matchedTariff ? formatCurrencyPrice(matchedTariff.price_per_unit_minor, matchedTariff.currency) : item.price;
 
                         return (
@@ -5655,23 +6577,27 @@ export default function AdminPage() {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "space-between",
-                              gap: "12px",
-                              padding: "11px 14px",
+                              gap: "10px",
+                              padding: "9px 12px",
                               background: "#FAF8F5",
-                              borderRadius: "12px",
-                              border: "1px solid rgba(42, 24, 16, 0.07)",
+                              borderRadius: "10px",
+                              border: "1px solid rgba(112, 72, 56, 0.07)",
                             }}
                           >
                             <div style={{ minWidth: 0, flex: 1 }}>
-                              <div style={{ fontSize: "0.84rem", fontWeight: "700", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
-                              <div style={{ fontSize: "0.71rem", color: "var(--text-muted)", marginTop: "1px" }}>
+                              <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {item.name}
+                              </div>
+                              <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
                                 Délai : {matchedTariff?.estimated_days_min ? `${matchedTariff.estimated_days_min} à ${matchedTariff.estimated_days_max} j` : item.delay}
                               </div>
                             </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
                               <div style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                                <span style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }} className="tabular-nums">{currentPrice}</span>
-                                <span style={{ fontSize: "0.7rem", color: "var(--text-secondary)", marginLeft: "3px" }}>{item.unit}</span>
+                                <span style={{ fontSize: "0.86rem", fontWeight: "800", color: "var(--brown-dark)" }} className="tabular-nums">
+                                  {currentPrice}
+                                </span>
+                                <span style={{ fontSize: "0.68rem", color: "var(--text-secondary)", marginLeft: "3px" }}>{item.unit}</span>
                               </div>
                               <button
                                 type="button"
@@ -5691,15 +6617,15 @@ export default function AdminPage() {
                                       currency: "FCFA",
                                       estimated_days_min: 4,
                                       estimated_days_max: 14,
-                                      note: "Tarif officiel Chine & Dubaï",
+                                      note: "Tarif officiel Chine ➔ Afrique",
                                     });
                                   }
                                 }}
                                 className="btn-icon-clean"
-                                style={{ width: "28px", height: "28px" }}
+                                style={{ width: "26px", height: "26px" }}
                                 title="Modifier ce tarif"
                               >
-                                <Edit3 size={13} />
+                                <Edit3 size={12} />
                               </button>
                             </div>
                           </div>
@@ -5709,143 +6635,80 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* COLONNE DROITE : LES DEUX RECTANGLES EMPILÉS */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  {/* RECTANGLE 1 (EN HAUT) : 2. GROUPAGE SUBSAHARIEN MAROC */}
-                  <div className="card-clean" style={{ padding: "20px 22px", borderRadius: "20px", background: "#FFFFFF", border: "1px solid var(--border-light)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "12px", paddingBottom: "10px", borderBottom: "1px solid var(--border-light)" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-                        <CircularFlag countryCode="MA" size={20} />
+                {/* 2. DUBAÏ ➔ AFRIQUE */}
+                <div
+                  className="card-clean"
+                  style={{
+                    padding: "20px 22px",
+                    borderRadius: "20px",
+                    background: "#FFFFFF",
+                    border: "1px solid var(--border-light)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px", paddingBottom: "10px", borderBottom: "1px solid var(--border-light)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "9px", minWidth: 0 }}>
+                        <CircularFlag countryCode="AE" size={20} />
                         <div style={{ minWidth: 0 }}>
-                          <h4 style={{ fontSize: "0.95rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            2. Groupage Subsaharien (Maroc)
-                          </h4>
+                          <h3 style={{ fontSize: "1rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            2. Dubaï ➔ Afrique
+                          </h3>
                           <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            Casablanca → 5 Pays · 5 jours garantis
+                            Hub Dubaï Cargo & Transit Émirats
                           </span>
                         </div>
                       </div>
-                      <span className="ios-trend-pill ios-trend-pill-up">
-                        5 jours
+                      <span className="ios-trend-pill ios-trend-pill-gold">
+                        Par défaut
                       </span>
                     </div>
 
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                       {[
-                        { dest: "Côte d'Ivoire", flag: "CI", price: "6 500 FCFA", matchKeyword: "ivoire", defaultVal: 6500 },
-                        { dest: "Sénégal, Mali, Burkina", flag: "SN", price: "7 000 FCFA", matchKeyword: "mali", defaultVal: 7000 },
-                        { dest: "Gabon", flag: "GA", price: "7 500 FCFA", matchKeyword: "gabon", defaultVal: 7500 },
-                      ].map((route) => {
-                        const matchedTariff = tariffsList.find((t) => (t.origin_country || "").toLowerCase().includes("maroc") && ((t.destination_country || "").toLowerCase().includes(route.matchKeyword) || (t.service_name || "").toLowerCase().includes(route.matchKeyword)));
-                        const currentPrice = matchedTariff ? formatCurrencyPrice(matchedTariff.price_per_unit_minor, matchedTariff.currency) : route.price;
-
-                        return (
-                          <div
-                            key={route.dest}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              gap: "12px",
-                              padding: "9px 12px",
-                              background: "#FAF8F5",
-                              borderRadius: "10px",
-                              border: "1px solid rgba(42, 24, 16, 0.07)",
-                            }}
-                          >
-                            <div style={{ display: "flex", alignItems: "center", gap: "7px", minWidth: 0, flex: 1 }}>
-                              <CircularFlag countryCode={route.flag} size={16} />
-                              <span style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{route.dest}</span>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0, whiteSpace: "nowrap" }}>
-                              <span style={{ fontSize: "0.86rem", fontWeight: "800", color: "var(--brown-dark)" }} className="tabular-nums">{currentPrice} / kg</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (matchedTariff) {
-                                    setEditingTariff({
-                                      ...matchedTariff,
-                                      price_per_unit: matchedTariff.price_per_unit || (matchedTariff.price_per_unit_minor / 100),
-                                    });
-                                  } else {
-                                    setEditingTariff({
-                                      id: `default-ma-${route.flag}`,
-                                      service_name: `Groupage vers ${route.dest}`,
-                                      origin_country: "Maroc",
-                                      destination_country: route.dest,
-                                      price_per_unit: route.defaultVal,
-                                      currency: "FCFA",
-                                      estimated_days_min: 5,
-                                      estimated_days_max: 5,
-                                      note: "Groupage aérien Maroc 5 jours",
-                                    });
-                                  }
-                                }}
-                                className="btn-icon-clean"
-                                style={{ width: "28px", height: "28px" }}
-                                title="Modifier ce tarif"
-                              >
-                                <Edit3 size={13} />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* RECTANGLE 2 (EN BAS) : 3. LIAISONS BILATÉRALES PARIS ↔ ABIDJAN */}
-                  <div className="card-clean" style={{ padding: "20px 22px", borderRadius: "20px", background: "#FFFFFF", border: "1px solid var(--border-light)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "12px", paddingBottom: "10px", borderBottom: "1px solid var(--border-light)" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "4px", flexShrink: 0 }}>
-                          <CircularFlag countryCode="FR" size={18} />
-                          <CircularFlag countryCode="CI" size={18} />
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <h4 style={{ fontSize: "0.95rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            3. Liaisons Aériennes (Paris ↔ Abidjan)
-                          </h4>
-                          <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            Agence Bingerville · Expéditions dans les 2 sens
-                          </span>
-                        </div>
-                      </div>
-                      <span className="ios-trend-pill ios-trend-pill-neutral">
-                        2 sens
-                      </span>
-                    </div>
-
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                      {[
-                        { name: "Divers Articles", price: "8 500 F / 12 €", unit: "/ kg", matchKeyword: "divers", defaultVal: 8500 },
-                        { name: "Cosmétique et Liquide", price: "9 000 F / 14 €", unit: "/ kg", matchKeyword: "cosmétique", defaultVal: 9000 },
-                        { name: "Document Administratif", price: "13 000 F / 20 €", unit: "/ pli", matchKeyword: "document", defaultVal: 13000 },
+                        { key: "ae-express", name: "Voie express Dubaï (4 jours)", delay: "4 à 5 j", price: "12 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-ae-express", keyword: "express", defaultVal: 12000 },
+                        { key: "ae-normale", name: "Voie normale Dubaï (2 semaines)", delay: "10 à 14 j", price: "10 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-ae-normal", keyword: "normale", defaultVal: 10000 },
+                        { key: "ae-special", name: "Marchandises Spéciales Dubaï", delay: "7 à 10 j", price: "14 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-ae-special", keyword: "spécial", defaultVal: 14000 },
+                        { key: "ae-bateau", name: "Par Bateau Dubaï (Le CBM)", delay: "30 - 40 jours", price: "300 000 FCFA", unit: "/ m³", matchId: "tariff-flyer-ae-sea", keyword: "bateau", defaultVal: 300000 },
                       ].map((item) => {
-                        const matchedTariff = tariffsList.find((t) => (t.origin_country || "").toLowerCase().includes("france") && (t.service_name || "").toLowerCase().includes(item.matchKeyword));
+                        const matchedTariff = tariffsList.find(
+                          (t) =>
+                            ((t.origin_country || "").toLowerCase().includes("émirat") || (t.origin_country || "").toLowerCase().includes("duba")) &&
+                            (t.id === item.matchId ||
+                              (t.service_name || "").toLowerCase().includes(item.keyword) ||
+                              (t.category_tag || "").toLowerCase().includes(item.keyword))
+                        );
                         const currentPrice = matchedTariff ? formatCurrencyPrice(matchedTariff.price_per_unit_minor, matchedTariff.currency) : item.price;
 
                         return (
                           <div
-                            key={item.name}
+                            key={item.key}
                             style={{
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "space-between",
-                              gap: "12px",
+                              gap: "10px",
                               padding: "9px 12px",
                               background: "#FAF8F5",
                               borderRadius: "10px",
-                              border: "1px solid rgba(42, 24, 16, 0.07)",
+                              border: "1px solid rgba(112, 72, 56, 0.07)",
                             }}
                           >
                             <div style={{ minWidth: 0, flex: 1 }}>
-                              <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
-                              <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Régulier · Agence Bingerville</div>
+                              <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {item.name}
+                              </div>
+                              <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                                Délai : {matchedTariff?.estimated_days_min ? `${matchedTariff.estimated_days_min} à ${matchedTariff.estimated_days_max} j` : item.delay}
+                              </div>
                             </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0, whiteSpace: "nowrap" }}>
-                              <div style={{ textAlign: "right" }}>
-                                <span style={{ fontSize: "0.86rem", fontWeight: "800", color: "var(--brown-dark)" }} className="tabular-nums">{currentPrice}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                              <div style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                                <span style={{ fontSize: "0.86rem", fontWeight: "800", color: "var(--brown-dark)" }} className="tabular-nums">
+                                  {currentPrice}
+                                </span>
                                 <span style={{ fontSize: "0.68rem", color: "var(--text-secondary)", marginLeft: "3px" }}>{item.unit}</span>
                               </div>
                               <button
@@ -5858,29 +6721,380 @@ export default function AdminPage() {
                                     });
                                   } else {
                                     setEditingTariff({
-                                      id: `default-fr-${item.name}`,
+                                      id: `default-${item.key}`,
                                       service_name: item.name,
-                                      origin_country: "France",
+                                      origin_country: "Émirats Arabes Unis",
+                                      origin_city: "Dubaï",
                                       destination_country: "Côte d'Ivoire",
                                       price_per_unit: item.defaultVal,
                                       currency: "FCFA",
-                                      estimated_days_min: 3,
-                                      estimated_days_max: 5,
-                                      note: "Paris ↔ Abidjan",
+                                      estimated_days_min: 4,
+                                      estimated_days_max: 14,
+                                      note: "Tarif officiel Dubaï ➔ Afrique",
                                     });
                                   }
                                 }}
                                 className="btn-icon-clean"
-                                style={{ width: "28px", height: "28px" }}
+                                style={{ width: "26px", height: "26px" }}
                                 title="Modifier ce tarif"
                               >
-                                <Edit3 size={13} />
+                                <Edit3 size={12} />
                               </button>
                             </div>
                           </div>
                         );
                       })}
                     </div>
+                  </div>
+                </div>
+
+                {/* 3. GROUPAGE SUBSAHARIEN MAROC */}
+                {(() => {
+                  const baseRoutes = [
+                    { dest: "Côte d'Ivoire", flag: "CI", price: "6 500 FCFA", matchKeyword: "ivoire", defaultVal: 6500 },
+                    { dest: "Sénégal, Mali, Burkina", flag: "SN", price: "7 000 FCFA", matchKeyword: "mali", defaultVal: 7000 },
+                    { dest: "Gabon", flag: "GA", price: "7 500 FCFA", matchKeyword: "gabon", defaultVal: 7500 },
+                  ];
+
+                  const customMoroccoTariffs = tariffsList.filter((t) => {
+                    const isMa = (t.origin_country || "").toLowerCase().includes("maroc") || (t.category_tag || "").toLowerCase().includes("maroc");
+                    if (!isMa) return false;
+                    const matchesBase = baseRoutes.some((b) =>
+                      (t.destination_country || "").toLowerCase().includes(b.matchKeyword) ||
+                      (t.service_name || "").toLowerCase().includes(b.matchKeyword)
+                    );
+                    return !matchesBase;
+                  });
+
+                  const totalDestCount = baseRoutes.length + customMoroccoTariffs.length;
+
+                  return (
+                    <div
+                      className="card-clean"
+                      style={{
+                        padding: "20px 22px",
+                        borderRadius: "20px",
+                        background: "#FFFFFF",
+                        border: "1px solid var(--border-light)",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginBottom: "14px", paddingBottom: "10px", borderBottom: "1px solid var(--border-light)" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "9px", minWidth: 0 }}>
+                            <CircularFlag countryCode="MA" size={20} />
+                            <div style={{ minWidth: 0 }}>
+                              <h4 style={{ fontSize: "1rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                3. Groupage Subsaharien (Maroc)
+                              </h4>
+                              <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                Casablanca ➔ {totalDestCount} Destinations · 5 jours garantis
+                              </span>
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                            <span className="ios-trend-pill ios-trend-pill-up">
+                              5 jours
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setShowAddMoroccoCountryModal(true)}
+                              className="btn btn-primary"
+                              style={{
+                                padding: "6px 14px",
+                                fontSize: "0.76rem",
+                                borderRadius: "9999px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                textAlign: "center",
+                                gap: "5px",
+                                lineHeight: 1,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              <Plus size={13} />
+                              <span>Ajouter un pays</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          {baseRoutes.map((route) => {
+                            const matchedTariff = tariffsList.find(
+                              (t) =>
+                                (t.origin_country || "").toLowerCase().includes("maroc") &&
+                                ((t.destination_country || "").toLowerCase().includes(route.matchKeyword) ||
+                                  (t.service_name || "").toLowerCase().includes(route.matchKeyword))
+                            );
+                            const currentPrice = matchedTariff ? formatCurrencyPrice(matchedTariff.price_per_unit_minor, matchedTariff.currency) : route.price;
+
+                            return (
+                              <div
+                                key={route.dest}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  gap: "10px",
+                                  padding: "9px 12px",
+                                  background: "#FAF8F5",
+                                  borderRadius: "10px",
+                                  border: "1px solid rgba(112, 72, 56, 0.07)",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
+                                  <CircularFlag countryCode={route.flag} size={16} />
+                                  <span style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {route.dest}
+                                  </span>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, whiteSpace: "nowrap" }}>
+                                  <span style={{ fontSize: "0.86rem", fontWeight: "800", color: "var(--brown-dark)" }} className="tabular-nums">
+                                    {currentPrice} / kg
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (matchedTariff) {
+                                        setEditingTariff({
+                                          ...matchedTariff,
+                                          price_per_unit: matchedTariff.price_per_unit || (matchedTariff.price_per_unit_minor / 100),
+                                        });
+                                      } else {
+                                        setEditingTariff({
+                                          id: `default-ma-${route.flag}`,
+                                          service_name: `Groupage vers ${route.dest}`,
+                                          origin_country: "Maroc",
+                                          destination_country: route.dest,
+                                          price_per_unit: route.defaultVal,
+                                          currency: "FCFA",
+                                          estimated_days_min: 5,
+                                          estimated_days_max: 5,
+                                          note: "Groupage aérien Maroc 5 jours",
+                                        });
+                                      }
+                                    }}
+                                    className="btn-icon-clean"
+                                    style={{ width: "26px", height: "26px" }}
+                                    title="Modifier ce tarif"
+                                  >
+                                    <Edit3 size={12} />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {customMoroccoTariffs.map((t) => {
+                            const destName = t.destination_country || t.service_name || "Destination";
+                            const flagCode = getCountryCodeFromName(destName) || "MA";
+                            const currentPrice = formatCurrencyPrice(t.price_per_unit_minor, t.currency);
+
+                            return (
+                              <div
+                                key={t.id}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  gap: "10px",
+                                  padding: "9px 12px",
+                                  background: "#FAF8F5",
+                                  borderRadius: "10px",
+                                  border: "1px solid rgba(112, 72, 56, 0.07)",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
+                                  <CircularFlag countryCode={flagCode} size={16} />
+                                  <span style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {destName}
+                                  </span>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, whiteSpace: "nowrap" }}>
+                                  <span style={{ fontSize: "0.86rem", fontWeight: "800", color: "var(--brown-dark)" }} className="tabular-nums">
+                                    {currentPrice} / kg
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingTariff({
+                                        ...t,
+                                        price_per_unit: t.price_per_unit || (t.price_per_unit_minor / 100),
+                                      });
+                                    }}
+                                    className="btn-icon-clean"
+                                    style={{ width: "26px", height: "26px" }}
+                                    title="Modifier ce tarif"
+                                  >
+                                    <Edit3 size={12} />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* 4. LIAISONS AÉRIENNES DYNAMIQUES (CONTRÔLE ABSOLU DIRECTION) */}
+                <div
+                  className="card-clean"
+                  style={{
+                    padding: "20px 22px",
+                    borderRadius: "20px",
+                    background: "#FFFFFF",
+                    border: "1px solid var(--border-light)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginBottom: "14px", paddingBottom: "10px", borderBottom: "1px solid var(--border-light)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "9px", minWidth: 0 }}>
+                        <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "rgba(112, 72, 56, 0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <Plane size={16} color="var(--brown-dark)" />
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <h4 style={{ fontSize: "1rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            4. Liaisons Aériennes Libres
+                          </h4>
+                          <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            Création & liaison libre · Contrôle absolu Direction
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateAirRouteModal(true)}
+                        className="btn btn-primary"
+                        style={{
+                          padding: "6px 14px",
+                          fontSize: "0.76rem",
+                          borderRadius: "9999px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          textAlign: "center",
+                          gap: "5px",
+                          lineHeight: 1,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <Plus size={13} />
+                        <span>Relier une liaison</span>
+                      </button>
+                    </div>
+
+                    {/* Listing dynamique des liaisons aériennes hors hubs par défaut */}
+                    {(() => {
+                      const customAirTariffs = tariffsList.filter((t) => {
+                        const orig = (t.origin_country || "").toLowerCase();
+                        const isCn = orig.includes("chine");
+                        const isAe = orig.includes("émirat") || orig.includes("duba");
+                        const isMa = orig.includes("maroc");
+                        if (isCn || isAe || isMa) return false;
+                        const isAir = t.shipping_mode_type === "AIR" || (t.shipping_mode_name || "").toLowerCase().includes("aérien") || (t.shipping_mode_name || "").toLowerCase().includes("vol") || (t.category_tag || "").toLowerCase().includes("paris") || (t.category_tag || "").toLowerCase().includes("pli");
+                        return isAir || orig.includes("france");
+                      });
+
+                      if (customAirTariffs.length === 0) {
+                        return (
+                          <div style={{ textAlign: "center", padding: "20px 14px", background: "#FAF8F5", borderRadius: "12px", border: "1px dashed rgba(112, 72, 56, 0.18)" }}>
+                            <Plane size={22} style={{ color: "var(--brown-light)", margin: "0 auto 6px auto", opacity: 0.8 }} />
+                            <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--brown-dark)", marginBottom: "3px" }}>
+                              Aucune liaison imposée
+                            </div>
+                            <p style={{ fontSize: "0.71rem", color: "var(--text-muted)", margin: "0 0 10px 0" }}>
+                              Vous avez le contrôle total pour relier n&apos;importe quelle liaison aérienne (Paris, Istanbul, New York, Bruxelles...).
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setShowCreateAirRouteModal(true)}
+                              className="btn btn-primary"
+                              style={{ padding: "5px 14px", fontSize: "0.74rem", borderRadius: "9999px" }}
+                            >
+                              <Plus size={12} /> Créer & Relier une Liaison Aérienne
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "260px", overflowY: "auto", paddingRight: "2px" }}>
+                          {customAirTariffs.slice(0, 5).map((t) => (
+                            <div
+                              key={t.id}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: "10px",
+                                padding: "9px 12px",
+                                background: "#FAF8F5",
+                                borderRadius: "10px",
+                                border: "1px solid rgba(112, 72, 56, 0.07)",
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", gap: "7px", minWidth: 0, flex: 1 }}>
+                                <div style={{ display: "inline-flex", alignItems: "center", gap: "3px", flexShrink: 0 }}>
+                                  <CircularFlag countryName={t.origin_country} size={15} />
+                                  <span style={{ fontSize: "0.72rem", fontWeight: "800", color: "var(--brown-light)" }}>➔</span>
+                                  <CircularFlag countryName={t.destination_country} size={15} />
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ fontSize: "0.8rem", fontWeight: "700", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {t.service_name || `${t.origin_country} ➔ ${t.destination_country}`}
+                                  </div>
+                                  <div style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                                    {t.origin_city || t.origin_country} ➔ {t.destination_city || t.destination_country} · {t.estimated_days_min ? `${t.estimated_days_min} à ${t.estimated_days_max || t.estimated_days_min} j` : "Délai garanti"}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, whiteSpace: "nowrap" }}>
+                                <div style={{ textAlign: "right" }}>
+                                  <span style={{ fontSize: "0.84rem", fontWeight: "800", color: "var(--brown-dark)" }} className="tabular-nums">
+                                    {formatCurrencyPrice(t.price_per_unit_minor, t.currency)}
+                                  </span>
+                                  <span style={{ fontSize: "0.66rem", color: "var(--text-secondary)", marginLeft: "2px" }}>
+                                    {t.pricing_basis === "PER_UNIT" ? "/ pli" : "/ kg"}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setEditingTariff({
+                                      ...t,
+                                      price_per_unit: t.price_per_unit || (t.price_per_unit_minor / 100),
+                                    })
+                                  }
+                                  className="btn-icon-clean"
+                                  style={{ width: "26px", height: "26px" }}
+                                  title="Modifier cette liaison"
+                                >
+                                  <Edit3 size={11} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteTariff(t.id)}
+                                  className="btn-icon-clean"
+                                  style={{ width: "26px", height: "26px", color: "#C53030", borderColor: "rgba(197, 48, 48, 0.2)" }}
+                                  title="Retirer cette liaison"
+                                >
+                                  <Trash2 size={11} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -5893,29 +7107,24 @@ export default function AdminPage() {
                     {[
                       { id: "ALL", label: `Tous (${tariffsList.length})`, icon: <Globe size={14} /> },
                       {
-                        id: "CN_AE",
-                        label: "Chine & Dubaï",
-                        icon: (
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
-                            <CircularFlag countryCode="CN" size={14} />
-                            <CircularFlag countryCode="AE" size={14} />
-                          </span>
-                        ),
+                        id: "CN",
+                        label: "Chine",
+                        icon: <CircularFlag countryCode="CN" size={14} />,
+                      },
+                      {
+                        id: "AE",
+                        label: "Dubaï",
+                        icon: <CircularFlag countryCode="AE" size={14} />,
                       },
                       {
                         id: "MA",
-                        label: "Maroc Subsaharien",
+                        label: "Maroc",
                         icon: <CircularFlag countryCode="MA" size={14} />,
                       },
                       {
-                        id: "FR_CI",
-                        label: "Paris ↔ Abidjan",
-                        icon: (
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
-                            <CircularFlag countryCode="FR" size={14} />
-                            <CircularFlag countryCode="CI" size={14} />
-                          </span>
-                        ),
+                        id: "AIR_CUSTOM",
+                        label: "Liaisons Aériennes",
+                        icon: <Plane size={14} />,
                       },
                     ].map((c) => (
                       <button
@@ -6042,9 +7251,10 @@ export default function AdminPage() {
                           const unitLabel = isSea ? "Par m³ (CBM)" : isUnit ? "Par pièce / pli" : "Par kg";
                           const cleanTag = (t.category_tag || t.shipping_mode_name || "").replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
                           const noteText = t.note || (t.flyer_source ? `Offre : ${t.flyer_source}` : "Tarif standard");
+                          const isPending = Boolean(t._isPendingEdit || pendingTariffEdits[t.id]);
 
                           return (
-                            <tr key={t.id} className="table-row-clean">
+                            <tr key={t.id} className="table-row-clean" style={isPending ? { background: "rgba(180, 83, 9, 0.04)" } : undefined}>
                               <td>
                                 <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                                   <CircularFlag countryName={t.origin_country} size={18} />
@@ -6070,7 +7280,7 @@ export default function AdminPage() {
                                   style={{
                                     background: "#FAF8F5",
                                     color: "var(--brown-dark)",
-                                    border: "1px solid rgba(42, 24, 16, 0.08)",
+                                    border: "1px solid rgba(112, 72, 56, 0.08)",
                                     fontWeight: "700",
                                     padding: "4px 10px",
                                     borderRadius: "8px",
@@ -6100,8 +7310,15 @@ export default function AdminPage() {
                               </td>
 
                               <td>
-                                <div style={{ fontWeight: "800", fontSize: "0.88rem", color: "var(--brown-dark)", fontVariantNumeric: "tabular-nums" }}>
-                                  {formatCurrencyPrice(t.price_per_unit_minor, t.currency)} {isSea ? "/ m³" : isUnit ? "" : "/ kg"}
+                                <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                                  <div style={{ fontWeight: "800", fontSize: "0.88rem", color: "var(--brown-dark)", fontVariantNumeric: "tabular-nums" }}>
+                                    {formatCurrencyPrice(t.price_per_unit_minor, t.currency)} {isSea ? "/ m³" : isUnit ? "" : "/ kg"}
+                                  </div>
+                                  {isPending && (
+                                    <span style={{ fontSize: "0.62rem", background: "#FEF3C7", color: "#92400E", padding: "1px 6px", borderRadius: "9999px", fontWeight: "700" }}>
+                                      En attente
+                                    </span>
+                                  )}
                                 </div>
                                 {t.secondary_display && (
                                   <div style={{ fontSize: "0.7rem", color: "var(--text-secondary)", fontWeight: "600", marginTop: "1px" }}>
@@ -6276,7 +7493,7 @@ export default function AdminPage() {
                     padding: "16px 22px",
                     borderRadius: "18px",
                     background: "#FFFFFF",
-                    border: "1px solid rgba(42, 24, 16, 0.07)",
+                    border: "1px solid rgba(112, 72, 56, 0.07)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
@@ -6311,7 +7528,7 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <div className="card-clean" style={{ padding: "0", overflow: "hidden", borderRadius: "22px", border: "1px solid var(--border-light)", background: "#FFFFFF" }}>
-                  <div style={{ padding: "18px 24px", background: "#FFFFFF", borderBottom: "1px solid rgba(42, 24, 16, 0.07)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                  <div style={{ padding: "18px 24px", background: "#FFFFFF", borderBottom: "1px solid rgba(112, 72, 56, 0.07)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                       <span className="metric-icon-box">
                         <Clock size={18} strokeWidth={1.8} />
@@ -6368,9 +7585,7 @@ export default function AdminPage() {
                               {formatCurrencyPrice(p.amount_minor, p.currency || "FCFA")}
                             </td>
                             <td>
-                              <span className="badge-clean badge-draft">
-                                {p.payment_method === "ORANGE_MONEY" ? "Orange Money" : p.payment_method === "WAVE" ? "Wave" : p.payment_method === "CASH" ? "Espèces" : p.payment_method || "Mobile"}
-                              </span>
+                              {renderPaymentMethodBadge(p.payment_method)}
                             </td>
                             <td style={{ fontSize: "0.77rem", color: "var(--text-secondary)" }}>
                               {p.reference_code || "Manuel"}
@@ -6418,7 +7633,7 @@ export default function AdminPage() {
 
               {/* TABLEAU 2 SÉPARÉ : HISTORIQUE DES ENCAISSEMENTS CONFIRMÉS */}
               <div className="card-clean" style={{ padding: "0", overflow: "hidden", borderRadius: "22px", border: "1px solid var(--border-light)", background: "#FFFFFF" }}>
-                <div style={{ padding: "18px 24px", borderBottom: "1px solid rgba(42, 24, 16, 0.07)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                <div style={{ padding: "18px 24px", borderBottom: "1px solid rgba(112, 72, 56, 0.07)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#059669" }} />
                     <div>
@@ -6892,9 +8107,9 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* CARTE 2 : RÉSEAU DES HUBS INTERNATIONAUX (CHINE, DUBAÏ, FRANCE) */}
+            {/* CARTE 2 : RÉSEAU DES HUBS INTERNATIONAUX (CHINE, DUBAÏ, FRANCE & HUBS PERSONNALISÉS) */}
             <div className="card-clean" style={{ padding: "26px", borderRadius: "20px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px", borderBottom: "1px solid var(--border-light)", paddingBottom: "14px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px", borderBottom: "1px solid var(--border-light)", paddingBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
                 <div>
                   <h3 style={{ fontSize: "1.15rem", fontWeight: "800", color: "var(--brown-dark)", margin: "0 0 3px 0" }}>
                     Hubs & Dépôts Internationaux de Réception
@@ -6903,9 +8118,31 @@ export default function AdminPage() {
                     Adresses exactes communiquées aux fournisseurs (Alibaba, Yiwu, Deira, France) avec shipping marks.
                   </p>
                 </div>
-                <span className="badge-clean badge-transit" style={{ padding: "4px 10px", fontSize: "0.72rem" }}>
-                  3 Plateformes Actives
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                  <span className="badge-clean badge-transit" style={{ padding: "4px 12px", fontSize: "0.74rem" }}>
+                    {3 + customHubs.length} Plateformes Actives
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddHubModal(true)}
+                    className="btn btn-primary"
+                    style={{
+                      padding: "6px 14px",
+                      fontSize: "0.76rem",
+                      borderRadius: "9999px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      textAlign: "center",
+                      gap: "5px",
+                      lineHeight: 1,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <Plus size={13} />
+                    <span>Ajouter un hub</span>
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "18px" }}>
@@ -7022,6 +8259,92 @@ export default function AdminPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* HUBS INTERNATIONAUX AJOUTÉS DYNAMIQUEMENT */}
+                {customHubs.map((hub) => (
+                  <div
+                    key={hub.id}
+                    style={{
+                      padding: "16px",
+                      background: "var(--bg-app)",
+                      borderRadius: "14px",
+                      border: "1px solid var(--border-light)",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "10px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
+                          <CircularFlag countryCode={hub.countryCode} size={16} />
+                          <strong style={{ fontSize: "0.88rem", color: "var(--brown-dark)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {hub.name}
+                          </strong>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteHub(hub.id)}
+                          className="btn-icon-clean"
+                          style={{ width: "24px", height: "24px", color: "var(--text-muted)" }}
+                          title="Supprimer ce hub"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                      <div style={{ display: "grid", gap: "10px" }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>
+                            Adresse Réception Colis
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={hub.address}
+                            onChange={(e) => {
+                              const updated = customHubs.map((h) => h.id === hub.id ? { ...h, address: e.target.value } : h);
+                              setCustomHubs(updated);
+                              try { localStorage.setItem("roum_custom_hubs", JSON.stringify(updated)); } catch {}
+                            }}
+                            className="input-clean"
+                            style={{ fontSize: "0.82rem" }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>
+                            Format Shipping Mark à inscrire sur les cartons
+                          </label>
+                          <input
+                            type="text"
+                            value={hub.shipping_mark}
+                            onChange={(e) => {
+                              const updated = customHubs.map((h) => h.id === hub.id ? { ...h, shipping_mark: e.target.value } : h);
+                              setCustomHubs(updated);
+                              try { localStorage.setItem("roum_custom_hubs", JSON.stringify(updated)); } catch {}
+                            }}
+                            className="input-clean"
+                            style={{ fontSize: "0.82rem" }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>
+                            Contact Équipe Réception Hub
+                          </label>
+                          <input
+                            type="text"
+                            value={hub.contact}
+                            onChange={(e) => {
+                              const updated = customHubs.map((h) => h.id === hub.id ? { ...h, contact: e.target.value } : h);
+                              setCustomHubs(updated);
+                              try { localStorage.setItem("roum_custom_hubs", JSON.stringify(updated)); } catch {}
+                            }}
+                            className="input-clean"
+                            style={{ fontSize: "0.82rem" }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -7052,7 +8375,7 @@ export default function AdminPage() {
                         background: "#FFFFFF",
                         borderRadius: "16px",
                         border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
-                        boxShadow: isEditing ? "0 8px 24px rgba(42, 24, 16, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        boxShadow: isEditing ? "0 8px 24px rgba(112, 72, 56, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
                         transition: "all 0.2s ease",
                       }}
                     >
@@ -7063,15 +8386,9 @@ export default function AdminPage() {
                             <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
                               Wave Côte d&apos;Ivoire & Sénégal
                             </div>
-                            {isEditing ? (
-                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                <Edit3 size={10} /> Modification en cours
-                              </span>
-                            ) : (
-                              <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
-                                Sans Frais Client
-                              </span>
-                            )}
+                            <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                              Sans Frais Client
+                            </span>
                           </div>
                         </div>
                         {isEditing ? (
@@ -7195,7 +8512,7 @@ export default function AdminPage() {
                         background: "#FFFFFF",
                         borderRadius: "16px",
                         border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
-                        boxShadow: isEditing ? "0 8px 24px rgba(42, 24, 16, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        boxShadow: isEditing ? "0 8px 24px rgba(112, 72, 56, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
                         transition: "all 0.2s ease",
                       }}
                     >
@@ -7206,15 +8523,9 @@ export default function AdminPage() {
                             <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
                               Orange Money (OM CI / UEMOA)
                             </div>
-                            {isEditing ? (
-                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                <Edit3 size={10} /> Modification en cours
-                              </span>
-                            ) : (
-                              <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
-                                Code Marchand & Transfert
-                              </span>
-                            )}
+                            <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                              Code Marchand & Transfert
+                            </span>
                           </div>
                         </div>
                         {isEditing ? (
@@ -7323,7 +8634,7 @@ export default function AdminPage() {
                         background: "#FFFFFF",
                         borderRadius: "16px",
                         border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
-                        boxShadow: isEditing ? "0 8px 24px rgba(42, 24, 16, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        boxShadow: isEditing ? "0 8px 24px rgba(112, 72, 56, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
                         transition: "all 0.2s ease",
                       }}
                     >
@@ -7334,15 +8645,9 @@ export default function AdminPage() {
                             <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
                               Compte Bancaire Officiel (RIB / IBAN FCFA)
                             </div>
-                            {isEditing ? (
-                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                <Edit3 size={10} /> Modification en cours
-                              </span>
-                            ) : (
-                              <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
-                                Banque Atlantique (BACI) · Zone UEMOA
-                              </span>
-                            )}
+                            <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                              Banque Atlantique (BACI) · Zone UEMOA
+                            </span>
                           </div>
                         </div>
                         {isEditing ? (
@@ -7481,7 +8786,7 @@ export default function AdminPage() {
                         background: "#FFFFFF",
                         borderRadius: "16px",
                         border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
-                        boxShadow: isEditing ? "0 8px 24px rgba(42, 24, 16, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        boxShadow: isEditing ? "0 8px 24px rgba(112, 72, 56, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
                         transition: "all 0.2s ease",
                       }}
                     >
@@ -7492,15 +8797,9 @@ export default function AdminPage() {
                             <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               Sourcing Chine & Devises
                             </div>
-                            {isEditing ? (
-                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                <Edit3 size={10} /> Modification en cours
-                              </span>
-                            ) : (
-                              <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
-                                Alipay · WeChat · SEPA Euro
-                              </span>
-                            )}
+                            <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                              Alipay · WeChat · SEPA Euro
+                            </span>
                           </div>
                         </div>
                         {isEditing ? (
@@ -7624,7 +8923,7 @@ export default function AdminPage() {
                         background: "#FFFFFF",
                         borderRadius: "16px",
                         border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
-                        boxShadow: isEditing ? "0 8px 24px rgba(42, 24, 16, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        boxShadow: isEditing ? "0 8px 24px rgba(112, 72, 56, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
                         transition: "all 0.2s ease",
                       }}
                     >
@@ -7635,15 +8934,9 @@ export default function AdminPage() {
                             <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
                               Mentions Légales sur les Reçus
                             </div>
-                            {isEditing ? (
-                              <span style={{ fontSize: "0.68rem", background: "rgba(42, 24, 16, 0.08)", color: "var(--brown-dark)", padding: "1px 8px", borderRadius: "9999px", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                <Edit3 size={10} /> Modification en cours
-                              </span>
-                            ) : (
-                              <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
-                                Bordereaux de Caisse Officiels
-                              </span>
-                            )}
+                            <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                              Bordereaux de Caisse Officiels
+                            </span>
                           </div>
                         </div>
                         {isEditing ? (
@@ -7758,7 +9051,7 @@ export default function AdminPage() {
                     }
                   }}
                   className="btn btn-primary"
-                  style={{ padding: "11px 28px", fontSize: "0.92rem", borderRadius: "9999px", boxShadow: "0 4px 14px rgba(42, 24, 16, 0.25)" }}
+                  style={{ padding: "11px 28px", fontSize: "0.92rem", borderRadius: "9999px", boxShadow: "0 4px 14px rgba(112, 72, 56, 0.25)" }}
                 >
                   Enregistrer l&apos;ensemble des Paramètres
                 </button>
@@ -7836,7 +9129,7 @@ export default function AdminPage() {
             {/* Modal Header */}
             <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--border-light)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(42, 24, 16, 0.06)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--brown-dark)" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(112, 72, 56, 0.06)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--brown-dark)" }}>
                   <Package size={18} />
                 </div>
                 <div>
@@ -8134,7 +9427,7 @@ export default function AdminPage() {
             {/* Modal Header */}
             <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--border-light)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "rgba(42, 24, 16, 0.06)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--brown-dark)" }}>
+                <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "rgba(112, 72, 56, 0.06)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--brown-dark)" }}>
                   <DollarSign size={20} />
                 </div>
                 <div>
@@ -8962,14 +10255,6 @@ export default function AdminPage() {
               {/* Entête Modale */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", paddingBottom: "14px", borderBottom: "1px solid var(--border-light)" }}>
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
-                    <span className="badge-clean badge-transit" style={{ padding: "2px 8px", fontSize: "0.72rem" }}>
-                      Super Admin
-                    </span>
-                    <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-                      Configuration Tarifaire Libre & Multi-Couloirs
-                    </span>
-                  </div>
                   <h3 style={{ fontSize: "1.3rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0 }}>
                     Nouveau Tarif d&apos;Expédition
                   </h3>
@@ -9375,6 +10660,625 @@ export default function AdminPage() {
         );
       })()}
 
+      {/* MODALE DÉDIÉE : CRÉER & RELIER UNE LIAISON AÉRIENNE (CONTRÔLE ABSOLU DIRECTION) */}
+      {showCreateAirRouteModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.45)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100, padding: "20px" }}>
+          <div className="card-clean animate-fade-in" style={{ maxWidth: "580px", width: "100%", maxHeight: "92vh", overflowY: "auto", borderRadius: "24px", padding: "26px", boxShadow: "0 25px 60px rgba(0, 0, 0, 0.25)", background: "#FFFFFF" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid var(--border-light)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "rgba(112, 72, 56, 0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Plane size={20} color="var(--brown-dark)" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: "800", color: "var(--brown-dark)", margin: "0 0 2px 0" }}>
+                    Créer & Relier une Liaison Aérienne
+                  </h3>
+                  <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", margin: 0 }}>
+                    Contrôle absolu Direction : reliez librement vos aéroports et configurez vos barèmes.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateAirRouteModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "4px" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAirRoute} style={{ display: "grid", gap: "14px" }}>
+              {/* Type de liaison / Sens */}
+              <div style={{ background: "#FAF8F5", padding: "12px 14px", borderRadius: "14px", border: "1px solid rgba(112, 72, 56, 0.08)" }}>
+                <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--brown-dark)", display: "block", marginBottom: "8px" }}>
+                  Sens de la liaison aérienne
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setAirRouteForm({ ...airRouteForm, isBilateral: true })}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "10px",
+                      border: "1px solid " + (airRouteForm.isBilateral ? "var(--brown-dark)" : "var(--border-light)"),
+                      background: airRouteForm.isBilateral ? "#FFFFFF" : "transparent",
+                      color: airRouteForm.isBilateral ? "var(--brown-dark)" : "var(--text-secondary)",
+                      fontWeight: airRouteForm.isBilateral ? "800" : "500",
+                      fontSize: "0.78rem",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                      boxShadow: airRouteForm.isBilateral ? "0 2px 6px rgba(0,0,0,0.06)" : "none",
+                    }}
+                  >
+                    <span>↔ Bilatérale (2 sens)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAirRouteForm({ ...airRouteForm, isBilateral: false })}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "10px",
+                      border: "1px solid " + (!airRouteForm.isBilateral ? "var(--brown-dark)" : "var(--border-light)"),
+                      background: !airRouteForm.isBilateral ? "#FFFFFF" : "transparent",
+                      color: !airRouteForm.isBilateral ? "var(--brown-dark)" : "var(--text-secondary)",
+                      fontWeight: !airRouteForm.isBilateral ? "800" : "500",
+                      fontSize: "0.78rem",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                      boxShadow: !airRouteForm.isBilateral ? "0 2px 6px rgba(0,0,0,0.06)" : "none",
+                    }}
+                  >
+                    <span>➔ Aller simple</span>
+                  </button>
+                </div>
+                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "6px" }}>
+                  {airRouteForm.isBilateral
+                    ? "Crée automatiquement les deux directions reliées (ex: Paris ➔ Abidjan ET Abidjan ➔ Paris)."
+                    : "Crée uniquement la liaison dans le sens Aller (Départ ➔ Arrivée)."}
+                </div>
+              </div>
+
+              {/* Aéroports reliés : Départ et Arrivée */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Pays de Départ (Menu déroulant)
+                  </label>
+                  <select
+                    value={airRouteForm.origin_country}
+                    onChange={(e) => {
+                      const selectedName = e.target.value;
+                      const found = [...STRATEGIC_HUBS, ...AFRICAN_COUNTRIES, ...ALL_WORLD_COUNTRIES].find((c) => c.name === selectedName);
+                      setAirRouteForm({
+                        ...airRouteForm,
+                        origin_country: selectedName,
+                        origin_city: found?.hubCity || airRouteForm.origin_city,
+                      });
+                    }}
+                    className="input-clean"
+                    style={{ fontWeight: "700", cursor: "pointer" }}
+                  >
+                    <optgroup label="Hubs Stratégiques ROUM">
+                      {STRATEGIC_HUBS.map((c) => (
+                        <option key={`air-hub-orig-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Pays Africains">
+                      {AFRICAN_COUNTRIES.map((c) => (
+                        <option key={`air-afr-orig-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Tous les Pays du Monde">
+                      {ALL_WORLD_COUNTRIES.map((c) => (
+                        <option key={`air-all-orig-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Ville / Hub (Ex: Paris CDG)"
+                    value={airRouteForm.origin_city}
+                    onChange={(e) => setAirRouteForm({ ...airRouteForm, origin_city: e.target.value })}
+                    className="input-clean"
+                    style={{ marginTop: "6px", fontSize: "0.76rem" }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Pays de Destination (Menu déroulant)
+                  </label>
+                  <select
+                    value={airRouteForm.destination_country}
+                    onChange={(e) => {
+                      const selectedName = e.target.value;
+                      const found = [...AFRICAN_COUNTRIES, ...STRATEGIC_HUBS, ...ALL_WORLD_COUNTRIES].find((c) => c.name === selectedName);
+                      setAirRouteForm({
+                        ...airRouteForm,
+                        destination_country: selectedName,
+                        destination_city: found?.hubCity || airRouteForm.destination_city,
+                      });
+                    }}
+                    className="input-clean"
+                    style={{ fontWeight: "700", cursor: "pointer" }}
+                  >
+                    <optgroup label="Destinations Africaines">
+                      {AFRICAN_COUNTRIES.map((c) => (
+                        <option key={`air-afr-dest-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Hubs Stratégiques">
+                      {STRATEGIC_HUBS.map((c) => (
+                        <option key={`air-hub-dest-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Tous les Pays du Monde">
+                      {ALL_WORLD_COUNTRIES.map((c) => (
+                        <option key={`air-all-dest-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Ville / Hub (Ex: Abidjan FHB)"
+                    value={airRouteForm.destination_city}
+                    onChange={(e) => setAirRouteForm({ ...airRouteForm, destination_city: e.target.value })}
+                    className="input-clean"
+                    style={{ marginTop: "6px", fontSize: "0.76rem" }}
+                  />
+                </div>
+              </div>
+
+              {/* Nom du service / Formule */}
+              <div>
+                <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Nom de la Formule / Service Aérien
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Fret Aérien Direct Paris ↔ Abidjan"
+                  value={airRouteForm.service_name}
+                  onChange={(e) => setAirRouteForm({ ...airRouteForm, service_name: e.target.value })}
+                  className="input-clean"
+                />
+              </div>
+
+              {/* Tarification et Unité */}
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: "10px" }}>
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Prix Unitaire
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    placeholder="Ex: 8500"
+                    value={airRouteForm.price_per_unit || ""}
+                    onChange={(e) => setAirRouteForm({ ...airRouteForm, price_per_unit: Number(e.target.value) })}
+                    className="input-clean"
+                    style={{ fontWeight: "800", color: "var(--brown-dark)" }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Base de calcul
+                  </label>
+                  <select
+                    value={airRouteForm.pricing_basis}
+                    onChange={(e) => setAirRouteForm({ ...airRouteForm, pricing_basis: e.target.value })}
+                    className="input-clean"
+                  >
+                    <option value="PER_KG">Par kg (/ kg)</option>
+                    <option value="PER_UNIT">Par pli / pièce</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Devise
+                  </label>
+                  <select
+                    value={airRouteForm.currency}
+                    onChange={(e) => setAirRouteForm({ ...airRouteForm, currency: e.target.value })}
+                    className="input-clean"
+                  >
+                    <option value="FCFA">FCFA</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="USD">USD ($)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Délais */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Délai min (jours)
+                  </label>
+                  <input
+                    type="number"
+                    value={airRouteForm.estimated_days_min}
+                    onChange={(e) => setAirRouteForm({ ...airRouteForm, estimated_days_min: Number(e.target.value) })}
+                    className="input-clean"
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Délai max (jours)
+                  </label>
+                  <input
+                    type="number"
+                    value={airRouteForm.estimated_days_max}
+                    onChange={(e) => setAirRouteForm({ ...airRouteForm, estimated_days_max: Number(e.target.value) })}
+                    className="input-clean"
+                  />
+                </div>
+              </div>
+
+              {/* Notes / Conditions */}
+              <div>
+                <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Conditions & Agence / Hub associé
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Agence Bingerville · Expéditions régulières dans les 2 sens"
+                  value={airRouteForm.note}
+                  onChange={(e) => setAirRouteForm({ ...airRouteForm, note: e.target.value })}
+                  className="input-clean"
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "10px", borderTop: "1px solid var(--border-light)", paddingTop: "14px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateAirRouteModal(false)}
+                  className="btn btn-secondary"
+                  style={{ padding: "8px 18px", borderRadius: "9999px" }}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ padding: "8px 24px", borderRadius: "9999px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Check size={14} />
+                  Créer & Relier cette Liaison
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODALE DÉDIÉE : AJOUTER UN PAYS (GROUPAGE SUBSAHARIEN MAROC) */}
+      {showAddMoroccoCountryModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.45)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100, padding: "20px" }}>
+          <div className="card-clean animate-fade-in" style={{ maxWidth: "540px", width: "100%", maxHeight: "90vh", overflowY: "auto", borderRadius: "24px", padding: "26px", boxShadow: "0 25px 60px rgba(0, 0, 0, 0.22)", background: "#FFFFFF" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid var(--border-light)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <CircularFlag countryCode="MA" size={24} />
+                <div>
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: "800", color: "var(--brown-dark)", margin: "0 0 2px 0" }}>
+                    Ajouter une Destination (Maroc)
+                  </h3>
+                  <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", margin: 0 }}>
+                    Groupage Subsaharien Casablanca ➔ Nouvelle destination africaine
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddMoroccoCountryModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "4px" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddMoroccoCountry} style={{ display: "grid", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Pays de Départ
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value="Maroc (Casablanca)"
+                    className="input-clean"
+                    style={{ background: "#FAF8F5", fontWeight: "700", cursor: "not-allowed" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Pays de Destination (Menu déroulant)
+                  </label>
+                  <select
+                    value={moroccoCountryForm.destination_country}
+                    onChange={(e) => {
+                      const selectedName = e.target.value;
+                      const found = [...AFRICAN_COUNTRIES, ...ALL_WORLD_COUNTRIES].find((c) => c.name === selectedName);
+                      setMoroccoCountryForm({
+                        ...moroccoCountryForm,
+                        destination_country: selectedName,
+                        destination_city: found?.hubCity || selectedName,
+                      });
+                    }}
+                    className="input-clean"
+                    style={{ fontWeight: "700", cursor: "pointer" }}
+                  >
+                    <optgroup label="Destinations Africaines">
+                      {AFRICAN_COUNTRIES.map((c) => (
+                        <option key={`ma-add-afr-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Tous les Pays du Monde">
+                      {ALL_WORLD_COUNTRIES.map((c) => (
+                        <option key={`ma-add-all-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Ville / Hub d&apos;arrivée
+                  </label>
+                  <input
+                    type="text"
+                    value={moroccoCountryForm.destination_city}
+                    onChange={(e) => setMoroccoCountryForm({ ...moroccoCountryForm, destination_city: e.target.value })}
+                    className="input-clean"
+                    placeholder="Ex: Dakar, Bamako, Lomé..."
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Prix unitaire (FCFA / kg)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={moroccoCountryForm.price_per_unit}
+                    onChange={(e) => setMoroccoCountryForm({ ...moroccoCountryForm, price_per_unit: Number(e.target.value) })}
+                    className="input-clean"
+                    style={{ fontWeight: "800", color: "var(--brown-dark)" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Délai garanti (jours)
+                  </label>
+                  <input
+                    type="number"
+                    value={moroccoCountryForm.estimated_days_min}
+                    onChange={(e) => setMoroccoCountryForm({ ...moroccoCountryForm, estimated_days_min: Number(e.target.value), estimated_days_max: Number(e.target.value) })}
+                    className="input-clean"
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Devise
+                  </label>
+                  <select
+                    value={moroccoCountryForm.currency}
+                    onChange={(e) => setMoroccoCountryForm({ ...moroccoCountryForm, currency: e.target.value })}
+                    className="input-clean"
+                  >
+                    {CURRENCY_OPTIONS.map((c) => (
+                      <option key={`curr-ma-${c.code}`} value={c.code}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Note / Modalités
+                </label>
+                <input
+                  type="text"
+                  value={moroccoCountryForm.note}
+                  onChange={(e) => setMoroccoCountryForm({ ...moroccoCountryForm, note: e.target.value })}
+                  className="input-clean"
+                  placeholder="Ex: Groupage aérien départ Casablanca 5 jours garantis"
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "12px", borderTop: "1px solid var(--border-light)", paddingTop: "14px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAddMoroccoCountryModal(false)}
+                  className="btn btn-secondary"
+                  style={{ padding: "8px 18px", borderRadius: "9999px" }}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ padding: "8px 22px", borderRadius: "9999px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Check size={14} /> Enregistrer la destination
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODALE DÉDIÉE : AJOUTER UN HUB / DÉPÔT INTERNATIONAL */}
+      {showAddHubModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.45)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100, padding: "20px" }}>
+          <div className="card-clean animate-fade-in" style={{ maxWidth: "560px", width: "100%", maxHeight: "90vh", overflowY: "auto", borderRadius: "24px", padding: "26px", boxShadow: "0 25px 60px rgba(0, 0, 0, 0.22)", background: "#FFFFFF" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid var(--border-light)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <CircularFlag countryCode={newHubForm.countryCode || "TR"} size={24} />
+                <div>
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: "800", color: "var(--brown-dark)", margin: "0 0 2px 0" }}>
+                    Ajouter un Hub International
+                  </h3>
+                  <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", margin: 0 }}>
+                    Nouvelle plateforme de transit, entrepôt ou adresse de réception à l&apos;étranger
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddHubModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "4px" }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddHub} style={{ display: "grid", gap: "14px" }}>
+              <div>
+                <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Nom de la Plateforme / Hub *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newHubForm.name}
+                  onChange={(e) => setNewHubForm({ ...newHubForm, name: e.target.value })}
+                  className="input-clean"
+                  placeholder="Ex : Hub Istanbul (Turquie), Hub Milan (Italie)..."
+                  style={{ fontWeight: "700" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Pays (Menu déroulant) *
+                  </label>
+                  <select
+                    value={newHubForm.country}
+                    onChange={(e) => {
+                      const selectedName = e.target.value;
+                      const found = [...STRATEGIC_HUBS, ...ALL_WORLD_COUNTRIES].find((c) => c.name === selectedName);
+                      const code = found?.code || getCountryCodeFromName(selectedName) || "TR";
+                      setNewHubForm({
+                        ...newHubForm,
+                        country: selectedName,
+                        countryCode: code,
+                        city: found?.hubCity || newHubForm.city,
+                      });
+                    }}
+                    className="input-clean"
+                    style={{ fontWeight: "700", cursor: "pointer" }}
+                  >
+                    <optgroup label="Hubs Stratégiques & Partenaires">
+                      {STRATEGIC_HUBS.map((c) => (
+                        <option key={`hub-add-strat-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Tous les Pays du Monde">
+                      {ALL_WORLD_COUNTRIES.map((c) => (
+                        <option key={`hub-add-all-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Ville du Dépôt / Magasin *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newHubForm.city}
+                    onChange={(e) => setNewHubForm({ ...newHubForm, city: e.target.value })}
+                    className="input-clean"
+                    placeholder="Ex: Istanbul, New York, Milan..."
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                  Adresse Physique Complète de Livraison *
+                </label>
+                <textarea
+                  required
+                  rows={2}
+                  value={newHubForm.address}
+                  onChange={(e) => setNewHubForm({ ...newHubForm, address: e.target.value })}
+                  className="input-clean"
+                  placeholder="Adresse précise pour vos fournisseurs (Rue, Bâtiment, Quartier, Code postal)..."
+                  style={{ resize: "vertical", fontSize: "0.82rem" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Shipping Mark Obligatoire *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newHubForm.shipping_mark}
+                    onChange={(e) => setNewHubForm({ ...newHubForm, shipping_mark: e.target.value })}
+                    className="input-clean"
+                    placeholder="Ex: ROUM-IST-[NOM_CLIENT]"
+                    style={{ fontWeight: "700", color: "var(--brown-dark)" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Contact Téléphone / WhatsApp du Hub
+                  </label>
+                  <input
+                    type="text"
+                    value={newHubForm.contact}
+                    onChange={(e) => setNewHubForm({ ...newHubForm, contact: e.target.value })}
+                    className="input-clean"
+                    placeholder="Ex: +90 532 000 0000"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "12px", borderTop: "1px solid var(--border-light)", paddingTop: "14px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAddHubModal(false)}
+                  className="btn btn-secondary"
+                  style={{ padding: "8px 18px", borderRadius: "9999px" }}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ padding: "8px 22px", borderRadius: "9999px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Check size={14} /> Enregistrer ce Hub
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* MODALE DE MODIFICATION : TARIF */}
       {editingTariff && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.45)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100, padding: "20px" }}>
@@ -9402,24 +11306,64 @@ export default function AdminPage() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>Pays de Départ</label>
-                  <input
-                    type="text"
-                    required
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Pays de Départ (Menu déroulant)
+                  </label>
+                  <select
                     value={editingTariff.origin_country || ""}
                     onChange={(e) => setEditingTariff({ ...editingTariff, origin_country: e.target.value })}
                     className="input-clean"
-                  />
+                    style={{ fontWeight: "700", cursor: "pointer" }}
+                  >
+                    {editingTariff.origin_country && (
+                      <option value={editingTariff.origin_country}>{editingTariff.origin_country}</option>
+                    )}
+                    <optgroup label="Hubs Stratégiques ROUM">
+                      {STRATEGIC_HUBS.map((c) => (
+                        <option key={`edit-hub-dep-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Pays Africains">
+                      {AFRICAN_COUNTRIES.map((c) => (
+                        <option key={`edit-afr-dep-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Tous les Pays du Monde">
+                      {ALL_WORLD_COUNTRIES.map((c) => (
+                        <option key={`edit-all-dep-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                  </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>Pays de Destination</label>
-                  <input
-                    type="text"
-                    required
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Pays de Destination (Menu déroulant)
+                  </label>
+                  <select
                     value={editingTariff.destination_country || ""}
                     onChange={(e) => setEditingTariff({ ...editingTariff, destination_country: e.target.value })}
                     className="input-clean"
-                  />
+                    style={{ fontWeight: "700", cursor: "pointer" }}
+                  >
+                    {editingTariff.destination_country && (
+                      <option value={editingTariff.destination_country}>{editingTariff.destination_country}</option>
+                    )}
+                    <optgroup label="Destinations Africaines">
+                      {AFRICAN_COUNTRIES.map((c) => (
+                        <option key={`edit-afr-dest-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Hubs Stratégiques">
+                      {STRATEGIC_HUBS.map((c) => (
+                        <option key={`edit-hub-dest-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Tous les Pays du Monde">
+                      {ALL_WORLD_COUNTRIES.map((c) => (
+                        <option key={`edit-all-dest-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                  </select>
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
@@ -9484,7 +11428,7 @@ export default function AdminPage() {
                   Annuler
                 </button>
                 <button type="submit" className="btn btn-primary" style={{ padding: "8px 22px", borderRadius: "9999px" }}>
-                  <Check size={14} /> Enregistrer
+                  <Check size={14} /> Appliquer à la grille
                 </button>
               </div>
             </form>
@@ -9548,22 +11492,64 @@ export default function AdminPage() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>Origine</label>
-                  <input
-                    type="text"
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Pays d&apos;Origine (Menu déroulant)
+                  </label>
+                  <select
                     value={editingShipment.origin_country || ""}
                     onChange={(e) => setEditingShipment({ ...editingShipment, origin_country: e.target.value })}
                     className="input-clean"
-                  />
+                    style={{ fontWeight: "700", cursor: "pointer" }}
+                  >
+                    {editingShipment.origin_country && (
+                      <option value={editingShipment.origin_country}>{editingShipment.origin_country}</option>
+                    )}
+                    <optgroup label="Hubs Stratégiques ROUM">
+                      {STRATEGIC_HUBS.map((c) => (
+                        <option key={`ship-hub-dep-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Pays Africains">
+                      {AFRICAN_COUNTRIES.map((c) => (
+                        <option key={`ship-afr-dep-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Tous les Pays du Monde">
+                      {ALL_WORLD_COUNTRIES.map((c) => (
+                        <option key={`ship-all-dep-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                  </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>Destination</label>
-                  <input
-                    type="text"
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Pays de Destination (Menu déroulant)
+                  </label>
+                  <select
                     value={editingShipment.destination_country || ""}
                     onChange={(e) => setEditingShipment({ ...editingShipment, destination_country: e.target.value })}
                     className="input-clean"
-                  />
+                    style={{ fontWeight: "700", cursor: "pointer" }}
+                  >
+                    {editingShipment.destination_country && (
+                      <option value={editingShipment.destination_country}>{editingShipment.destination_country}</option>
+                    )}
+                    <optgroup label="Destinations Africaines">
+                      {AFRICAN_COUNTRIES.map((c) => (
+                        <option key={`ship-afr-dest-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Hubs Stratégiques">
+                      {STRATEGIC_HUBS.map((c) => (
+                        <option key={`ship-hub-dest-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Tous les Pays du Monde">
+                      {ALL_WORLD_COUNTRIES.map((c) => (
+                        <option key={`ship-all-dest-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                  </select>
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
@@ -9670,22 +11656,64 @@ export default function AdminPage() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>Pays de Départ</label>
-                  <input
-                    type="text"
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Pays de Départ (Menu déroulant)
+                  </label>
+                  <select
                     value={editingRequest.origin_country || ""}
                     onChange={(e) => setEditingRequest({ ...editingRequest, origin_country: e.target.value })}
                     className="input-clean"
-                  />
+                    style={{ fontWeight: "700", cursor: "pointer" }}
+                  >
+                    {editingRequest.origin_country && (
+                      <option value={editingRequest.origin_country}>{editingRequest.origin_country}</option>
+                    )}
+                    <optgroup label="Hubs Stratégiques ROUM">
+                      {STRATEGIC_HUBS.map((c) => (
+                        <option key={`req-hub-dep-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Pays Africains">
+                      {AFRICAN_COUNTRIES.map((c) => (
+                        <option key={`req-afr-dep-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Tous les Pays du Monde">
+                      {ALL_WORLD_COUNTRIES.map((c) => (
+                        <option key={`req-all-dep-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                  </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>Pays de Destination</label>
-                  <input
-                    type="text"
+                  <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                    Pays de Destination (Menu déroulant)
+                  </label>
+                  <select
                     value={editingRequest.destination_country || ""}
                     onChange={(e) => setEditingRequest({ ...editingRequest, destination_country: e.target.value })}
                     className="input-clean"
-                  />
+                    style={{ fontWeight: "700", cursor: "pointer" }}
+                  >
+                    {editingRequest.destination_country && (
+                      <option value={editingRequest.destination_country}>{editingRequest.destination_country}</option>
+                    )}
+                    <optgroup label="Destinations Africaines">
+                      {AFRICAN_COUNTRIES.map((c) => (
+                        <option key={`req-afr-dest-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Hubs Stratégiques">
+                      {STRATEGIC_HUBS.map((c) => (
+                        <option key={`req-hub-dest-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Tous les Pays du Monde">
+                      {ALL_WORLD_COUNTRIES.map((c) => (
+                        <option key={`req-all-dest-${c.code}`} value={c.name}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                  </select>
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
@@ -10004,7 +12032,7 @@ export default function AdminPage() {
               border: "1px solid var(--border-light)",
             }}
           >
-            {/* Entête Modale */}
+            {/* Entête Modale Épurée */}
             <div
               style={{
                 display: "flex",
@@ -10015,30 +12043,9 @@ export default function AdminPage() {
                 paddingBottom: "14px",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <div
-                  style={{
-                    width: "42px",
-                    height: "42px",
-                    borderRadius: "12px",
-                    background: "var(--bg-subtle)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--brown-dark)",
-                  }}
-                >
-                  <UserCheck size={22} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: "1.2rem", fontWeight: "800", color: "var(--brown-dark)", margin: "0 0 2px 0" }}>
-                    Mon Profil de Direction
-                  </h3>
-                  <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0 }}>
-                    Identité exécutive & synchronisation de votre assistant IA
-                  </p>
-                </div>
-              </div>
+              <h3 style={{ fontSize: "1.18rem", fontWeight: "800", color: "var(--brown-dark)", margin: 0 }}>
+                Mon Profil de Direction
+              </h3>
               <button
                 type="button"
                 onClick={() => setShowProfileModal(false)}
@@ -10211,32 +12218,16 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Encadré d'information IA & Plateforme */}
-              <div
-                style={{
-                  padding: "12px 14px",
-                  borderRadius: "14px",
-                  background: "var(--bg-subtle)",
-                  border: "1px solid var(--border-light)",
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "10px",
-                }}
-              >
-                <CheckCircle2 size={16} color="var(--accent-gold)" style={{ marginTop: "2px", flexShrink: 0 }} />
-                <div style={{ fontSize: "0.74rem", color: "var(--text-secondary)", lineHeight: "1.4" }}>
-                  Toute modification de votre nom ou de votre photo s&apos;applique instantanément dans votre barre latérale et synchronise votre Assistant IA pour qu&apos;il s&apos;adresse à vous avec ce nouveau nom.
-                </div>
-              </div>
 
-              {/* Boutons d'Action */}
+
+              {/* Boutons d Action */}
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "flex-end",
-                  gap: "10px",
-                  paddingTop: "14px",
+                  gap: "12px",
+                  paddingTop: "16px",
                   borderTop: "1px solid var(--border-light)",
                 }}
               >
@@ -10244,7 +12235,7 @@ export default function AdminPage() {
                   type="button"
                   onClick={() => setShowProfileModal(false)}
                   className="btn btn-secondary"
-                  style={{ padding: "8px 18px", borderRadius: "9999px" }}
+                  style={{ padding: "9px 20px", borderRadius: "9999px", fontSize: "0.84rem" }}
                 >
                   Annuler
                 </button>
@@ -10252,18 +12243,128 @@ export default function AdminPage() {
                   type="submit"
                   className="btn btn-primary"
                   style={{
-                    padding: "8px 22px",
+                    padding: "9px 24px",
                     borderRadius: "9999px",
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: "6px",
+                    gap: "7px",
+                    fontSize: "0.84rem",
+                    boxShadow: "0 4px 14px rgba(120, 77, 60, 0.22)",
                   }}
                 >
-                  <Check size={14} />
+                  <Check size={15} />
                   Enregistrer mon Profil
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* POP-UP EXÉCUTIF DE CONFIRMATION AUTOMATIQUE (DEMANDÉ EXPLICITEMENT PAR L'UTILISATEUR) */}
+      {saveConfirmationPopup && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.45)",
+            backdropFilter: "blur(5px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1200,
+            padding: "20px",
+          }}
+        >
+          <div
+            className="card-clean animate-fade-in"
+            style={{
+              maxWidth: "460px",
+              width: "100%",
+              borderRadius: "24px",
+              padding: "28px 24px",
+              background: "#FFFFFF",
+              boxShadow: "0 25px 60px rgba(0, 0, 0, 0.22)",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: "56px",
+                height: "56px",
+                borderRadius: "50%",
+                background: "rgba(16, 185, 129, 0.12)",
+                color: "#10B981",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 16px auto",
+              }}
+            >
+              <Check size={28} strokeWidth={2.8} />
+            </div>
+
+            <h3 style={{ fontSize: "1.2rem", fontWeight: "800", color: "var(--brown-dark)", margin: "0 0 6px 0" }}>
+              {saveConfirmationPopup.title}
+            </h3>
+            <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", margin: "0 0 20px 0", lineHeight: 1.4 }}>
+              {saveConfirmationPopup.subtitle}
+            </p>
+
+            <div
+              style={{
+                background: "#FAF8F5",
+                borderRadius: "16px",
+                padding: "16px",
+                border: "1px solid rgba(112, 72, 56, 0.08)",
+                textAlign: "left",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                marginBottom: "20px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: "600" }}>Service</span>
+                <span style={{ fontSize: "0.82rem", fontWeight: "800", color: "var(--brown-dark)" }}>
+                  {saveConfirmationPopup.item.service}
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: "600" }}>Itinéraire</span>
+                <span style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)" }}>
+                  {saveConfirmationPopup.item.route}
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: "600" }}>Tarif unitaire</span>
+                <span style={{ fontSize: "0.95rem", fontWeight: "900", color: "#10B981" }} className="tabular-nums">
+                  {saveConfirmationPopup.item.price}
+                </span>
+              </div>
+              {saveConfirmationPopup.item.delay && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: "600" }}>Délai estimé</span>
+                  <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "var(--text-secondary)" }}>
+                    {saveConfirmationPopup.item.delay}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", fontSize: "0.72rem", color: "#10B981", fontWeight: "700", marginBottom: "18px" }}>
+              <Check size={14} />
+              <span>Enregistrement automatique réussi · Base de données synchronisée</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSaveConfirmationPopup(null)}
+              className="btn btn-primary"
+              style={{ width: "100%", padding: "12px", borderRadius: "9999px", fontSize: "0.88rem", fontWeight: "800" }}
+            >
+              Continuer
+            </button>
           </div>
         </div>
       )}

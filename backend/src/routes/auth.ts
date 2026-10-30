@@ -123,9 +123,9 @@ authRouter.post("/login", zValidator("json", loginSchema), async (c) => {
   const session: UserSession = {
     userId: user.id,
     email: user.email,
-    fullName: user.full_name,
+    fullName: isSuperAdmin ? "Madame Marouba" : user.full_name,
     roleId: user.role_id,
-    roleName: user.role_name,
+    roleName: isSuperAdmin ? "CEO" : user.role_name,
     isSuperAdmin,
     hubLocation: user.hub_location,
     permissions,
@@ -157,7 +157,7 @@ authRouter.get("/me", async (c) => {
   // Session locale de développement (uniquement hors production)
   if (token === "roum_local_admin_session" && c.env.ENVIRONMENT !== "production") {
     const devSession: UserSession = {
-      userId: "user-superadmin-01",
+      userId: "user-ceo-marouba",
       email: "ceo@roumtransit.com",
       fullName: "Madame Marouba",
       roleId: SUPER_ADMIN_ROLE_ID,
@@ -216,9 +216,9 @@ authRouter.get("/me", async (c) => {
   const session: UserSession = {
     userId: user.id,
     email: user.email,
-    fullName: user.full_name,
+    fullName: isSuperAdmin ? "Madame Marouba" : user.full_name,
     roleId: user.role_id,
-    roleName: user.role_name,
+    roleName: isSuperAdmin ? "CEO" : user.role_name,
     isSuperAdmin,
     hubLocation: user.hub_location,
     permissions,

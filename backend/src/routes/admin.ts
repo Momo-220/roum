@@ -1110,6 +1110,146 @@ adminRouter.post("/tariffs", zValidator("json", createTariffSchema), async (c) =
   return c.json({ success: true, tariff_id: tariffId, message: "Tarif enregistré avec succès." }, 201);
 });
 
+adminRouter.put("/tariffs/batch", async (c) => {
+  if (!checkPermission(c, "config.tariffs")) {
+    return c.json({ error: "Permission insuffisante (config.tariffs requise)." }, 403);
+  }
+
+  const user = c.get("user");
+  const body = await c.req.json<{ tariffs: any[] }>().catch(() => ({ tariffs: [] }));
+  const items = Array.isArray(body?.tariffs) ? body.tariffs : [];
+
+  if (items.length === 0) {
+    return c.json({ success: true, count: 0, message: "Aucune modification à enregistrer." });
+  }
+
+  const statements: any[] = [];
+  for (const item of items) {
+    if (!item.id) continue;
+    statements.push(
+      c.env.DB.prepare(`
+        UPDATE tariffs 
+        SET price_per_unit_minor = COALESCE(?, price_per_unit_minor),
+            minimum_charge_minor = COALESCE(?, minimum_charge_minor),
+            currency = COALESCE(?, currency),
+            estimated_days_min = COALESCE(?, estimated_days_min),
+            estimated_days_max = COALESCE(?, estimated_days_max),
+            note = COALESCE(?, note),
+            category_tag = COALESCE(?, category_tag),
+            updated_at = datetime('now')
+        WHERE id = ?
+      `).bind(
+        item.price_per_unit_minor !== undefined ? Number(item.price_per_unit_minor) : null,
+        item.minimum_charge_minor !== undefined ? Number(item.minimum_charge_minor) : null,
+        item.currency || null,
+        item.estimated_days_min !== undefined ? Number(item.estimated_days_min) : null,
+        item.estimated_days_max !== undefined ? Number(item.estimated_days_max) : null,
+        item.note !== undefined ? String(item.note) : null,
+        item.category_tag !== undefined ? String(item.category_tag) : null,
+        item.id
+      )
+    );
+  }
+
+  if (statements.length > 0) {
+    statements.push(
+      c.env.DB.prepare(`
+        INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
+        VALUES (?, ?, 'tariffs.batch_update', 'tariff', 'batch', ?)
+      `).bind(crypto.randomUUID(), user?.userId || "admin", JSON.stringify({ count: statements.length }))
+    );
+    await c.env.DB.batch(statements);
+  }
+
+  return c.json({ success: true, count: items.length, message: `${items.length} tarifs mis à jour simultanément avec succès.` });
+});
+
+adminRouter.put("/tariffs/:id", async (c) => {
+  if (!checkPermission(c, "config.tariffs")) {
+    return c.json({ error: "Permission insuffisante (config.tariffs requise)." }, 403);
+  }
+
+  const user = c.get("user");
+  const tariffId = c.req.param("id");
+  const body = await c.req.json<any>().catch(() => ({}));
+
+  const existing = await c.env.DB.prepare("SELECT id FROM tariffs WHERE id = ?").bind(tariffId).first();
+
+  if (existing) {
+    await c.env.DB.batch([
+      c.env.DB.prepare(`
+        UPDATE tariffs 
+        SET price_per_unit_minor = COALESCE(?, price_per_unit_minor),
+            minimum_charge_minor = COALESCE(?, minimum_charge_minor),
+            currency = COALESCE(?, currency),
+            estimated_days_min = COALESCE(?, estimated_days_min),
+            estimated_days_max = COALESCE(?, estimated_days_max),
+            note = COALESCE(?, note),
+            category_tag = COALESCE(?, category_tag),
+            updated_at = datetime('now')
+        WHERE id = ?
+      `).bind(
+        body.price_per_unit_minor !== undefined ? Number(body.price_per_unit_minor) : null,
+        body.minimum_charge_minor !== undefined ? Number(body.minimum_charge_minor) : null,
+        body.currency || null,
+        body.estimated_days_min !== undefined ? Number(body.estimated_days_min) : null,
+        body.estimated_days_max !== undefined ? Number(body.estimated_days_max) : null,
+        body.note !== undefined ? String(body.note) : null,
+        body.category_tag !== undefined ? String(body.category_tag) : null,
+        tariffId
+      ),
+      c.env.DB.prepare(`
+        INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
+        VALUES (?, ?, 'tariff.update', 'tariff', ?, ?)
+      `).bind(crypto.randomUUID(), user?.userId || "admin", tariffId, JSON.stringify(body)),
+    ]);
+  } else {
+    // Upsert pour les tarifs par défaut / créés côté interface
+    let routeId = "route-default";
+    const origCountry = (body.origin_country || "Chine").trim();
+    const destCountry = (body.destination_country || "Côte d'Ivoire").trim();
+    const existingRoute = await c.env.DB.prepare(`
+      SELECT id FROM routes WHERE LOWER(origin_country) = LOWER(?) AND LOWER(destination_country) = LOWER(?) LIMIT 1
+    `).bind(origCountry, destCountry).first<{ id: string }>();
+
+    if (existingRoute?.id) {
+      routeId = existingRoute.id;
+    } else {
+      routeId = `route-${crypto.randomUUID().slice(0, 8)}`;
+      await c.env.DB.prepare(`
+        INSERT INTO routes (id, origin_country, origin_city, destination_country, destination_city, is_active)
+        VALUES (?, ?, ?, ?, ?, 1)
+      `).bind(routeId, origCountry, body.origin_city || null, destCountry, body.destination_city || null).run();
+    }
+
+    await c.env.DB.prepare(`
+      INSERT INTO tariffs (
+        id, route_id, shipping_mode_id, currency, price_per_unit_minor,
+        minimum_charge_minor, estimated_days_min, estimated_days_max,
+        category_tag, note, is_active
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+    `).bind(
+      tariffId,
+      routeId,
+      body.shipping_mode_id || "mode-air-standard",
+      body.currency || "USD",
+      body.price_per_unit_minor || 0,
+      body.minimum_charge_minor || 0,
+      body.estimated_days_min || null,
+      body.estimated_days_max || null,
+      body.category_tag || null,
+      body.note || null
+    ).run();
+
+    await c.env.DB.prepare(`
+      INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
+      VALUES (?, ?, 'tariff.create_upsert', 'tariff', ?, ?)
+    `).bind(crypto.randomUUID(), user?.userId || "admin", tariffId, JSON.stringify(body)).run();
+  }
+
+  return c.json({ success: true, message: "Tarif mis à jour avec succès." });
+});
+
 adminRouter.delete("/tariffs/:id", async (c) => {
   if (!checkPermission(c, "config.tariffs")) {
     return c.json({ error: "Permission insuffisante (config.tariffs requise)." }, 403);
