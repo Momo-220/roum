@@ -5092,7 +5092,7 @@ export default function AdminPage() {
                         </div>
 
                         {msg.sender === "user" ? (
-                          <div className="ios-bubble-user" style={{ background: "var(--brown-dark)", color: "#FFFFFF" }}>
+                          <div className="ios-bubble-user" style={{ background: "var(--btn-primary-bg)", color: "#FFFFFF" }}>
                             {msg.text}
                           </div>
                         ) : (
@@ -5235,7 +5235,7 @@ export default function AdminPage() {
                       height: "32px",
                       borderRadius: "50%",
                       border: "none",
-                      background: !chatInput.trim() || isAgentThinking ? "rgba(28, 25, 23, 0.3)" : "var(--brown-dark)",
+                      background: !chatInput.trim() || isAgentThinking ? "rgba(55, 65, 81, 0.35)" : "var(--btn-primary-bg)",
                       color: "#FFFFFF",
                       display: "flex",
                       alignItems: "center",
