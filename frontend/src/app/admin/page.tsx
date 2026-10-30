@@ -509,7 +509,7 @@ const PERMISSION_LABELS_MAP: Record<string, string> = {
   "shipments.view": "Consulter les expéditions",
   "shipments.create": "Enregistrer des colis",
   "shipments.edit": "Modifier les colis & pesées",
-  "shipments.status.update": "Mettre à jour les jalons",
+  "shipments.status.update": "Mettre à jour l'étape du colis",
   "shipments.cancel": "Annuler une expédition",
   "finance.view": "Consulter la caisse",
   "finance.edit": "Valider les paiements",
@@ -6342,7 +6342,7 @@ export default function AdminPage() {
                                 onClick={() => handleOpenShipmentDetail(s)}
                                 className="btn btn-secondary"
                                 style={{ padding: "4px 9px", fontSize: "0.72rem", height: "28px" }}
-                                title="Historique complet des jalons et paiements"
+                                title="Historique complet des étapes et paiements"
                               >
                                 Historique
                               </button>
@@ -6351,9 +6351,9 @@ export default function AdminPage() {
                                 onClick={() => setShowStatusModal(s)}
                                 className="btn btn-secondary"
                                 style={{ padding: "4px 9px", fontSize: "0.72rem", height: "28px" }}
-                                title="Mettre à jour l'étape de suivi"
+                                title="Mettre à jour l'étape du colis"
                               >
-                                Jalon
+                                Étape
                               </button>
                               <button
                                 type="button"
@@ -9789,7 +9789,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* MODALE : HISTORIQUE COMPLET D'EXPÉDITION (JALONS, COLIS, PAIEMENTS) */}
+      {/* MODALE : HISTORIQUE COMPLET D'EXPÉDITION (ÉTAPES DU COLIS, MESURES, PAIEMENTS) */}
       {showShipmentDetailModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
           <div className="card-clean" style={{ maxWidth: "680px", width: "100%", padding: "28px", maxHeight: "90vh", overflowY: "auto" }}>
@@ -9832,10 +9832,10 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Jalons de Suivi Horodatés */}
+            {/* Étapes de Suivi du Colis */}
             <div style={{ marginBottom: "20px" }}>
               <h4 style={{ fontSize: "0.92rem", fontWeight: "700", marginBottom: "10px" }}>
-                Chronologie des Jalons ({showShipmentDetailModal.tracking_events?.length || 0})
+                Chronologie des Étapes du Colis ({showShipmentDetailModal.tracking_events?.length || 0})
               </h4>
               <div style={{ display: "grid", gap: "8px" }}>
                 {showShipmentDetailModal.tracking_events?.map((ev: any, idx: number) => (
