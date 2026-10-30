@@ -81,10 +81,12 @@ h1, h2, h3, h4, h5, h6 {
 /* Effet coup de pinceau beige signature ROUM TRANSIT (Sober Luxury) */
 .roum-brush-title {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   z-index: 1;
-  padding: 2px 14px 3px 12px;
-  margin-left: -6px;
+  padding: 3px 18px;
   color: #140D09;
 }
 
@@ -627,6 +629,8 @@ select.input-clean {
   position: relative;
   display: flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   width: 100%;
   border-radius: 10px;
   border: 1px solid transparent;
@@ -636,7 +640,6 @@ select.input-clean {
   font-size: 0.84rem;
   letter-spacing: -0.01em;
   cursor: pointer;
-  text-align: left;
   transition: all 0.15s ease;
 }
 

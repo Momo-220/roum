@@ -4107,18 +4107,26 @@ export default function AdminPage() {
                   onClick={() => setActiveTab(item.id as any)}
                   className={`sidebar-nav-btn ${isActive ? "active" : ""}`}
                   style={{
-                    justifyContent: isSidebarCollapsed ? "center" : "space-between",
-                    gap: isSidebarCollapsed ? 0 : "10px",
-                    padding: isSidebarCollapsed ? "10px 0" : "9px 12px",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: isSidebarCollapsed ? "10px 0" : "10px 14px",
+                    width: "100%",
+                    textAlign: "center",
                   }}
                 >
-                  <span style={{ display: "flex", alignItems: "center", gap: "10px", position: "relative" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px", position: "relative" }}>
                     <Icon
                       size={16}
                       strokeWidth={isActive ? 2.1 : 1.75}
                       color={isActive ? "var(--brown-dark)" : "currentColor"}
                     />
-                    {!isSidebarCollapsed && <span>{item.label}</span>}
+                    {!isSidebarCollapsed && <span style={{ textAlign: "center" }}>{item.label}</span>}
+                    {!isSidebarCollapsed && item.badge && item.badge > 0 && (
+                      <span className="sidebar-nav-badge">
+                        {item.badge}
+                      </span>
+                    )}
                     {isSidebarCollapsed && item.badge && item.badge > 0 && (
                       <span
                         style={{
@@ -4133,11 +4141,6 @@ export default function AdminPage() {
                       />
                     )}
                   </span>
-                  {!isSidebarCollapsed && item.badge && item.badge > 0 && (
-                    <span className="sidebar-nav-badge">
-                      {item.badge}
-                    </span>
-                  )}
                 </button>
                 {isSidebarCollapsed && (
                   <span className="sidebar-tooltip">
@@ -4156,17 +4159,22 @@ export default function AdminPage() {
               onClick={() => setActiveTab("settings")}
               className={`sidebar-nav-btn ${activeTab === "settings" ? "active" : ""}`}
               style={{
-                justifyContent: isSidebarCollapsed ? "center" : "flex-start",
-                gap: isSidebarCollapsed ? 0 : "10px",
-                padding: isSidebarCollapsed ? "10px 0" : "9px 12px",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "8px",
+                padding: isSidebarCollapsed ? "10px 0" : "10px 14px",
+                width: "100%",
+                textAlign: "center",
               }}
             >
-              <Settings
-                size={16}
-                strokeWidth={activeTab === "settings" ? 2.1 : 1.75}
-                color={activeTab === "settings" ? "var(--brown-dark)" : "currentColor"}
-              />
-              {!isSidebarCollapsed && <span>Paramètres & Audit</span>}
+              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                <Settings
+                  size={16}
+                  strokeWidth={activeTab === "settings" ? 2.1 : 1.75}
+                  color={activeTab === "settings" ? "var(--brown-dark)" : "currentColor"}
+                />
+                {!isSidebarCollapsed && <span style={{ textAlign: "center" }}>Paramètres & Audit</span>}
+              </span>
             </button>
             {isSidebarCollapsed && (
               <span className="sidebar-tooltip">Paramètres & Audit</span>
