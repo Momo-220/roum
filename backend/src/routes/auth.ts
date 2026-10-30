@@ -5,6 +5,7 @@ import { z } from "zod";
 import { SUPER_ADMIN_ROLE_ID } from "../shared";
 import {
   verifyPassword,
+  hashPassword,
   signJwt,
   verifyJwt,
   resolveJwtSecret,
@@ -234,4 +235,85 @@ authRouter.get("/me", async (c) => {
 authRouter.post("/logout", (c) => {
   deleteCookie(c, "roum_session", { path: "/" });
   return c.json({ success: true });
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Le mot de passe actuel est requis"),
+  newPassword: z.string().min(6, "Le nouveau mot de passe doit comporter au moins 6 caractères").max(256),
+});
+
+/**
+ * 4. Modification sécurisée du mot de passe (POST /change-password)
+ */
+authRouter.post("/change-password", zValidator("json", changePasswordSchema), async (c) => {
+  const { currentPassword, newPassword } = c.req.valid("json");
+  const authHeader = c.req.header("Authorization");
+  const cookieToken = getCookie(c, "roum_session");
+  const token =
+    authHeader && authHeader.startsWith("Bearer ")
+      ? authHeader.substring(7)
+      : cookieToken;
+
+  if (!token) {
+    return c.json({ error: "Session non authentifiée. Veuillez vous reconnecter." }, 401);
+  }
+
+  let targetUserId = "";
+
+  if (token === "roum_local_admin_session" && c.env.ENVIRONMENT !== "production") {
+    const ceo = await c.env.DB.prepare(`
+      SELECT id FROM users WHERE role_id = ? OR LOWER(email) = 'ceo@roumtransit.com' LIMIT 1
+    `).bind(SUPER_ADMIN_ROLE_ID).first<{ id: string }>();
+    if (ceo) {
+      targetUserId = ceo.id;
+    } else {
+      return c.json({ success: true, message: "Mot de passe mis à jour avec succès (Session Développeur)." });
+    }
+  } else {
+    const jwtSecret = resolveJwtSecret(c.env);
+    const payload = await verifyJwt<{ sub: string; exp: number }>(token, jwtSecret);
+    if (!payload || !payload.sub || Date.now() > payload.exp) {
+      return c.json({ error: "Session expirée ou invalide. Veuillez vous reconnecter." }, 401);
+    }
+    targetUserId = payload.sub;
+  }
+
+  const user = await c.env.DB.prepare(`
+    SELECT id, email, password_hash FROM users WHERE id = ?
+  `).bind(targetUserId).first<{ id: string; email: string; password_hash: string }>();
+
+  if (!user) {
+    return c.json({ error: "Utilisateur introuvable." }, 404);
+  }
+
+  const isMatch = await verifyPassword(currentPassword, user.password_hash);
+  if (!isMatch) {
+    return c.json({ error: "Le mot de passe actuel saisi est incorrect." }, 400);
+  }
+
+  const newHash = await hashPassword(newPassword);
+
+  await c.env.DB.prepare(`
+    UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?
+  `).bind(newHash, targetUserId).run();
+
+  try {
+    const auditId = `audit-${crypto.randomUUID()}`;
+    await c.env.DB.prepare(`
+      INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json, created_at)
+      VALUES (?, ?, 'auth.change_password', 'user', ?, ?, datetime('now'))
+    `).bind(
+      auditId,
+      targetUserId,
+      targetUserId,
+      JSON.stringify({ email: user.email, timestamp: new Date().toISOString() })
+    ).run();
+  } catch (err) {
+    console.error("Erreur enregistrement audit log password change:", err);
+  }
+
+  return c.json({
+    success: true,
+    message: "Votre mot de passe a été modifié avec succès.",
+  });
 });

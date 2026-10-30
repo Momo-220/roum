@@ -7,6 +7,7 @@ import {
   Users,
   Plus,
   Lock,
+  KeyRound,
   LogOut,
   RefreshCw,
   Sliders,
@@ -394,7 +395,7 @@ function getFriendlyStatus(code: string, originalLabel?: string): { icon: string
 export function formatRequestType(type?: string): string {
   switch (type) {
     case "ALIBABA":
-      return "Sourcing Alibaba";
+      return "Achats Chine en ligne";
     case "SUPPLIER_TRANSIT":
       return "Transit Direct";
     case "PARCEL_SHIPPING":
@@ -420,7 +421,7 @@ export function formatShipmentStatusShort(status?: string): string {
     case "DRAFT":
       return "Enregistré";
     case "RECEIVED_AT_HUB":
-      return "Reçu au Hub";
+      return "Reçu au Magasin";
     case "PACKED_READY":
       return "Prêt départ";
     case "IN_TRANSIT":
@@ -534,6 +535,41 @@ export function formatPermissionLabel(perm: string): string {
 }
 
 export function formatAuditAction(action?: string): string {
+  if (!action) return "Opération";
+  const norm = action.toLowerCase().replace(/[._]/g, " ");
+  if (norm.includes("tariffs") || norm.includes("tariff")) {
+    return "Mise à jour des tarifs";
+  }
+  if (norm.includes("change password") || norm.includes("change_password")) {
+    return "Changement mot de passe";
+  }
+  if (norm.includes("settings") || norm.includes("setting")) {
+    return "Mise à jour coordonnées";
+  }
+  if (norm.includes("intake") || norm.includes("weighing")) {
+    return "Pesée en magasin";
+  }
+  if (norm.includes("status")) {
+    return "Changement d'étape colis";
+  }
+  if (norm.includes("payment confirmed")) {
+    return "Validation en caisse";
+  }
+  if (norm.includes("payment")) {
+    return "Enregistrement paiement";
+  }
+  if (norm.includes("convert")) {
+    return "Conversion en colis";
+  }
+  if (norm.includes("create")) {
+    return "Création";
+  }
+  if (norm.includes("update")) {
+    return "Modification";
+  }
+  if (norm.includes("delete")) {
+    return "Suppression";
+  }
   switch (action) {
     case "CREATE":
       return "Création";
@@ -544,7 +580,7 @@ export function formatAuditAction(action?: string): string {
     case "STATUS_UPDATE":
       return "Changement d'étape";
     case "INTAKE_WEIGHING":
-      return "Pesée magasin Hub";
+      return "Pesée en magasin";
     case "PAYMENT_RECORD":
       return "Enregistrement paiement";
     case "PAYMENT_CONFIRMED":
@@ -552,33 +588,22 @@ export function formatAuditAction(action?: string): string {
     case "REQUEST_CONVERT":
       return "Conversion en colis";
     default:
-      return action ? action.replace(/_/g, " ") : "Action";
+      return action.replace(/[_.]/g, " ");
   }
 }
 
 export function formatAuditEntity(entity?: string): string {
-  switch (entity) {
-    case "shipments":
-    case "shipment":
-      return "Expédition";
-    case "requests":
-    case "request":
-      return "Demande";
-    case "payments":
-    case "payment":
-      return "Paiement";
-    case "tasks":
-    case "task":
-      return "Tâche";
-    case "roles":
-    case "role":
-      return "Rôle";
-    case "users":
-    case "user":
-      return "Collaborateur";
-    default:
-      return entity || "Entité";
-  }
+  if (!entity) return "Général";
+  const norm = entity.toLowerCase();
+  if (norm.includes("tariff")) return "Tarif & Route";
+  if (norm.includes("setting")) return "Coordonnées & Magasins";
+  if (norm.includes("shipment")) return "Colis & Expédition";
+  if (norm.includes("request")) return "Commande Client";
+  if (norm.includes("payment")) return "Règlement Caisse";
+  if (norm.includes("task")) return "Tâche Opérationnelle";
+  if (norm.includes("user")) return "Compte Utilisateur";
+  if (norm.includes("role")) return "Rôle & Accès";
+  return entity;
 }
 
 // 19 Tarifs Officiels extraits directement des 3 flyers marketing réels de ROUM TRANSIT
@@ -1341,21 +1366,18 @@ function IOSTypingMessage({
 
 const DEFAULT_COMPANY_SETTINGS: Record<string, string> = {
   company_name: "ROUM TRANSIT INTERNATIONAL SARL",
-  company_rccm: "CI-ABJ-2024-B-14289",
-  company_nif: "2418520 M",
-  company_customs_license: "CAD-N° 2026/048-DGD (Commissionnaire Agréé en Douane)",
   company_headquarters: "Abidjan, Bingerville, Carrefour Safari, Résidence Roum",
   company_email: "contact@roumtransit.com",
   company_billing_email: "facturation@roumtransit.com",
   whatsapp_official_number: "+225 01 53 63 85 69",
   phone_secondary: "+225 07 48 29 11 00",
 
-  // Hubs mondiaux & adresses de livraison
+  // Entrepôts mondiaux & adresses de livraison
   warehouse_china_address: "No. 88 Huanshi Dong Road, Yuexiu District, Guangzhou, Guangdong, Chine (Code: 510000)",
   warehouse_china_shipping_mark: "ROUM-CAN-[VOTRE_NOM]-[CODE_PAYS]",
-  warehouse_china_contact: "+86 138 2449 8812 (WhatsApp Hub Guangzhou)",
+  warehouse_china_contact: "+86 138 2449 8812 (WhatsApp Entrepôt Guangzhou)",
   warehouse_dubai_address: "Al Sabkha Road, Deira, Office 304, Dubaï, Émirats Arabes Unis",
-  warehouse_dubai_contact: "+971 50 892 4110 (WhatsApp Hub Dubaï)",
+  warehouse_dubai_contact: "+971 50 892 4110 (WhatsApp Entrepôt Dubaï)",
   agency_paris_address: "14 Rue de la Logistique, 93290 Tremblay-en-France / Roissy CDG",
   agency_paris_contact: "+33 6 52 90 14 30 (Liaison Paris)",
 
@@ -1365,17 +1387,10 @@ const DEFAULT_COMPANY_SETTINGS: Record<string, string> = {
   payment_wave_merchant: "wave.me/roumtransit",
   payment_orange_money_ci: "#144*389278# / +225 07 48 29 11 00",
   payment_orange_name: "ROUM TRANSIT INTERNATIONAL",
-  payment_mtn_momo_ci: "MOMO-749201 / +225 05 94 32 10 05",
-  payment_mtn_name: "ROUM LOGISTICS",
-  payment_moov_money: "+225 01 02 03 04 05 (ROUM TRANSIT)",
-  payment_bank_name: "Banque Atlantique Côte d'Ivoire (BACI)",
-  payment_bank_account_holder: "ROUM TRANSIT INTERNATIONAL SARL",
-  payment_bank_rib: "CI092 01001 012345678901 24",
-  payment_bank_swift: "ATBKCIAB",
-  payment_alipay_china: "pay@roumtransit-china.com (Règlements Fournisseurs Chine)",
-  payment_euro_sepa: "FR76 3000 4001 2345 6789 0123 456 (BIC: BNPAFRPP)",
-  payment_cash_desks: "Guichets Espèces : Agence Abidjan Bingerville & Magasin Guangzhou",
-  payment_receipt_terms: "Tout paiement doit faire l'objet d'un reçu ou bordereau officiel validé en caisse avant remise ou livraison des colis.",
+  payment_morocco_bank: "CIH Bank / Attijariwafa Bank Casablanca",
+  payment_morocco_holder: "ROUM TRANSIT MAROC",
+  payment_morocco_rib: "230 780 0001234567890123 45",
+  payment_morocco_whatsapp: "Casablanca Maarif · WhatsApp : +212 6 00 00 00 00",
 };
 
 const DEFAULT_REQUESTS = [
@@ -1392,7 +1407,7 @@ const DEFAULT_REQUESTS = [
     destination_country: "Côte d'Ivoire",
     destination_city: "Abidjan",
     shipping_mode_id: "AIR_EXPRESS",
-    description: "Sourcing & commande de 50 trottinettes électriques 350W pliables + casques de protection sur Alibaba. Contrôle qualité usine requis avant expédition.",
+    description: "Achat & commande de 50 trottinettes électriques 350W pliables + casques de protection en ligne. Contrôle qualité usine requis avant expédition.",
     estimated_weight_kg: 480.0,
     estimated_cbm: 2.8,
     supplier_name: "Guangzhou E-Vehicle Tech Co., Ltd",
@@ -1634,6 +1649,60 @@ export default function AdminPage() {
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [editingPaymentCard, setEditingPaymentCard] = useState<string | null>(null);
   const [backupSettings, setBackupSettings] = useState<Record<string, string> | null>(null);
+
+  // Formulaire et état du changement de mot de passe de direction
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [showPasswordSuccess, setShowPasswordSuccess] = useState(false);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordForm.currentPassword) {
+      triggerToast("Veuillez saisir votre mot de passe actuel.", "Mot de passe requis", "error");
+      return;
+    }
+    if (!passwordForm.newPassword || passwordForm.newPassword.length < 6) {
+      triggerToast("Le nouveau mot de passe doit comporter au moins 6 caractères.", "Mot de passe trop court", "error");
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      triggerToast("Les deux mots de passe saisis ne sont pas identiques.", "Confirmation incorrecte", "error");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Impossible de mettre à jour le mot de passe.");
+      }
+
+      setShowPasswordSuccess(true);
+      setTimeout(() => setShowPasswordSuccess(false), 5000);
+      triggerToast("Votre mot de passe de direction a été modifié avec succès.", "Sécurité Compte Direction", "success");
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (err: any) {
+      triggerToast(err.message || "Erreur de connexion au serveur.", "Échec modification", "error");
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   const handleStartEditPaymentCard = (cardKey: string) => {
     setBackupSettings({ ...companySettings });
@@ -1995,7 +2064,7 @@ export default function AdminPage() {
             actions: [
               { label: `Valider Caisse (${pendingPaymentsList.length})`, tab: "finances" },
               { label: `Cotations (${pendingRequestsList.length})`, tab: "requests" },
-              { label: `Pesées Hub (${pendingWeighingsList.length})`, tab: "shipments" },
+              { label: `Pesées Magasin (${pendingWeighingsList.length})`, tab: "shipments" },
               { label: `Urgences (${urgentTasksList.length})`, tab: "tasks" },
             ],
           },
@@ -2069,10 +2138,10 @@ export default function AdminPage() {
       qLower.includes("bilan") ||
       qLower.includes("jour")
     ) {
-      reply = `${boss}, voici les ${totalAgentAlerts} tâche(s) qui requièrent votre exécution immédiate :\n1. Validation Caisse : ${pendingPaymentsList.length} règlement(s) en attente d'approbation (${formatCurrencyPrice(pendingAmount, "FCFA")}).\n2. Arbitrage Sourcing : ${pendingRequestsList.length} dossier(s) client à chiffrer (${pendingRequestsList.slice(0, 2).map((r) => r.reference).join(", ") || "aucun"}).\n3. Contrôle Hub : ${pendingWeighingsList.length} colis à peser avant embarquement (${pendingWeighingsList.slice(0, 2).map((s) => s.tracking_number).join(", ") || "aucun"}).\n4. Directives d'Équipe : ${urgentTasksList.length} tâche(s) urgente(s) (${urgentTasksList.slice(0, 2).map((t) => t.title).join(" ; ") || "aucune"}).`;
+      reply = `${boss}, voici les ${totalAgentAlerts} tâche(s) qui requièrent votre exécution immédiate :\n1. Validation Caisse : ${pendingPaymentsList.length} règlement(s) en attente d'approbation (${formatCurrencyPrice(pendingAmount, "FCFA")}).\n2. Commandes Clients : ${pendingRequestsList.length} commande(s) d'achats à chiffrer (${pendingRequestsList.slice(0, 2).map((r) => r.reference).join(", ") || "aucun"}).\n3. Pesées en Magasin : ${pendingWeighingsList.length} colis à peser avant départ (${pendingWeighingsList.slice(0, 2).map((s) => s.tracking_number).join(", ") || "aucun"}).\n4. Directives d'Équipe : ${urgentTasksList.length} tâche(s) urgente(s) (${urgentTasksList.slice(0, 2).map((t) => t.title).join(" ; ") || "aucune"}).`;
       msgActions = [
         { label: `Exécuter Caisse (${pendingPaymentsList.length})`, tab: "finances" },
-        { label: `Exécuter Sourcing (${pendingRequestsList.length})`, tab: "requests" },
+        { label: `Traiter Commandes (${pendingRequestsList.length})`, tab: "requests" },
         { label: `Exécuter Pesées (${pendingWeighingsList.length})`, tab: "shipments" },
         { label: `Voir Urgences (${urgentTasksList.length})`, tab: "tasks" },
       ];
@@ -2107,13 +2176,14 @@ export default function AdminPage() {
         .join("\n");
       reply =
         pendingWeighingsList.length > 0
-          ? `Tâches CEO — Contrôle des Pesées Hub (${pendingWeighingsList.length} colis à régulariser) :\n${details}\nExécutez la pesée officielle dans la colonne de gauche ou dans Expéditions.`
-          : `Tous les colis réceptionnés au hub disposent d'une pesée officielle validée.`;
-      msgActions = [{ label: "Contrôler les Colis au Hub", tab: "shipments" }];
+          ? `Tâches CEO — Pesées en Magasin (${pendingWeighingsList.length} colis à peser) :\n${details}\nExécutez la pesée dans la colonne de gauche ou dans Expéditions.`
+          : `Tous les colis au magasin de départ disposent d'une pesée officielle validée.`;
+      msgActions = [{ label: "Peser les Colis au Magasin", tab: "shipments" }];
     } else if (
       qLower.includes("alibaba") ||
       qLower.includes("sourcing") ||
       qLower.includes("demande") ||
+      qLower.includes("commande") ||
       qLower.includes("cotation") ||
       qLower.includes("devis")
     ) {
@@ -2123,9 +2193,9 @@ export default function AdminPage() {
         .join("\n");
       reply =
         pendingRequestsList.length > 0
-          ? `Tâches CEO — Arbitrage Sourcing & Devis (${pendingRequestsList.length} dossier(s) à valider) :\n${details}`
-          : `Aucun dossier de sourcing en attente d'arbitrage CEO.`;
-      msgActions = [{ label: "Traiter les Demandes", tab: "requests" }];
+          ? `Tâches CEO — Commandes & Achats Clients (${pendingRequestsList.length} dossier(s) à valider) :\n${details}`
+          : `Aucune commande client en attente de validation CEO.`;
+      msgActions = [{ label: "Traiter les Commandes", tab: "requests" }];
     } else if (
       qLower.includes("vol") ||
       qLower.includes("mer") ||
@@ -2160,7 +2230,7 @@ export default function AdminPage() {
         reply = `Dossier Colis ${foundShipment.tracking_number} (${foundShipment.client_name}) :\n- Corridor : ${foundShipment.origin_country} vers ${foundShipment.destination_country}\n- Statut : ${formatShipmentStatus(foundShipment.current_status, foundShipment.status_label)} (${foundShipment.total_weight_kg || 0} kg)\n- Action CEO : ${foundShipment.payment_status === "PAID" ? "Règlement validé, prêt pour livraison" : "Règlement en attente de validation caisse"}.`;
         msgActions = [{ label: "Voir dans Expéditions", tab: "shipments" }];
       } else if (foundRequest) {
-        reply = `Dossier Sourcing ${foundRequest.reference} (${foundRequest.client_name}) :\n- Type : ${formatRequestType(foundRequest.request_type)} (${foundRequest.origin_country || "Chine"} vers ${foundRequest.destination_country || "Afrique"})\n- Action CEO : Valider la cotation tarifaire et convertir en expédition.`;
+        reply = `Commande Client ${foundRequest.reference} (${foundRequest.client_name}) :\n- Type : ${formatRequestType(foundRequest.request_type)} (${foundRequest.origin_country || "Chine"} vers ${foundRequest.destination_country || "Afrique"})\n- Action CEO : Valider la cotation tarifaire et convertir en expédition.`;
         msgActions = [{ label: "Exécuter ce Dossier", tab: "requests" }];
       } else {
         // Appel ultra-rapide à l'API IA (avec repli instantané sur le rapport d'exécution CEO)
@@ -3451,7 +3521,7 @@ export default function AdminPage() {
 
     const createdHub = {
       id,
-      name: newHubForm.name.trim() || `Hub ${newHubForm.city} (${newHubForm.country})`,
+      name: newHubForm.name.trim() || `Entrepôt ${newHubForm.city} (${newHubForm.country})`,
       country: newHubForm.country.trim(),
       countryCode: code,
       city: newHubForm.city.trim(),
@@ -3468,14 +3538,14 @@ export default function AdminPage() {
 
     setShowAddHubModal(false);
     setSaveConfirmationPopup({
-      title: "Nouveau Hub Enregistré !",
+      title: "Nouvel Entrepôt Enregistré !",
       subtitle: "La plateforme de réception a été ajoutée et configurée avec succès.",
       item: {
         service: createdHub.name,
         price: "Plateforme Active",
         route: `${createdHub.country} (${createdHub.city})`,
         delay: "Réception Fournisseurs",
-        transport: "Hub International",
+        transport: "Entrepôt International",
       },
     });
   };
@@ -3486,7 +3556,7 @@ export default function AdminPage() {
     try {
       localStorage.setItem("roum_custom_hubs", JSON.stringify(updated));
     } catch {}
-    triggerToast("Plateforme hub retirée avec succès.", "Hub International");
+    triggerToast("Entrepôt retiré avec succès.", "Entrepôts Internationaux");
   };
 
   const handleDeleteTariff = async (tariffId: string) => {
@@ -3517,7 +3587,7 @@ export default function AdminPage() {
     setRequestsList((prev) =>
       prev.map((r) => (r.id === requestId ? { ...r, status: newStatus } : r))
     );
-    triggerToast("Statut de la demande mis à jour.", "Demandes & Sourcing");
+    triggerToast("Statut de la commande mis à jour.", "Commandes Clients");
 
     try {
       const res = await fetch(`/api/admin/requests/${requestId}/status`, {
@@ -3738,7 +3808,7 @@ export default function AdminPage() {
     if (!editingRequest) return;
 
     setRequestsList((prev) => prev.map((r) => (r.id === editingRequest.id ? editingRequest : r)));
-    triggerToast("Demande modifiée et synchronisée !", "Demandes & Sourcing");
+    triggerToast("Commande modifiée et synchronisée !", "Commandes Clients");
     setEditingRequest(null);
 
     if (token) {
@@ -3965,7 +4035,7 @@ export default function AdminPage() {
   const navItems = [
     { id: "dashboard", label: "Tableau de Bord", icon: LayoutDashboard },
     { id: "assistant", label: "Assistant Roum", icon: Compass, badge: totalAgentAlerts },
-    { id: "requests", label: "Demandes reçues", icon: Inbox, badge: stats?.pending_requests },
+    { id: "requests", label: "Commandes clients", icon: Inbox, badge: stats?.pending_requests },
     { id: "shipments", label: "Expéditions & Colis", icon: Package },
     { id: "clients", label: "Clients", icon: Users },
     { id: "tariffs", label: "Tarifs & Routes", icon: Truck },
@@ -4273,7 +4343,7 @@ export default function AdminPage() {
             <h2 className="roum-brush-title" style={{ fontSize: "1.48rem", fontWeight: "800" }}>
               {activeTab === "assistant" && "Assistant Roum"}
               {activeTab === "dashboard" && "Tableau de Bord"}
-              {activeTab === "requests" && "Demandes & Sourcing"}
+              {activeTab === "requests" && "Commandes & Achats Clients"}
               {activeTab === "shipments" && "Expéditions & Colis"}
               {activeTab === "clients" && "Répertoire Clients"}
               {activeTab === "tariffs" && "Grilles Tarifaires"}
@@ -4374,7 +4444,7 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Carte 2 : Pesées au Hub */}
+              {/* Carte 2 : Pesées au Magasin */}
               <div
                 className="ios-metric-card"
                 onClick={() => setActiveTab("shipments")}
@@ -4386,7 +4456,7 @@ export default function AdminPage() {
                       <Scale size={15} strokeWidth={1.8} />
                     </span>
                     <span className="metric-card-title">
-                      Pesées au Hub
+                      Pesées au Magasin
                     </span>
                   </div>
                   <span className="ios-trend-pill ios-trend-pill-neutral">
@@ -4415,7 +4485,7 @@ export default function AdminPage() {
                       <Inbox size={15} strokeWidth={1.8} />
                     </span>
                     <span className="metric-card-title">
-                      Sourcing Client
+                      Commandes Clients
                     </span>
                   </div>
                   <span className="ios-trend-pill ios-trend-pill-gold">
@@ -4427,7 +4497,7 @@ export default function AdminPage() {
                     {pendingRequestsList.length} {pendingRequestsList.length > 1 ? "dossiers" : "dossier"}
                   </div>
                   <div className="metric-card-sub">
-                    Demandes Alibaba, 1688 & transit
+                    Achats en ligne & commandes clients
                   </div>
                 </div>
               </div>
@@ -4892,7 +4962,7 @@ export default function AdminPage() {
                         <Scale size={14} color="var(--brown-dark)" />
                       </div>
                       <div style={{ fontSize: "0.78rem", fontWeight: "700", color: "var(--text-main)", lineHeight: 1.25 }}>
-                        Pesées au Hub
+                        Pesées au Magasin
                       </div>
                       <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)", marginTop: "4px", lineHeight: 1.3 }}>
                         {pendingWeighingsList.length} colis en attente de pesée.
@@ -4949,10 +5019,10 @@ export default function AdminPage() {
                         <Inbox size={14} color="var(--brown-dark)" />
                       </div>
                       <div style={{ fontSize: "0.78rem", fontWeight: "700", color: "var(--text-main)", lineHeight: 1.25 }}>
-                        Sourcing Client
+                        Commandes Clients
                       </div>
                       <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)", marginTop: "4px", lineHeight: 1.3 }}>
-                        {pendingRequestsList.length} demande(s) à coter.
+                        {pendingRequestsList.length} commande(s) à chiffrer.
                       </div>
                     </div>
                     <button
@@ -5214,7 +5284,7 @@ export default function AdminPage() {
                   className="ios-metric-card"
                   onClick={() => setActiveTab("requests")}
                   style={{ cursor: "pointer" }}
-                  title="Ouvrir les demandes de sourcing"
+                  title="Ouvrir les commandes clients"
                 >
                   <div className="metric-card-header">
                     <div className="metric-card-label">
@@ -5222,7 +5292,7 @@ export default function AdminPage() {
                         <Inbox size={15} strokeWidth={1.8} />
                       </span>
                       <span className="metric-card-title">
-                        Sourcing Client
+                        Commandes Clients
                       </span>
                     </div>
                     <span className="ios-trend-pill ios-trend-pill-gold">
@@ -5231,10 +5301,10 @@ export default function AdminPage() {
                   </div>
                   <div className="metric-card-body">
                     <div className="metric-card-value">
-                      {stats?.pending_requests ?? (requestsList.length > 0 ? requestsList.filter((r) => r.status === "NEW" || r.status === "IN_REVIEW").length : 3)} demandes
+                      {stats?.pending_requests ?? (requestsList.length > 0 ? requestsList.filter((r) => r.status === "NEW" || r.status === "IN_REVIEW").length : 3)} commandes
                     </div>
                     <div className="metric-card-sub">
-                      Achats Alibaba, 1688 & usines
+                      Achats en Chine & commandes
                     </div>
                   </div>
                 </div>
@@ -5642,7 +5712,7 @@ export default function AdminPage() {
                         },
                         {
                           key: "PREPARATION",
-                          label: `Hub Préparation (${shipments.filter((s) => s.current_status === "RECEIVED_AT_HUB" || s.current_status === "IN_PREPARATION" || s.current_status === "PREPARATION").length})`,
+                          label: `Au Magasin (${shipments.filter((s) => s.current_status === "RECEIVED_AT_HUB" || s.current_status === "IN_PREPARATION" || s.current_status === "PREPARATION").length})`,
                         },
                         {
                           key: "DELIVERED",
@@ -6544,7 +6614,7 @@ export default function AdminPage() {
                             1. Chine ➔ Afrique
                           </h3>
                           <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            Hubs Guangzhou & Yiwu · Aérien & Maritime
+                            Entrepôts Guangzhou & Yiwu · Aérien & Maritime
                           </span>
                         </div>
                       </div>
@@ -6657,7 +6727,7 @@ export default function AdminPage() {
                             2. Dubaï ➔ Afrique
                           </h3>
                           <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            Hub Dubaï Cargo & Transit Émirats
+                            Entrepôt Dubaï Cargo & Transit Émirats
                           </span>
                         </div>
                       </div>
@@ -7987,7 +8057,7 @@ export default function AdminPage() {
                     Identité & Coordonnées Officielles de l&apos;Entreprise
                   </h3>
                   <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: 0 }}>
-                    Renseignements légaux, agréments de douane et contacts de direction affichés sur les devis et factures.
+                    Coordonnées officielles, siège social et contacts de direction affichés sur les devis et factures.
                   </p>
                 </div>
                 <span className="badge-clean badge-delivered" style={{ padding: "4px 10px", fontSize: "0.72rem" }}>
@@ -8009,42 +8079,6 @@ export default function AdminPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "5px", fontWeight: "600" }}>
-                    Numéro RCCM (Registre de Commerce)
-                  </label>
-                  <input
-                    type="text"
-                    value={companySettings.company_rccm || ""}
-                    onChange={(e) => setCompanySettings({ ...companySettings, company_rccm: e.target.value })}
-                    className="input-clean"
-                    placeholder="CI-ABJ-2024-B-14289"
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "5px", fontWeight: "600" }}>
-                    Compte Contribuable / NIF
-                  </label>
-                  <input
-                    type="text"
-                    value={companySettings.company_nif || ""}
-                    onChange={(e) => setCompanySettings({ ...companySettings, company_nif: e.target.value })}
-                    className="input-clean"
-                    placeholder="2418520 M"
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "5px", fontWeight: "600" }}>
-                    Agrément Douanes / Commissionnaire Agréé
-                  </label>
-                  <input
-                    type="text"
-                    value={companySettings.company_customs_license || ""}
-                    onChange={(e) => setCompanySettings({ ...companySettings, company_customs_license: e.target.value })}
-                    className="input-clean"
-                    placeholder="CAD-N° 2026/048-DGD"
-                  />
-                </div>
-                <div style={{ gridColumn: "1 / -1" }}>
                   <label style={{ display: "block", fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "5px", fontWeight: "600" }}>
                     Adresse du Siège Social & Agence Principale
                   </label>
@@ -8107,15 +8141,15 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* CARTE 2 : RÉSEAU DES HUBS INTERNATIONAUX (CHINE, DUBAÏ, FRANCE & HUBS PERSONNALISÉS) */}
+            {/* CARTE 2 : RÉSEAU DES ENTREPÔTS INTERNATIONAUX (CHINE, DUBAÏ, FRANCE & ENTREPÔTS PERSONNALISÉS) */}
             <div className="card-clean" style={{ padding: "26px", borderRadius: "20px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px", borderBottom: "1px solid var(--border-light)", paddingBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
                 <div>
                   <h3 style={{ fontSize: "1.15rem", fontWeight: "800", color: "var(--brown-dark)", margin: "0 0 3px 0" }}>
-                    Hubs & Dépôts Internationaux de Réception
+                    Entrepôts & Magasins Internationaux de Réception
                   </h3>
                   <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: 0 }}>
-                    Adresses exactes communiquées aux fournisseurs (Alibaba, Yiwu, Deira, France) avec shipping marks.
+                    Adresses exactes de réception des colis (Chine, Dubaï, France...) avec code client.
                   </p>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
@@ -8140,17 +8174,17 @@ export default function AdminPage() {
                     }}
                   >
                     <Plus size={13} />
-                    <span>Ajouter un hub</span>
+                    <span>Ajouter un entrepôt</span>
                   </button>
                 </div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "18px" }}>
-                {/* Hub Chine */}
+                {/* Entrepôt Chine */}
                 <div style={{ padding: "16px", background: "var(--bg-app)", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
                     <CircularFlag countryCode="CN" size={16} />
-                    <strong style={{ fontSize: "0.88rem", color: "var(--brown-dark)" }}>Hub Guangzhou (Chine)</strong>
+                    <strong style={{ fontSize: "0.88rem", color: "var(--brown-dark)" }}>Entrepôt Guangzhou (Chine)</strong>
                   </div>
                   <div style={{ display: "grid", gap: "10px" }}>
                     <div>
@@ -8167,7 +8201,7 @@ export default function AdminPage() {
                     </div>
                     <div>
                       <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>
-                        Format Shipping Mark à inscrire sur les cartons
+                        Code client sur colis (Shipping Mark)
                       </label>
                       <input
                         type="text"
@@ -8192,11 +8226,11 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Hub Dubaï */}
+                {/* Entrepôt Dubaï */}
                 <div style={{ padding: "16px", background: "var(--bg-app)", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
                     <CircularFlag countryCode="AE" size={16} />
-                    <strong style={{ fontSize: "0.88rem", color: "var(--brown-dark)" }}>Hub Dubaï (Émirats Arabes Unis)</strong>
+                    <strong style={{ fontSize: "0.88rem", color: "var(--brown-dark)" }}>Entrepôt Dubaï (Émirats Arabes Unis)</strong>
                   </div>
                   <div style={{ display: "grid", gap: "10px" }}>
                     <div>
@@ -8213,7 +8247,7 @@ export default function AdminPage() {
                     </div>
                     <div>
                       <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>
-                        Contact WhatsApp Hub Dubaï
+                        Contact WhatsApp Entrepôt Dubaï
                       </label>
                       <input
                         type="text"
@@ -8226,11 +8260,11 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Hub France */}
+                {/* Magasin & Dépôt France */}
                 <div style={{ padding: "16px", background: "var(--bg-app)", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
                     <CircularFlag countryCode="FR" size={16} />
-                    <strong style={{ fontSize: "0.88rem", color: "var(--brown-dark)" }}>Liaison Paris (France & Europe)</strong>
+                    <strong style={{ fontSize: "0.88rem", color: "var(--brown-dark)" }}>Magasin & Dépôt Paris (France & Europe)</strong>
                   </div>
                   <div style={{ display: "grid", gap: "10px" }}>
                     <div>
@@ -8247,7 +8281,7 @@ export default function AdminPage() {
                     </div>
                     <div>
                       <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>
-                        Contact Responsable Liaison Paris
+                        Contact Responsable Magasin Paris
                       </label>
                       <input
                         type="text"
@@ -8624,9 +8658,9 @@ export default function AdminPage() {
                   );
                 })()}
 
-                {/* 3. Compte Bancaire Officiel (RIB / IBAN FCFA BACI) */}
+                {/* 3. Compte & Coordonnées Bancaires Maroc (Casablanca) */}
                 {(() => {
-                  const isEditing = editingPaymentCard === "bank";
+                  const isEditing = editingPaymentCard === "morocco";
                   return (
                     <div
                       style={{
@@ -8640,13 +8674,13 @@ export default function AdminPage() {
                     >
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <BankBaciLogo size={34} />
+                          <CircularFlag countryCode="MA" size={34} />
                           <div>
                             <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
-                              Compte Bancaire Officiel (RIB / IBAN FCFA)
+                              Compte & Virement Maroc
                             </div>
                             <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
-                              Banque Atlantique (BACI) · Zone UEMOA
+                              Agence Casablanca · CIH / Attijariwafa
                             </span>
                           </div>
                         </div>
@@ -8669,7 +8703,7 @@ export default function AdminPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleSaveEditPaymentCard("bank", "Compte Bancaire")}
+                              onClick={() => handleSaveEditPaymentCard("morocco", "Compte Maroc")}
                               className="btn btn-primary"
                               style={{
                                 display: "inline-flex",
@@ -8689,7 +8723,7 @@ export default function AdminPage() {
                         ) : (
                           <button
                             type="button"
-                            onClick={() => handleStartEditPaymentCard("bank")}
+                            onClick={() => handleStartEditPaymentCard("morocco")}
                             className="btn btn-secondary"
                             style={{
                               display: "inline-flex",
@@ -8704,7 +8738,7 @@ export default function AdminPage() {
                               cursor: "pointer",
                               color: "var(--brown-dark)",
                             }}
-                            title="Modifier ce compte bancaire"
+                            title="Modifier ce compte Maroc"
                           >
                             <Edit3 size={15} />
                           </button>
@@ -8712,14 +8746,14 @@ export default function AdminPage() {
                       </div>
                       <div style={{ display: "grid", gap: "10px" }}>
                         <div>
-                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Établissement Bancaire</label>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Établissement Bancaire au Maroc</label>
                           <input
                             type="text"
                             readOnly={!isEditing}
-                            value={companySettings.payment_bank_name || ""}
-                            onChange={(e) => setCompanySettings({ ...companySettings, payment_bank_name: e.target.value })}
+                            value={companySettings.payment_morocco_bank || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_morocco_bank: e.target.value })}
                             className="input-clean"
-                            placeholder="Banque Atlantique Côte d'Ivoire (BACI)"
+                            placeholder="CIH Bank / Attijariwafa Bank"
                             style={{
                               background: isEditing ? "#FFFFFF" : "var(--bg-app)",
                               cursor: isEditing ? "text" : "default",
@@ -8731,10 +8765,10 @@ export default function AdminPage() {
                           <input
                             type="text"
                             readOnly={!isEditing}
-                            value={companySettings.payment_bank_account_holder || ""}
-                            onChange={(e) => setCompanySettings({ ...companySettings, payment_bank_account_holder: e.target.value })}
+                            value={companySettings.payment_morocco_holder || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_morocco_holder: e.target.value })}
                             className="input-clean"
-                            placeholder="ROUM TRANSIT INTERNATIONAL SARL"
+                            placeholder="ROUM TRANSIT MAROC"
                             style={{
                               background: isEditing ? "#FFFFFF" : "var(--bg-app)",
                               cursor: isEditing ? "text" : "default",
@@ -8742,14 +8776,14 @@ export default function AdminPage() {
                           />
                         </div>
                         <div>
-                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>RIB / Clé IBAN</label>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>RIB Bancaire Marocain (24 chiffres)</label>
                           <input
                             type="text"
                             readOnly={!isEditing}
-                            value={companySettings.payment_bank_rib || ""}
-                            onChange={(e) => setCompanySettings({ ...companySettings, payment_bank_rib: e.target.value })}
+                            value={companySettings.payment_morocco_rib || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_morocco_rib: e.target.value })}
                             className="input-clean"
-                            placeholder="CI092 01001 012345678901 24"
+                            placeholder="230 780 0001234567890123 45"
                             style={{
                               background: isEditing ? "#FFFFFF" : "var(--bg-app)",
                               cursor: isEditing ? "text" : "default",
@@ -8757,265 +8791,20 @@ export default function AdminPage() {
                           />
                         </div>
                         <div>
-                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Code BIC / SWIFT</label>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Ville / Agence & Contact WhatsApp Maroc</label>
                           <input
                             type="text"
                             readOnly={!isEditing}
-                            value={companySettings.payment_bank_swift || ""}
-                            onChange={(e) => setCompanySettings({ ...companySettings, payment_bank_swift: e.target.value })}
+                            value={companySettings.payment_morocco_whatsapp || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_morocco_whatsapp: e.target.value })}
                             className="input-clean"
-                            placeholder="ATBKCIAB"
+                            placeholder="Casablanca Maarif · WhatsApp : +212 6 00 00 00 00"
                             style={{
                               background: isEditing ? "#FFFFFF" : "var(--bg-app)",
                               cursor: isEditing ? "text" : "default",
                             }}
                           />
                         </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* 4. Règlements Internationaux (Chine Alipay / WeChat & Europe SEPA) */}
-                {(() => {
-                  const isEditing = editingPaymentCard === "china";
-                  return (
-                    <div
-                      style={{
-                        padding: "18px",
-                        background: "#FFFFFF",
-                        borderRadius: "16px",
-                        border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
-                        boxShadow: isEditing ? "0 8px 24px rgba(112, 72, 56, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
-                        transition: "all 0.2s ease",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
-                          <AlipayLogo size={34} />
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              Sourcing Chine & Devises
-                            </div>
-                            <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
-                              Alipay · WeChat · SEPA Euro
-                            </span>
-                          </div>
-                        </div>
-                        {isEditing ? (
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <button
-                              type="button"
-                              onClick={handleCancelEditPaymentCard}
-                              className="btn btn-secondary"
-                              style={{
-                                padding: "5px 10px",
-                                fontSize: "0.74rem",
-                                fontWeight: "600",
-                                borderRadius: "8px",
-                                border: "1px solid var(--border-light)",
-                                cursor: "pointer",
-                              }}
-                            >
-                              Annuler
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleSaveEditPaymentCard("china", "Comptes Internationaux")}
-                              className="btn btn-primary"
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                padding: "5px 12px",
-                                fontSize: "0.74rem",
-                                fontWeight: "700",
-                                borderRadius: "8px",
-                                cursor: "pointer",
-                              }}
-                            >
-                              <Check size={13} />
-                              Enregistrer
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleStartEditPaymentCard("china")}
-                            className="btn btn-secondary"
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              width: "32px",
-                              height: "32px",
-                              padding: 0,
-                              borderRadius: "8px",
-                              border: "1px solid var(--border-light)",
-                              background: "var(--bg-subtle)",
-                              cursor: "pointer",
-                              color: "var(--brown-dark)",
-                            }}
-                            title="Modifier les comptes internationaux"
-                          >
-                            <Edit3 size={15} />
-                          </button>
-                        )}
-                      </div>
-                      <div style={{ display: "grid", gap: "10px" }}>
-                        <div>
-                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Alipay / WeChat Pay (Chine)</label>
-                          <input
-                            type="text"
-                            readOnly={!isEditing}
-                            value={companySettings.payment_alipay_china || ""}
-                            onChange={(e) => setCompanySettings({ ...companySettings, payment_alipay_china: e.target.value })}
-                            className="input-clean"
-                            placeholder="pay@roumtransit-china.com"
-                            style={{
-                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
-                              cursor: isEditing ? "text" : "default",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Virement Bancaire Euro (SEPA)</label>
-                          <input
-                            type="text"
-                            readOnly={!isEditing}
-                            value={companySettings.payment_euro_sepa || ""}
-                            onChange={(e) => setCompanySettings({ ...companySettings, payment_euro_sepa: e.target.value })}
-                            className="input-clean"
-                            placeholder="FR76 3000 4001 2345 6789 0123 456"
-                            style={{
-                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
-                              cursor: isEditing ? "text" : "default",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Caisse Espèces aux Guichets</label>
-                          <input
-                            type="text"
-                            readOnly={!isEditing}
-                            value={companySettings.payment_cash_desks || ""}
-                            onChange={(e) => setCompanySettings({ ...companySettings, payment_cash_desks: e.target.value })}
-                            className="input-clean"
-                            placeholder="Agence Abidjan Bingerville & Hub Guangzhou"
-                            style={{
-                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
-                              cursor: isEditing ? "text" : "default",
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* 5. Mentions Légales sur les Reçus */}
-                {(() => {
-                  const isEditing = editingPaymentCard === "receipt";
-                  return (
-                    <div
-                      style={{
-                        padding: "18px",
-                        background: "#FFFFFF",
-                        borderRadius: "16px",
-                        border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
-                        boxShadow: isEditing ? "0 8px 24px rgba(112, 72, 56, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
-                        transition: "all 0.2s ease",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <ReceiptSealLogo size={34} />
-                          <div>
-                            <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
-                              Mentions Légales sur les Reçus
-                            </div>
-                            <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
-                              Bordereaux de Caisse Officiels
-                            </span>
-                          </div>
-                        </div>
-                        {isEditing ? (
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <button
-                              type="button"
-                              onClick={handleCancelEditPaymentCard}
-                              className="btn btn-secondary"
-                              style={{
-                                padding: "5px 10px",
-                                fontSize: "0.74rem",
-                                fontWeight: "600",
-                                borderRadius: "8px",
-                                border: "1px solid var(--border-light)",
-                                cursor: "pointer",
-                              }}
-                            >
-                              Annuler
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleSaveEditPaymentCard("receipt", "Mentions Légales")}
-                              className="btn btn-primary"
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                padding: "5px 12px",
-                                fontSize: "0.74rem",
-                                fontWeight: "700",
-                                borderRadius: "8px",
-                                cursor: "pointer",
-                              }}
-                            >
-                              <Check size={13} />
-                              Enregistrer
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleStartEditPaymentCard("receipt")}
-                            className="btn btn-secondary"
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              width: "32px",
-                              height: "32px",
-                              padding: 0,
-                              borderRadius: "8px",
-                              border: "1px solid var(--border-light)",
-                              background: "var(--bg-subtle)",
-                              cursor: "pointer",
-                              color: "var(--brown-dark)",
-                            }}
-                            title="Modifier cette clause légale"
-                          >
-                            <Edit3 size={15} />
-                          </button>
-                        )}
-                      </div>
-                      <div>
-                        <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "4px", fontWeight: "600" }}>
-                          Clause officielle imprimée sur les reçus
-                        </label>
-                        <textarea
-                          rows={4}
-                          readOnly={!isEditing}
-                          value={companySettings.payment_receipt_terms || ""}
-                          onChange={(e) => setCompanySettings({ ...companySettings, payment_receipt_terms: e.target.value })}
-                          className="input-clean"
-                          style={{
-                            fontSize: "0.8rem",
-                            lineHeight: "1.4",
-                            background: isEditing ? "#FFFFFF" : "var(--bg-app)",
-                            cursor: isEditing ? "text" : "default",
-                          }}
-                        />
                       </div>
                     </div>
                   );
@@ -9056,6 +8845,128 @@ export default function AdminPage() {
                   Enregistrer l&apos;ensemble des Paramètres
                 </button>
               </div>
+            </div>
+
+            {/* CARTE 4 : SÉCURITÉ & MODIFICATION DU MOT DE PASSE DE DIRECTION */}
+            <div className="card-clean" style={{ padding: "26px", borderRadius: "20px", background: "#FFFFFF", border: "1px solid var(--border-light)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px", borderBottom: "1px solid var(--border-light)", paddingBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div
+                    style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "12px",
+                      background: "rgba(112, 72, 56, 0.08)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--brown-dark)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Lock size={20} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: "1.15rem", fontWeight: "800", color: "var(--brown-dark)", margin: "0 0 3px 0" }}>
+                      Sécurité & Mot de Passe de Direction
+                    </h3>
+                    <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: 0 }}>
+                      Modifiez votre mot de passe d&apos;accès administrateur en toute sécurité.
+                    </p>
+                  </div>
+                </div>
+                <span className="badge-clean badge-delivered" style={{ padding: "4px 12px", fontSize: "0.72rem", borderRadius: "9999px" }}>
+                  Session Protégée
+                </span>
+              </div>
+
+              <form onSubmit={handleChangePassword} style={{ maxWidth: "720px", display: "grid", gap: "16px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "5px", fontWeight: "600" }}>
+                      Mot de passe actuel
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordForm.currentPassword}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                      className="input-clean"
+                      placeholder="••••••••••••"
+                      autoComplete="current-password"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "5px", fontWeight: "600" }}>
+                      Nouveau mot de passe
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordForm.newPassword}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                      className="input-clean"
+                      placeholder="Min. 6 caractères"
+                      autoComplete="new-password"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "5px", fontWeight: "600" }}>
+                      Confirmer le mot de passe
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordForm.confirmPassword}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                      className="input-clean"
+                      placeholder="Retapez à l'identique"
+                      autoComplete="new-password"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginTop: "6px" }}>
+                  <div style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
+                    {showPasswordSuccess ? (
+                      <span style={{ color: "#16A34A", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                        <CheckCircle2 size={15} /> Mot de passe mis à jour avec succès !
+                      </span>
+                    ) : (
+                      "Utilisez au moins 6 caractères pour garantir la sécurité de votre accès."
+                    )}
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isChangingPassword}
+                    className="btn btn-primary"
+                    style={{
+                      borderRadius: "9999px",
+                      padding: "8px 20px",
+                      fontSize: "0.82rem",
+                      fontWeight: "700",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "7px",
+                      cursor: isChangingPassword ? "not-allowed" : "pointer",
+                      opacity: isChangingPassword ? 0.7 : 1,
+                    }}
+                  >
+                    {isChangingPassword ? (
+                      <>
+                        <RefreshCw size={14} className="animate-spin" />
+                        <span>Mise à jour en cours...</span>
+                      </>
+                    ) : (
+                      <>
+                        <KeyRound size={15} />
+                        <span>Mettre à jour le mot de passe</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
 
             <div className="card-clean" style={{ padding: "0", overflow: "hidden", borderRadius: "22px", border: "1px solid var(--border-light)" }}>
@@ -9549,14 +9460,14 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* MODALE : DÉTAIL D'UNE DEMANDE & ARTICLES DE SOURCING */}
+      {/* MODALE : DÉTAIL D'UNE COMMANDE & ARTICLES COMMANDÉS */}
       {showRequestDetailModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
           <div className="card-clean" style={{ maxWidth: "680px", width: "100%", padding: "28px", maxHeight: "90vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
               <div>
                 <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <h3 style={{ fontSize: "1.2rem", margin: 0 }}>Demande {showRequestDetailModal.reference}</h3>
+                  <h3 style={{ fontSize: "1.2rem", margin: 0 }}>Commande {showRequestDetailModal.reference}</h3>
                   <span className="badge-clean badge-draft">
                     {formatRequestType(showRequestDetailModal.request_type)}
                   </span>
@@ -9598,7 +9509,7 @@ export default function AdminPage() {
                 )}
                 {showRequestDetailModal.shipping_mark && (
                   <div>
-                    <span style={{ color: "var(--text-muted)", display: "block" }}>Shipping Mark (Marquage colis) :</span>
+                    <span style={{ color: "var(--text-muted)", display: "block" }}>Code client sur colis (Shipping Mark) :</span>
                     <strong style={{ color: "var(--brown-dark)", fontFamily: "monospace" }}>{showRequestDetailModal.shipping_mark}</strong>
                   </div>
                 )}
@@ -9614,7 +9525,7 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* Articles multi-produits du sourcing */}
+            {/* Articles & Marchandises commandés */}
             <div style={{ marginBottom: "20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
                 <h4 style={{ fontSize: "0.92rem", fontWeight: "700", margin: 0 }}>Articles demandés ({showRequestDetailModal.items?.length || 0})</h4>
@@ -9780,7 +9691,7 @@ export default function AdminPage() {
                   value={convertForm.package_label}
                   onChange={(e) => setConvertForm({ ...convertForm, package_label: e.target.value })}
                   className="input-clean"
-                  placeholder="Ex: Colis Sourcing Vêtements"
+                  placeholder="Ex: Colis Vêtements & Marchandises"
                 />
               </div>
 
@@ -9798,7 +9709,7 @@ export default function AdminPage() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
           <div className="card-clean" style={{ maxWidth: "520px", width: "100%", padding: "26px" }}>
             <h3 style={{ fontSize: "1.15rem", marginBottom: "4px" }}>
-              Pesée Réelle & Réception Hub ({showIntakeModal.tracking_number})
+              Pesée Réelle & Réception Magasin ({showIntakeModal.tracking_number})
             </h3>
             <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "16px" }}>
               Saisie manuelle des mesures physiques réelles lors de la prise en charge physique du colis.
@@ -9834,14 +9745,14 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Magasin / Hub de réception</label>
+                <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Magasin / Entrepôt de réception</label>
                 <input
                   type="text"
                   required
                   value={intakeForm.hub_location}
                   onChange={(e) => setIntakeForm({ ...intakeForm, hub_location: e.target.value })}
                   className="input-clean"
-                  placeholder="Ex : Hub Entrepôt Guangzhou, Magasin Yiwu, Agence Bamako..."
+                  placeholder="Ex : Entrepôt Guangzhou, Magasin Yiwu, Agence Bamako..."
                 />
               </div>
 
@@ -9979,7 +9890,7 @@ export default function AdminPage() {
                 }}
                 className="btn btn-primary"
               >
-                Réajuster Pesée Hub
+                Réajuster Pesée Magasin
               </button>
             </div>
           </div>
@@ -10350,7 +10261,7 @@ export default function AdminPage() {
                           className="input-clean"
                           style={{ height: "40px", borderRadius: "10px", flex: 1, fontWeight: "600" }}
                         >
-                          <optgroup label="Hubs Majeurs & Stratégiques">
+                          <optgroup label="Grands Entrepôts Stratégiques">
                             {STRATEGIC_HUBS.map((h) => (
                               <option key={`hub-orig-${h.code}`} value={h.name}>{h.name}</option>
                             ))}
@@ -10382,7 +10293,7 @@ export default function AdminPage() {
                   </div>
                   {/* Raccourcis départ avec drapeaux circulaires */}
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
-                    <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Hubs fréquents :</span>
+                    <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Entrepôts fréquents :</span>
                     {POPULAR_ORIGINS.slice(0, 6).map((po) => (
                       <button
                         key={po.city}
@@ -10439,7 +10350,7 @@ export default function AdminPage() {
                               <option key={`afr-dest-${a.code}`} value={a.name}>{a.name}</option>
                             ))}
                           </optgroup>
-                          <optgroup label="Hubs Internationaux">
+                          <optgroup label="Entrepôts Internationaux">
                             {STRATEGIC_HUBS.map((h) => (
                               <option key={`hub-dest-${h.code}`} value={h.name}>{h.name}</option>
                             ))}
@@ -10764,7 +10675,7 @@ export default function AdminPage() {
                     className="input-clean"
                     style={{ fontWeight: "700", cursor: "pointer" }}
                   >
-                    <optgroup label="Hubs Stratégiques ROUM">
+                    <optgroup label="Entrepôts Stratégiques ROUM">
                       {STRATEGIC_HUBS.map((c) => (
                         <option key={`air-hub-orig-${c.code}`} value={c.name}>{c.name}</option>
                       ))}
@@ -10782,7 +10693,7 @@ export default function AdminPage() {
                   </select>
                   <input
                     type="text"
-                    placeholder="Ville / Hub (Ex: Paris CDG)"
+                    placeholder="Ville / Entrepôt de départ (Ex: Paris CDG)"
                     value={airRouteForm.origin_city}
                     onChange={(e) => setAirRouteForm({ ...airRouteForm, origin_city: e.target.value })}
                     className="input-clean"
@@ -10813,7 +10724,7 @@ export default function AdminPage() {
                         <option key={`air-afr-dest-${c.code}`} value={c.name}>{c.name}</option>
                       ))}
                     </optgroup>
-                    <optgroup label="Hubs Stratégiques">
+                    <optgroup label="Entrepôts Stratégiques">
                       {STRATEGIC_HUBS.map((c) => (
                         <option key={`air-hub-dest-${c.code}`} value={c.name}>{c.name}</option>
                       ))}
@@ -10826,7 +10737,7 @@ export default function AdminPage() {
                   </select>
                   <input
                     type="text"
-                    placeholder="Ville / Hub (Ex: Abidjan FHB)"
+                    placeholder="Ville / Entrepôt d'arrivée (Ex: Abidjan FHB)"
                     value={airRouteForm.destination_city}
                     onChange={(e) => setAirRouteForm({ ...airRouteForm, destination_city: e.target.value })}
                     className="input-clean"
@@ -10927,7 +10838,7 @@ export default function AdminPage() {
               {/* Notes / Conditions */}
               <div>
                 <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                  Conditions & Agence / Hub associé
+                  Conditions & Magasin / Entrepôt associé
                 </label>
                 <input
                   type="text"
@@ -11035,7 +10946,7 @@ export default function AdminPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
                   <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                    Ville / Hub d&apos;arrivée
+                    Ville / Entrepôt d&apos;arrivée
                   </label>
                   <input
                     type="text"
@@ -11124,7 +11035,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* MODALE DÉDIÉE : AJOUTER UN HUB / DÉPÔT INTERNATIONAL */}
+      {/* MODALE DÉDIÉE : AJOUTER UN ENTREPÔT / DÉPÔT INTERNATIONAL */}
       {showAddHubModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.45)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100, padding: "20px" }}>
           <div className="card-clean animate-fade-in" style={{ maxWidth: "560px", width: "100%", maxHeight: "90vh", overflowY: "auto", borderRadius: "24px", padding: "26px", boxShadow: "0 25px 60px rgba(0, 0, 0, 0.22)", background: "#FFFFFF" }}>
@@ -11133,7 +11044,7 @@ export default function AdminPage() {
                 <CircularFlag countryCode={newHubForm.countryCode || "TR"} size={24} />
                 <div>
                   <h3 style={{ fontSize: "1.15rem", fontWeight: "800", color: "var(--brown-dark)", margin: "0 0 2px 0" }}>
-                    Ajouter un Hub International
+                    Ajouter un Entrepôt International
                   </h3>
                   <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", margin: 0 }}>
                     Nouvelle plateforme de transit, entrepôt ou adresse de réception à l&apos;étranger
@@ -11152,7 +11063,7 @@ export default function AdminPage() {
             <form onSubmit={handleAddHub} style={{ display: "grid", gap: "14px" }}>
               <div>
                 <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                  Nom de la Plateforme / Hub *
+                  Nom de l&apos;Entrepôt / Magasin *
                 </label>
                 <input
                   type="text"
@@ -11160,7 +11071,7 @@ export default function AdminPage() {
                   value={newHubForm.name}
                   onChange={(e) => setNewHubForm({ ...newHubForm, name: e.target.value })}
                   className="input-clean"
-                  placeholder="Ex : Hub Istanbul (Turquie), Hub Milan (Italie)..."
+                  placeholder="Ex : Entrepôt Istanbul (Turquie), Dépôt Milan (Italie)..."
                   style={{ fontWeight: "700" }}
                 />
               </div>
@@ -11186,7 +11097,7 @@ export default function AdminPage() {
                     className="input-clean"
                     style={{ fontWeight: "700", cursor: "pointer" }}
                   >
-                    <optgroup label="Hubs Stratégiques & Partenaires">
+                    <optgroup label="Entrepôts Stratégiques & Partenaires">
                       {STRATEGIC_HUBS.map((c) => (
                         <option key={`hub-add-strat-${c.code}`} value={c.name}>{c.name}</option>
                       ))}
@@ -11231,7 +11142,7 @@ export default function AdminPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
                   <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                    Shipping Mark Obligatoire *
+                    Code client sur colis (Shipping Mark) *
                   </label>
                   <input
                     type="text"
@@ -11245,7 +11156,7 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
-                    Contact Téléphone / WhatsApp du Hub
+                    Contact Téléphone / WhatsApp de l&apos;Entrepôt
                   </label>
                   <input
                     type="text"
@@ -11271,7 +11182,7 @@ export default function AdminPage() {
                   className="btn btn-primary"
                   style={{ padding: "8px 22px", borderRadius: "9999px", display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
-                  <Check size={14} /> Enregistrer ce Hub
+                  <Check size={14} /> Enregistrer cet entrepôt
                 </button>
               </div>
             </form>
@@ -11318,7 +11229,7 @@ export default function AdminPage() {
                     {editingTariff.origin_country && (
                       <option value={editingTariff.origin_country}>{editingTariff.origin_country}</option>
                     )}
-                    <optgroup label="Hubs Stratégiques ROUM">
+                    <optgroup label="Entrepôts Stratégiques ROUM">
                       {STRATEGIC_HUBS.map((c) => (
                         <option key={`edit-hub-dep-${c.code}`} value={c.name}>{c.name}</option>
                       ))}
@@ -11353,7 +11264,7 @@ export default function AdminPage() {
                         <option key={`edit-afr-dest-${c.code}`} value={c.name}>{c.name}</option>
                       ))}
                     </optgroup>
-                    <optgroup label="Hubs Stratégiques">
+                    <optgroup label="Entrepôts Stratégiques">
                       {STRATEGIC_HUBS.map((c) => (
                         <option key={`edit-hub-dest-${c.code}`} value={c.name}>{c.name}</option>
                       ))}
@@ -11504,7 +11415,7 @@ export default function AdminPage() {
                     {editingShipment.origin_country && (
                       <option value={editingShipment.origin_country}>{editingShipment.origin_country}</option>
                     )}
-                    <optgroup label="Hubs Stratégiques ROUM">
+                    <optgroup label="Entrepôts Stratégiques ROUM">
                       {STRATEGIC_HUBS.map((c) => (
                         <option key={`ship-hub-dep-${c.code}`} value={c.name}>{c.name}</option>
                       ))}
@@ -11539,7 +11450,7 @@ export default function AdminPage() {
                         <option key={`ship-afr-dest-${c.code}`} value={c.name}>{c.name}</option>
                       ))}
                     </optgroup>
-                    <optgroup label="Hubs Stratégiques">
+                    <optgroup label="Entrepôts Stratégiques">
                       {STRATEGIC_HUBS.map((c) => (
                         <option key={`ship-hub-dest-${c.code}`} value={c.name}>{c.name}</option>
                       ))}
@@ -11584,7 +11495,7 @@ export default function AdminPage() {
                     className="input-clean"
                   >
                     <option value="DRAFT">Dossier créé</option>
-                    <option value="RECEIVED_ORIGIN_HUB">Reçu au Hub d&apos;Origine</option>
+                    <option value="RECEIVED_ORIGIN_HUB">Reçu au Magasin de départ</option>
                     <option value="IN_TRANSIT">En acheminement international</option>
                     <option value="CUSTOMS_CLEARANCE">En dédouanement</option>
                     <option value="ARRIVED_DESTINATION">Arrivé au magasin de destination</option>
@@ -11668,7 +11579,7 @@ export default function AdminPage() {
                     {editingRequest.origin_country && (
                       <option value={editingRequest.origin_country}>{editingRequest.origin_country}</option>
                     )}
-                    <optgroup label="Hubs Stratégiques ROUM">
+                    <optgroup label="Entrepôts Stratégiques ROUM">
                       {STRATEGIC_HUBS.map((c) => (
                         <option key={`req-hub-dep-${c.code}`} value={c.name}>{c.name}</option>
                       ))}
@@ -11703,7 +11614,7 @@ export default function AdminPage() {
                         <option key={`req-afr-dest-${c.code}`} value={c.name}>{c.name}</option>
                       ))}
                     </optgroup>
-                    <optgroup label="Hubs Stratégiques">
+                    <optgroup label="Entrepôts Stratégiques">
                       {STRATEGIC_HUBS.map((c) => (
                         <option key={`req-hub-dest-${c.code}`} value={c.name}>{c.name}</option>
                       ))}
