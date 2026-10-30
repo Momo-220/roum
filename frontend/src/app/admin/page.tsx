@@ -8174,7 +8174,7 @@ export default function AdminPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "18px" }}>
                 {/* Entrepôt Chine */}
-                <div style={{ padding: "16px", background: "var(--bg-app)", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
+                <div style={{ padding: "12px 6px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
                     <CircularFlag countryCode="CN" size={16} />
                     <strong style={{ fontSize: "0.88rem", color: "var(--brown-dark)" }}>Entrepôt Guangzhou (Chine)</strong>
@@ -8220,7 +8220,7 @@ export default function AdminPage() {
                 </div>
 
                 {/* Entrepôt Dubaï */}
-                <div style={{ padding: "16px", background: "var(--bg-app)", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
+                <div style={{ padding: "12px 6px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
                     <CircularFlag countryCode="AE" size={16} />
                     <strong style={{ fontSize: "0.88rem", color: "var(--brown-dark)" }}>Entrepôt Dubaï (Émirats Arabes Unis)</strong>
@@ -8254,7 +8254,7 @@ export default function AdminPage() {
                 </div>
 
                 {/* Magasin & Dépôt France */}
-                <div style={{ padding: "16px", background: "var(--bg-app)", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
+                <div style={{ padding: "12px 6px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
                     <CircularFlag countryCode="FR" size={16} />
                     <strong style={{ fontSize: "0.88rem", color: "var(--brown-dark)" }}>Magasin & Dépôt Paris (France & Europe)</strong>
@@ -8292,10 +8292,7 @@ export default function AdminPage() {
                   <div
                     key={hub.id}
                     style={{
-                      padding: "16px",
-                      background: "var(--bg-app)",
-                      borderRadius: "14px",
-                      border: "1px solid var(--border-light)",
+                      padding: "12px 6px",
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "space-between",
@@ -8398,11 +8395,11 @@ export default function AdminPage() {
                   return (
                     <div
                       style={{
-                        padding: "18px",
-                        background: "#FFFFFF",
+                        padding: isEditing ? "18px" : "12px 6px",
+                        background: isEditing ? "#FFFFFF" : "transparent",
                         borderRadius: "16px",
-                        border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
-                        boxShadow: isEditing ? "0 8px 24px rgba(28, 25, 23, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        border: isEditing ? "1.5px solid var(--brown-dark)" : "none",
+                        boxShadow: isEditing ? "0 8px 24px rgba(28, 25, 23, 0.08)" : "none",
                         transition: "all 0.2s ease",
                       }}
                     >
@@ -8413,7 +8410,7 @@ export default function AdminPage() {
                             <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
                               Wave Côte d&apos;Ivoire & Sénégal
                             </div>
-                            <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: "600" }}>
                               Sans Frais Client
                             </span>
                           </div>
@@ -8489,7 +8486,7 @@ export default function AdminPage() {
                             className="input-clean"
                             placeholder="+225 01 53 63 85 69"
                             style={{
-                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
                             }}
                           />
@@ -8504,7 +8501,7 @@ export default function AdminPage() {
                             className="input-clean"
                             placeholder="ROUM TRANSIT SARL"
                             style={{
-                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
                             }}
                           />
@@ -8519,7 +8516,7 @@ export default function AdminPage() {
                             className="input-clean"
                             placeholder="wave.me/roumtransit"
                             style={{
-                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
                             }}
                           />
@@ -8535,11 +8532,11 @@ export default function AdminPage() {
                   return (
                     <div
                       style={{
-                        padding: "18px",
-                        background: "#FFFFFF",
+                        padding: isEditing ? "18px" : "12px 6px",
+                        background: isEditing ? "#FFFFFF" : "transparent",
                         borderRadius: "16px",
-                        border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
-                        boxShadow: isEditing ? "0 8px 24px rgba(28, 25, 23, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        border: isEditing ? "1.5px solid var(--brown-dark)" : "none",
+                        boxShadow: isEditing ? "0 8px 24px rgba(28, 25, 23, 0.08)" : "none",
                         transition: "all 0.2s ease",
                       }}
                     >
@@ -8550,7 +8547,7 @@ export default function AdminPage() {
                             <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
                               Orange Money (OM CI / UEMOA)
                             </div>
-                            <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: "600" }}>
                               Code Marchand & Transfert
                             </span>
                           </div>
@@ -8626,7 +8623,7 @@ export default function AdminPage() {
                             className="input-clean"
                             placeholder="#144*389278# / +225 07 48 29 11 00"
                             style={{
-                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
                             }}
                           />
@@ -8641,7 +8638,7 @@ export default function AdminPage() {
                             className="input-clean"
                             placeholder="ROUM TRANSIT INTERNATIONAL"
                             style={{
-                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
                             }}
                           />
@@ -8657,11 +8654,11 @@ export default function AdminPage() {
                   return (
                     <div
                       style={{
-                        padding: "18px",
-                        background: "#FFFFFF",
+                        padding: isEditing ? "18px" : "12px 6px",
+                        background: isEditing ? "#FFFFFF" : "transparent",
                         borderRadius: "16px",
-                        border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
-                        boxShadow: isEditing ? "0 8px 24px rgba(28, 25, 23, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        border: isEditing ? "1.5px solid var(--brown-dark)" : "none",
+                        boxShadow: isEditing ? "0 8px 24px rgba(28, 25, 23, 0.08)" : "none",
                         transition: "all 0.2s ease",
                       }}
                     >
@@ -8672,7 +8669,7 @@ export default function AdminPage() {
                             <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
                               Compte & Virement Maroc
                             </div>
-                            <span style={{ fontSize: "0.68rem", background: "var(--bg-subtle)", color: "var(--text-secondary)", padding: "1px 7px", borderRadius: "9999px", fontWeight: "600" }}>
+                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: "600" }}>
                               Agence Casablanca · CIH / Attijariwafa
                             </span>
                           </div>
@@ -8748,7 +8745,7 @@ export default function AdminPage() {
                             className="input-clean"
                             placeholder="CIH Bank / Attijariwafa Bank"
                             style={{
-                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
                             }}
                           />
@@ -8763,7 +8760,7 @@ export default function AdminPage() {
                             className="input-clean"
                             placeholder="ROUM TRANSIT MAROC"
                             style={{
-                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
                             }}
                           />
@@ -8778,7 +8775,7 @@ export default function AdminPage() {
                             className="input-clean"
                             placeholder="230 780 0001234567890123 45"
                             style={{
-                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
                             }}
                           />
@@ -8793,7 +8790,7 @@ export default function AdminPage() {
                             className="input-clean"
                             placeholder="Casablanca Maarif · WhatsApp : +212 6 00 00 00 00"
                             style={{
-                              background: isEditing ? "#FFFFFF" : "var(--bg-app)",
+                              background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
                             }}
                           />
@@ -8968,7 +8965,7 @@ export default function AdminPage() {
                   <h3 style={{ fontSize: "1.02rem", fontWeight: "700", margin: "0 0 2px 0", color: "var(--text-main)" }}>Journal d&apos;Audit</h3>
                   <p style={{ fontSize: "0.76rem", color: "var(--text-muted)", margin: 0 }}>Historique des opérations et modifications sur la plateforme</p>
                 </div>
-                <span className="badge-clean" style={{ background: "#FAF9F7", border: "1px solid var(--border-light)", color: "var(--text-secondary)" }}>
+                <span className="badge-clean" style={{ background: "#FFFFFF", border: "1px solid var(--border-light)", color: "var(--text-secondary)" }}>
                   {auditLogs.length} entrées
                 </span>
               </div>
