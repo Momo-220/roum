@@ -6638,7 +6638,7 @@ export default function AdminPage() {
                         { key: "cn-batteries", name: "Batteries & Compléments", delay: "7 à 10 j", price: "14 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-cn-special", keyword: "batterie", defaultVal: 14000 },
                         { key: "cn-hightech", name: "Pièces d'ordinateur & High-Tech", delay: "Express", price: "50 000 FCFA", unit: "/ pièce", matchId: "tariff-flyer-cn-tech", keyword: "ordinateur", defaultVal: 50000 },
                         { key: "cn-bateau", name: "Par Bateau (Le CBM conteneur)", delay: "35 - 45 jours", price: "300 000 FCFA", unit: "/ m³", matchId: "tariff-flyer-cn-sea", keyword: "bateau", defaultVal: 300000 },
-                      ].map((item) => {
+                      ].map((item, idx, arr) => {
                         const matchedTariff = tariffsList.find(
                           (t) =>
                             (t.origin_country || "").toLowerCase().includes("chine") &&
@@ -6656,7 +6656,8 @@ export default function AdminPage() {
                               alignItems: "center",
                               justifyContent: "space-between",
                               gap: "10px",
-                              padding: "8px 6px",
+                              padding: "10px 4px",
+                              borderBottom: idx < arr.length - 1 ? "1px solid var(--border-light)" : "none",
                             }}
                           >
                             <div style={{ minWidth: 0, flex: 1 }}>
@@ -6747,7 +6748,7 @@ export default function AdminPage() {
                         { key: "ae-normale", name: "Voie normale Dubaï (2 semaines)", delay: "10 à 14 j", price: "10 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-ae-normal", keyword: "normale", defaultVal: 10000 },
                         { key: "ae-special", name: "Marchandises Spéciales Dubaï", delay: "7 à 10 j", price: "14 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-ae-special", keyword: "spécial", defaultVal: 14000 },
                         { key: "ae-bateau", name: "Par Bateau Dubaï (Le CBM)", delay: "30 - 40 jours", price: "300 000 FCFA", unit: "/ m³", matchId: "tariff-flyer-ae-sea", keyword: "bateau", defaultVal: 300000 },
-                      ].map((item) => {
+                      ].map((item, idx, arr) => {
                         const matchedTariff = tariffsList.find(
                           (t) =>
                             ((t.origin_country || "").toLowerCase().includes("émirat") || (t.origin_country || "").toLowerCase().includes("duba")) &&
@@ -6765,7 +6766,8 @@ export default function AdminPage() {
                               alignItems: "center",
                               justifyContent: "space-between",
                               gap: "10px",
-                              padding: "8px 6px",
+                              padding: "10px 4px",
+                              borderBottom: idx < arr.length - 1 ? "1px solid var(--border-light)" : "none",
                             }}
                           >
                             <div style={{ minWidth: 0, flex: 1 }}>
@@ -6894,7 +6896,7 @@ export default function AdminPage() {
                         </div>
 
                         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                          {baseRoutes.map((route) => {
+                          {baseRoutes.map((route, idx) => {
                             const matchedTariff = tariffsList.find(
                               (t) =>
                                 (t.origin_country || "").toLowerCase().includes("maroc") &&
@@ -6902,6 +6904,7 @@ export default function AdminPage() {
                                   (t.service_name || "").toLowerCase().includes(route.matchKeyword))
                             );
                             const currentPrice = matchedTariff ? formatCurrencyPrice(matchedTariff.price_per_unit_minor, matchedTariff.currency) : route.price;
+                            const isLast = idx === baseRoutes.length - 1 && customMoroccoTariffs.length === 0;
 
                             return (
                               <div
@@ -6911,7 +6914,8 @@ export default function AdminPage() {
                                   alignItems: "center",
                                   justifyContent: "space-between",
                                   gap: "10px",
-                                  padding: "8px 6px",
+                                  padding: "10px 4px",
+                                  borderBottom: isLast ? "none" : "1px solid var(--border-light)",
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
@@ -6957,7 +6961,7 @@ export default function AdminPage() {
                             );
                           })}
 
-                          {customMoroccoTariffs.map((t) => {
+                          {customMoroccoTariffs.map((t, idx, arr) => {
                             const destName = t.destination_country || t.service_name || "Destination";
                             const flagCode = getCountryCodeFromName(destName) || "MA";
                             const currentPrice = formatCurrencyPrice(t.price_per_unit_minor, t.currency);
@@ -6970,7 +6974,8 @@ export default function AdminPage() {
                                   alignItems: "center",
                                   justifyContent: "space-between",
                                   gap: "10px",
-                                  padding: "8px 6px",
+                                  padding: "10px 4px",
+                                  borderBottom: idx < arr.length - 1 ? "1px solid var(--border-light)" : "none",
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
@@ -7093,7 +7098,7 @@ export default function AdminPage() {
 
                       return (
                         <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "260px", overflowY: "auto", paddingRight: "2px" }}>
-                          {customAirTariffs.slice(0, 5).map((t) => (
+                          {customAirTariffs.slice(0, 5).map((t, idx, arr) => (
                             <div
                               key={t.id}
                               style={{
@@ -7101,7 +7106,8 @@ export default function AdminPage() {
                                 alignItems: "center",
                                 justifyContent: "space-between",
                                 gap: "10px",
-                                padding: "8px 6px",
+                                padding: "10px 4px",
+                                borderBottom: idx < arr.length - 1 ? "1px solid var(--border-light)" : "none",
                               }}
                             >
                               <div style={{ display: "flex", alignItems: "center", gap: "7px", minWidth: 0, flex: 1 }}>
@@ -8174,7 +8180,7 @@ export default function AdminPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "18px" }}>
                 {/* Entrepôt Chine */}
-                <div style={{ padding: "12px 6px" }}>
+                <div style={{ padding: "12px 6px 20px 6px", borderBottom: "1px solid var(--border-light)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
                     <CircularFlag countryCode="CN" size={16} />
                     <strong style={{ fontSize: "0.88rem", color: "var(--brown-dark)" }}>Entrepôt Guangzhou (Chine)</strong>
@@ -8220,7 +8226,7 @@ export default function AdminPage() {
                 </div>
 
                 {/* Entrepôt Dubaï */}
-                <div style={{ padding: "12px 6px" }}>
+                <div style={{ padding: "12px 6px 20px 6px", borderBottom: "1px solid var(--border-light)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
                     <CircularFlag countryCode="AE" size={16} />
                     <strong style={{ fontSize: "0.88rem", color: "var(--brown-dark)" }}>Entrepôt Dubaï (Émirats Arabes Unis)</strong>
@@ -8254,7 +8260,7 @@ export default function AdminPage() {
                 </div>
 
                 {/* Magasin & Dépôt France */}
-                <div style={{ padding: "12px 6px" }}>
+                <div style={{ padding: "12px 6px 20px 6px", borderBottom: "1px solid var(--border-light)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
                     <CircularFlag countryCode="FR" size={16} />
                     <strong style={{ fontSize: "0.88rem", color: "var(--brown-dark)" }}>Magasin & Dépôt Paris (France & Europe)</strong>
@@ -8292,7 +8298,8 @@ export default function AdminPage() {
                   <div
                     key={hub.id}
                     style={{
-                      padding: "12px 6px",
+                      padding: "12px 6px 20px 6px",
+                      borderBottom: "1px solid var(--border-light)",
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "space-between",
@@ -8395,10 +8402,11 @@ export default function AdminPage() {
                   return (
                     <div
                       style={{
-                        padding: isEditing ? "18px" : "12px 6px",
+                        padding: isEditing ? "18px" : "12px 6px 20px 6px",
                         background: isEditing ? "#FFFFFF" : "transparent",
-                        borderRadius: "16px",
+                        borderRadius: isEditing ? "16px" : "0",
                         border: isEditing ? "1.5px solid var(--brown-dark)" : "none",
+                        borderBottom: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
                         boxShadow: isEditing ? "0 8px 24px rgba(28, 25, 23, 0.08)" : "none",
                         transition: "all 0.2s ease",
                       }}
@@ -8532,10 +8540,11 @@ export default function AdminPage() {
                   return (
                     <div
                       style={{
-                        padding: isEditing ? "18px" : "12px 6px",
+                        padding: isEditing ? "18px" : "12px 6px 20px 6px",
                         background: isEditing ? "#FFFFFF" : "transparent",
-                        borderRadius: "16px",
+                        borderRadius: isEditing ? "16px" : "0",
                         border: isEditing ? "1.5px solid var(--brown-dark)" : "none",
+                        borderBottom: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
                         boxShadow: isEditing ? "0 8px 24px rgba(28, 25, 23, 0.08)" : "none",
                         transition: "all 0.2s ease",
                       }}
@@ -8654,10 +8663,11 @@ export default function AdminPage() {
                   return (
                     <div
                       style={{
-                        padding: isEditing ? "18px" : "12px 6px",
+                        padding: isEditing ? "18px" : "12px 6px 20px 6px",
                         background: isEditing ? "#FFFFFF" : "transparent",
-                        borderRadius: "16px",
+                        borderRadius: isEditing ? "16px" : "0",
                         border: isEditing ? "1.5px solid var(--brown-dark)" : "none",
+                        borderBottom: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
                         boxShadow: isEditing ? "0 8px 24px rgba(28, 25, 23, 0.08)" : "none",
                         transition: "all 0.2s ease",
                       }}
