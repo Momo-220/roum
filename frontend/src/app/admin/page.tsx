@@ -4637,7 +4637,7 @@ export default function AdminPage() {
                                   padding: "12px 14px",
                                   borderRadius: "12px",
                                   border: "1px solid var(--border-light)",
-                                  background: "#FAF8F5",
+                                  background: "#FFFFFF",
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "space-between",
@@ -4691,7 +4691,7 @@ export default function AdminPage() {
                                   padding: "12px 14px",
                                   borderRadius: "12px",
                                   border: "1px solid var(--border-light)",
-                                  background: "#FAF8F5",
+                                  background: "#FFFFFF",
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "space-between",
@@ -4735,7 +4735,7 @@ export default function AdminPage() {
                                   padding: "12px 14px",
                                   borderRadius: "12px",
                                   border: "1px solid var(--border-light)",
-                                  background: "#FAF8F5",
+                                  background: "#FFFFFF",
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "space-between",
@@ -4779,7 +4779,7 @@ export default function AdminPage() {
                                   padding: "10px 14px",
                                   borderRadius: "12px",
                                   border: "1px solid var(--border-light)",
-                                  background: "#FAF8F5",
+                                  background: "#FFFFFF",
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "space-between",
@@ -5099,8 +5099,8 @@ export default function AdminPage() {
                           <div
                             className="ios-bubble-agent"
                             style={{
-                              background: "#FAF8F5",
-                              border: "1px solid rgba(28, 25, 23, 0.1)",
+                              background: "#FFFFFF",
+                              border: "1px solid var(--border-light)",
                               color: "var(--text-main)",
                               borderRadius: "16px 16px 16px 4px",
                               padding: "10px 14px",
@@ -5151,7 +5151,7 @@ export default function AdminPage() {
                       <div style={{ fontSize: "0.66rem", color: "#8E8E93", padding: "0 6px", fontWeight: "500" }}>
                         Assistante Roum prépare votre rapport...
                       </div>
-                      <div className="ios-typing-indicator" style={{ background: "#FAF8F5", border: "1px solid rgba(28, 25, 23, 0.1)" }}>
+                      <div className="ios-typing-indicator" style={{ background: "#FFFFFF", border: "1px solid var(--border-light)" }}>
                         <span className="ios-typing-dot" style={{ background: "var(--brown-dark)" }} />
                         <span className="ios-typing-dot" style={{ background: "var(--brown-dark)" }} />
                         <span className="ios-typing-dot" style={{ background: "var(--brown-dark)" }} />
@@ -5194,8 +5194,8 @@ export default function AdminPage() {
                       width: "28px",
                       height: "28px",
                       borderRadius: "50%",
-                      border: "1px solid rgba(28, 25, 23, 0.16)",
-                      background: "#FAF8F5",
+                      border: "1px solid var(--border-light)",
+                      background: "#FFFFFF",
                       color: "var(--brown-dark)",
                       display: "flex",
                       alignItems: "center",
@@ -5497,7 +5497,7 @@ export default function AdminPage() {
                       </div>
 
                       {/* Trajet & Mode de transport (Style Bordereau Épuré, Zéro Dépassement) */}
-                      <div style={{ padding: "12px 14px", background: "#FAF8F5", borderRadius: "14px", border: "1px solid rgba(28, 25, 23, 0.07)", overflow: "hidden" }}>
+                      <div style={{ padding: "12px 14px", background: "#FFFFFF", borderRadius: "14px", border: "1px solid var(--border-light)", overflow: "hidden" }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "8px", minWidth: 0 }}>
                           <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             Corridor
@@ -6657,9 +6657,9 @@ export default function AdminPage() {
                               justifyContent: "space-between",
                               gap: "10px",
                               padding: "9px 12px",
-                              background: "#FAF8F5",
+                              background: "#FFFFFF",
                               borderRadius: "10px",
-                              border: "1px solid rgba(28, 25, 23, 0.07)",
+                              border: "1px solid var(--border-light)",
                             }}
                           >
                             <div style={{ minWidth: 0, flex: 1 }}>
@@ -6769,9 +6769,9 @@ export default function AdminPage() {
                               justifyContent: "space-between",
                               gap: "10px",
                               padding: "9px 12px",
-                              background: "#FAF8F5",
+                              background: "#FFFFFF",
                               borderRadius: "10px",
-                              border: "1px solid rgba(28, 25, 23, 0.07)",
+                              border: "1px solid var(--border-light)",
                             }}
                           >
                             <div style={{ minWidth: 0, flex: 1 }}>
@@ -6918,9 +6918,9 @@ export default function AdminPage() {
                                   justifyContent: "space-between",
                                   gap: "10px",
                                   padding: "9px 12px",
-                                  background: "#FAF8F5",
+                                  background: "#FFFFFF",
                                   borderRadius: "10px",
-                                  border: "1px solid rgba(28, 25, 23, 0.07)",
+                                  border: "1px solid var(--border-light)",
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
@@ -6980,9 +6980,9 @@ export default function AdminPage() {
                                   justifyContent: "space-between",
                                   gap: "10px",
                                   padding: "9px 12px",
-                                  background: "#FAF8F5",
+                                  background: "#FFFFFF",
                                   borderRadius: "10px",
-                                  border: "1px solid rgba(28, 25, 23, 0.07)",
+                                  border: "1px solid var(--border-light)",
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
@@ -7083,7 +7083,7 @@ export default function AdminPage() {
 
                       if (customAirTariffs.length === 0) {
                         return (
-                          <div style={{ textAlign: "center", padding: "20px 14px", background: "#FAF8F5", borderRadius: "12px", border: "1px dashed rgba(28, 25, 23, 0.18)" }}>
+                          <div style={{ textAlign: "center", padding: "20px 14px", background: "#FFFFFF", borderRadius: "12px", border: "1px dashed var(--border-light)" }}>
                             <Plane size={22} style={{ color: "var(--brown-light)", margin: "0 auto 6px auto", opacity: 0.8 }} />
                             <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--brown-dark)", marginBottom: "3px" }}>
                               Aucune liaison imposée
@@ -7114,9 +7114,9 @@ export default function AdminPage() {
                                 justifyContent: "space-between",
                                 gap: "10px",
                                 padding: "9px 12px",
-                                background: "#FAF8F5",
+                                background: "#FFFFFF",
                                 borderRadius: "10px",
-                                border: "1px solid rgba(28, 25, 23, 0.07)",
+                                border: "1px solid var(--border-light)",
                               }}
                             >
                               <div style={{ display: "flex", alignItems: "center", gap: "7px", minWidth: 0, flex: 1 }}>
@@ -7356,9 +7356,9 @@ export default function AdminPage() {
                                 <span
                                   className="badge-clean"
                                   style={{
-                                    background: "#FAF8F5",
+                                    background: "#FFFFFF",
                                     color: "var(--brown-dark)",
-                                    border: "1px solid rgba(28, 25, 23, 0.08)",
+                                    border: "1px solid var(--border-light)",
                                     fontWeight: "700",
                                     padding: "4px 10px",
                                     borderRadius: "8px",
@@ -10608,7 +10608,7 @@ export default function AdminPage() {
 
             <form onSubmit={handleCreateAirRoute} style={{ display: "grid", gap: "14px" }}>
               {/* Type de liaison / Sens */}
-              <div style={{ background: "#FAF8F5", padding: "12px 14px", borderRadius: "14px", border: "1px solid rgba(28, 25, 23, 0.08)" }}>
+              <div style={{ background: "#FFFFFF", padding: "12px 14px", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
                 <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--brown-dark)", display: "block", marginBottom: "8px" }}>
                   Sens de la liaison aérienne
                 </label>
@@ -10916,7 +10916,7 @@ export default function AdminPage() {
                     disabled
                     value="Maroc (Casablanca)"
                     className="input-clean"
-                    style={{ background: "#FAF8F5", fontWeight: "700", cursor: "not-allowed" }}
+                    style={{ background: "#F3F4F6", fontWeight: "700", cursor: "not-allowed" }}
                   />
                 </div>
                 <div>
@@ -12232,10 +12232,10 @@ export default function AdminPage() {
 
             <div
               style={{
-                background: "#FAF8F5",
+                background: "#FFFFFF",
                 borderRadius: "16px",
                 padding: "16px",
-                border: "1px solid rgba(28, 25, 23, 0.08)",
+                border: "1px solid var(--border-light)",
                 textAlign: "left",
                 display: "flex",
                 flexDirection: "column",

@@ -1310,8 +1310,8 @@ export function RouteGlobe({
                       type="button"
                       onClick={resetGlobe}
                       style={{
-                        background: "#FAF8F5",
-                        border: "1px solid rgba(28, 25, 23, 0.12)",
+                        background: "#FFFFFF",
+                        border: "1px solid var(--border-light)",
                         borderRadius: "9999px",
                         color: "var(--brown-dark)",
                         cursor: "pointer",
@@ -1341,9 +1341,9 @@ export function RouteGlobe({
               fontSize: "0.76rem",
               gap: "6px",
               borderRadius: "var(--radius-full)",
-              background: isExp ? "var(--brown-dark)" : "#FAF8F5",
-              color: isExp ? "#FAF8F5" : "var(--brown-dark)",
-              borderColor: isExp ? "var(--brown-dark)" : "rgba(28, 25, 23, 0.12)",
+              background: isExp ? "var(--btn-primary-bg)" : "#FFFFFF",
+              color: isExp ? "#FFFFFF" : "var(--brown-dark)",
+              borderColor: isExp ? "var(--btn-primary-bg)" : "var(--border-light)",
               fontWeight: "700",
               flexShrink: 0,
               whiteSpace: "nowrap",
