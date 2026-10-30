@@ -4180,7 +4180,7 @@ export default function AdminPage() {
             <div
               onClick={openProfileModal}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(112, 72, 56, 0.04)";
+                e.currentTarget.style.background = "rgba(28, 25, 23, 0.04)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = "transparent";
@@ -4821,8 +4821,8 @@ export default function AdminPage() {
                   height: "740px",
                   background: "#FFFFFF",
                   borderRadius: "22px",
-                  border: "1px solid rgba(112, 72, 56, 0.1)",
-                  boxShadow: "0 8px 28px -6px rgba(112, 72, 56, 0.06)",
+                  border: "1px solid rgba(28, 25, 23, 0.1)",
+                  boxShadow: "0 8px 28px -6px rgba(28, 25, 23, 0.06)",
                 }}
               >
                 {/* 1. Entête Exécutif Épuré (Salutation Personnalisée inspirée de la maquette) */}
@@ -4832,8 +4832,8 @@ export default function AdminPage() {
                       width: "38px",
                       height: "38px",
                       borderRadius: "50%",
-                      background: "rgba(140, 88, 67, 0.08)",
-                      border: "1px solid rgba(140, 88, 67, 0.16)",
+                      background: "rgba(28, 25, 23, 0.08)",
+                      border: "1px solid rgba(28, 25, 23, 0.16)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -4895,7 +4895,7 @@ export default function AdminPage() {
                           width: "28px",
                           height: "28px",
                           borderRadius: "8px",
-                          background: "rgba(120, 77, 60, 0.09)",
+                          background: "rgba(28, 25, 23, 0.09)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -4920,7 +4920,7 @@ export default function AdminPage() {
                         width: "100%",
                         padding: "5px 6px",
                         borderRadius: "9999px",
-                        border: "1px solid rgba(120, 77, 60, 0.16)",
+                        border: "1px solid rgba(28, 25, 23, 0.16)",
                         background: "#FFFFFF",
                         color: "var(--brown-dark)",
                         fontSize: "0.70rem",
@@ -4952,7 +4952,7 @@ export default function AdminPage() {
                           width: "28px",
                           height: "28px",
                           borderRadius: "8px",
-                          background: "rgba(120, 77, 60, 0.09)",
+                          background: "rgba(28, 25, 23, 0.09)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -4977,7 +4977,7 @@ export default function AdminPage() {
                         width: "100%",
                         padding: "5px 6px",
                         borderRadius: "9999px",
-                        border: "1px solid rgba(120, 77, 60, 0.16)",
+                        border: "1px solid rgba(28, 25, 23, 0.16)",
                         background: "#FFFFFF",
                         color: "var(--brown-dark)",
                         fontSize: "0.70rem",
@@ -5009,7 +5009,7 @@ export default function AdminPage() {
                           width: "28px",
                           height: "28px",
                           borderRadius: "8px",
-                          background: "rgba(120, 77, 60, 0.09)",
+                          background: "rgba(28, 25, 23, 0.09)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -5034,7 +5034,7 @@ export default function AdminPage() {
                         width: "100%",
                         padding: "5px 6px",
                         borderRadius: "9999px",
-                        border: "1px solid rgba(120, 77, 60, 0.16)",
+                        border: "1px solid rgba(28, 25, 23, 0.16)",
                         background: "#FFFFFF",
                         color: "var(--brown-dark)",
                         fontSize: "0.70rem",
@@ -5092,7 +5092,7 @@ export default function AdminPage() {
                             className="ios-bubble-agent"
                             style={{
                               background: "#FAF8F5",
-                              border: "1px solid rgba(120, 77, 60, 0.1)",
+                              border: "1px solid rgba(28, 25, 23, 0.1)",
                               color: "var(--text-main)",
                               borderRadius: "16px 16px 16px 4px",
                               padding: "10px 14px",
@@ -5121,7 +5121,7 @@ export default function AdminPage() {
                                       fontSize: "0.72rem",
                                       borderRadius: "9999px",
                                       background: "#FFFFFF",
-                                      border: "1px solid rgba(120, 77, 60, 0.2)",
+                                      border: "1px solid rgba(28, 25, 23, 0.2)",
                                       color: "var(--brown-dark)",
                                       fontWeight: "700",
                                     }}
@@ -5143,7 +5143,7 @@ export default function AdminPage() {
                       <div style={{ fontSize: "0.66rem", color: "#8E8E93", padding: "0 6px", fontWeight: "500" }}>
                         Assistante Roum prépare votre rapport...
                       </div>
-                      <div className="ios-typing-indicator" style={{ background: "#FAF8F5", border: "1px solid rgba(120, 77, 60, 0.1)" }}>
+                      <div className="ios-typing-indicator" style={{ background: "#FAF8F5", border: "1px solid rgba(28, 25, 23, 0.1)" }}>
                         <span className="ios-typing-dot" style={{ background: "var(--brown-dark)" }} />
                         <span className="ios-typing-dot" style={{ background: "var(--brown-dark)" }} />
                         <span className="ios-typing-dot" style={{ background: "var(--brown-dark)" }} />
@@ -5167,8 +5167,8 @@ export default function AdminPage() {
                     alignItems: "center",
                     background: "#FFFFFF",
                     borderRadius: "9999px",
-                    border: "1px solid rgba(140, 88, 67, 0.2)",
-                    boxShadow: "0 2px 14px rgba(140, 88, 67, 0.06)",
+                    border: "1px solid rgba(28, 25, 23, 0.2)",
+                    boxShadow: "0 2px 14px rgba(28, 25, 23, 0.06)",
                     padding: "6px 8px 6px 10px",
                     gap: "8px",
                     marginTop: "12px",
@@ -5186,7 +5186,7 @@ export default function AdminPage() {
                       width: "28px",
                       height: "28px",
                       borderRadius: "50%",
-                      border: "1px solid rgba(140, 88, 67, 0.16)",
+                      border: "1px solid rgba(28, 25, 23, 0.16)",
                       background: "#FAF8F5",
                       color: "var(--brown-dark)",
                       display: "flex",
@@ -5227,7 +5227,7 @@ export default function AdminPage() {
                       height: "32px",
                       borderRadius: "50%",
                       border: "none",
-                      background: !chatInput.trim() || isAgentThinking ? "rgba(140, 88, 67, 0.3)" : "var(--brown-dark)",
+                      background: !chatInput.trim() || isAgentThinking ? "rgba(28, 25, 23, 0.3)" : "var(--brown-dark)",
                       color: "#FFFFFF",
                       display: "flex",
                       alignItems: "center",
@@ -5403,14 +5403,14 @@ export default function AdminPage() {
                     gap: "14px",
                     background: "#FFFFFF",
                     borderRadius: "22px",
-                    border: "1px solid rgba(112, 72, 56, 0.08)",
-                    boxShadow: "0 8px 28px -4px rgba(112, 72, 56, 0.04)",
+                    border: "1px solid rgba(28, 25, 23, 0.08)",
+                    boxShadow: "0 8px 28px -4px rgba(28, 25, 23, 0.04)",
                   }}
                 >
                   {activeShipment ? (
                     <>
                       {/* Entête Fiche Colis */}
-                      <div style={{ paddingBottom: "14px", borderBottom: "1px solid rgba(112, 72, 56, 0.07)", display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div style={{ paddingBottom: "14px", borderBottom: "1px solid rgba(28, 25, 23, 0.07)", display: "flex", flexDirection: "column", gap: "8px" }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: "8px" }}>
                           <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.7rem", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--brown-light)" }}>
                             <span className="live-pulse" style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#059669" }} />
@@ -5453,7 +5453,7 @@ export default function AdminPage() {
                             title="Copier le numéro de suivi"
                             style={{
                               background: copiedTracking ? "rgba(40, 167, 69, 0.1)" : "#F7F5F2",
-                              border: "1px solid " + (copiedTracking ? "#28A745" : "rgba(112, 72, 56, 0.08)"),
+                              border: "1px solid " + (copiedTracking ? "#28A745" : "rgba(28, 25, 23, 0.08)"),
                               borderRadius: "9999px",
                               padding: "4px 10px",
                               cursor: "pointer",
@@ -5489,12 +5489,12 @@ export default function AdminPage() {
                       </div>
 
                       {/* Trajet & Mode de transport (Style Bordereau Épuré, Zéro Dépassement) */}
-                      <div style={{ padding: "12px 14px", background: "#FAF8F5", borderRadius: "14px", border: "1px solid rgba(112, 72, 56, 0.07)", overflow: "hidden" }}>
+                      <div style={{ padding: "12px 14px", background: "#FAF8F5", borderRadius: "14px", border: "1px solid rgba(28, 25, 23, 0.07)", overflow: "hidden" }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "8px", minWidth: 0 }}>
                           <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.05em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                             Corridor
                           </span>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.68rem", color: "var(--brown-dark)", fontWeight: "700", background: "#FFFFFF", padding: "2px 8px", borderRadius: "9999px", border: "1px solid rgba(112, 72, 56, 0.08)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.68rem", color: "var(--brown-dark)", fontWeight: "700", background: "#FFFFFF", padding: "2px 8px", borderRadius: "9999px", border: "1px solid rgba(28, 25, 23, 0.08)", whiteSpace: "nowrap", flexShrink: 0 }}>
                             {(activeShipment.shipping_mode_name || "").includes("Aérien") || activeShipment.shipping_mode_id === "AIR_EXPRESS" ? (
                               <>
                                 <Plane size={11} strokeWidth={1.8} /> Aérien Express
@@ -5556,13 +5556,13 @@ export default function AdminPage() {
 
                       {/* Métriques Poids & Colis */}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                        <div style={{ padding: "9px 12px", background: "#F8F7F5", borderRadius: "12px", border: "1px solid rgba(112, 72, 56, 0.06)" }}>
+                        <div style={{ padding: "9px 12px", background: "#F8F7F5", borderRadius: "12px", border: "1px solid rgba(28, 25, 23, 0.06)" }}>
                           <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.04em" }}>Poids Total</div>
                           <div style={{ fontSize: "1rem", fontWeight: "800", color: "var(--brown-dark)", marginTop: "2px" }} className="tabular-nums">
                             {activeShipment.total_weight_kg || activeShipment.weight_kg || 0} kg
                           </div>
                         </div>
-                        <div style={{ padding: "9px 12px", background: "#F8F7F5", borderRadius: "12px", border: "1px solid rgba(112, 72, 56, 0.06)" }}>
+                        <div style={{ padding: "9px 12px", background: "#F8F7F5", borderRadius: "12px", border: "1px solid rgba(28, 25, 23, 0.06)" }}>
                           <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700", letterSpacing: "0.04em" }}>Colisage</div>
                           <div style={{ fontSize: "1rem", fontWeight: "800", color: "var(--brown-dark)", marginTop: "2px" }} className="tabular-nums">
                             {activeShipment.total_parcels_count || 1} colis
@@ -5576,7 +5576,7 @@ export default function AdminPage() {
                           <span style={{ fontSize: "0.66rem", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>
                             Progression de livraison
                           </span>
-                          <span style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--brown-dark)", background: "#F6F3EE", padding: "2px 8px", borderRadius: "9999px", border: "1px solid rgba(112, 72, 56, 0.08)" }}>
+                          <span style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--brown-dark)", background: "#F6F3EE", padding: "2px 8px", borderRadius: "9999px", border: "1px solid rgba(28, 25, 23, 0.08)" }}>
                             Étape {getShipmentPhase(activeShipment.current_status)} / 5
                           </span>
                         </div>
@@ -5606,7 +5606,7 @@ export default function AdminPage() {
                                           top: "12px",
                                           bottom: 0,
                                           width: "1.5px",
-                                          background: isDone ? "#059669" : "rgba(112, 72, 56, 0.12)",
+                                          background: isDone ? "#059669" : "rgba(28, 25, 23, 0.12)",
                                         }}
                                       />
                                     )}
@@ -5621,7 +5621,7 @@ export default function AdminPage() {
                                           : isCurrent
                                           ? "var(--brown-dark)"
                                           : "#E5E7EB",
-                                        boxShadow: isCurrent ? "0 0 0 3px rgba(112, 72, 56, 0.16)" : "none",
+                                        boxShadow: isCurrent ? "0 0 0 3px rgba(28, 25, 23, 0.16)" : "none",
                                         flexShrink: 0,
                                         zIndex: 1,
                                       }}
@@ -5905,7 +5905,7 @@ export default function AdminPage() {
                         style={{
                           padding: "11px 14px",
                           background: isDone ? "#FAFAFC" : "#FAF9F7",
-                          border: "1px solid rgba(112, 72, 56, 0.07)",
+                          border: "1px solid rgba(28, 25, 23, 0.07)",
                           borderRadius: "13px",
                           display: "flex",
                           alignItems: "center",
@@ -6425,7 +6425,7 @@ export default function AdminPage() {
                       <tr key={c.id} className="table-row-clean">
                         <td style={{ fontWeight: "700", color: "var(--text-main)" }}>
                           <div style={{ display: "inline-flex", alignItems: "center", gap: "10px" }}>
-                            <span style={{ width: "28px", height: "28px", borderRadius: "50%", background: "#F6F3EE", border: "1px solid rgba(112, 72, 56, 0.08)", color: "var(--brown-dark)", fontSize: "0.74rem", fontWeight: "800", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ width: "28px", height: "28px", borderRadius: "50%", background: "#F6F3EE", border: "1px solid rgba(28, 25, 23, 0.08)", color: "var(--brown-dark)", fontSize: "0.74rem", fontWeight: "800", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                               {(c.full_name || "C").charAt(0).toUpperCase()}
                             </span>
                             <span>{c.full_name}</span>
@@ -6651,7 +6651,7 @@ export default function AdminPage() {
                               padding: "9px 12px",
                               background: "#FAF8F5",
                               borderRadius: "10px",
-                              border: "1px solid rgba(112, 72, 56, 0.07)",
+                              border: "1px solid rgba(28, 25, 23, 0.07)",
                             }}
                           >
                             <div style={{ minWidth: 0, flex: 1 }}>
@@ -6763,7 +6763,7 @@ export default function AdminPage() {
                               padding: "9px 12px",
                               background: "#FAF8F5",
                               borderRadius: "10px",
-                              border: "1px solid rgba(112, 72, 56, 0.07)",
+                              border: "1px solid rgba(28, 25, 23, 0.07)",
                             }}
                           >
                             <div style={{ minWidth: 0, flex: 1 }}>
@@ -6912,7 +6912,7 @@ export default function AdminPage() {
                                   padding: "9px 12px",
                                   background: "#FAF8F5",
                                   borderRadius: "10px",
-                                  border: "1px solid rgba(112, 72, 56, 0.07)",
+                                  border: "1px solid rgba(28, 25, 23, 0.07)",
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
@@ -6974,7 +6974,7 @@ export default function AdminPage() {
                                   padding: "9px 12px",
                                   background: "#FAF8F5",
                                   borderRadius: "10px",
-                                  border: "1px solid rgba(112, 72, 56, 0.07)",
+                                  border: "1px solid rgba(28, 25, 23, 0.07)",
                                 }}
                               >
                                 <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
@@ -7027,7 +7027,7 @@ export default function AdminPage() {
                   <div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginBottom: "14px", paddingBottom: "10px", borderBottom: "1px solid var(--border-light)" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "9px", minWidth: 0 }}>
-                        <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "rgba(112, 72, 56, 0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "rgba(28, 25, 23, 0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                           <Plane size={16} color="var(--brown-dark)" />
                         </div>
                         <div style={{ minWidth: 0 }}>
@@ -7075,7 +7075,7 @@ export default function AdminPage() {
 
                       if (customAirTariffs.length === 0) {
                         return (
-                          <div style={{ textAlign: "center", padding: "20px 14px", background: "#FAF8F5", borderRadius: "12px", border: "1px dashed rgba(112, 72, 56, 0.18)" }}>
+                          <div style={{ textAlign: "center", padding: "20px 14px", background: "#FAF8F5", borderRadius: "12px", border: "1px dashed rgba(28, 25, 23, 0.18)" }}>
                             <Plane size={22} style={{ color: "var(--brown-light)", margin: "0 auto 6px auto", opacity: 0.8 }} />
                             <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--brown-dark)", marginBottom: "3px" }}>
                               Aucune liaison imposée
@@ -7108,7 +7108,7 @@ export default function AdminPage() {
                                 padding: "9px 12px",
                                 background: "#FAF8F5",
                                 borderRadius: "10px",
-                                border: "1px solid rgba(112, 72, 56, 0.07)",
+                                border: "1px solid rgba(28, 25, 23, 0.07)",
                               }}
                             >
                               <div style={{ display: "flex", alignItems: "center", gap: "7px", minWidth: 0, flex: 1 }}>
@@ -7350,7 +7350,7 @@ export default function AdminPage() {
                                   style={{
                                     background: "#FAF8F5",
                                     color: "var(--brown-dark)",
-                                    border: "1px solid rgba(112, 72, 56, 0.08)",
+                                    border: "1px solid rgba(28, 25, 23, 0.08)",
                                     fontWeight: "700",
                                     padding: "4px 10px",
                                     borderRadius: "8px",
@@ -7563,7 +7563,7 @@ export default function AdminPage() {
                     padding: "16px 22px",
                     borderRadius: "18px",
                     background: "#FFFFFF",
-                    border: "1px solid rgba(112, 72, 56, 0.07)",
+                    border: "1px solid rgba(28, 25, 23, 0.07)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
@@ -7598,7 +7598,7 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <div className="card-clean" style={{ padding: "0", overflow: "hidden", borderRadius: "22px", border: "1px solid var(--border-light)", background: "#FFFFFF" }}>
-                  <div style={{ padding: "18px 24px", background: "#FFFFFF", borderBottom: "1px solid rgba(112, 72, 56, 0.07)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                  <div style={{ padding: "18px 24px", background: "#FFFFFF", borderBottom: "1px solid rgba(28, 25, 23, 0.07)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                       <span className="metric-icon-box">
                         <Clock size={18} strokeWidth={1.8} />
@@ -7703,7 +7703,7 @@ export default function AdminPage() {
 
               {/* TABLEAU 2 SÉPARÉ : HISTORIQUE DES ENCAISSEMENTS CONFIRMÉS */}
               <div className="card-clean" style={{ padding: "0", overflow: "hidden", borderRadius: "22px", border: "1px solid var(--border-light)", background: "#FFFFFF" }}>
-                <div style={{ padding: "18px 24px", borderBottom: "1px solid rgba(112, 72, 56, 0.07)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                <div style={{ padding: "18px 24px", borderBottom: "1px solid rgba(28, 25, 23, 0.07)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#059669" }} />
                     <div>
@@ -8409,7 +8409,7 @@ export default function AdminPage() {
                         background: "#FFFFFF",
                         borderRadius: "16px",
                         border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
-                        boxShadow: isEditing ? "0 8px 24px rgba(112, 72, 56, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        boxShadow: isEditing ? "0 8px 24px rgba(28, 25, 23, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
                         transition: "all 0.2s ease",
                       }}
                     >
@@ -8546,7 +8546,7 @@ export default function AdminPage() {
                         background: "#FFFFFF",
                         borderRadius: "16px",
                         border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
-                        boxShadow: isEditing ? "0 8px 24px rgba(112, 72, 56, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        boxShadow: isEditing ? "0 8px 24px rgba(28, 25, 23, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
                         transition: "all 0.2s ease",
                       }}
                     >
@@ -8668,7 +8668,7 @@ export default function AdminPage() {
                         background: "#FFFFFF",
                         borderRadius: "16px",
                         border: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
-                        boxShadow: isEditing ? "0 8px 24px rgba(112, 72, 56, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
+                        boxShadow: isEditing ? "0 8px 24px rgba(28, 25, 23, 0.08)" : "0 2px 8px rgba(0, 0, 0, 0.02)",
                         transition: "all 0.2s ease",
                       }}
                     >
@@ -8840,7 +8840,7 @@ export default function AdminPage() {
                     }
                   }}
                   className="btn btn-primary"
-                  style={{ padding: "11px 28px", fontSize: "0.92rem", borderRadius: "9999px", boxShadow: "0 4px 14px rgba(112, 72, 56, 0.25)" }}
+                  style={{ padding: "11px 28px", fontSize: "0.92rem", borderRadius: "9999px", boxShadow: "0 4px 14px rgba(28, 25, 23, 0.25)" }}
                 >
                   Enregistrer l&apos;ensemble des Paramètres
                 </button>
@@ -8856,7 +8856,7 @@ export default function AdminPage() {
                       width: "40px",
                       height: "40px",
                       borderRadius: "12px",
-                      background: "rgba(112, 72, 56, 0.08)",
+                      background: "rgba(28, 25, 23, 0.08)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -9040,7 +9040,7 @@ export default function AdminPage() {
             {/* Modal Header */}
             <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--border-light)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(112, 72, 56, 0.06)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--brown-dark)" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(28, 25, 23, 0.06)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--brown-dark)" }}>
                   <Package size={18} />
                 </div>
                 <div>
@@ -9338,7 +9338,7 @@ export default function AdminPage() {
             {/* Modal Header */}
             <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--border-light)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "rgba(112, 72, 56, 0.06)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--brown-dark)" }}>
+                <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "rgba(28, 25, 23, 0.06)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--brown-dark)" }}>
                   <DollarSign size={20} />
                 </div>
                 <div>
@@ -10577,7 +10577,7 @@ export default function AdminPage() {
           <div className="card-clean animate-fade-in" style={{ maxWidth: "580px", width: "100%", maxHeight: "92vh", overflowY: "auto", borderRadius: "24px", padding: "26px", boxShadow: "0 25px 60px rgba(0, 0, 0, 0.25)", background: "#FFFFFF" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid var(--border-light)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "rgba(112, 72, 56, 0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "rgba(28, 25, 23, 0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Plane size={20} color="var(--brown-dark)" />
                 </div>
                 <div>
@@ -10600,7 +10600,7 @@ export default function AdminPage() {
 
             <form onSubmit={handleCreateAirRoute} style={{ display: "grid", gap: "14px" }}>
               {/* Type de liaison / Sens */}
-              <div style={{ background: "#FAF8F5", padding: "12px 14px", borderRadius: "14px", border: "1px solid rgba(112, 72, 56, 0.08)" }}>
+              <div style={{ background: "#FAF8F5", padding: "12px 14px", borderRadius: "14px", border: "1px solid rgba(28, 25, 23, 0.08)" }}>
                 <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--brown-dark)", display: "block", marginBottom: "8px" }}>
                   Sens de la liaison aérienne
                 </label>
@@ -12160,7 +12160,7 @@ export default function AdminPage() {
                     alignItems: "center",
                     gap: "7px",
                     fontSize: "0.84rem",
-                    boxShadow: "0 4px 14px rgba(120, 77, 60, 0.22)",
+                    boxShadow: "0 4px 14px rgba(28, 25, 23, 0.22)",
                   }}
                 >
                   <Check size={15} />
@@ -12227,7 +12227,7 @@ export default function AdminPage() {
                 background: "#FAF8F5",
                 borderRadius: "16px",
                 padding: "16px",
-                border: "1px solid rgba(112, 72, 56, 0.08)",
+                border: "1px solid rgba(28, 25, 23, 0.08)",
                 textAlign: "left",
                 display: "flex",
                 flexDirection: "column",
