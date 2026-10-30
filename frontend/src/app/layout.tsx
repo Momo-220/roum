@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ROUM TRANSIT — Voie Maritime, Aérienne & Sourcing International",
+  title: "ROUM TRANSIT — Voie Maritime, Aérienne & Achats Internationaux",
   description:
     "Plateforme officielle de ROUM TRANSIT (Wholesale & Boutique) : suivi de colis en temps réel, voie maritime et aérienne Chine, Dubaï, Maroc vers l'Afrique.",
 };

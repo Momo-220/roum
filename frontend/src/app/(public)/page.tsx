@@ -258,7 +258,7 @@ export default function HomePage() {
             }}
           >
             <ShieldCheck size={16} color="var(--brown-light)" />
-            Transport International & Sourcing Sécurisé
+            Transport International & Achats Sécurisés
           </div>
 
           <h1
@@ -487,7 +487,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Service 3 : Achat & Sourcing */}
+            {/* Service 3 : Achat & Commandes */}
             <div className="card-clean" style={{ padding: "28px" }}>
               <div
                 style={{
@@ -506,7 +506,7 @@ export default function HomePage() {
                 <ShoppingBag size={24} />
               </div>
               <h3 style={{ fontSize: "1.2rem", marginBottom: "10px", color: "var(--text-main)" }}>
-                Achats & Sourcing Usines
+                Achats & Commandes Fournisseurs
               </h3>
               <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: "1.6", marginBottom: "16px" }}>
                 Accompagnement sur les marchés de gros (1688, Taobao, marchés de Dubaï). Nous réglons
@@ -581,7 +581,7 @@ export default function HomePage() {
                           if (val === "Côte d'Ivoire" && simDest !== "France") setSimDest("France");
                         }}
                       >
-                        <optgroup label="Hubs Stratégiques Roum">
+                        <optgroup label="Nos Entrepôts & Agences">
                           {STRATEGIC_HUBS.map((c) => (
                             <option key={c.code} value={c.name}>
                               {c.name} ({c.code})
@@ -626,7 +626,7 @@ export default function HomePage() {
                             </option>
                           ))}
                         </optgroup>
-                        <optgroup label="Hubs Stratégiques & International">
+                        <optgroup label="Entrepôts & Départs Internationaux">
                           {STRATEGIC_HUBS.map((c) => (
                             <option key={c.code} value={c.name}>
                               {c.name} ({c.code})
@@ -1092,7 +1092,7 @@ export default function HomePage() {
             {[
               {
                 step: "01",
-                title: "Dépôt au Hub",
+                title: "Dépôt au Magasin",
                 desc: "Votre colis est réceptionné à notre entrepôt (Guangzhou, Dubaï ou Casablanca), pesé, mesuré et étiqueté.",
               },
               {

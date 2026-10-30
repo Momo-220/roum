@@ -29,10 +29,10 @@ export async function POST(req: Request) {
         liveContextText += `- Règlements en attente de vérification caisse : ${context.pendingPaymentsCount} paiement(s) pour un total de ${context.pendingPaymentsAmount || "0 FCFA"}.\n`;
       }
       if (context.pendingWeighingsCount !== undefined) {
-        liveContextText += `- Colis reçus au hub sans pesée officielle : ${context.pendingWeighingsCount} colis.\n`;
+        liveContextText += `- Colis reçus au magasin sans pesée officielle : ${context.pendingWeighingsCount} colis.\n`;
       }
       if (context.pendingRequestsCount !== undefined) {
-        liveContextText += `- Demandes de sourcing et cotations clients reçues : ${context.pendingRequestsCount} dossier(s).\n`;
+        liveContextText += `- Demandes d'achats et cotations clients reçues : ${context.pendingRequestsCount} dossier(s).\n`;
       }
       if (context.urgentTasksCount !== undefined) {
         liveContextText += `- Tâches prioritaires d'équipe en cours : ${context.urgentTasksCount}.\n`;

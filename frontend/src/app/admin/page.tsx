@@ -102,7 +102,7 @@ const GLOBAL_HUBS = [
     code: "CAN",
     city: "Guangzhou",
     country: "Chine",
-    role: "Hub Aérien Principal",
+    role: "Grand Entrepôt Aérien",
     timezone: "UTC+8",
     lon: 113.3,
     lat: 23.3,
@@ -111,7 +111,7 @@ const GLOBAL_HUBS = [
     code: "YIW",
     city: "Yiwu",
     country: "Chine",
-    role: "Hub Maritime & Cargo",
+    role: "Grand Entrepôt Maritime & Cargo",
     timezone: "UTC+8",
     lon: 120.0,
     lat: 29.3,
@@ -1539,7 +1539,7 @@ const DEFAULT_PAYMENTS = [
 const DEFAULT_TASKS = [
   { id: "tsk-01", title: "Contrôle pesée & scellés lot CAN-2610-04", description: "Pesée volumétrique, contrôle scanner et scellés de sécurité au magasin central de Guangzhou avant chargement vol cargo.", category: "WAREHOUSE_CHECK", priority: "URGENT", status: "IN_PROGRESS", due_date: "2026-10-28 12:00:00", created_at: "2026-10-27 08:00:00" },
   { id: "tsk-02", title: "Dédouanement conteneur maritime CBM n°7", description: "Finalisation du dédouanement et bon à enlever au Port Autonome d'Abidjan pour les lots LCL.", category: "GENERAL", priority: "HIGH", status: "TODO", due_date: "2026-10-29 17:00:00", created_at: "2026-10-27 14:30:00" },
-  { id: "tsk-03", title: "Appel validation devis sourcing REQ-01", description: "Contacter Koffi & Fils pour confirmation proforma fournisseur Alibaba et encaissement acompte.", category: "QUOTE_PREP", priority: "MEDIUM", status: "TODO", due_date: "2026-10-28 16:00:00", created_at: "2026-10-27 16:00:00" },
+  { id: "tsk-03", title: "Appel validation devis commande REQ-01", description: "Contacter Koffi & Fils pour confirmation de commande avec le fournisseur et encaissement acompte.", category: "QUOTE_PREP", priority: "MEDIUM", status: "TODO", due_date: "2026-10-28 16:00:00", created_at: "2026-10-27 16:00:00" },
 ];
 
 export default function AdminPage() {
@@ -2014,7 +2014,7 @@ export default function AdminPage() {
       parts.push(`${pendingRequestsList.length} demande(s) de cotation client à arbitrer`);
     }
     if (pendingWeighingsList.length > 0) {
-      parts.push(`${pendingWeighingsList.length} colis réceptionné(s) au hub à peser`);
+      parts.push(`${pendingWeighingsList.length} colis réceptionné(s) au magasin à peser`);
     }
     if (urgentTasksList.length > 0) {
       parts.push(`${urgentTasksList.length} tâche(s) prioritaire(s) à superviser`);
@@ -2042,7 +2042,7 @@ export default function AdminPage() {
       actions: [
         { label: "Point Caisse", tab: "finances" },
         { label: "Devis & Cotations", tab: "requests" },
-        { label: "Arrivages Hub", tab: "shipments" },
+        { label: "Arrivages Magasin", tab: "shipments" },
       ],
     },
   ]);
@@ -2410,7 +2410,7 @@ export default function AdminPage() {
   });
   const [showAddHubModal, setShowAddHubModal] = useState(false);
   const [newHubForm, setNewHubForm] = useState({
-    name: "Hub Istanbul (Turquie)",
+    name: "Entrepôt Istanbul (Turquie)",
     country: "Turquie",
     countryCode: "TR",
     city: "Istanbul",
@@ -2419,7 +2419,7 @@ export default function AdminPage() {
     contact: "+90 530 000 0000",
   });
 
-  // Nouvelles modales opérationnelles (sourcing, réception hub, détails)
+  // Nouvelles modales opérationnelles (commandes, réception magasin, détails)
   const [showRequestDetailModal, setShowRequestDetailModal] = useState<any | null>(null);
   const [showConvertRequestModal, setShowConvertRequestModal] = useState<any | null>(null);
   const [showIntakeModal, setShowIntakeModal] = useState<any | null>(null);
@@ -2458,15 +2458,15 @@ export default function AdminPage() {
   const [intakeForm, setIntakeForm] = useState({
     total_weight_kg: 5,
     total_volume_cbm: 0.05,
-    hub_location: "Hub Entrepôt Guangzhou",
+    hub_location: "Entrepôt Guangzhou",
     status: "RECEIVED_AT_HUB",
-    comment: "Pesée physique effectuée au hub de départ, carton vérifié",
+    comment: "Pesée physique effectuée au magasin de départ, carton vérifié",
     final_price_minor: 0,
   });
 
   const [statusUpdate, setStatusUpdate] = useState({
     new_status: "RECEIVED_AT_HUB",
-    location: "Hub Entrepôt Guangzhou",
+    location: "Entrepôt Guangzhou",
     comment: "Pesé et étiqueté pour expédition",
   });
 
@@ -2900,7 +2900,7 @@ export default function AdminPage() {
     const labelMap: Record<string, string> = {
       RECEIVED_AT_ORIGIN: "Colis reçu à l'entrepôt de départ",
       IN_TRANSIT: "En cours d'acheminement international",
-      ARRIVED_DESTINATION_HUB: "Arrivé au hub de destination",
+      ARRIVED_DESTINATION_HUB: "Arrivé au magasin de destination",
       CUSTOMS_CLEARANCE_IN_PROGRESS: "Dédouanement en cours",
       CUSTOMS_CLEARED: "Dédouané - En route pour livraison",
       OUT_FOR_DELIVERY: "En cours de livraison finale",
@@ -3107,7 +3107,7 @@ export default function AdminPage() {
     setIntakeForm({
       total_weight_kg: shipment.total_weight_kg || 1,
       total_volume_cbm: shipment.total_volume_cbm || 0.05,
-      hub_location: user?.hubLocation || "Hub Entrepôt Guangzhou",
+      hub_location: user?.hubLocation || "Entrepôt Guangzhou",
       status: "RECEIVED_AT_HUB",
       comment: `Pesée physique réelle effectuée (${shipment.total_weight_kg || 1} kg), colis étiqueté`,
       final_price_minor: shipment.final_price_minor || 0,
@@ -3137,7 +3137,7 @@ export default function AdminPage() {
       });
 
       if (res.ok) {
-        triggerToast("Réception physique et pesée réelle enregistrées avec succès !", "Réception Hub");
+        triggerToast("Réception physique et pesée réelle enregistrées avec succès !", "Réception Magasin");
         setShowIntakeModal(null);
         loadDashboardData(token);
         return;
@@ -3145,7 +3145,7 @@ export default function AdminPage() {
     } catch {
       // Poursuite directe
     }
-    triggerToast("Réception physique et pesée réelle enregistrées avec succès !", "Réception Hub");
+    triggerToast("Réception physique et pesée réelle enregistrées avec succès !", "Réception Magasin");
     setShipments((prev) =>
       prev.map((s) =>
         s.id === showIntakeModal.id
@@ -3153,7 +3153,7 @@ export default function AdminPage() {
               ...s,
               total_weight_kg: Number(intakeForm.total_weight_kg) || s.total_weight_kg,
               current_status_code: intakeForm.status,
-              current_status_label: "Colis reçu et pesé au hub",
+              current_status_label: "Colis reçu et pesé au magasin",
             }
           : s
       )
@@ -4668,12 +4668,12 @@ export default function AdminPage() {
                         </div>
                       )}
 
-                      {/* 2. Pesées magasin hub */}
+                      {/* 2. Pesées magasin */}
                       {pendingWeighingsList.length > 0 && (
                         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                           <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
                             <Scale size={14} color="var(--brown-dark)" />
-                            Colis au hub sans pesée officielle ({pendingWeighingsList.length})
+                            Colis au magasin sans pesée officielle ({pendingWeighingsList.length})
                           </div>
                           <div style={{ display: "grid", gap: "8px" }}>
                             {pendingWeighingsList.map((s) => (
@@ -4712,7 +4712,7 @@ export default function AdminPage() {
                         </div>
                       )}
 
-                      {/* 3. Demandes sourcing reçues */}
+                      {/* 3. Demandes de commandes reçues */}
                       {pendingRequestsList.length > 0 && (
                         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                           <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
@@ -4932,7 +4932,7 @@ export default function AdminPage() {
                     </button>
                   </div>
 
-                  {/* Carte 2 : Pesées Hub */}
+                  {/* Carte 2 : Pesées Magasin */}
                   <div
                     className="executive-prompt-card"
                     style={{
@@ -4989,7 +4989,7 @@ export default function AdminPage() {
                     </button>
                   </div>
 
-                  {/* Carte 3 : Sourcing & Devis */}
+                  {/* Carte 3 : Commandes & Devis */}
                   <div
                     className="executive-prompt-card"
                     style={{
@@ -8294,7 +8294,7 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* HUBS INTERNATIONAUX AJOUTÉS DYNAMIQUEMENT */}
+                {/* ENTREPÔTS INTERNATIONAUX AJOUTÉS DYNAMIQUEMENT */}
                 {customHubs.map((hub) => (
                   <div
                     key={hub.id}
@@ -8321,7 +8321,7 @@ export default function AdminPage() {
                           onClick={() => handleDeleteHub(hub.id)}
                           className="btn-icon-clean"
                           style={{ width: "24px", height: "24px", color: "var(--text-muted)" }}
-                          title="Supprimer ce hub"
+                          title="Supprimer cet entrepôt"
                         >
                           <X size={14} />
                         </button>
@@ -8361,7 +8361,7 @@ export default function AdminPage() {
                         </div>
                         <div>
                           <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>
-                            Contact Équipe Réception Hub
+                            Contact Équipe Réception Magasin
                           </label>
                           <input
                             type="text"
@@ -9704,7 +9704,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* MODALE : RÉCEPTION PHYSIQUE & PESÉE RÉELLE AU HUB */}
+      {/* MODALE : RÉCEPTION PHYSIQUE & PESÉE RÉELLE AU MAGASIN */}
       {showIntakeModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
           <div className="card-clean" style={{ maxWidth: "520px", width: "100%", padding: "26px" }}>
@@ -9763,7 +9763,7 @@ export default function AdminPage() {
                   onChange={(e) => setIntakeForm({ ...intakeForm, status: e.target.value })}
                   className="input-clean"
                 >
-                  <option value="RECEIVED_AT_HUB">Reçu au magasin / hub de départ</option>
+                  <option value="RECEIVED_AT_HUB">Reçu au magasin de départ</option>
                   <option value="PACKED_READY">Colis contrôlé et prêt pour expédition</option>
                   <option value="ARRIVED_DESTINATION">Arrivé à l&apos;agence de destination</option>
                 </select>

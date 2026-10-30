@@ -664,7 +664,7 @@ adminRouter.patch("/shipments/:id/intake", zValidator("json", shipmentIntakeSche
       shipmentId,
       data.status,
       data.hub_location.trim(),
-      data.comment?.trim() || `Réception physique et pesée réelle au hub (${data.total_weight_kg} kg${data.total_volume_cbm ? `, ${data.total_volume_cbm} m³` : ""})`,
+      data.comment?.trim() || `Réception physique et pesée réelle au magasin (${data.total_weight_kg} kg${data.total_volume_cbm ? `, ${data.total_volume_cbm} m³` : ""})`,
       user.userId
     ),
     c.env.DB.prepare(`

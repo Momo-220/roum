@@ -424,7 +424,7 @@ const DEFAULT_FALLBACK_ROUTES: TransactionRoute[] = [
     dest_lon: -8.00,
     dest_lat: 12.64,
     status_category: "PREPARATION",
-    status_label: "Reçu au hub de Guangzhou",
+    status_label: "Reçu au magasin de Guangzhou",
     mode: "AIR",
     weight_kg: 12.0,
     volume_cbm: 0.08,
@@ -1294,7 +1294,7 @@ export function RouteGlobe({
                 </h2>
                 {originFilter && (
                   <span className="ios-trend-pill ios-trend-pill-gold">
-                    Hub : {originFilter}
+                    Départ : {originFilter}
                   </span>
                 )}
               </div>
