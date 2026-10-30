@@ -427,28 +427,31 @@ a {
   justify-content: center;
   text-align: center;
   gap: 4px;
-  padding: 3px 9px;
-  border-radius: var(--radius-full);
-  font-size: 0.68rem;
+  padding: 0;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.01em;
   white-space: nowrap;
   flex-shrink: 0;
   line-height: 1;
+  box-shadow: none !important;
 }
 
 .ios-trend-pill-up {
-  background: #ECFDF5;
+  background: transparent !important;
   color: #059669;
 }
 
 .ios-trend-pill-neutral {
-  background: #F3F4F6;
-  color: #4B5563;
+  background: transparent !important;
+  color: #6B7280;
 }
 
 .ios-trend-pill-gold {
-  background: #FEF3C7;
+  background: transparent !important;
   color: #B45309;
 }
 
