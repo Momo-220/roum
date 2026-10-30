@@ -4128,13 +4128,13 @@ export default function AdminPage() {
                           width: "7px",
                           height: "7px",
                           borderRadius: "50%",
-                          background: isActive ? "#EAACA1" : "var(--brown-dark)",
+                          background: isActive ? "#EADDCB" : "var(--brown-dark)",
                         }}
                       />
                     )}
                   </span>
                   {!isSidebarCollapsed && item.badge && item.badge > 0 && (
-                    <span className="sidebar-nav-badge" style={{ color: "#000000", fontWeight: "700" }}>
+                    <span className="sidebar-nav-badge">
                       {item.badge}
                     </span>
                   )}

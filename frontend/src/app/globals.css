@@ -193,12 +193,11 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #FFFFFF;
-  border: 1px solid var(--border-light);
+  background: #F4F2EE;
+  border: 1px solid rgba(0, 0, 0, 0.04);
   border-radius: 9999px;
-  padding: 4px;
-  gap: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  padding: 3px;
+  gap: 2px;
 }
 
 .pill-option {
@@ -207,10 +206,10 @@ a {
   justify-content: center;
   text-align: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 5px 14px;
   border-radius: 9999px;
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-secondary);
   background: transparent;
   border: none;
@@ -223,18 +222,18 @@ a {
 
 .pill-option:hover {
   color: var(--text-main);
-  background: rgba(28, 25, 23, 0.05);
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .pill-option-active {
-  background: var(--brown-dark) !important;
-  color: #FFFFFF !important;
+  background: #FFFFFF !important;
+  color: #1C1917 !important;
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
 }
 
 .pill-option-active svg {
-  color: #FFFFFF !important;
+  color: #1C1917 !important;
 }
 
 /* Barre KPI Unifiée dans UN SEUL DIV séparée par des lignes */
@@ -629,10 +628,10 @@ select.input-clean {
   display: flex;
   align-items: center;
   width: 100%;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid transparent;
   background: transparent;
-  color: var(--text-secondary);
+  color: #4B5563;
   font-weight: 500;
   font-size: 0.84rem;
   letter-spacing: -0.01em;
@@ -642,45 +641,42 @@ select.input-clean {
 }
 
 .sidebar-nav-btn:hover:not(.active) {
-  background: rgba(28, 25, 23, 0.05);
-  color: var(--brown-dark);
+  background: #F5F4F0;
+  color: #111827;
 }
 
 .sidebar-nav-btn.active {
-  background: var(--brown-dark);
-  color: #FFFFFF;
-  font-weight: 600;
-  border-color: transparent;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  background: #F5EFE6;
+  color: #1C1917;
+  font-weight: 700;
+  border-color: rgba(234, 221, 203, 0.7);
+  box-shadow: none;
 }
 
 .sidebar-nav-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   line-height: 1;
-  background: transparent !important;
-  color: #000000 !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0;
-  min-width: auto;
-  height: auto;
+  background: #EDEBE6;
+  color: #4B5563;
+  border-radius: 9999px;
+  padding: 2px 7px;
+  min-width: 18px;
+  height: 18px;
   transition: all 0.15s ease;
 }
 
 .sidebar-nav-btn:hover .sidebar-nav-badge {
-  color: #000000 !important;
-  background: transparent !important;
-  border: none !important;
+  background: #E5E3DE;
+  color: #111827;
 }
 
 .sidebar-nav-btn.active .sidebar-nav-badge {
-  background: transparent !important;
-  color: #000000 !important;
-  border: none !important;
+  background: #EADDCB;
+  color: #1C1917;
   font-weight: 800;
 }
 
