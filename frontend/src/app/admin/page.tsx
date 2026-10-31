@@ -60,12 +60,18 @@ import {
   Upload,
   UserCheck,
   Banknote,
+  HandCoins,
+  ClipboardCheck,
+  Smartphone,
+  PackageCheck,
+  Coins,
   History,
   TrendingUp,
   RotateCcw,
 } from "lucide-react";
 import RouteGlobe from "@/components/RouteGlobe";
 import { CircularFlag } from "@/components/CircularFlag";
+import { BillsIcon } from "@/components/icons/BillsIcon";
 import {
   WaveLogo,
   OrangeMoneyLogo,
@@ -358,7 +364,7 @@ function renderPaymentMethodBadge(method: string = "") {
         whiteSpace: "nowrap",
       }}
     >
-      <Banknote size={13} strokeWidth={2} />
+      <BillsIcon size={14} />
       <span>{m.includes("CASH") || m.includes("ESP") ? "Espèces" : method || "Paiement"}</span>
     </span>
   );
@@ -4170,11 +4176,11 @@ export default function AdminPage() {
   const navItems = [
     { id: "dashboard", label: "Tableau de Bord", icon: LayoutDashboard },
     { id: "assistant", label: "Assistant Roum", icon: Compass, badge: totalAgentAlerts },
-    { id: "requests", label: "Commandes clients", icon: Inbox, badge: stats?.pending_requests },
+    { id: "requests", label: "Commandes clients", icon: ShoppingBag, badge: stats?.pending_requests },
     { id: "shipments", label: "Expéditions & Colis", icon: Package },
     { id: "clients", label: "Clients", icon: Users },
     { id: "tariffs", label: "Tarifs & Routes", icon: Truck },
-    { id: "finances", label: "Finances & Paiements", icon: Banknote },
+    { id: "finances", label: "Finances & Paiements", icon: HandCoins },
     { id: "tasks", label: "Tâches", icon: CheckSquare, badge: stats?.pending_tasks },
   ];
 
@@ -4667,7 +4673,7 @@ export default function AdminPage() {
                 <div className="metric-card-header">
                   <div className="metric-card-label">
                     <span className="metric-icon-box">
-                      <Banknote size={17} strokeWidth={2} />
+                      <ClipboardCheck size={17} strokeWidth={2} />
                     </span>
                     <span className="metric-card-title">
                       Contrôle Caisse
@@ -4725,7 +4731,7 @@ export default function AdminPage() {
                 <div className="metric-card-header">
                   <div className="metric-card-label">
                     <span className="metric-icon-box">
-                      <Inbox size={17} strokeWidth={2} />
+                      <ShoppingBag size={17} strokeWidth={2} />
                     </span>
                     <span className="metric-card-title">
                       Commandes Clients
@@ -4754,7 +4760,7 @@ export default function AdminPage() {
                 <div className="metric-card-header">
                   <div className="metric-card-label">
                     <span className="metric-icon-box">
-                      <CheckSquare size={17} strokeWidth={2} />
+                      <Flame size={17} strokeWidth={2} />
                     </span>
                     <span className="metric-card-title">
                       Tâches Urgentes
@@ -5543,7 +5549,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Inbox size={17} strokeWidth={2} />
+                        <ShoppingBag size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">
                         Commandes Clients
@@ -5572,7 +5578,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <ShieldCheck size={17} strokeWidth={2} />
+                        <PackageCheck size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">
                         Colis Livrés
@@ -5601,7 +5607,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Banknote size={17} strokeWidth={2} />
+                        <BillsIcon size={19} />
                       </span>
                       <span className="metric-card-title">
                         Trésorerie Caisse
@@ -7771,7 +7777,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <ShieldCheck size={17} strokeWidth={2} />
+                        <HandCoins size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">Total Encaissé</span>
                     </div>
@@ -7791,7 +7797,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Clock size={17} strokeWidth={2} />
+                        <ClipboardCheck size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">Contrôle Caisse</span>
                     </div>
@@ -7813,7 +7819,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Zap size={17} strokeWidth={2} />
+                        <Smartphone size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">Mobile Money</span>
                     </div>
@@ -7833,7 +7839,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Banknote size={17} strokeWidth={2} />
+                        <BillsIcon size={19} />
                       </span>
                       <span className="metric-card-title">Espèces Guichet</span>
                     </div>
@@ -7896,7 +7902,7 @@ export default function AdminPage() {
                   <div style={{ padding: "18px 24px", background: "#FFFFFF", borderBottom: "1px solid rgba(28, 25, 23, 0.07)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                       <span className="metric-icon-box">
-                        <Clock size={18} strokeWidth={1.8} />
+                        <ClipboardCheck size={18} strokeWidth={2} />
                       </span>
                       <div>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
