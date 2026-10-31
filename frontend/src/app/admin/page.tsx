@@ -4667,7 +4667,7 @@ export default function AdminPage() {
                 <div className="metric-card-header">
                   <div className="metric-card-label">
                     <span className="metric-icon-box">
-                      <Wallet size={15} strokeWidth={1.8} />
+                      <Wallet size={17} strokeWidth={2} />
                     </span>
                     <span className="metric-card-title">
                       Contrôle Caisse
@@ -4696,7 +4696,7 @@ export default function AdminPage() {
                 <div className="metric-card-header">
                   <div className="metric-card-label">
                     <span className="metric-icon-box">
-                      <Scale size={15} strokeWidth={1.8} />
+                      <Scale size={17} strokeWidth={2} />
                     </span>
                     <span className="metric-card-title">
                       Pesées au Magasin
@@ -4725,7 +4725,7 @@ export default function AdminPage() {
                 <div className="metric-card-header">
                   <div className="metric-card-label">
                     <span className="metric-icon-box">
-                      <Inbox size={15} strokeWidth={1.8} />
+                      <Inbox size={17} strokeWidth={2} />
                     </span>
                     <span className="metric-card-title">
                       Commandes Clients
@@ -4754,7 +4754,7 @@ export default function AdminPage() {
                 <div className="metric-card-header">
                   <div className="metric-card-label">
                     <span className="metric-icon-box">
-                      <CheckSquare size={15} strokeWidth={1.8} />
+                      <CheckSquare size={17} strokeWidth={2} />
                     </span>
                     <span className="metric-card-title">
                       Tâches Urgentes
@@ -4811,7 +4811,7 @@ export default function AdminPage() {
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
                     <span className="metric-icon-box">
-                      <AlertCircle size={15} strokeWidth={1.8} />
+                      <AlertCircle size={17} strokeWidth={2} />
                     </span>
                     <h3 style={{ fontSize: "0.96rem", fontWeight: "800", color: "var(--text-main)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       Actions Requises
@@ -5513,7 +5513,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Package size={15} strokeWidth={1.8} />
+                        <Package size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">
                         En Transit Actif
@@ -5543,7 +5543,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Inbox size={15} strokeWidth={1.8} />
+                        <Inbox size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">
                         Commandes Clients
@@ -5572,7 +5572,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <ShieldCheck size={15} strokeWidth={1.8} />
+                        <ShieldCheck size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">
                         Colis Livrés
@@ -5601,7 +5601,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Wallet size={15} strokeWidth={1.8} />
+                        <Wallet size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">
                         Trésorerie Caisse
@@ -6795,7 +6795,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <FileText size={15} strokeWidth={1.8} />
+                        <FileText size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">Grille Active</span>
                     </div>
@@ -6811,7 +6811,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Globe size={15} strokeWidth={1.8} />
+                        <Globe size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">Corridors Actifs</span>
                     </div>
@@ -6827,7 +6827,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Plane size={15} strokeWidth={1.8} />
+                        <Plane size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">Fret Aérien</span>
                     </div>
@@ -6843,7 +6843,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Ship size={15} strokeWidth={1.8} />
+                        <Ship size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">Fret Maritime</span>
                     </div>
@@ -6891,11 +6891,11 @@ export default function AdminPage() {
 
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                       {[
-                        { key: "cn-normale", name: "Voie normale (2 semaines)", delay: "12 à 14 j", price: "10 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-cn-normal", keyword: "normale", defaultVal: 10000 },
-                        { key: "cn-express", name: "Voie express (4 jours)", delay: "4 à 5 j", price: "12 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-cn-express", keyword: "express", defaultVal: 12000 },
-                        { key: "cn-batteries", name: "Batteries & Compléments", delay: "7 à 10 j", price: "14 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-cn-special", keyword: "batterie", defaultVal: 14000 },
-                        { key: "cn-hightech", name: "Pièces d'ordinateur & High-Tech", delay: "Express", price: "50 000 FCFA", unit: "/ pièce", matchId: "tariff-flyer-cn-tech", keyword: "ordinateur", defaultVal: 50000 },
-                        { key: "cn-bateau", name: "Par Bateau (Le CBM conteneur)", delay: "35 - 45 jours", price: "300 000 FCFA", unit: "/ m³", matchId: "tariff-flyer-cn-sea", keyword: "bateau", defaultVal: 300000 },
+                        { key: "cn-normale", icon: Plane, name: "Voie normale (2 semaines)", delay: "12 à 14 j", price: "10 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-cn-normal", keyword: "normale", defaultVal: 10000 },
+                        { key: "cn-express", icon: Zap, name: "Voie express (4 jours)", delay: "4 à 5 j", price: "12 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-cn-express", keyword: "express", defaultVal: 12000 },
+                        { key: "cn-batteries", icon: BatteryCharging, name: "Batteries & Compléments", delay: "7 à 10 j", price: "14 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-cn-special", keyword: "batterie", defaultVal: 14000 },
+                        { key: "cn-hightech", icon: Laptop, name: "Pièces d'ordinateur & High-Tech", delay: "Express", price: "50 000 FCFA", unit: "/ pièce", matchId: "tariff-flyer-cn-tech", keyword: "ordinateur", defaultVal: 50000 },
+                        { key: "cn-bateau", icon: Ship, name: "Par Bateau (Le CBM conteneur)", delay: "35 - 45 jours", price: "300 000 FCFA", unit: "/ m³", matchId: "tariff-flyer-cn-sea", keyword: "bateau", defaultVal: 300000 },
                       ].map((item, idx, arr) => {
                         const matchedTariff = tariffsList.find(
                           (t) =>
@@ -6905,6 +6905,7 @@ export default function AdminPage() {
                               (t.category_tag || "").toLowerCase().includes(item.keyword))
                         );
                         const currentPrice = matchedTariff ? formatCurrencyPrice(matchedTariff.price_per_unit_minor, matchedTariff.currency) : item.price;
+                        const ItemIcon = item.icon;
 
                         return (
                           <div
@@ -6918,12 +6919,30 @@ export default function AdminPage() {
                               borderBottom: idx < arr.length - 1 ? "1px solid var(--border-light)" : "none",
                             }}
                           >
-                            <div style={{ minWidth: 0, flex: 1 }}>
-                              <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {item.name}
-                              </div>
-                              <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                                Délai : {matchedTariff?.estimated_days_min ? `${matchedTariff.estimated_days_min} à ${matchedTariff.estimated_days_max} j` : item.delay}
+                            <div style={{ display: "flex", alignItems: "center", gap: "9px", minWidth: 0, flex: 1 }}>
+                              <span style={{
+                                width: "26px",
+                                height: "26px",
+                                minWidth: "26px",
+                                minHeight: "26px",
+                                borderRadius: "50%",
+                                backgroundColor: "#FAF8F5",
+                                border: "1px solid rgba(28, 25, 23, 0.09)",
+                                color: "var(--brown-dark)",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0
+                              }}>
+                                <ItemIcon size={13} strokeWidth={2} />
+                              </span>
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                  {item.name}
+                                </div>
+                                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                                  Délai : {matchedTariff?.estimated_days_min ? `${matchedTariff.estimated_days_min} à ${matchedTariff.estimated_days_max} j` : item.delay}
+                                </div>
                               </div>
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
@@ -7002,10 +7021,10 @@ export default function AdminPage() {
 
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                       {[
-                        { key: "ae-express", name: "Voie express Dubaï (4 jours)", delay: "4 à 5 j", price: "12 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-ae-express", keyword: "express", defaultVal: 12000 },
-                        { key: "ae-normale", name: "Voie normale Dubaï (2 semaines)", delay: "10 à 14 j", price: "10 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-ae-normal", keyword: "normale", defaultVal: 10000 },
-                        { key: "ae-special", name: "Marchandises Spéciales Dubaï", delay: "7 à 10 j", price: "14 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-ae-special", keyword: "spécial", defaultVal: 14000 },
-                        { key: "ae-bateau", name: "Par Bateau Dubaï (Le CBM)", delay: "30 - 40 jours", price: "300 000 FCFA", unit: "/ m³", matchId: "tariff-flyer-ae-sea", keyword: "bateau", defaultVal: 300000 },
+                        { key: "ae-express", icon: Zap, name: "Voie express Dubaï (4 jours)", delay: "4 à 5 j", price: "12 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-ae-express", keyword: "express", defaultVal: 12000 },
+                        { key: "ae-normale", icon: Plane, name: "Voie normale Dubaï (2 semaines)", delay: "10 à 14 j", price: "10 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-ae-normal", keyword: "normale", defaultVal: 10000 },
+                        { key: "ae-special", icon: ShoppingBag, name: "Marchandises Spéciales Dubaï", delay: "7 à 10 j", price: "14 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-ae-special", keyword: "spécial", defaultVal: 14000 },
+                        { key: "ae-bateau", icon: Ship, name: "Par Bateau Dubaï (Le CBM)", delay: "30 - 40 jours", price: "300 000 FCFA", unit: "/ m³", matchId: "tariff-flyer-ae-sea", keyword: "bateau", defaultVal: 300000 },
                       ].map((item, idx, arr) => {
                         const matchedTariff = tariffsList.find(
                           (t) =>
@@ -7015,6 +7034,7 @@ export default function AdminPage() {
                               (t.category_tag || "").toLowerCase().includes(item.keyword))
                         );
                         const currentPrice = matchedTariff ? formatCurrencyPrice(matchedTariff.price_per_unit_minor, matchedTariff.currency) : item.price;
+                        const ItemIcon = item.icon;
 
                         return (
                           <div
@@ -7028,12 +7048,30 @@ export default function AdminPage() {
                               borderBottom: idx < arr.length - 1 ? "1px solid var(--border-light)" : "none",
                             }}
                           >
-                            <div style={{ minWidth: 0, flex: 1 }}>
-                              <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {item.name}
-                              </div>
-                              <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                                Délai : {matchedTariff?.estimated_days_min ? `${matchedTariff.estimated_days_min} à ${matchedTariff.estimated_days_max} j` : item.delay}
+                            <div style={{ display: "flex", alignItems: "center", gap: "9px", minWidth: 0, flex: 1 }}>
+                              <span style={{
+                                width: "26px",
+                                height: "26px",
+                                minWidth: "26px",
+                                minHeight: "26px",
+                                borderRadius: "50%",
+                                backgroundColor: "#FAF8F5",
+                                border: "1px solid rgba(28, 25, 23, 0.09)",
+                                color: "var(--brown-dark)",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0
+                              }}>
+                                <ItemIcon size={13} strokeWidth={2} />
+                              </span>
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                  {item.name}
+                                </div>
+                                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                                  Délai : {matchedTariff?.estimated_days_min ? `${matchedTariff.estimated_days_min} à ${matchedTariff.estimated_days_max} j` : item.delay}
+                                </div>
                               </div>
                             </div>
                             <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
@@ -7733,7 +7771,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <ShieldCheck size={15} strokeWidth={1.8} />
+                        <ShieldCheck size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">Total Encaissé</span>
                     </div>
@@ -7753,7 +7791,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Clock size={15} strokeWidth={1.8} />
+                        <Clock size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">Contrôle Caisse</span>
                     </div>
@@ -7775,7 +7813,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Zap size={15} strokeWidth={1.8} />
+                        <Zap size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">Mobile Money</span>
                     </div>
@@ -7795,7 +7833,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Wallet size={15} strokeWidth={1.8} />
+                        <Wallet size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">Espèces Guichet</span>
                     </div>
@@ -7829,8 +7867,8 @@ export default function AdminPage() {
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <span className="metric-icon-box">
-                      <CheckCircle2 size={18} strokeWidth={1.8} />
+                    <span className="metric-icon-box" style={{ background: "rgba(5, 150, 105, 0.09)", color: "#059669", borderColor: "rgba(5, 150, 105, 0.22)" }}>
+                      <CheckCircle2 size={18} strokeWidth={2} />
                     </span>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -7850,7 +7888,7 @@ export default function AdminPage() {
                     className="btn btn-primary"
                     style={{ padding: "8px 16px", fontSize: "0.8rem", gap: "6px" }}
                   >
-                    <Plus size={14} /> Consigner un Paiement
+                    <Plus size={15} strokeWidth={2.2} /> Consigner un Paiement
                   </button>
                 </div>
               ) : (
@@ -8077,7 +8115,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <CheckSquare size={15} strokeWidth={1.8} />
+                        <CheckSquare size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">Tâches Actives</span>
                     </div>
@@ -8093,7 +8131,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Flame size={15} strokeWidth={1.8} />
+                        <Flame size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">Urgences</span>
                     </div>
@@ -8111,7 +8149,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <CheckCircle2 size={15} strokeWidth={1.8} />
+                        <CheckCircle2 size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">Terminées</span>
                     </div>

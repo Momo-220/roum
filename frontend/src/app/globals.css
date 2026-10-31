@@ -366,14 +366,14 @@ a {
 .metric-card-label {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 10px;
   min-width: 0;
   flex: 1;
 }
 
 .metric-card-title {
-  font-size: 0.77rem;
-  font-weight: 600;
+  font-size: 0.82rem;
+  font-weight: 700;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -410,15 +410,29 @@ a {
   line-height: 1.25;
 }
 
+/* Pastille circulaire haute précision pour les icônes Lucide des métriques */
 .metric-icon-box {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: none;
-  padding: 0;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 50%;
+  background: #FAF8F5;
+  border: 1px solid rgba(28, 25, 23, 0.11);
   color: var(--brown-dark);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   flex-shrink: 0;
+  transition: all 0.18s ease;
+}
+
+.ios-metric-card:hover .metric-icon-box {
+  background: var(--brown-dark);
+  color: #FFFFFF;
+  border-color: var(--brown-dark);
+  box-shadow: 0 3px 8px rgba(28, 25, 23, 0.18);
 }
 
 .ios-trend-pill {
@@ -426,33 +440,33 @@ a {
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 4px;
-  padding: 0;
-  background: transparent !important;
-  border: none !important;
-  border-radius: 0;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 9999px;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.01em;
   white-space: nowrap;
   flex-shrink: 0;
-  line-height: 1;
-  box-shadow: none !important;
+  line-height: 1.2;
 }
 
 .ios-trend-pill-up {
-  background: transparent !important;
-  color: #059669;
-}
-
-.ios-trend-pill-neutral {
-  background: transparent !important;
-  color: #6B7280;
+  background: rgba(5, 150, 105, 0.09) !important;
+  color: #059669 !important;
+  border: 1px solid rgba(5, 150, 105, 0.22) !important;
 }
 
 .ios-trend-pill-gold {
-  background: transparent !important;
-  color: #B45309;
+  background: rgba(217, 119, 6, 0.09) !important;
+  color: #D97706 !important;
+  border: 1px solid rgba(217, 119, 6, 0.22) !important;
+}
+
+.ios-trend-pill-neutral {
+  background: rgba(107, 114, 128, 0.08) !important;
+  color: #4B5563 !important;
+  border: 1px solid rgba(107, 114, 128, 0.18) !important;
 }
 
 /* Badges de Statut sobres en format Pill */
