@@ -33,3 +33,6 @@ npm-debug.log*
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# External Cloned Repos
+ECC/
