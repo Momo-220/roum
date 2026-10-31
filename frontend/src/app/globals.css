@@ -633,35 +633,41 @@ select.input-clean {
   background-color: var(--bg-subtle) !important;
 }
 
-/* Sélecteur de navigation latérale sobre, minimaliste & épuré */
+/* Sélecteur de navigation latérale sobre, minimaliste & épuré avec badges circulaires */
 .sidebar-nav-btn {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
-  text-align: center;
+  justify-content: flex-start;
+  text-align: left;
   width: 100%;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid transparent;
   background: transparent;
   color: #4B5563;
   font-weight: 500;
-  font-size: 0.84rem;
+  font-size: 0.85rem;
   letter-spacing: -0.01em;
   cursor: pointer;
   transition: all 0.15s ease;
+  padding: 6px 8px;
 }
 
 .sidebar-nav-btn:hover:not(.active) {
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(28, 25, 23, 0.035);
   color: #111827;
+}
+
+.sidebar-nav-btn:hover:not(.active) .sidebar-icon-circle {
+  background: #EFECE6 !important;
+  border-color: rgba(28, 25, 23, 0.15) !important;
 }
 
 .sidebar-nav-btn.active {
   background: #F5EFE6;
   color: #1C1917;
   font-weight: 700;
-  border-color: rgba(234, 221, 203, 0.7);
+  border-color: rgba(234, 221, 203, 0.85);
   box-shadow: none;
 }
 

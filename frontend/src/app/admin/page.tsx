@@ -4242,40 +4242,79 @@ export default function AdminPage() {
                   onClick={() => setActiveTab(item.id as any)}
                   className={`sidebar-nav-btn ${isActive ? "active" : ""}`}
                   style={{
-                    justifyContent: "center",
+                    display: "flex",
                     alignItems: "center",
-                    gap: "8px",
-                    padding: isSidebarCollapsed ? "10px 0" : "10px 14px",
+                    justifyContent: isSidebarCollapsed ? "center" : "flex-start",
+                    gap: isSidebarCollapsed ? "0" : "11px",
+                    padding: isSidebarCollapsed ? "8px 0" : "7px 9px",
                     width: "100%",
-                    textAlign: "center",
+                    borderRadius: "12px",
                   }}
                 >
-                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px", position: "relative" }}>
+                  {/* Pastille circulaire vectorielle haute précision */}
+                  <span
+                    className="sidebar-icon-circle"
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      minWidth: "32px",
+                      minHeight: "32px",
+                      borderRadius: "50%",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: isActive ? "#1C1917" : "#FAF8F5",
+                      border: isActive ? "1px solid #1C1917" : "1px solid rgba(28, 25, 23, 0.09)",
+                      color: isActive ? "#FFFFFF" : "var(--brown-dark)",
+                      boxShadow: isActive ? "0 2px 6px rgba(28, 25, 23, 0.2)" : "0 1px 2px rgba(0, 0, 0, 0.03)",
+                      transition: "all 0.16s ease",
+                      flexShrink: 0,
+                    }}
+                  >
                     <Icon
-                      size={16}
-                      strokeWidth={isActive ? 2.1 : 1.75}
-                      color={isActive ? "var(--brown-dark)" : "currentColor"}
+                      size={15}
+                      strokeWidth={isActive ? 2.1 : 1.8}
+                      color="currentColor"
                     />
-                    {!isSidebarCollapsed && <span style={{ textAlign: "center" }}>{item.label}</span>}
-                    {!isSidebarCollapsed && item.badge && item.badge > 0 && (
-                      <span className="sidebar-nav-badge">
-                        {item.badge}
-                      </span>
-                    )}
-                    {isSidebarCollapsed && item.badge && item.badge > 0 && (
-                      <span
-                        style={{
-                          position: "absolute",
-                          top: -3,
-                          right: -5,
-                          width: "7px",
-                          height: "7px",
-                          borderRadius: "50%",
-                          background: isActive ? "#EADDCB" : "var(--brown-dark)",
-                        }}
-                      />
-                    )}
                   </span>
+
+                  {!isSidebarCollapsed && (
+                    <span
+                      style={{
+                        flex: 1,
+                        textAlign: "left",
+                        fontSize: "0.85rem",
+                        fontWeight: isActive ? 700 : 500,
+                        color: isActive ? "#1C1917" : "#4B5563",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {item.label}
+                    </span>
+                  )}
+
+                  {!isSidebarCollapsed && item.badge && item.badge > 0 && (
+                    <span className="sidebar-nav-badge" style={{ marginLeft: "auto" }}>
+                      {item.badge}
+                    </span>
+                  )}
+
+                  {isSidebarCollapsed && item.badge && item.badge > 0 && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 4,
+                        right: 8,
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "50%",
+                        background: "var(--brown-dark)",
+                        border: "2px solid #FFFFFF",
+                      }}
+                    />
+                  )}
                 </button>
                 {isSidebarCollapsed && (
                   <span className="sidebar-tooltip">
@@ -4288,28 +4327,63 @@ export default function AdminPage() {
           })}
 
           {/* Paramètres & Audit */}
-          <div className="sidebar-item" style={{ position: "relative", marginTop: "12px" }}>
+          <div className="sidebar-item" style={{ position: "relative", marginTop: "10px" }}>
             <button
               type="button"
               onClick={() => setActiveTab("settings")}
               className={`sidebar-nav-btn ${activeTab === "settings" ? "active" : ""}`}
               style={{
-                justifyContent: "center",
+                display: "flex",
                 alignItems: "center",
-                gap: "8px",
-                padding: isSidebarCollapsed ? "10px 0" : "10px 14px",
+                justifyContent: isSidebarCollapsed ? "center" : "flex-start",
+                gap: isSidebarCollapsed ? "0" : "11px",
+                padding: isSidebarCollapsed ? "8px 0" : "7px 9px",
                 width: "100%",
-                textAlign: "center",
+                borderRadius: "12px",
               }}
             >
-              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+              <span
+                className="sidebar-icon-circle"
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  minWidth: "32px",
+                  minHeight: "32px",
+                  borderRadius: "50%",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: activeTab === "settings" ? "#1C1917" : "#FAF8F5",
+                  border: activeTab === "settings" ? "1px solid #1C1917" : "1px solid rgba(28, 25, 23, 0.09)",
+                  color: activeTab === "settings" ? "#FFFFFF" : "var(--brown-dark)",
+                  boxShadow: activeTab === "settings" ? "0 2px 6px rgba(28, 25, 23, 0.2)" : "0 1px 2px rgba(0, 0, 0, 0.03)",
+                  transition: "all 0.16s ease",
+                  flexShrink: 0,
+                }}
+              >
                 <Settings
-                  size={16}
-                  strokeWidth={activeTab === "settings" ? 2.1 : 1.75}
-                  color={activeTab === "settings" ? "var(--brown-dark)" : "currentColor"}
+                  size={15}
+                  strokeWidth={activeTab === "settings" ? 2.1 : 1.8}
+                  color="currentColor"
                 />
-                {!isSidebarCollapsed && <span style={{ textAlign: "center" }}>Paramètres & Audit</span>}
               </span>
+
+              {!isSidebarCollapsed && (
+                <span
+                  style={{
+                    flex: 1,
+                    textAlign: "left",
+                    fontSize: "0.85rem",
+                    fontWeight: activeTab === "settings" ? 700 : 500,
+                    color: activeTab === "settings" ? "#1C1917" : "#4B5563",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  Paramètres & Audit
+                </span>
+              )}
             </button>
             {isSidebarCollapsed && (
               <span className="sidebar-tooltip">Paramètres & Audit</span>
@@ -4445,10 +4519,36 @@ export default function AdminPage() {
               type="button"
               onClick={handleLogout}
               className="btn btn-secondary"
-              style={{ width: "100%", justifyContent: "center", gap: "6px", fontSize: "0.82rem", padding: "8px", borderRadius: "10px" }}
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                gap: "10px",
+                fontSize: "0.84rem",
+                padding: "6px 8px",
+                borderRadius: "12px",
+                fontWeight: 600,
+                color: "#78716C",
+              }}
             >
-              <LogOut size={14} />
-              Déconnexion
+              <span
+                style={{
+                  width: "30px",
+                  height: "30px",
+                  borderRadius: "50%",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#FAF8F5",
+                  border: "1px solid rgba(28, 25, 23, 0.08)",
+                  color: "#78716C",
+                  flexShrink: 0,
+                }}
+              >
+                <LogOut size={14} />
+              </span>
+              <span>Déconnexion</span>
             </button>
           ) : (
             <div className="sidebar-item" style={{ position: "relative", display: "flex", justifyContent: "center" }}>
