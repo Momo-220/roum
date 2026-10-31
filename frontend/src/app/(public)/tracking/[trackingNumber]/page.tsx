@@ -13,7 +13,9 @@ import {
   Copy,
   Check,
   RefreshCw,
+  MessageCircle,
 } from "lucide-react";
+import { CircularFlag } from "@/components/CircularFlag";
 
 interface TrackingData {
   tracking_number: string;
@@ -238,9 +240,13 @@ export default function TrackingResultPage() {
                 }}
               >
                 <div>
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Itinéraire</div>
-                  <div style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "0.95rem" }}>
-                    {data.route.origin} → {data.route.destination}
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "3px" }}>Itinéraire</div>
+                  <div style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "0.95rem", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    <CircularFlag countryName={data.route.origin} size={15} />
+                    <span>{data.route.origin}</span>
+                    <span style={{ color: "var(--brown-light)", fontSize: "0.75rem" }}>→</span>
+                    <CircularFlag countryName={data.route.destination} size={15} />
+                    <span>{data.route.destination}</span>
                   </div>
                 </div>
 
@@ -447,7 +453,7 @@ export default function TrackingResultPage() {
                 className="btn btn-whatsapp"
                 style={{ padding: "10px 18px", fontSize: "0.86rem", display: "inline-flex", alignItems: "center", gap: "8px" }}
               >
-                <img src="/images/whatsapp.png" alt="WhatsApp" style={{ width: 18, height: 18, objectFit: "contain", display: "block" }} />
+                <MessageCircle size={18} />
                 Contacter sur WhatsApp
               </a>
             </div>

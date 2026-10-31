@@ -4174,7 +4174,7 @@ export default function AdminPage() {
     { id: "shipments", label: "Expéditions & Colis", icon: Package },
     { id: "clients", label: "Clients", icon: Users },
     { id: "tariffs", label: "Tarifs & Routes", icon: Truck },
-    { id: "finances", label: "Finances & Paiements", icon: DollarSign },
+    { id: "finances", label: "Finances & Paiements", icon: Wallet },
     { id: "tasks", label: "Tâches", icon: CheckSquare, badge: stats?.pending_tasks },
   ];
 
