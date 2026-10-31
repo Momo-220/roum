@@ -3337,7 +3337,7 @@ export default function AdminPage() {
         destination_city: newTariff.destination_city,
         shipping_mode_name: newTariff.service_name || modeObj?.name || (isSea ? "Voie Maritime (Le CBM)" : isRoad ? "Voie Terrestre Transfrontalière" : "Voie Aérienne Express (4 jours)"),
         shipping_mode_type: isSea ? "SEA" : isRoad ? "ROAD" : "AIR",
-        category_tag: newTariff.category_tag || (isSea ? "Voie Maritime 🚢" : "Voie Aérienne ✈️"),
+        category_tag: newTariff.category_tag || (isSea ? "Voie Maritime" : isRoad ? "Voie Terrestre" : "Voie Aérienne"),
         pricing_basis: isSea ? "PER_CBM" : "PER_KG",
         currency: newTariff.currency,
         price_per_unit_minor: Math.round(Number(newTariff.price_per_unit) * 100),
@@ -4837,8 +4837,14 @@ export default function AdminPage() {
                                   <div style={{ fontWeight: "700", fontSize: "0.85rem", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                     {s.tracking_number} · {s.client_name}
                                   </div>
-                                  <div style={{ fontSize: "0.73rem", color: "var(--text-secondary)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                    Trajet : {s.origin_country} ➔ {s.destination_country} ({formatShippingModeShort(s.shipping_mode_name, s.shipping_mode_id)})
+                                  <div style={{ fontSize: "0.73rem", color: "var(--text-secondary)", marginTop: "2px", display: "flex", alignItems: "center", gap: "5px", flexWrap: "wrap" }}>
+                                    <span>Trajet :</span>
+                                    <CircularFlag countryName={s.origin_country} size={13} />
+                                    <span>{s.origin_country}</span>
+                                    <span style={{ color: "var(--brown-light)", fontSize: "0.7rem" }}>➔</span>
+                                    <CircularFlag countryName={s.destination_country} size={13} />
+                                    <span>{s.destination_country}</span>
+                                    <span>({formatShippingModeShort(s.shipping_mode_name, s.shipping_mode_id)})</span>
                                   </div>
                                 </div>
                                 <button
@@ -4881,8 +4887,13 @@ export default function AdminPage() {
                                   <div style={{ fontWeight: "700", fontSize: "0.85rem", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                                     {r.reference} · {r.client_name}
                                   </div>
-                                  <div style={{ fontSize: "0.73rem", color: "var(--text-secondary)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                    Type : <strong>{formatRequestType(r.request_type)}</strong> · {r.origin_country || "Chine"} ➔ {r.destination_country || "Afrique"}
+                                  <div style={{ fontSize: "0.73rem", color: "var(--text-secondary)", marginTop: "2px", display: "flex", alignItems: "center", gap: "5px", flexWrap: "wrap" }}>
+                                    <span>Type : <strong>{formatRequestType(r.request_type)}</strong> ·</span>
+                                    <CircularFlag countryName={r.origin_country || "Chine"} size={13} />
+                                    <span>{r.origin_country || "Chine"}</span>
+                                    <span style={{ color: "var(--brown-light)", fontSize: "0.7rem" }}>➔</span>
+                                    <CircularFlag countryName={r.destination_country || "Afrique"} size={13} />
+                                    <span>{r.destination_country || "Afrique"}</span>
                                   </div>
                                 </div>
                                 <button
@@ -5650,17 +5661,23 @@ export default function AdminPage() {
                           </span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", minWidth: 0 }}>
-                          <span style={{ fontSize: "0.84rem", fontWeight: "800", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {activeShipment.origin_country || "Chine"}
-                          </span>
-                          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "4px", minWidth: "20px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
+                            <CircularFlag countryName={activeShipment.origin_country || "Chine"} size={16} />
+                            <span style={{ fontSize: "0.84rem", fontWeight: "800", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {activeShipment.origin_country || "Chine"}
+                            </span>
+                          </div>
+                          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "4px", minWidth: "16px" }}>
                             <div style={{ flex: 1, height: "1px", borderTop: "1px dashed rgba(122, 74, 40, 0.35)" }} />
                             <span style={{ color: "var(--brown-light)", fontSize: "0.75rem", lineHeight: 1 }}>→</span>
                             <div style={{ flex: 1, height: "1px", borderTop: "1px dashed rgba(122, 74, 40, 0.35)" }} />
                           </div>
-                          <span style={{ fontSize: "0.84rem", fontWeight: "800", color: "var(--brown-dark)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {activeShipment.destination_country || "Afrique"}
-                          </span>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
+                            <CircularFlag countryName={activeShipment.destination_country || "Afrique"} size={16} />
+                            <span style={{ fontSize: "0.84rem", fontWeight: "800", color: "var(--brown-dark)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {activeShipment.destination_country || "Afrique"}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
@@ -5937,9 +5954,11 @@ export default function AdminPage() {
                               <div style={{ fontSize: "0.71rem", color: "var(--text-muted)" }} className="tabular-nums">{s.client_phone}</div>
                             </td>
                             <td>
-                              <div className="corridor-pill-clean">
+                              <div className="corridor-pill-clean" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                                <CircularFlag countryName={s.origin_country || "Chine"} size={14} />
                                 <span>{s.origin_country || "Chine"}</span>
                                 <span style={{ color: "var(--brown-light)", fontSize: "0.7rem" }}>→</span>
+                                <CircularFlag countryName={s.destination_country || "Afrique"} size={14} />
                                 <strong style={{ color: "var(--brown-dark)" }}>{s.destination_country || "Afrique"}</strong>
                               </div>
                             </td>
@@ -6185,9 +6204,11 @@ export default function AdminPage() {
                           <div style={{ fontSize: "0.71rem", color: "var(--text-muted)" }} className="tabular-nums">{r.client_phone}</div>
                         </td>
                         <td>
-                          <div className="corridor-pill-clean">
+                          <div className="corridor-pill-clean" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                            <CircularFlag countryName={r.origin_country || "Chine"} size={14} />
                             <span>{r.origin_country || "Chine"}</span>
                             <span style={{ color: "var(--brown-light)", fontSize: "0.7rem" }}>→</span>
+                            <CircularFlag countryName={r.destination_country || "Afrique"} size={14} />
                             <strong style={{ color: "var(--brown-dark)" }}>{r.destination_country || "Afrique"}</strong>
                           </div>
                         </td>
@@ -6418,9 +6439,11 @@ export default function AdminPage() {
                             <div style={{ fontSize: "0.71rem", color: "var(--text-muted)" }} className="tabular-nums">{s.client_phone}</div>
                           </td>
                           <td>
-                            <div className="corridor-pill-clean">
+                            <div className="corridor-pill-clean" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                              <CircularFlag countryName={s.origin_country} size={14} />
                               <span>{s.origin_country}</span>
                               <span style={{ color: "var(--brown-light)", fontSize: "0.7rem" }}>→</span>
+                              <CircularFlag countryName={s.destination_country} size={14} />
                               <strong style={{ color: "var(--brown-dark)" }}>{s.destination_country}</strong>
                             </div>
                           </td>
@@ -9255,8 +9278,12 @@ export default function AdminPage() {
 
               {/* Sticky Footer */}
               <div style={{ padding: "16px 24px", borderTop: "1px solid var(--border-light)", background: "var(--bg-app)", display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-                <button type="button" onClick={() => setShowCreateShipmentModal(false)} className="btn btn-secondary" style={{ padding: "9px 18px" }}>Annuler</button>
-                <button type="submit" className="btn btn-primary" style={{ padding: "9px 20px" }}>Créer Expédition</button>
+                <button type="button" onClick={() => setShowCreateShipmentModal(false)} className="btn btn-secondary" style={{ padding: "9px 18px", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <X size={14} /> Annuler
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ padding: "9px 20px", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <Plus size={14} /> Créer Expédition
+                </button>
               </div>
             </form>
           </div>
@@ -9284,8 +9311,14 @@ export default function AdminPage() {
             {/* Récapitulatif simple du colis */}
             <div style={{ padding: "12px", background: "var(--bg-app)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(59, 34, 24, 0.06)", marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.82rem" }}>
               <div>
-                <span style={{ color: "var(--text-muted)", fontSize: "0.72rem", display: "block" }}>Trajet</span>
-                <strong>{showStatusModal.origin_country || "Départ"} ➔ {showStatusModal.destination_country || "Arrivée"}</strong>
+                <span style={{ color: "var(--text-muted)", fontSize: "0.72rem", display: "block", marginBottom: "3px" }}>Trajet</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <CircularFlag countryName={showStatusModal.origin_country || "Chine"} size={14} />
+                  <strong>{showStatusModal.origin_country || "Départ"}</strong>
+                  <span style={{ color: "var(--brown-light)", fontSize: "0.7rem" }}>➔</span>
+                  <CircularFlag countryName={showStatusModal.destination_country || "Côte d'Ivoire"} size={14} />
+                  <strong>{showStatusModal.destination_country || "Arrivée"}</strong>
+                </span>
               </div>
               <div style={{ textAlign: "right" }}>
                 <span style={{ color: "var(--text-muted)", fontSize: "0.72rem", display: "block" }}>Statut actuel</span>
@@ -9352,11 +9385,11 @@ export default function AdminPage() {
               </div>
 
               <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "10px" }}>
-                <button type="button" onClick={() => setShowStatusModal(null)} className="btn btn-secondary" style={{ padding: "9px 18px" }}>
-                  Annuler
+                <button type="button" onClick={() => setShowStatusModal(null)} className="btn btn-secondary" style={{ padding: "9px 18px", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <X size={14} /> Annuler
                 </button>
-                <button type="submit" className="btn btn-primary" style={{ padding: "9px 20px" }}>
-                  Valider le nouveau statut
+                <button type="submit" className="btn btn-primary" style={{ padding: "9px 20px", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <CheckCircle2 size={14} /> Valider le nouveau statut
                 </button>
               </div>
             </form>
@@ -9404,8 +9437,14 @@ export default function AdminPage() {
                 <div>{showPrintLabelModal.client_phone}</div>
               </div>
               <div>
-                <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.72rem" }}>LIAISON</span>
-                <strong>{showPrintLabelModal.origin_country} → {showPrintLabelModal.destination_country}</strong>
+                <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.72rem", marginBottom: "3px" }}>LIAISON</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                  <CircularFlag countryName={showPrintLabelModal.origin_country} size={13} />
+                  <strong>{showPrintLabelModal.origin_country}</strong>
+                  <span style={{ color: "var(--brown-light)", fontSize: "0.7rem" }}>→</span>
+                  <CircularFlag countryName={showPrintLabelModal.destination_country} size={13} />
+                  <strong>{showPrintLabelModal.destination_country}</strong>
+                </span>
                 <div>{showPrintLabelModal.shipping_mode_name}</div>
               </div>
             </div>
@@ -9422,8 +9461,12 @@ export default function AdminPage() {
             </div>
 
             <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-              <button type="button" onClick={() => setShowPrintLabelModal(null)} className="btn btn-secondary">Fermer</button>
-              <button type="button" onClick={() => window.print()} className="btn btn-primary">Imprimer</button>
+              <button type="button" onClick={() => setShowPrintLabelModal(null)} className="btn btn-secondary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <X size={14} /> Fermer
+              </button>
+              <button type="button" onClick={() => window.print()} className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <Printer size={14} /> Imprimer
+              </button>
             </div>
           </div>
         </div>
@@ -9454,8 +9497,12 @@ export default function AdminPage() {
                 </div>
               </div>
               <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
-                <button type="button" onClick={() => setShowCreateClientModal(false)} className="btn btn-secondary">Annuler</button>
-                <button type="submit" className="btn btn-primary">Enregistrer Client</button>
+                <button type="button" onClick={() => setShowCreateClientModal(false)} className="btn btn-secondary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <X size={14} /> Annuler
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <UserCheck size={14} /> Enregistrer Client
+                </button>
               </div>
             </form>
           </div>
@@ -9587,8 +9634,12 @@ export default function AdminPage() {
 
               {/* Sticky Modal Footer */}
               <div style={{ padding: "16px 24px", borderTop: "1px solid var(--border-light)", background: "var(--bg-app)", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                <button type="button" onClick={() => setShowRecordPaymentModal(null)} className="btn btn-secondary" style={{ padding: "9px 18px" }}>Annuler</button>
-                <button type="submit" className="btn btn-primary" style={{ padding: "9px 20px" }}>Enregistrer Paiement</button>
+                <button type="button" onClick={() => setShowRecordPaymentModal(null)} className="btn btn-secondary" style={{ padding: "9px 18px", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <X size={14} /> Annuler
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ padding: "9px 20px", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <CheckCircle2 size={14} /> Enregistrer Paiement
+                </button>
               </div>
             </form>
           </div>
@@ -9622,8 +9673,14 @@ export default function AdminPage() {
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "var(--bg-app)", padding: "14px", borderRadius: "10px", marginBottom: "16px", fontSize: "0.82rem" }}>
               <div>
-                <span style={{ color: "var(--text-muted)", display: "block" }}>Liaison souhaitée :</span>
-                <strong>{showRequestDetailModal.origin_country || "Chine"} ➔ {showRequestDetailModal.destination_country || "Mali"}</strong>
+                <span style={{ color: "var(--text-muted)", display: "block", marginBottom: "3px" }}>Liaison souhaitée :</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <CircularFlag countryName={showRequestDetailModal.origin_country || "Chine"} size={14} />
+                  <strong>{showRequestDetailModal.origin_country || "Chine"}</strong>
+                  <span style={{ color: "var(--brown-light)", fontSize: "0.7rem" }}>➔</span>
+                  <CircularFlag countryName={showRequestDetailModal.destination_country || "Mali"} size={14} />
+                  <strong>{showRequestDetailModal.destination_country || "Mali"}</strong>
+                </span>
               </div>
               <div>
                 <span style={{ color: "var(--text-muted)", display: "block" }}>Poids / Volume estimé :</span>
@@ -9831,8 +9888,12 @@ export default function AdminPage() {
               </div>
 
               <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "12px" }}>
-                <button type="button" onClick={() => setShowConvertRequestModal(null)} className="btn btn-secondary">Annuler</button>
-                <button type="submit" className="btn btn-primary">Générer le Suivi & Créer Expédition</button>
+                <button type="button" onClick={() => setShowConvertRequestModal(null)} className="btn btn-secondary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <X size={14} /> Annuler
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <Package size={14} /> Générer le Suivi & Créer Expédition
+                </button>
               </div>
             </form>
           </div>
@@ -9916,8 +9977,12 @@ export default function AdminPage() {
               </div>
 
               <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "12px" }}>
-                <button type="button" onClick={() => setShowIntakeModal(null)} className="btn btn-secondary">Annuler</button>
-                <button type="submit" className="btn btn-primary">Enregistrer Pesée & Statut</button>
+                <button type="button" onClick={() => setShowIntakeModal(null)} className="btn btn-secondary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <X size={14} /> Annuler
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <Scale size={14} /> Enregistrer Pesée & Statut
+                </button>
               </div>
             </form>
           </div>
@@ -9952,8 +10017,14 @@ export default function AdminPage() {
             {/* Résumé Mesures et Liaison */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", background: "var(--bg-app)", padding: "14px", borderRadius: "10px", marginBottom: "18px", fontSize: "0.82rem" }}>
               <div>
-                <span style={{ color: "var(--text-muted)", display: "block" }}>Liaison :</span>
-                <strong>{showShipmentDetailModal.origin_country} ➔ {showShipmentDetailModal.destination_country}</strong>
+                <span style={{ color: "var(--text-muted)", display: "block", marginBottom: "3px" }}>Liaison :</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <CircularFlag countryName={showShipmentDetailModal.origin_country} size={14} />
+                  <strong>{showShipmentDetailModal.origin_country}</strong>
+                  <span style={{ color: "var(--brown-light)", fontSize: "0.7rem" }}>➔</span>
+                  <CircularFlag countryName={showShipmentDetailModal.destination_country} size={14} />
+                  <strong>{showShipmentDetailModal.destination_country}</strong>
+                </span>
               </div>
               <div>
                 <span style={{ color: "var(--text-muted)", display: "block" }}>Poids réel mesuré :</span>
@@ -10069,8 +10140,12 @@ export default function AdminPage() {
                 <input type="date" value={newTask.due_date} onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })} className="input-clean" />
               </div>
               <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
-                <button type="button" onClick={() => setShowCreateTaskModal(false)} className="btn btn-secondary">Annuler</button>
-                <button type="submit" className="btn btn-primary">Créer Tâche</button>
+                <button type="button" onClick={() => setShowCreateTaskModal(false)} className="btn btn-secondary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <X size={14} /> Annuler
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <Plus size={14} /> Créer Tâche
+                </button>
               </div>
             </form>
           </div>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Phone, Ship, MapPin } from "lucide-react";
+import { Ship, MapPin } from "lucide-react";
 import { CircularFlag } from "@/components/CircularFlag";
 
 export default function PublicLayout({
@@ -9,32 +9,33 @@ export default function PublicLayout({
 }) {
   return (
     <>
-      {/* Navigation Bar Publique */}
+      {/* Navigation Header Épurée & Minimaliste */}
       <header
         style={{
           position: "sticky",
           top: 0,
           zIndex: 100,
-          background: "#FFFFFF",
-          borderBottom: "1px solid var(--border-light)",
-          padding: "16px 0",
+          backgroundColor: "#FFFFFF",
+          borderBottom: "1px solid #E5E7EB",
+          padding: "12px 20px",
         }}
       >
         <div
-          className="container"
           style={{
+            maxWidth: "820px",
+            margin: "0 auto",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: "16px",
           }}
         >
-          {/* Logo */}
+          {/* Logo Officiel */}
           <Link
             href="/"
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "12px",
               textDecoration: "none",
             }}
           >
@@ -42,7 +43,7 @@ export default function PublicLayout({
               src="/images/roum-logo-tight.png"
               alt="Roum Transit"
               style={{
-                height: "64px",
+                height: "52px",
                 width: "auto",
                 objectFit: "contain",
                 display: "block",
@@ -50,44 +51,67 @@ export default function PublicLayout({
             />
           </Link>
 
-          {/* Navigation Links */}
+          {/* Navigation Simple Mobile & Desktop */}
           <nav
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "28px",
+              gap: "18px",
             }}
           >
             <Link
               href="/#tracking"
               style={{
-                fontSize: "0.92rem",
-                fontWeight: "500",
-                color: "var(--text-secondary)",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                color: "#4B5563",
+                textDecoration: "none",
               }}
             >
-              Suivi de Colis
+              Suivi
             </Link>
             <Link
               href="/#tariffs"
               style={{
-                fontSize: "0.92rem",
-                fontWeight: "500",
-                color: "var(--text-secondary)",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                color: "#4B5563",
+                textDecoration: "none",
               }}
             >
-              Tarifs & Simulateur
+              Tarifs
             </Link>
             <Link
-              href="/#services"
+              href="/#warehouses"
               style={{
-                fontSize: "0.92rem",
-                fontWeight: "500",
-                color: "var(--text-secondary)",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                color: "#4B5563",
+                textDecoration: "none",
               }}
             >
-              Nos Services
+              Entrepôts
             </Link>
+            <a
+              href="https://wa.me/2250153638569"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                backgroundColor: "#111827",
+                color: "#FFFFFF",
+                padding: "7px 12px",
+                borderRadius: "6px",
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <span>WhatsApp</span>
+            </a>
           </nav>
         </div>
       </header>
@@ -95,111 +119,96 @@ export default function PublicLayout({
       {/* Contenu de la page */}
       <main>{children}</main>
 
-      {/* Footer Public */}
+      {/* Footer Minimaliste & Éditorial */}
       <footer
         style={{
-          marginTop: "80px",
-          borderTop: "1px solid var(--border-light)",
-          background: "#FFFFFF",
-          padding: "50px 0 30px 0",
+          borderTop: "1px solid #E5E7EB",
+          backgroundColor: "#FAFAFA",
+          padding: "48px 20px 32px 20px",
         }}
       >
-        <div className="container">
+        <div style={{ maxWidth: "820px", margin: "0 auto" }}>
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-              gap: "40px",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "36px",
               marginBottom: "36px",
             }}
           >
             <div>
               <img
                 src="/images/roum-logo-tight.png"
-                alt="Logo Officiel Roum Transit"
+                alt="Logo Roum Transit"
                 style={{
-                  width: "100%",
-                  maxWidth: "210px",
-                  height: "auto",
+                  height: "46px",
+                  width: "auto",
                   objectFit: "contain",
-                  marginBottom: "16px",
+                  marginBottom: "12px",
                   display: "block",
                 }}
               />
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", lineHeight: "1.6" }}>
-                Spécialiste du transport par voie maritime, aérienne et de l&apos;approvisionnement international
-                au départ de la Chine, Dubaï et du Maroc vers l&apos;Afrique de l&apos;Ouest et Centrale.
+              <p style={{ color: "#6B7280", fontSize: "0.84rem", lineHeight: 1.6, margin: 0 }}>
+                Acheminement de fret maritime, aérien et approvisionnement direct (Chine, Dubaï, Maroc, France ➔ Afrique).
               </p>
             </div>
 
             <div>
-              <h4 style={{ color: "var(--text-main)", marginBottom: "14px", fontSize: "1.05rem" }}>
-                Liaisons Principales
+              <h4 style={{ color: "#111827", fontSize: "0.88rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", margin: "0 0 12px 0" }}>
+                Couloirs Actifs
               </h4>
-              <ul style={{ listStyle: "none", color: "var(--text-secondary)", fontSize: "0.85rem", display: "grid", gap: "10px" }}>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0, color: "#4B5563", fontSize: "0.82rem", display: "grid", gap: "8px" }}>
                 <li style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <CircularFlag countryCode="CN" size={15} />
-                  <span>Guangzhou / Yiwu → Abidjan, Dakar, Bamako</span>
+                  <span>Chine (Guangzhou) ➔ Afrique (4 - 14j)</span>
                 </li>
                 <li style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <CircularFlag countryCode="AE" size={15} />
-                  <span>Dubaï → Abidjan, Ouagadougou, Libreville</span>
+                  <span>Dubaï ➔ Afrique (Aérien & Achats)</span>
                 </li>
                 <li style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <CircularFlag countryCode="MA" size={15} />
-                  <span>Maroc → 5 Pays Subsahariens (5j Chrono)</span>
+                  <span>Maroc ➔ 5 Pays (5j Chrono)</span>
                 </li>
                 <li style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <CircularFlag countryCode="FR" size={15} />
-                  <span>Paris ↔ Abidjan (Aérien Bilatéral F/€)</span>
-                </li>
-                <li style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Ship size={15} color="#0284c7" />
-                  <span>Voie Maritime Groupage (300 000 F / CBM)</span>
+                  <span>Paris ↔ Abidjan (Aérien Direct)</span>
                 </li>
               </ul>
             </div>
 
             <div>
-              <h4 style={{ color: "var(--text-main)", marginBottom: "14px", fontSize: "1.05rem" }}>
-                Contact & Agence
+              <h4 style={{ color: "#111827", fontSize: "0.88rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", margin: "0 0 12px 0" }}>
+                Agence & Permanence
               </h4>
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
-                <MapPin size={15} color="var(--brown-dark)" />
-                Agence : Abidjan Bingerville, Côte d&apos;Ivoire
+              <p style={{ color: "#4B5563", fontSize: "0.82rem", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <MapPin size={14} color="#111827" />
+                <span>Abidjan Bingerville, Côte d&apos;Ivoire</span>
               </p>
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "14px", lineHeight: "1.5" }}>
-                WhatsApp : <strong>+225 01 53 638 569</strong><br />
-                Instagram : @roum_transittt • TikTok : @roum_transit
+              <p style={{ color: "#4B5563", fontSize: "0.82rem", lineHeight: 1.5, margin: "0 0 10px 0" }}>
+                Ligne directe : <strong>+225 01 53 638 569</strong>
               </p>
-              <a
-                href="https://wa.me/2250153638569"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-whatsapp"
-                style={{ width: "fit-content", padding: "10px 18px", fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: "8px" }}
-              >
-                <img src="/images/whatsapp.png" alt="WhatsApp" style={{ width: 18, height: 18, objectFit: "contain", display: "block" }} />
-                Contacter sur WhatsApp
-              </a>
+              <div style={{ fontSize: "0.78rem", color: "#6B7280" }}>
+                Réseaux officiels : @roum_transit
+              </div>
             </div>
           </div>
 
           <div
             style={{
               paddingTop: "20px",
-              borderTop: "1px solid var(--border-light)",
+              borderTop: "1px solid #E5E7EB",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
               flexWrap: "wrap",
-              gap: "14px",
-              fontSize: "0.82rem",
-              color: "var(--text-muted)",
+              gap: "12px",
+              fontSize: "0.78rem",
+              color: "#9CA3AF",
             }}
           >
-            <div>© 2026 ROUM TRANSIT — Tous droits réservés.</div>
-            <div>Conçu pour une transparence totale et zéro perte de colis.</div>
+            <div>© 2026 ROUM TRANSIT — Direction des Opérations.</div>
+            <div>Traçabilité certifiée et engagement de livraison.</div>
           </div>
         </div>
       </footer>
