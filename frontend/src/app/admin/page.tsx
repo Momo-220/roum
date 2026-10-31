@@ -59,7 +59,7 @@ import {
   Camera,
   Upload,
   UserCheck,
-  Wallet,
+  Banknote,
   History,
   TrendingUp,
   RotateCcw,
@@ -358,7 +358,7 @@ function renderPaymentMethodBadge(method: string = "") {
         whiteSpace: "nowrap",
       }}
     >
-      <Wallet size={13} />
+      <Banknote size={13} strokeWidth={2} />
       <span>{m.includes("CASH") || m.includes("ESP") ? "Espèces" : method || "Paiement"}</span>
     </span>
   );
@@ -4174,7 +4174,7 @@ export default function AdminPage() {
     { id: "shipments", label: "Expéditions & Colis", icon: Package },
     { id: "clients", label: "Clients", icon: Users },
     { id: "tariffs", label: "Tarifs & Routes", icon: Truck },
-    { id: "finances", label: "Finances & Paiements", icon: Wallet },
+    { id: "finances", label: "Finances & Paiements", icon: Banknote },
     { id: "tasks", label: "Tâches", icon: CheckSquare, badge: stats?.pending_tasks },
   ];
 
@@ -4667,7 +4667,7 @@ export default function AdminPage() {
                 <div className="metric-card-header">
                   <div className="metric-card-label">
                     <span className="metric-icon-box">
-                      <Wallet size={17} strokeWidth={2} />
+                      <Banknote size={17} strokeWidth={2} />
                     </span>
                     <span className="metric-card-title">
                       Contrôle Caisse
@@ -5601,7 +5601,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Wallet size={17} strokeWidth={2} />
+                        <Banknote size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">
                         Trésorerie Caisse
@@ -7833,7 +7833,7 @@ export default function AdminPage() {
                   <div className="metric-card-header">
                     <div className="metric-card-label">
                       <span className="metric-icon-box">
-                        <Wallet size={17} strokeWidth={2} />
+                        <Banknote size={17} strokeWidth={2} />
                       </span>
                       <span className="metric-card-title">Espèces Guichet</span>
                     </div>
