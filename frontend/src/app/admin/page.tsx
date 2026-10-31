@@ -81,7 +81,6 @@ import {
   DEFAULT_CURRENCY,
   getCountryCodeFromName,
 } from "@/data/countries";
-import { SplashScreen } from "@/components/SplashScreen";
 
 interface UserSession {
   userId: string;
@@ -1546,7 +1545,6 @@ export default function AdminPage() {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<UserSession | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isSplashDone, setIsSplashDone] = useState(false);
 
   // Formulaire de connexion
   const [email, setEmail] = useState("admin@roumtransit.com");
@@ -2542,7 +2540,6 @@ export default function AdminPage() {
     const activeSessionToken =
       typeof window !== "undefined" ? sessionStorage.getItem("roum_admin_token") : null;
     if (activeSessionToken) {
-      setIsSplashDone(true);
       setToken(activeSessionToken);
       fetchSession(activeSessionToken);
       return;
@@ -3896,11 +3893,6 @@ export default function AdminPage() {
       }
     }
   };
-
-  // 1. ÉTAPE 1 : SPLASH SCREEN DE DÉMARRAGE
-  if (!isSplashDone) {
-    return <SplashScreen onComplete={() => setIsSplashDone(true)} />;
-  }
 
   // ÉCRAN 1 : CONNEXION SOBRE & ÉPURÉE
   if (!token || !user) {
