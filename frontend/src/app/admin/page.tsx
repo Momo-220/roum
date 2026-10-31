@@ -54,6 +54,7 @@ import {
   Scale,
   Flame,
   ArrowUp,
+  ArrowRight,
   Edit,
   Edit3,
   Camera,
@@ -3914,48 +3915,72 @@ export default function AdminPage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          padding: "32px 18px",
-          background: "var(--bg-app)",
+          padding: "36px 20px",
+          background: "radial-gradient(ellipse at 50% 12%, #FFFFFF 0%, #FAF8F5 50%, #F3EFEA 100%)",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
         <div
           style={{
-            maxWidth: "410px",
+            maxWidth: "420px",
             width: "100%",
             background: "#FFFFFF",
-            borderRadius: "22px",
-            border: "1px solid var(--border-light)",
-            boxShadow: "0 12px 36px -10px rgba(28, 25, 23, 0.07), 0 2px 6px rgba(28, 25, 23, 0.03)",
-            padding: "38px 32px 28px 32px",
+            borderRadius: "26px",
+            border: "1px solid rgba(28, 25, 23, 0.08)",
+            boxShadow: "0 24px 48px -12px rgba(28, 25, 23, 0.08), 0 2px 6px rgba(28, 25, 23, 0.02)",
+            padding: "38px 34px 28px 34px",
+            position: "relative",
+            zIndex: 1,
           }}
         >
           <div style={{ textAlign: "center", marginBottom: "26px" }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "18px" }}>
               <img
                 src="/images/roum-logo-tight.png"
                 alt="Logo Officiel Roum Transit"
                 style={{
-                  height: "68px",
+                  height: "72px",
                   width: "auto",
-                  maxWidth: "220px",
+                  maxWidth: "230px",
                   objectFit: "contain",
                   display: "block",
                 }}
               />
             </div>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "7px",
+                padding: "3px 11px",
+                borderRadius: "9999px",
+                background: "#FAF8F5",
+                border: "1px solid rgba(28, 25, 23, 0.09)",
+                fontSize: "0.68rem",
+                fontWeight: "700",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "var(--text-secondary)",
+                marginBottom: "10px",
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#059669" }} />
+              Portail Direction & Opérations
+            </div>
             <h1
               style={{
-                fontSize: "1.2rem",
+                fontSize: "1.38rem",
                 fontWeight: "800",
-                color: "var(--brown-dark)",
+                color: "#1C1917",
                 margin: "0 0 5px 0",
-                letterSpacing: "-0.015em",
+                letterSpacing: "-0.02em",
               }}
             >
               Espace de Gestion
             </h1>
-            <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", margin: 0, fontWeight: "500" }}>
-              Direction & Opérations Roum Transit
+            <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", margin: 0, fontWeight: "500", lineHeight: 1.45 }}>
+              Supervision globale des expéditions & trésorerie
             </p>
           </div>
 
@@ -3982,17 +4007,21 @@ export default function AdminPage() {
 
           <form onSubmit={handleLogin} style={{ display: "grid", gap: "16px" }}>
             <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.78rem",
-                  color: "var(--text-secondary)",
-                  marginBottom: "6px",
-                  fontWeight: "700",
-                }}
-              >
-                Identifiant / Email
-              </label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <label
+                  style={{
+                    fontSize: "0.76rem",
+                    color: "#374151",
+                    fontWeight: "700",
+                    letterSpacing: "0.01em",
+                  }}
+                >
+                  Identifiant / Email
+                </label>
+                <span style={{ fontSize: "0.68rem", color: "var(--text-dim)", fontWeight: "600" }}>
+                  Accès certifié
+                </span>
+              </div>
               <div style={{ position: "relative" }}>
                 <input
                   type="email"
@@ -4002,23 +4031,31 @@ export default function AdminPage() {
                   placeholder="admin@roumtransit.com"
                   style={{
                     width: "100%",
-                    height: "44px",
-                    padding: "0 14px 0 40px",
-                    borderRadius: "10px",
-                    border: "1px solid var(--border-light)",
-                    background: "#FFFFFF",
-                    fontSize: "0.88rem",
+                    height: "46px",
+                    padding: "0 14px 0 42px",
+                    borderRadius: "12px",
+                    border: "1px solid rgba(28, 25, 23, 0.12)",
+                    background: "#FAF9F7",
+                    fontSize: "0.9rem",
                     color: "var(--text-main)",
                     outline: "none",
                     boxSizing: "border-box",
-                    transition: "border-color 0.15s ease",
+                    transition: "all 0.18s ease",
                   }}
-                  onFocus={(e) => (e.currentTarget.style.borderColor = "var(--brown-dark)")}
-                  onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border-light)")}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = "#1C1917";
+                    e.currentTarget.style.background = "#FFFFFF";
+                    e.currentTarget.style.boxShadow = "0 0 0 3px rgba(28, 25, 23, 0.06)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(28, 25, 23, 0.12)";
+                    e.currentTarget.style.background = "#FAF9F7";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
                 />
                 <Mail
                   size={16}
-                  color="var(--text-muted)"
+                  color="#6B7280"
                   style={{
                     position: "absolute",
                     left: "14px",
@@ -4031,17 +4068,21 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.78rem",
-                  color: "var(--text-secondary)",
-                  marginBottom: "6px",
-                  fontWeight: "700",
-                }}
-              >
-                Mot de Passe
-              </label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <label
+                  style={{
+                    fontSize: "0.76rem",
+                    color: "#374151",
+                    fontWeight: "700",
+                    letterSpacing: "0.01em",
+                  }}
+                >
+                  Mot de Passe
+                </label>
+                <span style={{ fontSize: "0.68rem", color: "var(--text-dim)", fontWeight: "600" }}>
+                  Chiffrement AES
+                </span>
+              </div>
               <div style={{ position: "relative" }}>
                 <input
                   type={showPassword ? "text" : "password"}
@@ -4051,23 +4092,31 @@ export default function AdminPage() {
                   placeholder="••••••••••••"
                   style={{
                     width: "100%",
-                    height: "44px",
-                    padding: "0 40px 0 40px",
-                    borderRadius: "10px",
-                    border: "1px solid var(--border-light)",
-                    background: "#FFFFFF",
-                    fontSize: "0.88rem",
+                    height: "46px",
+                    padding: "0 42px 0 42px",
+                    borderRadius: "12px",
+                    border: "1px solid rgba(28, 25, 23, 0.12)",
+                    background: "#FAF9F7",
+                    fontSize: "0.9rem",
                     color: "var(--text-main)",
                     outline: "none",
                     boxSizing: "border-box",
-                    transition: "border-color 0.15s ease",
+                    transition: "all 0.18s ease",
                   }}
-                  onFocus={(e) => (e.currentTarget.style.borderColor = "var(--brown-dark)")}
-                  onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border-light)")}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = "#1C1917";
+                    e.currentTarget.style.background = "#FFFFFF";
+                    e.currentTarget.style.boxShadow = "0 0 0 3px rgba(28, 25, 23, 0.06)";
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(28, 25, 23, 0.12)";
+                    e.currentTarget.style.background = "#FAF9F7";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
                 />
                 <Lock
                   size={16}
-                  color="var(--text-muted)"
+                  color="#6B7280"
                   style={{
                     position: "absolute",
                     left: "14px",
@@ -4106,36 +4155,43 @@ export default function AdminPage() {
               disabled={loginLoading}
               style={{
                 width: "100%",
-                height: "44px",
+                height: "48px",
                 borderRadius: "12px",
                 border: "none",
-                background: "var(--brown-dark)",
+                background: "#1C1917",
                 color: "#FFFFFF",
-                fontWeight: "700",
-                fontSize: "0.9rem",
+                fontWeight: "800",
+                fontSize: "0.92rem",
+                letterSpacing: "0.01em",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "8px",
                 cursor: loginLoading ? "not-allowed" : "pointer",
-                marginTop: "6px",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.12)",
+                marginTop: "8px",
+                boxShadow: "0 2px 10px rgba(28, 25, 23, 0.16)",
                 opacity: loginLoading ? 0.75 : 1,
-                transition: "background-color 0.15s ease, opacity 0.15s ease",
+                transition: "all 0.16s ease",
               }}
               onMouseEnter={(e) => {
-                if (!loginLoading) e.currentTarget.style.background = "var(--brown-deep)";
+                if (!loginLoading) {
+                  e.currentTarget.style.background = "#000000";
+                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(28, 25, 23, 0.24)";
+                }
               }}
               onMouseLeave={(e) => {
-                if (!loginLoading) e.currentTarget.style.background = "var(--brown-dark)";
+                if (!loginLoading) {
+                  e.currentTarget.style.background = "#1C1917";
+                  e.currentTarget.style.boxShadow = "0 2px 10px rgba(28, 25, 23, 0.16)";
+                }
               }}
             >
               {loginLoading ? (
                 <span>Connexion en cours...</span>
               ) : (
                 <>
-                  <Lock size={15} />
                   <span>Se Connecter</span>
+                  <ArrowRight size={16} strokeWidth={2.4} />
                 </>
               )}
             </button>
@@ -4143,31 +4199,59 @@ export default function AdminPage() {
 
           <div
             style={{
-              marginTop: "22px",
+              marginTop: "24px",
               paddingTop: "16px",
-              borderTop: "1px solid var(--border-light)",
+              borderTop: "1px solid rgba(28, 25, 23, 0.07)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: "6px",
-              fontSize: "0.74rem",
+              gap: "7px",
+              fontSize: "0.73rem",
               color: "var(--text-muted)",
             }}
           >
-            <ShieldCheck size={14} color="#10B981" />
-            <span>Espace sécurisé pour les opérations de Roum Transit</span>
+            <span
+              style={{
+                width: "18px",
+                height: "18px",
+                borderRadius: "50%",
+                background: "rgba(5, 150, 105, 0.08)",
+                border: "1px solid rgba(5, 150, 105, 0.2)",
+                color: "#059669",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Lock size={10} strokeWidth={2.4} />
+            </span>
+            <span>Session chiffrée SSL · Accès réservé aux administrateurs</span>
           </div>
         </div>
 
         <div
           style={{
-            marginTop: "20px",
+            marginTop: "24px",
             fontSize: "0.72rem",
             color: "var(--text-dim)",
             textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
+            position: "relative",
+            zIndex: 1,
           }}
         >
-          © 2026 Roum Transit International. Tous droits réservés.
+          <div style={{ fontWeight: "700", color: "var(--text-secondary)", letterSpacing: "0.02em" }}>
+            ROUM TRANSIT INTERNATIONAL
+          </div>
+          <div style={{ fontSize: "0.69rem", color: "var(--text-dim)" }}>
+            Abidjan · Guangzhou · Yiwu · Dubaï · Casablanca
+          </div>
+          <div style={{ fontSize: "0.68rem", color: "var(--text-dim)", marginTop: "2px" }}>
+            © 2026 Roum Transit. Système d&apos;exploitation logistique officiel.
+          </div>
         </div>
       </div>
     );
