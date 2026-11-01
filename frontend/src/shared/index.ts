@@ -5,3 +5,5 @@ export * from "./references";
 export * from "./phone";
 export * from "./whatsapp";
 export * from "./money";
+export * from "./services-data";
+

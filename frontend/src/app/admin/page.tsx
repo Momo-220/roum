@@ -1766,6 +1766,34 @@ export default function AdminPage() {
     if (typeof window !== "undefined") localStorage.setItem("roum_tasks_data", JSON.stringify(tasksList));
   }, [tasksList]);
 
+  // Synchronisation temps réel bidirectionnelle avec le côté client public
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleSyncFromClient = () => {
+      try {
+        const savedReqs = localStorage.getItem("roum_requests_data");
+        if (savedReqs) {
+          const parsed = JSON.parse(savedReqs);
+          if (Array.isArray(parsed)) setRequestsList(parsed);
+        }
+        const savedTariffs = localStorage.getItem("roum_tariffs_data");
+        if (savedTariffs) {
+          const parsed = JSON.parse(savedTariffs);
+          if (Array.isArray(parsed)) setTariffsList(parsed);
+        }
+      } catch (err) {
+        console.warn("Erreur synchronisation temps réel admin :", err);
+      }
+    };
+
+    window.addEventListener("storage", handleSyncFromClient);
+    window.addEventListener("roum:request_created", handleSyncFromClient);
+    return () => {
+      window.removeEventListener("storage", handleSyncFromClient);
+      window.removeEventListener("roum:request_created", handleSyncFromClient);
+    };
+  }, []);
+
   // Notifications Toast Système Style Dashboard (Supprime les popups du navigateur)
   const [toast, setToast] = useState<{ message: string; title?: string; type: "success" | "error" | "info" } | null>(null);
 
