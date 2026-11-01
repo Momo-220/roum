@@ -23,3 +23,4 @@ INSERT OR IGNORE INTO shipment_statuses (code, label_public, description, sort_o
 ('ARRIVED_DESTINATION', 'Colis arrivé à destination', 'Arrivée sur le sol de destination et formalités de dédouanement', 60, 0, 0, 1),
 ('READY_FOR_PICKUP', 'Colis disponible pour retrait', 'Le colis est prêt en agence à Bingerville ou au hub local', 70, 0, 0, 1),
 ('DELIVERED', 'Colis livré', 'Remise officielle en main propre au client destinataire', 90, 1, 0, 1);
+
