@@ -131,21 +131,14 @@ export default function PublicLayout({
           </nav>
 
           {/* Actions Droite : WhatsApp Direct + Accès Direction */}
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <Link
               href="/admin"
+              className="roum-btn-secondary"
               style={{
                 fontSize: "0.78rem",
-                fontWeight: 600,
-                color: "#6B7280",
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "5px",
-                padding: "7px 12px",
+                padding: "8px 14px",
                 borderRadius: "8px",
-                border: "1px solid #E5E7EB",
-                background: "#FFFFFF",
               }}
               title="Portail de direction et gestion interne"
             >
@@ -156,18 +149,11 @@ export default function PublicLayout({
               href="https://wa.me/2250153638569"
               target="_blank"
               rel="noopener noreferrer"
+              className="roum-btn-primary"
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
                 fontSize: "0.82rem",
-                fontWeight: 700,
-                backgroundColor: "#18181B",
-                color: "#FFFFFF",
-                padding: "8px 14px",
+                padding: "8px 16px",
                 borderRadius: "8px",
-                textDecoration: "none",
-                whiteSpace: "nowrap",
               }}
             >
               <span>WhatsApp : +225 01 53 638 569</span>

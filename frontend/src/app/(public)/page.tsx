@@ -161,19 +161,25 @@ export default function HomePage() {
   return (
     <div style={{ backgroundColor: "#FFFFFF", color: "#111827", minHeight: "100vh" }}>
       {/* ============================================================
-          HERO : DESIGN ÉPURÉ, GRANDEUR NATURE, SANS CLIGNOTANTS
+          HERO : ARCHITECTURE ÉPURÉE & CADRAN DE SUIVI EN SUPERPOSITION
           ============================================================ */}
       <section
         style={{
           borderBottom: "1px solid #E5E7EB",
-          padding: "64px 20px 72px 20px",
+          padding: "72px 20px 84px 20px",
           backgroundColor: "#FFFFFF",
+          position: "relative",
         }}
       >
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <ScrollReveal>
-            <div style={{ marginBottom: "14px", fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "#6B7280" }}>
-              ROUM TRANSIT INTERNATIONAL
+            <div className="roum-numero-ligne">
+              <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#111827", letterSpacing: "0.14em" }}>
+                ROUM TRANSIT INTERNATIONAL
+              </span>
+              <span style={{ fontSize: "0.72rem", color: "#6B7280", letterSpacing: "0.12em", marginLeft: "10px" }}>
+                OPÉRATIONS CARGO MONDIALES
+              </span>
             </div>
 
             <h1
@@ -183,7 +189,7 @@ export default function HomePage() {
                 lineHeight: 1.08,
                 letterSpacing: "-0.03em",
                 color: "#111827",
-                margin: "0 0 20px 0",
+                margin: "0 0 22px 0",
                 maxWidth: "960px",
                 textWrap: "balance",
               }}
@@ -194,41 +200,50 @@ export default function HomePage() {
             <p
               style={{
                 fontSize: "clamp(1rem, 1.6vw, 1.18rem)",
-                lineHeight: 1.6,
+                lineHeight: 1.65,
                 color: "#4B5563",
-                maxWidth: "720px",
-                margin: "0 0 36px 0",
+                maxWidth: "740px",
+                margin: "0 0 44px 0",
+                textWrap: "pretty",
               }}
             >
-              Acheminement régulier depuis la Chine, Dubaï, le Maroc et la France. Pesée certifiée en magasin, traçabilité continue et dédouanement tout compris.
+              Acheminement régulier depuis la Chine, Dubaï, le Maroc et la France. Pesée certifiée en magasin, traçabilité unitaire continue et dédouanement tout compris.
             </p>
 
-            {/* FORMULAIRE DE SUIVI DE COLIS DIRECT & SIMPLE */}
+            {/* CADRAN DE SUIVI EN SUPERPOSITION ARCHITECTURALE */}
             <div
               id="tracking"
+              className="roum-cadran"
               style={{
-                maxWidth: "680px",
-                border: "1px solid #E5E7EB",
-                borderRadius: "14px",
-                padding: "20px",
-                backgroundColor: "#FFFFFF",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                maxWidth: "720px",
+                padding: "30px 24px 22px 24px",
+                marginTop: "16px",
               }}
             >
-              <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#111827", marginBottom: "12px" }}>
-                Suivre une expédition
+              {/* Badge superposé sur la bordure supérieure */}
+              <div className="roum-badge-superpose">
+                REGISTRE UNIFIÉ · CONTRÔLE DOUANIER & CARGO
               </div>
 
-              <form onSubmit={handleTrackingSubmit} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {/* Badge supérieur droit */}
+              <div className="roum-badge-superpose-right">
+                BORDEREAU OFFICIEL
+              </div>
+
+              <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#111827", marginBottom: "14px" }}>
+                Suivre une expédition en temps réel
+              </div>
+
+              <form onSubmit={handleTrackingSubmit} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 <div
                   style={{
                     display: "flex",
                     flexDirection: "row",
-                    gap: "8px",
+                    gap: "10px",
                     flexWrap: "wrap",
                   }}
                 >
-                  <div style={{ position: "relative", flex: "1 1 260px" }}>
+                  <div style={{ position: "relative", flex: "1 1 280px" }}>
                     <input
                       type="text"
                       value={trackingInput}
@@ -240,7 +255,7 @@ export default function HomePage() {
                       style={{
                         width: "100%",
                         height: "48px",
-                        padding: "0 14px",
+                        padding: "0 16px",
                         fontSize: "16px", // 16px empêche le zoom sur iPhone
                         border: "1px solid #D1D5DB",
                         borderRadius: "10px",
@@ -248,42 +263,34 @@ export default function HomePage() {
                         backgroundColor: "#FFFFFF",
                         outline: "none",
                         boxSizing: "border-box",
-                        fontWeight: 500,
+                        fontWeight: 600,
+                        transition: "border-color 0.15s ease",
                       }}
                     />
                   </div>
 
                   <button
                     type="submit"
+                    className="roum-btn-primary"
                     style={{
                       height: "48px",
-                      padding: "0 24px",
-                      backgroundColor: "#111827",
-                      color: "#FFFFFF",
-                      border: "none",
-                      borderRadius: "10px",
-                      fontSize: "0.9rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px",
+                      padding: "0 26px",
+                      fontSize: "0.92rem",
                       flexShrink: 0,
                     }}
                   >
-                    <Search size={15} />
+                    <Search size={16} />
                     <span>Rechercher</span>
                   </button>
                 </div>
 
                 {trackingError && (
-                  <div style={{ fontSize: "0.82rem", color: "#DC2626", fontWeight: 600, marginTop: "2px" }}>
+                  <div style={{ fontSize: "0.82rem", color: "#DC2626", fontWeight: 700, marginTop: "2px" }}>
                     {trackingError}
                   </div>
                 )}
 
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#6B7280", marginTop: "4px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.8rem", color: "#6B7280", marginTop: "4px" }}>
                   <span>Dossier témoin :</span>
                   <button
                     type="button"
@@ -293,14 +300,15 @@ export default function HomePage() {
                       border: "none",
                       padding: 0,
                       color: "#111827",
-                      fontWeight: 700,
+                      fontWeight: 800,
                       textDecoration: "underline",
                       cursor: "pointer",
-                      fontSize: "0.78rem",
+                      fontSize: "0.8rem",
                     }}
                   >
                     RM-AIR-2610-K8P9Q2
                   </button>
+                  <span style={{ color: "#9CA3AF" }}>· Consultation immédiate sans code secret</span>
                 </div>
               </form>
             </div>
@@ -309,23 +317,23 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================
-          SECTION 01 : GRILLE DES COULOIRS & DÉLAIS
+          SECTION 01 : COULOIRS & DÉLAIS (CADRANS AVEC SUPERPOSITION)
           ============================================================ */}
       <section
         id="corridors"
         style={{
-          padding: "80px 20px",
+          padding: "84px 20px",
           borderBottom: "1px solid #E5E7EB",
           backgroundColor: "#FFFFFF",
         }}
       >
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <ScrollReveal>
-            <div style={{ marginBottom: "40px" }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "10px", marginBottom: "8px" }}>
-                <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "#111827" }}>01</span>
-                <span style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#6B7280" }}>
-                  COULOIRS & DÉLAIS
+            <div style={{ marginBottom: "44px" }}>
+              <div className="roum-numero-ligne">
+                <span style={{ fontSize: "0.9rem", fontWeight: 800, color: "#111827" }}>01</span>
+                <span style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "#6B7280", marginLeft: "10px" }}>
+                  COULOIRS STRATÉGIQUES & DÉLAIS D&apos;ACHEMINEMENT
                 </span>
               </div>
               <h2
@@ -339,38 +347,45 @@ export default function HomePage() {
               >
                 Liaisons régulières vers l&apos;Afrique
               </h2>
-              <p style={{ fontSize: "0.98rem", color: "#4B5563", maxWidth: "640px", margin: 0, lineHeight: 1.5 }}>
-                Départs hebdomadaires planifiés depuis nos entrepôts de consolidation.
+              <p style={{ fontSize: "1rem", color: "#4B5563", maxWidth: "660px", margin: 0, lineHeight: 1.55 }}>
+                Départs hebdomadaires planifiés depuis nos entrepôts de consolidation avec réceptions sécurisées.
               </p>
             </div>
           </ScrollReveal>
 
-          {/* Grille des 4 couloirs */}
+          {/* Grille des 4 couloirs avec superposition de médaillon drapeau */}
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-              gap: "20px",
+              gap: "28px 22px",
             }}
           >
             {/* Couloir 1 : Chine */}
             <ScrollReveal delay={40}>
               <div
+                className="roum-cadran"
                 style={{
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "12px",
-                  padding: "24px",
+                  padding: "28px 24px 20px 24px",
                   height: "100%",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  backgroundColor: "#FFFFFF",
+                  boxSizing: "border-box",
                 }}
               >
+                {/* Médaillon drapeau en superposition sur l'arête supérieure */}
+                <div className="roum-flag-medaillon">
+                  <CircularFlag countryCode="CN" size={20} />
+                </div>
+                {/* Badge d'identification */}
+                <div className="roum-badge-superpose-right">
+                  CN · 01
+                </div>
+
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                    <CircularFlag countryCode="CN" size={20} />
-                    <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: 0 }}>
+                  <div style={{ marginTop: "4px", marginBottom: "4px" }}>
+                    <h3 style={{ fontSize: "1.12rem", fontWeight: 800, color: "#111827", margin: 0 }}>
                       Chine ➔ Afrique
                     </h3>
                   </div>
@@ -378,7 +393,7 @@ export default function HomePage() {
                     Guangzhou & Yiwu (2 départs / semaine)
                   </div>
 
-                  <div style={{ display: "grid", gap: "8px", fontSize: "0.84rem", borderTop: "1px solid #F3F4F6", paddingTop: "12px", marginBottom: "16px" }}>
+                  <div style={{ display: "grid", gap: "10px", fontSize: "0.84rem", borderTop: "1px solid #F3F4F6", paddingTop: "14px", marginBottom: "18px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <span style={{ color: "#4B5563" }}>Voie express :</span>
                       <strong style={{ color: "#111827" }}>4 - 5 jours</strong>
@@ -394,8 +409,16 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div style={{ borderTop: "1px solid #F3F4F6", paddingTop: "12px" }}>
-                  <div style={{ fontSize: "0.72rem", color: "#6B7280", textTransform: "uppercase", fontWeight: 600 }}>Tarif de base</div>
+                <div
+                  style={{
+                    backgroundColor: "#F8FAFC",
+                    borderTop: "1px solid #E2E8F0",
+                    margin: "0 -24px -20px -24px",
+                    padding: "12px 24px",
+                    borderRadius: "0 0 14px 14px",
+                  }}
+                >
+                  <div style={{ fontSize: "0.7rem", color: "#6B7280", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.06em" }}>Tarif de base</div>
                   <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#111827" }}>
                     Dès 10 000 FCFA / kg
                   </div>
@@ -406,29 +429,34 @@ export default function HomePage() {
             {/* Couloir 2 : Dubaï */}
             <ScrollReveal delay={90}>
               <div
+                className="roum-cadran"
                 style={{
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "12px",
-                  padding: "24px",
+                  padding: "28px 24px 20px 24px",
                   height: "100%",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  backgroundColor: "#FFFFFF",
+                  boxSizing: "border-box",
                 }}
               >
+                <div className="roum-flag-medaillon">
+                  <CircularFlag countryCode="AE" size={20} />
+                </div>
+                <div className="roum-badge-superpose-right">
+                  AE · 02
+                </div>
+
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                    <CircularFlag countryCode="AE" size={20} />
-                    <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: 0 }}>
+                  <div style={{ marginTop: "4px", marginBottom: "4px" }}>
+                    <h3 style={{ fontSize: "1.12rem", fontWeight: 800, color: "#111827", margin: 0 }}>
                       Dubaï ➔ Afrique
                     </h3>
                   </div>
                   <div style={{ fontSize: "0.8rem", color: "#6B7280", marginBottom: "16px" }}>
-                    Cargo Dubaï & Deira
+                    Cargo Dubaï & Deira Wholesale
                   </div>
 
-                  <div style={{ display: "grid", gap: "8px", fontSize: "0.84rem", borderTop: "1px solid #F3F4F6", paddingTop: "12px", marginBottom: "16px" }}>
+                  <div style={{ display: "grid", gap: "10px", fontSize: "0.84rem", borderTop: "1px solid #F3F4F6", paddingTop: "14px", marginBottom: "18px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <span style={{ color: "#4B5563" }}>Voie express :</span>
                       <strong style={{ color: "#111827" }}>4 - 5 jours</strong>
@@ -444,8 +472,16 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div style={{ borderTop: "1px solid #F3F4F6", paddingTop: "12px" }}>
-                  <div style={{ fontSize: "0.72rem", color: "#6B7280", textTransform: "uppercase", fontWeight: 600 }}>Tarif de base</div>
+                <div
+                  style={{
+                    backgroundColor: "#F8FAFC",
+                    borderTop: "1px solid #E2E8F0",
+                    margin: "0 -24px -20px -24px",
+                    padding: "12px 24px",
+                    borderRadius: "0 0 14px 14px",
+                  }}
+                >
+                  <div style={{ fontSize: "0.7rem", color: "#6B7280", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.06em" }}>Tarif de base</div>
                   <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#111827" }}>
                     Dès 10 000 FCFA / kg
                   </div>
@@ -456,21 +492,26 @@ export default function HomePage() {
             {/* Couloir 3 : Maroc */}
             <ScrollReveal delay={140}>
               <div
+                className="roum-cadran"
                 style={{
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "12px",
-                  padding: "24px",
+                  padding: "28px 24px 20px 24px",
                   height: "100%",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  backgroundColor: "#FFFFFF",
+                  boxSizing: "border-box",
                 }}
               >
+                <div className="roum-flag-medaillon">
+                  <CircularFlag countryCode="MA" size={20} />
+                </div>
+                <div className="roum-badge-superpose-right">
+                  MA · 03
+                </div>
+
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                    <CircularFlag countryCode="MA" size={20} />
-                    <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: 0 }}>
+                  <div style={{ marginTop: "4px", marginBottom: "4px" }}>
+                    <h3 style={{ fontSize: "1.12rem", fontWeight: 800, color: "#111827", margin: 0 }}>
                       Maroc ➔ 5 Pays
                     </h3>
                   </div>
@@ -478,7 +519,7 @@ export default function HomePage() {
                     Casablanca (5 jours chrono)
                   </div>
 
-                  <div style={{ display: "grid", gap: "8px", fontSize: "0.84rem", borderTop: "1px solid #F3F4F6", paddingTop: "12px", marginBottom: "16px" }}>
+                  <div style={{ display: "grid", gap: "10px", fontSize: "0.84rem", borderTop: "1px solid #F3F4F6", paddingTop: "14px", marginBottom: "18px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <span style={{ color: "#4B5563" }}>Côte d&apos;Ivoire :</span>
                       <strong style={{ color: "#111827" }}>6 500 F / kg</strong>
@@ -494,8 +535,16 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div style={{ borderTop: "1px solid #F3F4F6", paddingTop: "12px" }}>
-                  <div style={{ fontSize: "0.72rem", color: "#6B7280", textTransform: "uppercase", fontWeight: 600 }}>Tarif de base</div>
+                <div
+                  style={{
+                    backgroundColor: "#F8FAFC",
+                    borderTop: "1px solid #E2E8F0",
+                    margin: "0 -24px -20px -24px",
+                    padding: "12px 24px",
+                    borderRadius: "0 0 14px 14px",
+                  }}
+                >
+                  <div style={{ fontSize: "0.7rem", color: "#6B7280", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.06em" }}>Tarif de base</div>
                   <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#111827" }}>
                     Dès 6 500 FCFA / kg
                   </div>
@@ -506,21 +555,26 @@ export default function HomePage() {
             {/* Couloir 4 : France */}
             <ScrollReveal delay={190}>
               <div
+                className="roum-cadran"
                 style={{
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "12px",
-                  padding: "24px",
+                  padding: "28px 24px 20px 24px",
                   height: "100%",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  backgroundColor: "#FFFFFF",
+                  boxSizing: "border-box",
                 }}
               >
+                <div className="roum-flag-medaillon">
+                  <CircularFlag countryCode="FR" size={20} />
+                </div>
+                <div className="roum-badge-superpose-right">
+                  FR · 04
+                </div>
+
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                    <CircularFlag countryCode="FR" size={20} />
-                    <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: 0 }}>
+                  <div style={{ marginTop: "4px", marginBottom: "4px" }}>
+                    <h3 style={{ fontSize: "1.12rem", fontWeight: 800, color: "#111827", margin: 0 }}>
                       France ↔ Abidjan
                     </h3>
                   </div>
@@ -528,7 +582,7 @@ export default function HomePage() {
                     Ligne aérienne directe Paris
                   </div>
 
-                  <div style={{ display: "grid", gap: "8px", fontSize: "0.84rem", borderTop: "1px solid #F3F4F6", paddingTop: "12px", marginBottom: "16px" }}>
+                  <div style={{ display: "grid", gap: "10px", fontSize: "0.84rem", borderTop: "1px solid #F3F4F6", paddingTop: "14px", marginBottom: "18px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <span style={{ color: "#4B5563" }}>Articles divers :</span>
                       <strong style={{ color: "#111827" }}>8 500 F / kg</strong>
@@ -544,8 +598,16 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div style={{ borderTop: "1px solid #F3F4F6", paddingTop: "12px" }}>
-                  <div style={{ fontSize: "0.72rem", color: "#6B7280", textTransform: "uppercase", fontWeight: 600 }}>Tarif de base</div>
+                <div
+                  style={{
+                    backgroundColor: "#F8FAFC",
+                    borderTop: "1px solid #E2E8F0",
+                    margin: "0 -24px -20px -24px",
+                    padding: "12px 24px",
+                    borderRadius: "0 0 14px 14px",
+                  }}
+                >
+                  <div style={{ fontSize: "0.7rem", color: "#6B7280", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.06em" }}>Tarif de base</div>
                   <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#111827" }}>
                     Dès 8 500 FCFA / kg
                   </div>
@@ -557,23 +619,23 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================
-          SECTION 02 : SIMULATEUR TARIFAIRE SIMPLE & DIRECT
+          SECTION 02 : SIMULATEUR TARIFAIRE & BORDEREAU EN SUPERPOSITION
           ============================================================ */}
       <section
         id="tariffs"
         style={{
-          padding: "80px 20px",
+          padding: "84px 20px",
           borderBottom: "1px solid #E5E7EB",
           backgroundColor: "#FAFAFA",
         }}
       >
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <ScrollReveal>
-            <div style={{ marginBottom: "36px" }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "10px", marginBottom: "8px" }}>
-                <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "#111827" }}>02</span>
-                <span style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#6B7280" }}>
-                  SIMULATEUR DE COTATION
+            <div style={{ marginBottom: "40px" }}>
+              <div className="roum-numero-ligne">
+                <span style={{ fontSize: "0.9rem", fontWeight: 800, color: "#111827" }}>02</span>
+                <span style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "#6B7280", marginLeft: "10px" }}>
+                  SIMULATEUR DE COTATION IMMÉDIATE
                 </span>
               </div>
               <h2
@@ -587,8 +649,8 @@ export default function HomePage() {
               >
                 Calculer une expédition
               </h2>
-              <p style={{ fontSize: "0.98rem", color: "#4B5563", maxWidth: "640px", margin: 0, lineHeight: 1.5 }}>
-                Estimation directe selon les grilles en vigueur. Frais de douane inclus.
+              <p style={{ fontSize: "1rem", color: "#4B5563", maxWidth: "660px", margin: 0, lineHeight: 1.55 }}>
+                Estimation directe selon les grilles en vigueur. Frais de dédouanement et sécurisation inclus.
               </p>
             </div>
           </ScrollReveal>
@@ -597,270 +659,288 @@ export default function HomePage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-                gap: "24px",
-                alignItems: "start",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: "28px",
+                alignItems: "stretch",
               }}
             >
-              {/* Formulaire de saisie */}
+              {/* Cadran gauche : Pupitre de Configuration */}
               <div
+                className="roum-cadran"
                 style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "14px",
-                  padding: "24px",
-                }}
-              >
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px", marginBottom: "18px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#374151", marginBottom: "6px", textTransform: "uppercase" }}>
-                      Départ (Origine)
-                    </label>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", border: "1px solid #D1D5DB", borderRadius: "8px", padding: "0 10px", height: "44px" }}>
-                      <CircularFlag countryName={simOrigin} size={16} />
-                      <select
-                        value={simOrigin}
-                        onChange={(e) => setSimOrigin(e.target.value)}
-                        style={{
-                          border: "none",
-                          backgroundColor: "transparent",
-                          width: "100%",
-                          height: "100%",
-                          fontSize: "14px",
-                          color: "#111827",
-                          outline: "none",
-                          fontWeight: 600,
-                        }}
-                      >
-                        <option value="Chine">Chine (Guangzhou / Yiwu)</option>
-                        <option value="Émirats Arabes Unis (Dubaï)">Émirats Arabes Unis (Dubaï)</option>
-                        <option value="Maroc">Maroc (Casablanca)</option>
-                        <option value="France">France (Paris)</option>
-                        <option value="Turquie">Turquie (Istanbul)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#374151", marginBottom: "6px", textTransform: "uppercase" }}>
-                      Arrivée (Destination)
-                    </label>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", border: "1px solid #D1D5DB", borderRadius: "8px", padding: "0 10px", height: "44px" }}>
-                      <CircularFlag countryName={simDest} size={16} />
-                      <select
-                        value={simDest}
-                        onChange={(e) => setSimDest(e.target.value)}
-                        style={{
-                          border: "none",
-                          backgroundColor: "transparent",
-                          width: "100%",
-                          height: "100%",
-                          fontSize: "14px",
-                          color: "#111827",
-                          outline: "none",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {AFRICAN_COUNTRIES.map((c) => (
-                          <option key={c.code} value={c.name}>
-                            {c.name} ({c.hubCity || c.code})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mode de transport */}
-                <div style={{ marginBottom: "18px" }}>
-                  <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#374151", marginBottom: "6px", textTransform: "uppercase" }}>
-                    Mode de transport
-                  </label>
-                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                    {[
-                      { id: "AIR", label: "Aérien Express (4 - 5j)", icon: Plane },
-                      { id: "SEA", label: "Maritime (CBM)", icon: Ship },
-                      { id: "ROAD", label: "Terrestre", icon: Truck },
-                    ].map((mode) => {
-                      const Icon = mode.icon;
-                      const isSelected = simMode === mode.id;
-                      return (
-                        <button
-                          key={mode.id}
-                          type="button"
-                          onClick={() => setSimMode(mode.id as any)}
-                          style={{
-                            padding: "8px 14px",
-                            borderRadius: "8px",
-                            fontSize: "0.82rem",
-                            fontWeight: 600,
-                            border: isSelected ? "1px solid #111827" : "1px solid #D1D5DB",
-                            backgroundColor: isSelected ? "#111827" : "#FFFFFF",
-                            color: isSelected ? "#FFFFFF" : "#374151",
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
-                          }}
-                        >
-                          <Icon size={13} />
-                          <span>{mode.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Poids / Catégorie */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "14px" }}>
-                  {simMode === "SEA" ? (
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>
-                        Volume en m³ (CBM)
-                      </label>
-                      <input
-                        type="number"
-                        min="0.1"
-                        step="0.1"
-                        value={simCbm}
-                        onChange={(e) => setSimCbm(Math.max(0.1, Number(e.target.value)))}
-                        style={{
-                          width: "100%",
-                          height: "44px",
-                          padding: "0 12px",
-                          fontSize: "15px",
-                          border: "1px solid #D1D5DB",
-                          borderRadius: "8px",
-                          backgroundColor: "#FFFFFF",
-                          color: "#111827",
-                          boxSizing: "border-box",
-                          fontWeight: 600,
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <>
-                      <div>
-                        <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>
-                          Poids (kg)
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          step="1"
-                          value={simWeight}
-                          onChange={(e) => setSimWeight(Math.max(1, Number(e.target.value)))}
-                          style={{
-                            width: "100%",
-                            height: "44px",
-                            padding: "0 12px",
-                            fontSize: "15px",
-                            border: "1px solid #D1D5DB",
-                            borderRadius: "8px",
-                            backgroundColor: "#FFFFFF",
-                            color: "#111827",
-                            boxSizing: "border-box",
-                            fontWeight: 600,
-                          }}
-                        />
-                      </div>
-
-                      <div>
-                        <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>
-                          Catégorie
-                        </label>
-                        <select
-                          value={simCategory}
-                          onChange={(e) => setSimCategory(e.target.value)}
-                          style={{
-                            width: "100%",
-                            height: "44px",
-                            padding: "0 12px",
-                            fontSize: "14px",
-                            border: "1px solid #D1D5DB",
-                            borderRadius: "8px",
-                            backgroundColor: "#FFFFFF",
-                            color: "#111827",
-                            outline: "none",
-                            boxSizing: "border-box",
-                            fontWeight: 600,
-                          }}
-                        >
-                          <option value="express">Marchandises Générales (Express 4-5j)</option>
-                          <option value="normal">Marchandises Générales (Normale 2 sem)</option>
-                          <option value="battery">Batteries & Compléments</option>
-                          <option value="pc">Pièces d&apos;ordinateur & High-Tech</option>
-                          <option value="cosmetic">Cosmétiques & Beauté</option>
-                          <option value="doc">Pli & Document Administratif</option>
-                        </select>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Résultat Devis */}
-              <div
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "14px",
-                  padding: "26px",
+                  padding: "32px 26px",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  gap: "20px",
                 }}
               >
+                <div className="roum-badge-superpose">
+                  CONFIGURATION D&apos;EXPÉDITION
+                </div>
+
                 <div>
-                  <div style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", color: "#6B7280", marginBottom: "8px" }}>
-                    Montant estimé (tout compris)
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "20px", marginTop: "4px" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 800, color: "#374151", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        Départ (Origine)
+                      </label>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", border: "1px solid #D1D5DB", borderRadius: "10px", padding: "0 12px", height: "46px", backgroundColor: "#FFFFFF" }}>
+                        <CircularFlag countryName={simOrigin} size={18} />
+                        <select
+                          value={simOrigin}
+                          onChange={(e) => setSimOrigin(e.target.value)}
+                          style={{
+                            border: "none",
+                            backgroundColor: "transparent",
+                            width: "100%",
+                            height: "100%",
+                            fontSize: "14px",
+                            color: "#111827",
+                            outline: "none",
+                            fontWeight: 700,
+                          }}
+                        >
+                          <option value="Chine">Chine (Guangzhou / Yiwu)</option>
+                          <option value="Émirats Arabes Unis (Dubaï)">Émirats Arabes Unis (Dubaï)</option>
+                          <option value="Maroc">Maroc (Casablanca)</option>
+                          <option value="France">France (Paris)</option>
+                          <option value="Turquie">Turquie (Istanbul)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 800, color: "#374151", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                        Arrivée (Destination)
+                      </label>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", border: "1px solid #D1D5DB", borderRadius: "10px", padding: "0 12px", height: "46px", backgroundColor: "#FFFFFF" }}>
+                        <CircularFlag countryName={simDest} size={18} />
+                        <select
+                          value={simDest}
+                          onChange={(e) => setSimDest(e.target.value)}
+                          style={{
+                            border: "none",
+                            backgroundColor: "transparent",
+                            width: "100%",
+                            height: "100%",
+                            fontSize: "14px",
+                            color: "#111827",
+                            outline: "none",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {AFRICAN_COUNTRIES.map((c) => (
+                            <option key={c.code} value={c.name}>
+                              {c.name} ({c.hubCity || c.code})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mode de transport avec boutons tactiles */}
+                  <div style={{ marginBottom: "20px" }}>
+                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 800, color: "#374151", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      Mode d&apos;acheminement
+                    </label>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      {[
+                        { id: "AIR", label: "Aérien Express (4 - 5j)", icon: Plane },
+                        { id: "SEA", label: "Maritime Groupage (CBM)", icon: Ship },
+                        { id: "ROAD", label: "Terrestre Transfrontalier", icon: Truck },
+                      ].map((mode) => {
+                        const Icon = mode.icon;
+                        const isSelected = simMode === mode.id;
+                        return (
+                          <button
+                            key={mode.id}
+                            type="button"
+                            onClick={() => setSimMode(mode.id as any)}
+                            className={isSelected ? "roum-btn-primary" : "roum-btn-secondary"}
+                            style={{
+                              padding: "9px 14px",
+                              fontSize: "0.82rem",
+                              borderRadius: "8px",
+                            }}
+                          >
+                            <Icon size={14} />
+                            <span>{mode.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Poids / Catégorie */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" }}>
+                    {simMode === "SEA" ? (
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 800, color: "#374151", marginBottom: "8px", textTransform: "uppercase" }}>
+                          Volume en m³ (CBM)
+                        </label>
+                        <input
+                          type="number"
+                          min="0.1"
+                          step="0.1"
+                          value={simCbm}
+                          onChange={(e) => setSimCbm(Math.max(0.1, Number(e.target.value)))}
+                          style={{
+                            width: "100%",
+                            height: "46px",
+                            padding: "0 14px",
+                            fontSize: "15px",
+                            border: "1px solid #D1D5DB",
+                            borderRadius: "10px",
+                            backgroundColor: "#FFFFFF",
+                            color: "#111827",
+                            boxSizing: "border-box",
+                            fontWeight: 700,
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 800, color: "#374151", marginBottom: "8px", textTransform: "uppercase" }}>
+                            Poids (kg)
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={simWeight}
+                            onChange={(e) => setSimWeight(Math.max(1, Number(e.target.value)))}
+                            style={{
+                              width: "100%",
+                              height: "46px",
+                              padding: "0 14px",
+                              fontSize: "15px",
+                              border: "1px solid #D1D5DB",
+                              borderRadius: "10px",
+                              backgroundColor: "#FFFFFF",
+                              color: "#111827",
+                              boxSizing: "border-box",
+                              fontWeight: 700,
+                            }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 800, color: "#374151", marginBottom: "8px", textTransform: "uppercase" }}>
+                            Nature de la marchandise
+                          </label>
+                          <select
+                            value={simCategory}
+                            onChange={(e) => setSimCategory(e.target.value)}
+                            style={{
+                              width: "100%",
+                              height: "46px",
+                              padding: "0 12px",
+                              fontSize: "14px",
+                              border: "1px solid #D1D5DB",
+                              borderRadius: "10px",
+                              backgroundColor: "#FFFFFF",
+                              color: "#111827",
+                              outline: "none",
+                              boxSizing: "border-box",
+                              fontWeight: 700,
+                            }}
+                          >
+                            <option value="express">Marchandises Générales (Express 4-5j)</option>
+                            <option value="normal">Marchandises Générales (Normale 2 sem)</option>
+                            <option value="battery">Batteries & Compléments</option>
+                            <option value="pc">Pièces d&apos;ordinateur & High-Tech</option>
+                            <option value="cosmetic">Cosmétiques & Beauté</option>
+                            <option value="doc">Pli & Document Administratif</option>
+                          </select>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Cadran droit : Bordereau Officiel Superposé */}
+              <div
+                className="roum-bordereau-superpose"
+                style={{
+                  padding: "32px 28px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div className="roum-badge-superpose">
+                  BORDEREAU D&apos;ESTIMATION OFFICIEL
+                </div>
+
+                <div className="roum-badge-superpose-right">
+                  DOUANE INCLUSE
+                </div>
+
+                <div style={{ marginTop: "4px" }}>
+                  <div style={{ fontSize: "0.74rem", fontWeight: 800, textTransform: "uppercase", color: "#6B7280", letterSpacing: "0.08em", marginBottom: "8px" }}>
+                    Montant estimé net
                   </div>
 
                   <div
                     style={{
-                      fontSize: "clamp(2rem, 3.6vw, 2.6rem)",
+                      fontSize: "clamp(2.2rem, 3.8vw, 2.9rem)",
                       fontWeight: 800,
                       color: "#111827",
-                      letterSpacing: "-0.02em",
-                      lineHeight: 1.1,
-                      margin: "0 0 10px 0",
+                      letterSpacing: "-0.025em",
+                      lineHeight: 1.05,
+                      margin: "0 0 12px 0",
                     }}
                     className="tabular-nums"
                   >
                     {estimate.amountFcfa.toLocaleString("fr-FR")} FCFA
                   </div>
 
-                  <div style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.5 }}>
-                    {estimate.details} · <strong>Délai : {estimate.duration}</strong>
+                  <div style={{ fontSize: "0.92rem", color: "#374151", lineHeight: 1.55 }}>
+                    {estimate.details} · <strong>Délai garanti : {estimate.duration}</strong>
                   </div>
 
-                  <div style={{ fontSize: "0.78rem", color: "#6B7280", marginTop: "12px", borderTop: "1px solid #F3F4F6", paddingTop: "10px" }}>
-                    Dédouanement complet inclus. Retrait en agence à Abidjan Bingerville.
+                  {/* Ligne pointillée technique façon LTA */}
+                  <div style={{ borderTop: "1.5px dashed #CBD5E1", margin: "18px 0" }} />
+
+                  <div style={{ display: "grid", gap: "8px", fontSize: "0.82rem", color: "#4B5563" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span>Trajet :</span>
+                      <strong style={{ color: "#111827" }}>{simOrigin} ➔ {simDest}</strong>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span>Conditionnement :</span>
+                      <strong style={{ color: "#111827" }}>{simMode === "SEA" ? `${simCbm} m³` : `${simWeight} kg net`}</strong>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span>Point de retrait :</span>
+                      <strong style={{ color: "#111827" }}>Agence Abidjan Bingerville</strong>
+                    </div>
                   </div>
                 </div>
 
-                <a
-                  href={getSimulatorWaUrl()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    height: "48px",
-                    backgroundColor: "#111827",
-                    color: "#FFFFFF",
-                    borderRadius: "10px",
-                    fontSize: "0.88rem",
-                    fontWeight: 700,
-                    textDecoration: "none",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                  }}
-                >
-                  <MessageCircle size={16} />
-                  <span>Valider sur WhatsApp</span>
-                </a>
+                <div style={{ marginTop: "24px" }}>
+                  <a
+                    href={getSimulatorWaUrl()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="roum-btn-primary"
+                    style={{
+                      width: "100%",
+                      height: "48px",
+                      fontSize: "0.92rem",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <MessageCircle size={17} />
+                    <span>Valider & Réserver sur WhatsApp</span>
+                  </a>
+                  <div style={{ textAlign: "center", fontSize: "0.74rem", color: "#9CA3AF", marginTop: "8px" }}>
+                    Confirmation sans engagement · Assistance humaine directe
+                  </div>
+                </div>
               </div>
             </div>
           </ScrollReveal>
@@ -868,23 +948,23 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================
-          SECTION 03 : ENTREPÔTS & ADRESSES DE RÉCEPTION
+          SECTION 03 : ENTREPÔTS & ADRESSES DE RÉCEPTION (POCHOIR STENCIL)
           ============================================================ */}
       <section
         id="warehouses"
         style={{
-          padding: "80px 20px",
+          padding: "84px 20px",
           borderBottom: "1px solid #E5E7EB",
           backgroundColor: "#FFFFFF",
         }}
       >
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <ScrollReveal>
-            <div style={{ marginBottom: "40px" }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "10px", marginBottom: "8px" }}>
-                <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "#111827" }}>03</span>
-                <span style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#6B7280" }}>
-                  ENTREPÔTS & GROUPAGE
+            <div style={{ marginBottom: "44px" }}>
+              <div className="roum-numero-ligne">
+                <span style={{ fontSize: "0.9rem", fontWeight: 800, color: "#111827" }}>03</span>
+                <span style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "#6B7280", marginLeft: "10px" }}>
+                  ENTREPÔTS MONDAUX & GROUPAGE SÉCURISÉ
                 </span>
               </div>
               <h2
@@ -898,8 +978,8 @@ export default function HomePage() {
               >
                 Adresses de réception pour vos fournisseurs
               </h2>
-              <p style={{ fontSize: "0.98rem", color: "#4B5563", maxWidth: "640px", margin: 0, lineHeight: 1.5 }}>
-                Transmettez ces adresses à vos expéditeurs avec votre nom et numéro de téléphone en Shipping Mark.
+              <p style={{ fontSize: "1rem", color: "#4B5563", maxWidth: "660px", margin: 0, lineHeight: 1.55 }}>
+                Transmettez ces adresses à vos usines ou expéditeurs avec le marquage obligatoire en Shipping Mark.
               </p>
             </div>
           </ScrollReveal>
@@ -908,57 +988,58 @@ export default function HomePage() {
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-              gap: "20px",
+              gap: "28px 22px",
             }}
           >
             {/* Chine */}
             <ScrollReveal delay={40}>
               <div
+                className="roum-cadran"
                 style={{
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "12px",
-                  padding: "22px",
+                  padding: "28px 24px 22px 24px",
                   height: "100%",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  backgroundColor: "#FFFFFF",
+                  boxSizing: "border-box",
                 }}
               >
+                <div className="roum-flag-medaillon">
+                  <CircularFlag countryCode="CN" size={20} />
+                </div>
+                <div className="roum-badge-superpose-right">
+                  HUB ASIE
+                </div>
+
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-                    <CircularFlag countryCode="CN" size={18} />
-                    <strong style={{ fontSize: "0.96rem", color: "#111827" }}>Guangzhou (Chine)</strong>
+                  <div style={{ marginTop: "4px", marginBottom: "4px" }}>
+                    <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: 0 }}>
+                      Guangzhou (Chine)
+                    </h3>
                   </div>
-                  <p style={{ fontSize: "0.82rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 12px 0" }}>
+                  <p style={{ fontSize: "0.84rem", color: "#4B5563", lineHeight: 1.55, margin: "0 0 14px 0" }}>
                     Baiyun District, Guangzhou City, Guangdong Province, China. Réception & consolidation 1688 / Taobao.
                   </p>
-                  <div style={{ fontSize: "0.75rem", color: "#6B7280", background: "#F9FAFB", padding: "8px 10px", borderRadius: "8px", marginBottom: "16px" }}>
-                    Marquage colis : <strong>ROUM TRANSIT / [Votre Nom]</strong>
+                  <div className="roum-stencil-mark" style={{ marginBottom: "16px" }}>
+                    SHIPPING MARK : ROUM TRANSIT / [VOTRE NOM]
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => handleCopy("cn", "Guangzhou Warehouse, Baiyun District, Guangzhou City, Guangdong Province, China — ROUM TRANSIT")}
+                  className="roum-btn-secondary"
                   style={{
                     width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid #D1D5DB",
+                    height: "42px",
                     backgroundColor: copiedKey === "cn" ? "#F0FDF4" : "#FFFFFF",
-                    color: copiedKey === "cn" ? "#15803D" : "#111827",
-                    fontSize: "0.8rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
+                    color: copiedKey === "cn" ? "#15803D !important" : "#111827",
+                    borderColor: copiedKey === "cn" ? "#86EFAC" : "#D1D5DB",
+                    boxSizing: "border-box",
                   }}
                 >
-                  {copiedKey === "cn" ? <Check size={13} /> : <Copy size={13} />}
-                  <span>{copiedKey === "cn" ? "Adresse copiée !" : "Copier l'adresse"}</span>
+                  {copiedKey === "cn" ? <Check size={14} color="#15803D" /> : <Copy size={14} />}
+                  <span>{copiedKey === "cn" ? "Adresse copiée !" : "Copier l'adresse de livraison"}</span>
                 </button>
               </div>
             </ScrollReveal>
@@ -966,51 +1047,52 @@ export default function HomePage() {
             {/* Dubaï */}
             <ScrollReveal delay={90}>
               <div
+                className="roum-cadran"
                 style={{
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "12px",
-                  padding: "22px",
+                  padding: "28px 24px 22px 24px",
                   height: "100%",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  backgroundColor: "#FFFFFF",
+                  boxSizing: "border-box",
                 }}
               >
+                <div className="roum-flag-medaillon">
+                  <CircularFlag countryCode="AE" size={20} />
+                </div>
+                <div className="roum-badge-superpose-right">
+                  HUB MOYEN-ORIENT
+                </div>
+
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-                    <CircularFlag countryCode="AE" size={18} />
-                    <strong style={{ fontSize: "0.96rem", color: "#111827" }}>Dubaï (Émirats)</strong>
+                  <div style={{ marginTop: "4px", marginBottom: "4px" }}>
+                    <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: 0 }}>
+                      Dubaï (Émirats)
+                    </h3>
                   </div>
-                  <p style={{ fontSize: "0.82rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 12px 0" }}>
-                    Deira Wholesale District, Dubaï Cargo Hub. Parfumerie, cosmétiques et électronique.
+                  <p style={{ fontSize: "0.84rem", color: "#4B5563", lineHeight: 1.55, margin: "0 0 14px 0" }}>
+                    Deira Wholesale District, Dubaï Cargo Hub. Parfumerie, compléments, cosmétiques et électronique.
                   </p>
-                  <div style={{ fontSize: "0.75rem", color: "#6B7280", background: "#F9FAFB", padding: "8px 10px", borderRadius: "8px", marginBottom: "16px" }}>
-                    Marquage colis : <strong>ROUM TRANSIT DUBAI / [Votre Nom]</strong>
+                  <div className="roum-stencil-mark" style={{ marginBottom: "16px" }}>
+                    SHIPPING MARK : ROUM TRANSIT DUBAI / [VOTRE NOM]
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => handleCopy("ae", "Deira Cargo Hub, Dubai, UAE — ROUM TRANSIT DUBAI")}
+                  className="roum-btn-secondary"
                   style={{
                     width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid #D1D5DB",
+                    height: "42px",
                     backgroundColor: copiedKey === "ae" ? "#F0FDF4" : "#FFFFFF",
-                    color: copiedKey === "ae" ? "#15803D" : "#111827",
-                    fontSize: "0.8rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
+                    color: copiedKey === "ae" ? "#15803D !important" : "#111827",
+                    borderColor: copiedKey === "ae" ? "#86EFAC" : "#D1D5DB",
+                    boxSizing: "border-box",
                   }}
                 >
-                  {copiedKey === "ae" ? <Check size={13} /> : <Copy size={13} />}
-                  <span>{copiedKey === "ae" ? "Adresse copiée !" : "Copier l'adresse"}</span>
+                  {copiedKey === "ae" ? <Check size={14} color="#15803D" /> : <Copy size={14} />}
+                  <span>{copiedKey === "ae" ? "Adresse copiée !" : "Copier l'adresse de livraison"}</span>
                 </button>
               </div>
             </ScrollReveal>
@@ -1018,51 +1100,52 @@ export default function HomePage() {
             {/* Maroc */}
             <ScrollReveal delay={140}>
               <div
+                className="roum-cadran"
                 style={{
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "12px",
-                  padding: "22px",
+                  padding: "28px 24px 22px 24px",
                   height: "100%",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  backgroundColor: "#FFFFFF",
+                  boxSizing: "border-box",
                 }}
               >
+                <div className="roum-flag-medaillon">
+                  <CircularFlag countryCode="MA" size={20} />
+                </div>
+                <div className="roum-badge-superpose-right">
+                  HUB MAGHREB
+                </div>
+
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-                    <CircularFlag countryCode="MA" size={18} />
-                    <strong style={{ fontSize: "0.96rem", color: "#111827" }}>Casablanca (Maroc)</strong>
+                  <div style={{ marginTop: "4px", marginBottom: "4px" }}>
+                    <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: 0 }}>
+                      Casablanca (Maroc)
+                    </h3>
                   </div>
-                  <p style={{ fontSize: "0.82rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 12px 0" }}>
+                  <p style={{ fontSize: "0.84rem", color: "#4B5563", lineHeight: 1.55, margin: "0 0 14px 0" }}>
                     Zone Industrielle Ain Sebaa, Casablanca. Groupage subsaharien express départ garanti.
                   </p>
-                  <div style={{ fontSize: "0.75rem", color: "#6B7280", background: "#F9FAFB", padding: "8px 10px", borderRadius: "8px", marginBottom: "16px" }}>
-                    Marquage colis : <strong>ROUM TRANSIT MAROC / [Votre Nom]</strong>
+                  <div className="roum-stencil-mark" style={{ marginBottom: "16px" }}>
+                    SHIPPING MARK : ROUM TRANSIT MAROC / [VOTRE NOM]
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => handleCopy("ma", "Zone Industrielle Ain Sebaa, Casablanca, Maroc — ROUM TRANSIT")}
+                  className="roum-btn-secondary"
                   style={{
                     width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid #D1D5DB",
+                    height: "42px",
                     backgroundColor: copiedKey === "ma" ? "#F0FDF4" : "#FFFFFF",
-                    color: copiedKey === "ma" ? "#15803D" : "#111827",
-                    fontSize: "0.8rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
+                    color: copiedKey === "ma" ? "#15803D !important" : "#111827",
+                    borderColor: copiedKey === "ma" ? "#86EFAC" : "#D1D5DB",
+                    boxSizing: "border-box",
                   }}
                 >
-                  {copiedKey === "ma" ? <Check size={13} /> : <Copy size={13} />}
-                  <span>{copiedKey === "ma" ? "Adresse copiée !" : "Copier l'adresse"}</span>
+                  {copiedKey === "ma" ? <Check size={14} color="#15803D" /> : <Copy size={14} />}
+                  <span>{copiedKey === "ma" ? "Adresse copiée !" : "Copier l'adresse de livraison"}</span>
                 </button>
               </div>
             </ScrollReveal>
@@ -1070,51 +1153,52 @@ export default function HomePage() {
             {/* France */}
             <ScrollReveal delay={190}>
               <div
+                className="roum-cadran"
                 style={{
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "12px",
-                  padding: "22px",
+                  padding: "28px 24px 22px 24px",
                   height: "100%",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  backgroundColor: "#FFFFFF",
+                  boxSizing: "border-box",
                 }}
               >
+                <div className="roum-flag-medaillon">
+                  <CircularFlag countryCode="FR" size={20} />
+                </div>
+                <div className="roum-badge-superpose-right">
+                  HUB EUROPE
+                </div>
+
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-                    <CircularFlag countryCode="FR" size={18} />
-                    <strong style={{ fontSize: "0.96rem", color: "#111827" }}>Paris (France)</strong>
+                  <div style={{ marginTop: "4px", marginBottom: "4px" }}>
+                    <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: 0 }}>
+                      Paris (France)
+                    </h3>
                   </div>
-                  <p style={{ fontSize: "0.82rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 12px 0" }}>
+                  <p style={{ fontSize: "0.84rem", color: "#4B5563", lineHeight: 1.55, margin: "0 0 14px 0" }}>
                     Plateforme logistique Île-de-France. Expédition aérienne directe vers Abidjan.
                   </p>
-                  <div style={{ fontSize: "0.75rem", color: "#6B7280", background: "#F9FAFB", padding: "8px 10px", borderRadius: "8px", marginBottom: "16px" }}>
-                    Marquage colis : <strong>ROUM TRANSIT PARIS / [Votre Nom]</strong>
+                  <div className="roum-stencil-mark" style={{ marginBottom: "16px" }}>
+                    SHIPPING MARK : ROUM TRANSIT PARIS / [VOTRE NOM]
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => handleCopy("fr", "Plateforme Logistique Paris Île-de-France — ROUM TRANSIT PARIS")}
+                  className="roum-btn-secondary"
                   style={{
                     width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid #D1D5DB",
+                    height: "42px",
                     backgroundColor: copiedKey === "fr" ? "#F0FDF4" : "#FFFFFF",
-                    color: copiedKey === "fr" ? "#15803D" : "#111827",
-                    fontSize: "0.8rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
+                    color: copiedKey === "fr" ? "#15803D !important" : "#111827",
+                    borderColor: copiedKey === "fr" ? "#86EFAC" : "#D1D5DB",
+                    boxSizing: "border-box",
                   }}
                 >
-                  {copiedKey === "fr" ? <Check size={13} /> : <Copy size={13} />}
-                  <span>{copiedKey === "fr" ? "Adresse copiée !" : "Copier l'adresse"}</span>
+                  {copiedKey === "fr" ? <Check size={14} color="#15803D" /> : <Copy size={14} />}
+                  <span>{copiedKey === "fr" ? "Adresse copiée !" : "Copier l'adresse de livraison"}</span>
                 </button>
               </div>
             </ScrollReveal>
@@ -1123,20 +1207,24 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================
-          SECTION 04 : LA DÉMARCHE (STYLE DE LA RÉFÉRENCE UTILISATEUR)
+          SECTION 04 : LA DÉMARCHE OPÉRATIONNELLE (DOCUMENTATION ARCHITECTURALE)
+          Inspirée fidèlement de la planche Medscan de Mohamed Boubacar Seini
           ============================================================ */}
       <section
         id="exigence"
         style={{
-          padding: "80px 20px 96px 20px",
+          padding: "84px 20px 104px 20px",
           backgroundColor: "#FFFFFF",
         }}
       >
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <ScrollReveal>
-            <div style={{ marginBottom: "48px" }}>
-              <div style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "#6B7280", marginBottom: "8px" }}>
-                DOCUMENTATION
+            <div style={{ marginBottom: "52px" }}>
+              <div className="roum-numero-ligne">
+                <span style={{ fontSize: "0.9rem", fontWeight: 800, color: "#111827" }}>04</span>
+                <span style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "#6B7280", marginLeft: "10px" }}>
+                  DOCUMENTATION & ENGAGEMENT DU FONDATEUR
+                </span>
               </div>
               <h2
                 style={{
@@ -1152,57 +1240,65 @@ export default function HomePage() {
             </div>
           </ScrollReveal>
 
-          {/* Grille 4 colonnes épurée comme la référence du fondateur */}
+          {/* Grille 4 colonnes éditoriales monumentales */}
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-              gap: "36px 28px",
+              gap: "40px 32px",
             }}
           >
             <ScrollReveal delay={40}>
-              <div>
-                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#9CA3AF", marginBottom: "6px" }} className="tabular-nums">01</div>
-                <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#111827", margin: "0 0 10px 0" }}>
+              <div style={{ borderTop: "2px solid #111827", paddingTop: "18px" }}>
+                <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#111827", marginBottom: "8px" }} className="tabular-nums">
+                  01
+                </div>
+                <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: "0 0 10px 0" }}>
                   Pesée Certifiée & Rigueur
                 </h3>
-                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.6, margin: 0 }}>
-                  Chaque colis entrant en magasin fait l&apos;objet d&apos;une pesée officielle et d&apos;une vérification physique de son conditionnement. Zéro surfacturation, facturation stricte au poids réel.
+                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.65, margin: 0, textWrap: "pretty" }}>
+                  Chaque colis entrant en magasin fait l&apos;objet d&apos;une pesée officielle et d&apos;une vérification physique de son conditionnement. Zéro surfacturation, facturation stricte au poids réel constaté.
                 </p>
               </div>
             </ScrollReveal>
 
             <ScrollReveal delay={90}>
-              <div>
-                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#9CA3AF", marginBottom: "6px" }} className="tabular-nums">02</div>
-                <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#111827", margin: "0 0 10px 0" }}>
+              <div style={{ borderTop: "2px solid #111827", paddingTop: "18px" }}>
+                <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#111827", marginBottom: "8px" }} className="tabular-nums">
+                  02
+                </div>
+                <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: "0 0 10px 0" }}>
                   Traçabilité Unitaire
                 </h3>
-                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.6, margin: 0 }}>
+                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.65, margin: 0, textWrap: "pretty" }}>
                   Dès la prise en charge, une référence de bordereau standardisée vous est remise. Votre dossier est tracé à chaque étape clé (réception magasin, vol/mer, douane, mise à disposition en agence).
                 </p>
               </div>
             </ScrollReveal>
 
             <ScrollReveal delay={140}>
-              <div>
-                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#9CA3AF", marginBottom: "6px" }} className="tabular-nums">03</div>
-                <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#111827", margin: "0 0 10px 0" }}>
+              <div style={{ borderTop: "2px solid #111827", paddingTop: "18px" }}>
+                <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#111827", marginBottom: "8px" }} className="tabular-nums">
+                  03
+                </div>
+                <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: "0 0 10px 0" }}>
                   Transparence des Délais
                 </h3>
-                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.6, margin: 0 }}>
+                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.65, margin: 0, textWrap: "pretty" }}>
                   Nos plannings d&apos;embarquement sont réguliers et tenus : 4 à 5 jours en aérien express, 5 jours chrono depuis le Maroc, et 35 à 45 jours par conteneur maritime groupé.
                 </p>
               </div>
             </ScrollReveal>
 
             <ScrollReveal delay={190}>
-              <div>
-                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#9CA3AF", marginBottom: "6px" }} className="tabular-nums">04</div>
-                <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "#111827", margin: "0 0 10px 0" }}>
+              <div style={{ borderTop: "2px solid #111827", paddingTop: "18px" }}>
+                <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#111827", marginBottom: "8px" }} className="tabular-nums">
+                  04
+                </div>
+                <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: "0 0 10px 0" }}>
                   Disponibilité & Permanence
                 </h3>
-                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.6, margin: 0 }}>
+                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.65, margin: 0, textWrap: "pretty" }}>
                   Une équipe opérationnelle dédiée à votre écoute directe par WhatsApp et à l&apos;agence d&apos;Abidjan Bingerville pour retirer vos colis en toute sérénité.
                 </p>
               </div>

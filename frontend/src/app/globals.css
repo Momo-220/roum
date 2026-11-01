@@ -1297,6 +1297,192 @@ select.input-clean {
   }
 }
 
+/* ============================================================
+   ROUM DESIGN SYSTEM : BOUTONS TACTILES & CADRANS EN SUPERPOSITION
+   Inspiré de l'esthétique suisse éditoriale, pure et architecturale
+   ============================================================ */
+
+/* Bouton Primaire Tactile (Senior Craftsmanship) */
+.roum-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #111827;
+  color: #FFFFFF !important;
+  font-weight: 700;
+  font-size: 0.88rem;
+  letter-spacing: -0.01em;
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: 1px solid #111827;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 3px 8px -2px rgba(17, 24, 39, 0.16);
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  touch-action: manipulation;
+  user-select: none;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease;
+}
+
+.roum-btn-primary:hover {
+  background-color: #000000;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08), 0 8px 18px -4px rgba(17, 24, 39, 0.22);
+}
+
+.roum-btn-primary:active {
+  transform: translateY(0px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* Bouton Secondaire Tactile */
+.roum-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #FFFFFF;
+  color: #111827 !important;
+  font-weight: 700;
+  font-size: 0.84rem;
+  letter-spacing: -0.01em;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid #D1D5DB;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  touch-action: manipulation;
+  user-select: none;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.16s ease, background-color 0.16s ease;
+}
+
+.roum-btn-secondary:hover {
+  border-color: #9CA3AF;
+  background-color: #F9FAFB;
+  transform: translateY(-1px);
+}
+
+.roum-btn-secondary:active {
+  transform: translateY(0px);
+}
+
+/* Cadrans Architecturaux (Cadrants) */
+.roum-cadran {
+  position: relative;
+  background-color: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02), 0 8px 24px -8px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.roum-cadran:hover {
+  border-color: #CBD5E1;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04), 0 14px 32px -10px rgba(0, 0, 0, 0.08);
+}
+
+/* Pastille & Sceau en Superposition (Chevauchement d'arête) */
+.roum-badge-superpose {
+  position: absolute;
+  top: -11px;
+  left: 20px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 9999px;
+  padding: 2px 10px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #374151;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  z-index: 2;
+  white-space: nowrap;
+}
+
+.roum-badge-superpose-right {
+  position: absolute;
+  top: -11px;
+  right: 20px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 9999px;
+  padding: 2px 10px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #374151;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  z-index: 2;
+  white-space: nowrap;
+}
+
+/* Médaillon circulaire de drapeau en superposition */
+.roum-flag-medaillon {
+  position: absolute;
+  top: -16px;
+  left: 20px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+
+/* Bordereau / Fiche de Chargement en Superposition */
+.roum-bordereau-superpose {
+  position: relative;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 14px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03), 0 12px 30px -8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.roum-bordereau-superpose:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04), 0 16px 36px -10px rgba(0, 0, 0, 0.11);
+}
+
+/* Marquage Pochoir (Stencil Shipping Mark) */
+.roum-stencil-mark {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #1F2937;
+  background: #F8FAFC;
+  border: 1px dashed #CBD5E1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+}
+
+/* Ligne architecturale avec chiffre en superposition */
+.roum-numero-ligne {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.roum-numero-ligne::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background-color: #E5E7EB;
+  margin-left: 12px;
+}
+
 /* Boutons tactiles mobile-first */
 .btn-mobile-touch {
   min-height: 48px;
