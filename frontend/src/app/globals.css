@@ -1221,6 +1221,93 @@ select.input-clean {
   border-color: var(--btn-primary-hover) !important;
 }
 
+/* ============================================================
+   CÔTÉ CLIENT : DESIGN GRANDEUR NATURE, ÉPURÉ & SCROLL FADE
+   ============================================================ */
+.scroll-fade-section {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.scroll-fade-section.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-fade-section {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* Cartes Grandeur Nature */
+.public-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(28, 25, 23, 0.08);
+  border-radius: 20px;
+  box-shadow: 0 4px 20px -6px rgba(28, 25, 23, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.public-card:hover {
+  border-color: rgba(28, 25, 23, 0.18);
+  box-shadow: 0 12px 32px -8px rgba(28, 25, 23, 0.07);
+}
+
+/* Grilles Responsive Fluides */
+.public-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.public-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.public-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .public-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  .public-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+  }
+}
+
+@media (max-width: 680px) {
+  .public-grid-4,
+  .public-grid-3,
+  .public-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+/* Boutons tactiles mobile-first */
+.btn-mobile-touch {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+
 
 
 
