@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Home,
   Search,
@@ -12,45 +12,14 @@ import {
 } from "lucide-react";
 
 export function FloatingBottomNav() {
-  const [activeSection, setActiveSection] = useState("hero");
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const sections = ["hero", "tracking", "services", "tariffs", "warehouses", "exigence"];
-      const scrollPos = window.scrollY + 200;
-
-      for (const sectionId of sections) {
-        const el = document.getElementById(sectionId);
-        if (el) {
-          const top = el.offsetTop;
-          const height = el.offsetHeight;
-          if (scrollPos >= top && scrollPos < top + height) {
-            setActiveSection(sectionId);
-            break;
-          }
-        }
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
-    e.preventDefault();
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
-      setActiveSection(id);
-    }
-  };
+  const pathname = usePathname();
 
   const navItems = [
-    { id: "hero", label: "Accueil", icon: Home, href: "/#hero" },
-    { id: "tracking", label: "Suivi", icon: Search, href: "/#tracking" },
-    { id: "services", label: "Services", icon: Layers, href: "/#services" },
-    { id: "tariffs", label: "Tarifs", icon: Calculator, href: "/#tariffs" },
-    { id: "warehouses", label: "Entrepôts", icon: MapPin, href: "/#warehouses" },
+    { id: "home", label: "Accueil", icon: Home, href: "/", isActive: pathname === "/" },
+    { id: "services", label: "Services", icon: Layers, href: "/services", isActive: pathname === "/services" },
+    { id: "tracking", label: "Suivi", icon: Search, href: "/tracking", isActive: pathname.startsWith("/tracking") },
+    { id: "tariffs", label: "Tarifs", icon: Calculator, href: "/tariffs", isActive: pathname === "/tariffs" },
+    { id: "warehouses", label: "Entrepôts", icon: MapPin, href: "/warehouses", isActive: pathname === "/warehouses" },
   ];
 
   return (
@@ -61,11 +30,11 @@ export function FloatingBottomNav() {
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 999,
-        maxWidth: "92vw",
+        maxWidth: "94vw",
       }}
     >
       <nav
-        aria-label="Navigation rapide"
+        aria-label="Navigation principale"
         style={{
           display: "flex",
           alignItems: "center",
@@ -81,12 +50,10 @@ export function FloatingBottomNav() {
       >
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeSection === item.id;
           return (
-            <a
+            <Link
               key={item.id}
               href={item.href}
-              onClick={(e) => scrollToSection(e, item.id)}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -97,17 +64,17 @@ export function FloatingBottomNav() {
                 fontWeight: 700,
                 textDecoration: "none",
                 transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
-                backgroundColor: isActive ? "#FFFFFF" : "transparent",
-                color: isActive ? "#111827" : "#D1D5DB",
+                backgroundColor: item.isActive ? "#FFFFFF" : "transparent",
+                color: item.isActive ? "#111827" : "#D1D5DB",
                 whiteSpace: "nowrap",
                 touchAction: "manipulation",
                 userSelect: "none",
               }}
               title={item.label}
             >
-              <Icon size={15} strokeWidth={isActive ? 2.5 : 2} color={isActive ? "#111827" : "#D1D5DB"} />
+              <Icon size={15} strokeWidth={item.isActive ? 2.5 : 2} color={item.isActive ? "#111827" : "#D1D5DB"} />
               <span className="bottom-nav-label">{item.label}</span>
-            </a>
+            </Link>
           );
         })}
 
