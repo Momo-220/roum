@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MapPin, Phone, ArrowUpRight, Shield } from "lucide-react";
 import { CircularFlag } from "@/components/CircularFlag";
+import { FloatingBottomNav } from "@/components/FloatingBottomNav";
 
 export default function PublicLayout({
   children,
@@ -9,161 +10,45 @@ export default function PublicLayout({
 }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#FFFFFF" }}>
-      {/* Navigation Header Épurée & Grand Format */}
+      {/* Header Épuré : UNIQUEMENT LE LOGO BIEN IMPOSANT */}
       <header
         style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-          backgroundColor: "rgba(255, 255, 255, 0.94)",
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
-          borderBottom: "1px solid rgba(28, 25, 23, 0.07)",
-          padding: "14px 20px",
+          backgroundColor: "#FFFFFF",
+          borderBottom: "1px solid #E5E7EB",
+          padding: "18px 24px",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
         }}
       >
-        <div
+        <Link
+          href="/"
           style={{
-            maxWidth: "1240px",
-            margin: "0 auto",
-            display: "flex",
-            justifyContent: "space-between",
+            display: "inline-flex",
             alignItems: "center",
-            gap: "20px",
+            justifyContent: "center",
+            textDecoration: "none",
           }}
+          title="Roum Transit International"
         >
-          {/* Logo Officiel avec breathing room */}
-          <Link
-            href="/"
+          <img
+            src="/images/roum-logo-tight.png"
+            alt="Roum Transit International"
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              textDecoration: "none",
+              height: "68px",
+              width: "auto",
+              objectFit: "contain",
+              display: "block",
             }}
-          >
-            <img
-              src="/images/roum-logo-tight.png"
-              alt="Roum Transit International"
-              style={{
-                height: "54px",
-                width: "auto",
-                objectFit: "contain",
-                display: "block",
-              }}
-            />
-          </Link>
-
-          {/* Navigation Centrale sobre (desktop) */}
-          <nav
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "28px",
-            }}
-            className="public-nav-links"
-          >
-            <Link
-              href="/#tracking"
-              style={{
-                fontSize: "0.86rem",
-                fontWeight: 700,
-                color: "#374151",
-                textDecoration: "none",
-                letterSpacing: "-0.01em",
-                transition: "color 0.15s ease",
-              }}
-            >
-              Suivi Colis
-            </Link>
-            <Link
-              href="/#corridors"
-              style={{
-                fontSize: "0.86rem",
-                fontWeight: 700,
-                color: "#374151",
-                textDecoration: "none",
-                letterSpacing: "-0.01em",
-                transition: "color 0.15s ease",
-              }}
-            >
-              Couloirs
-            </Link>
-            <Link
-              href="/#tariffs"
-              style={{
-                fontSize: "0.86rem",
-                fontWeight: 700,
-                color: "#374151",
-                textDecoration: "none",
-                letterSpacing: "-0.01em",
-                transition: "color 0.15s ease",
-              }}
-            >
-              Simulateur
-            </Link>
-            <Link
-              href="/#warehouses"
-              style={{
-                fontSize: "0.86rem",
-                fontWeight: 700,
-                color: "#374151",
-                textDecoration: "none",
-                letterSpacing: "-0.01em",
-                transition: "color 0.15s ease",
-              }}
-            >
-              Entrepôts
-            </Link>
-            <Link
-              href="/#exigence"
-              style={{
-                fontSize: "0.86rem",
-                fontWeight: 700,
-                color: "#374151",
-                textDecoration: "none",
-                letterSpacing: "-0.01em",
-                transition: "color 0.15s ease",
-              }}
-            >
-              Démarche
-            </Link>
-          </nav>
-
-          {/* Actions Droite : WhatsApp Direct + Accès Direction */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <Link
-              href="/admin"
-              className="roum-btn-secondary"
-              style={{
-                fontSize: "0.78rem",
-                padding: "8px 14px",
-                borderRadius: "8px",
-              }}
-              title="Portail de direction et gestion interne"
-            >
-              <span>Accès Direction</span>
-            </Link>
-
-            <a
-              href="https://wa.me/2250153638569"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="roum-btn-primary"
-              style={{
-                fontSize: "0.82rem",
-                padding: "8px 16px",
-                borderRadius: "8px",
-              }}
-            >
-              <span>WhatsApp : +225 01 53 638 569</span>
-            </a>
-          </div>
-        </div>
+          />
+        </Link>
       </header>
 
-      {/* Contenu de la page avec mise en page grandeur nature */}
-      <main style={{ flex: 1 }}>{children}</main>
+      {/* Contenu de la page avec marge basse pour la nav bar flottante */}
+      <main style={{ flex: 1, paddingBottom: "80px" }}>{children}</main>
+
+      {/* Navigation Flottante en Bas : Format Pills avec Icônes SVG */}
+      <FloatingBottomNav />
 
       {/* Footer Minimaliste & Architectural Grand Format */}
       <footer
@@ -208,19 +93,19 @@ export default function PublicLayout({
               <ul style={{ listStyle: "none", padding: 0, margin: 0, color: "#374151", fontSize: "0.85rem", display: "grid", gap: "12px" }}>
                 <li style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <CircularFlag countryCode="CN" size={17} />
-                  <span>Chine (Guangzhou / Yiwu) ➔ Afrique</span>
+                  <span>Chine (Guangzhou / Yiwu) vers Afrique</span>
                 </li>
                 <li style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <CircularFlag countryCode="AE" size={17} />
-                  <span>Dubaï (Émirats) ➔ Afrique (4 - 5j)</span>
+                  <span>Dubaï (Émirats) vers Afrique (4 à 5j)</span>
                 </li>
                 <li style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <CircularFlag countryCode="MA" size={17} />
-                  <span>Maroc (Casablanca) ➔ 5 Pays (5j)</span>
+                  <span>Maroc (Casablanca) vers 5 Pays (5j)</span>
                 </li>
                 <li style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <CircularFlag countryCode="FR" size={17} />
-                  <span>France (Paris) ↔ Côte d&apos;Ivoire</span>
+                  <span>France (Paris) et Côte d&apos;Ivoire</span>
                 </li>
               </ul>
             </div>

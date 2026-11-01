@@ -11,6 +11,12 @@ import {
   Copy,
   Check,
   MessageCircle,
+  PackageCheck,
+  ShieldCheck,
+  Scale,
+  Clock,
+  MapPin,
+  HelpCircle,
 } from "lucide-react";
 import { normalizeTrackingNumber, buildWhatsAppUrl } from "@/shared";
 import { CircularFlag } from "@/components/CircularFlag";
@@ -35,10 +41,9 @@ export default function HomePage() {
   // État du simulateur dynamique
   const [simOrigin, setSimOrigin] = useState("Chine");
   const [simDest, setSimDest] = useState("Côte d'Ivoire");
-  const [simMode, setSimMode] = useState<"AIR" | "SEA" | "ROAD">("AIR");
-  const [simCategory, setSimCategory] = useState("express");
-  const [simWeight, setSimWeight] = useState(10);
-  const [simCbm, setSimCbm] = useState(1.0);
+  const [simMode, setSimMode] = useState<"AIR" | "SEA">("AIR");
+  const [simWeight, setSimWeight] = useState(5);
+  const [simCbm, setSimCbm] = useState(0.5);
 
   const handleCopy = (key: string, text: string) => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -54,229 +59,169 @@ export default function HomePage() {
 
     const normalized = normalizeTrackingNumber(trackingInput);
     if (!normalized) {
-      setTrackingError("Veuillez saisir un numéro de suivi valide (Ex : RM-AIR-2610-K8P9Q2).");
+      setTrackingError("Veuillez entrer un numéro de suivi valide (Ex : RM-AIR-2610-K8P9Q2).");
       return;
     }
 
     router.push(`/tracking/${normalized}`);
   };
 
-  // Calcul exact aligné sur les grilles tarifaires officielles
+  const scrollToElement = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  // Calcul direct et transparent
   const estimateCost = () => {
-    const isParisCorridor =
-      (simOrigin === "France" && simDest === "Côte d'Ivoire") ||
-      (simOrigin === "Côte d'Ivoire" && simDest === "France");
-    const isMoroccoCorridor = simOrigin === "Maroc";
-
-    // 1. France ↔ Côte d'Ivoire
-    if (isParisCorridor) {
-      if (simCategory === "doc") {
-        return {
-          amountFcfa: 13000,
-          duration: "3 à 5 jours",
-          details: "Pli ou document administratif express",
-        };
-      }
-      if (simCategory === "cosmetic") {
-        return {
-          amountFcfa: simWeight * 9000,
-          duration: "3 à 5 jours",
-          details: "Cosmétiques, liquides & soins",
-        };
-      }
-      return {
-        amountFcfa: simWeight * 8500,
-        duration: "3 à 5 jours",
-        details: "Articles divers & effets personnels",
-      };
-    }
-
-    // 2. Maroc ➔ Afrique Subsaharienne
-    if (isMoroccoCorridor) {
-      let rate = 7000;
-      if (simDest === "Côte d'Ivoire") rate = 6500;
-      if (simDest === "Burkina Faso" || simDest === "Gabon") rate = 7500;
-      return {
-        amountFcfa: simWeight * rate,
-        duration: "5 jours chrono",
-        details: "Groupage Aérien Express Maroc ➔ Afrique",
-      };
-    }
-
-    // 3. Voie Terrestre
-    if (simMode === "ROAD") {
-      return {
-        amountFcfa: simWeight * 5000,
-        duration: "7 à 12 jours",
-        details: "Fret terrestre transfrontalier sécurisé",
-      };
-    }
-
-    // 4. Voie Maritime
     if (simMode === "SEA") {
+      const amount = Math.round(simCbm * 300000);
       return {
-        amountFcfa: Math.round(simCbm * 300000),
+        amountFcfa: Math.max(150000, amount),
         duration: "35 à 45 jours",
-        details: "Groupage maritime en conteneur sécurisé",
+        description: "Groupage maritime en conteneur sécurisé",
       };
     }
 
-    // 5. Aérien Chine & Dubaï
-    if (simCategory === "pc") {
-      return {
-        amountFcfa: 50000,
-        duration: "4 à 7 jours",
-        details: "Pièce d'ordinateur & équipement high-tech",
-      };
-    }
-    if (simCategory === "battery") {
-      return {
-        amountFcfa: simWeight * 14000,
-        duration: "7 à 10 jours",
-        details: "Batteries, compléments & produits spéciaux",
-      };
-    }
-    if (simCategory === "normal") {
-      return {
-        amountFcfa: simWeight * 10000,
-        duration: "12 à 14 jours",
-        details: "Voie normale économique",
-      };
+    // Fret aérien par pays
+    let ratePerKg = 10000;
+    let duration = "4 à 5 jours";
+
+    if (simOrigin === "Maroc") {
+      ratePerKg = 6500;
+      duration = "5 jours chrono";
+    } else if (simOrigin === "France") {
+      ratePerKg = 8500;
+      duration = "3 à 5 jours";
+    } else if (simOrigin === "Chine" || simOrigin.includes("Dubaï")) {
+      ratePerKg = 10000;
+      duration = "4 à 5 jours";
     }
 
     return {
-      amountFcfa: simWeight * 12000,
-      duration: "4 à 5 jours",
-      details: "Voie express prioritaire",
+      amountFcfa: simWeight * ratePerKg,
+      duration,
+      description: `Fret aérien express (${ratePerKg.toLocaleString("fr-FR")} FCFA / kg)`,
     };
   };
 
   const estimate = estimateCost();
 
   const getSimulatorWaUrl = () => {
-    const text = `Bonjour ROUM TRANSIT,\nJe souhaite valider une expédition :\n- Trajet : ${simOrigin} ➔ ${simDest}\n- Mode : ${simMode === "AIR" ? "Voie Aérienne" : simMode === "SEA" ? "Voie Maritime" : "Voie Terrestre"}\n- Volume : ${simMode === "SEA" ? simCbm + " m³" : simWeight + " kg"}\n- Estimation : ~${estimate.amountFcfa.toLocaleString("fr-FR")} FCFA\n- Délai : ${estimate.duration}`;
+    const text = `Bonjour Roum Transit, je souhaite faire une expédition :\n- Origine : ${simOrigin}\n- Destination : ${simDest}\n- Moyen : ${simMode === "AIR" ? "Avion (Fret Aérien)" : "Bateau (Fret Maritime)"}\n- Quantité : ${simMode === "SEA" ? simCbm + " m³" : simWeight + " kg"}\n- Estimation : ~${estimate.amountFcfa.toLocaleString("fr-FR")} FCFA (Douane incluse)\n- Délai prévu : ${estimate.duration}`;
     return buildWhatsAppUrl("+2250153638569", text);
   };
 
   return (
     <div style={{ backgroundColor: "#FFFFFF", color: "#111827", minHeight: "100vh" }}>
       {/* ============================================================
-          HERO : ARCHITECTURE ÉPURÉE & CADRAN DE SUIVI EN SUPERPOSITION
+          HERO : MESSAGE PERTINENT, CLAIR & CHAMP DE SUIVI DIRECT
           ============================================================ */}
       <section
+        id="hero"
         style={{
+          padding: "60px 20px 64px 20px",
           borderBottom: "1px solid #E5E7EB",
-          padding: "72px 20px 84px 20px",
           backgroundColor: "#FFFFFF",
-          position: "relative",
         }}
       >
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "960px", margin: "0 auto", textAlign: "center" }}>
           <ScrollReveal>
-            <div className="roum-numero-ligne">
-              <span style={{ fontSize: "0.82rem", fontWeight: 800, color: "#111827", letterSpacing: "0.14em" }}>
-                ROUM TRANSIT INTERNATIONAL
-              </span>
-              <span style={{ fontSize: "0.72rem", color: "#6B7280", letterSpacing: "0.12em", marginLeft: "10px" }}>
-                OPÉRATIONS CARGO MONDIALES
-              </span>
+            <div
+              style={{
+                display: "inline-block",
+                padding: "4px 12px",
+                borderRadius: "9999px",
+                backgroundColor: "#F3F4F6",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                color: "#4B5563",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                marginBottom: "16px",
+              }}
+            >
+              Fret International Simple & Direct
             </div>
 
             <h1
               style={{
-                fontSize: "clamp(2.4rem, 5.2vw, 4.2rem)",
+                fontSize: "clamp(2.1rem, 4.8vw, 3.8rem)",
                 fontWeight: 800,
-                lineHeight: 1.08,
+                lineHeight: 1.12,
                 letterSpacing: "-0.03em",
                 color: "#111827",
-                margin: "0 0 22px 0",
-                maxWidth: "960px",
+                margin: "0 auto 18px auto",
+                maxWidth: "880px",
                 textWrap: "balance",
               }}
             >
-              Fret maritime & aérien direct vers l&apos;Afrique.
+              Vos colis de Chine, Dubaï, Maroc et France livrés à Abidjan.
             </h1>
 
             <p
               style={{
-                fontSize: "clamp(1rem, 1.6vw, 1.18rem)",
-                lineHeight: 1.65,
+                fontSize: "clamp(1.02rem, 1.6vw, 1.18rem)",
+                lineHeight: 1.6,
                 color: "#4B5563",
-                maxWidth: "740px",
-                margin: "0 0 44px 0",
+                maxWidth: "680px",
+                margin: "0 auto 36px auto",
                 textWrap: "pretty",
               }}
             >
-              Acheminement régulier depuis la Chine, Dubaï, le Maroc et la France. Pesée certifiée en magasin, traçabilité unitaire continue et dédouanement tout compris.
+              Vous achetez chez vos fournisseurs, ils déposent dans nos magasins, nous pesons et nous expédions. Aucun frais caché : le dédouanement est déjà compris dans le tarif.
             </p>
 
-            {/* CADRAN DE SUIVI EN SUPERPOSITION ARCHITECTURALE */}
+            {/* FORMULAIRE DE RECHERCHE DE COLIS SIMPLE */}
             <div
               id="tracking"
-              className="roum-cadran"
               style={{
-                maxWidth: "720px",
-                padding: "30px 24px 22px 24px",
-                marginTop: "16px",
+                maxWidth: "600px",
+                margin: "0 auto",
+                backgroundColor: "#FFFFFF",
+                border: "1px solid #D1D5DB",
+                borderRadius: "14px",
+                padding: "20px",
+                boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.05)",
+                textAlign: "left",
               }}
             >
-              {/* Badge superposé sur la bordure supérieure */}
-              <div className="roum-badge-superpose">
-                REGISTRE UNIFIÉ · CONTRÔLE DOUANIER & CARGO
+              <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#111827", marginBottom: "10px" }}>
+                Suivre l&apos;arrivée d&apos;un colis
               </div>
 
-              {/* Badge supérieur droit */}
-              <div className="roum-badge-superpose-right">
-                BORDEREAU OFFICIEL
-              </div>
-
-              <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#111827", marginBottom: "14px" }}>
-                Suivre une expédition en temps réel
-              </div>
-
-              <form onSubmit={handleTrackingSubmit} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "row",
-                    gap: "10px",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <div style={{ position: "relative", flex: "1 1 280px" }}>
-                    <input
-                      type="text"
-                      value={trackingInput}
-                      onChange={(e) => {
-                        setTrackingInput(e.target.value);
-                        if (trackingError) setTrackingError("");
-                      }}
-                      placeholder="N° de bordereau (Ex : RM-AIR-2610-K8P9Q2)"
-                      style={{
-                        width: "100%",
-                        height: "48px",
-                        padding: "0 16px",
-                        fontSize: "16px", // 16px empêche le zoom sur iPhone
-                        border: "1px solid #D1D5DB",
-                        borderRadius: "10px",
-                        color: "#111827",
-                        backgroundColor: "#FFFFFF",
-                        outline: "none",
-                        boxSizing: "border-box",
-                        fontWeight: 600,
-                        transition: "border-color 0.15s ease",
-                      }}
-                    />
-                  </div>
+              <form onSubmit={handleTrackingSubmit} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <input
+                    type="text"
+                    value={trackingInput}
+                    onChange={(e) => {
+                      setTrackingInput(e.target.value);
+                      if (trackingError) setTrackingError("");
+                    }}
+                    placeholder="Numéro de colis (Ex : RM-AIR-2610-K8P9Q2)"
+                    style={{
+                      flex: "1 1 240px",
+                      height: "48px",
+                      padding: "0 14px",
+                      fontSize: "16px", // 16px empêche l'auto-zoom iPhone
+                      border: "1px solid #D1D5DB",
+                      borderRadius: "8px",
+                      color: "#111827",
+                      backgroundColor: "#FFFFFF",
+                      outline: "none",
+                      fontWeight: 600,
+                    }}
+                  />
 
                   <button
                     type="submit"
                     className="roum-btn-primary"
                     style={{
                       height: "48px",
-                      padding: "0 26px",
-                      fontSize: "0.92rem",
-                      flexShrink: 0,
+                      padding: "0 22px",
+                      fontSize: "0.9rem",
                     }}
                   >
                     <Search size={16} />
@@ -285,13 +230,13 @@ export default function HomePage() {
                 </div>
 
                 {trackingError && (
-                  <div style={{ fontSize: "0.82rem", color: "#DC2626", fontWeight: 700, marginTop: "2px" }}>
+                  <div style={{ fontSize: "0.82rem", color: "#DC2626", fontWeight: 600, marginTop: "4px" }}>
                     {trackingError}
                   </div>
                 )}
 
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.8rem", color: "#6B7280", marginTop: "4px" }}>
-                  <span>Dossier témoin :</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#6B7280", marginTop: "4px" }}>
+                  <span>Exemple de test :</span>
                   <button
                     type="button"
                     onClick={() => setTrackingInput("RM-AIR-2610-K8P9Q2")}
@@ -300,15 +245,14 @@ export default function HomePage() {
                       border: "none",
                       padding: 0,
                       color: "#111827",
-                      fontWeight: 800,
+                      fontWeight: 700,
                       textDecoration: "underline",
                       cursor: "pointer",
-                      fontSize: "0.8rem",
+                      fontSize: "0.78rem",
                     }}
                   >
                     RM-AIR-2610-K8P9Q2
                   </button>
-                  <span style={{ color: "#9CA3AF" }}>· Consultation immédiate sans code secret</span>
                 </div>
               </form>
             </div>
@@ -317,24 +261,31 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================
-          SECTION 01 : COULOIRS & DÉLAIS (CADRANS AVEC SUPERPOSITION)
+          SECTION SERVICES : CLAIRE, SANS EMOJIS, AVEC BOUTONS D'ACTION
           ============================================================ */}
       <section
-        id="corridors"
+        id="services"
         style={{
-          padding: "84px 20px",
+          padding: "72px 20px",
           borderBottom: "1px solid #E5E7EB",
-          backgroundColor: "#FFFFFF",
+          backgroundColor: "#F9FAFB",
         }}
       >
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <ScrollReveal>
-            <div style={{ marginBottom: "44px" }}>
-              <div className="roum-numero-ligne">
-                <span style={{ fontSize: "0.9rem", fontWeight: 800, color: "#111827" }}>01</span>
-                <span style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "#6B7280", marginLeft: "10px" }}>
-                  COULOIRS STRATÉGIQUES & DÉLAIS D&apos;ACHEMINEMENT
-                </span>
+            <div style={{ textAlign: "center", marginBottom: "48px" }}>
+              <div
+                style={{
+                  display: "inline-block",
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  color: "#6B7280",
+                  marginBottom: "8px",
+                }}
+              >
+                Ce que nous faisons
               </div>
               <h2
                 style={{
@@ -345,28 +296,30 @@ export default function HomePage() {
                   margin: "0 0 10px 0",
                 }}
               >
-                Liaisons régulières vers l&apos;Afrique
+                Nos Services de Transport
               </h2>
-              <p style={{ fontSize: "1rem", color: "#4B5563", maxWidth: "660px", margin: 0, lineHeight: 1.55 }}>
-                Départs hebdomadaires planifiés depuis nos entrepôts de consolidation avec réceptions sécurisées.
+              <p style={{ fontSize: "1rem", color: "#4B5563", maxWidth: "600px", margin: "0 auto", lineHeight: 1.5 }}>
+                Des solutions simples et adaptées au poids, au délai et au budget de chacun.
               </p>
             </div>
           </ScrollReveal>
 
-          {/* Grille des 4 couloirs avec superposition de médaillon drapeau */}
+          {/* Grille des 4 services */}
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-              gap: "28px 22px",
+              gap: "20px",
             }}
           >
-            {/* Couloir 1 : Chine */}
+            {/* Service 1 : Avion */}
             <ScrollReveal delay={40}>
               <div
-                className="roum-cadran"
                 style={{
-                  padding: "28px 24px 20px 24px",
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "14px",
+                  padding: "24px",
                   height: "100%",
                   display: "flex",
                   flexDirection: "column",
@@ -374,64 +327,58 @@ export default function HomePage() {
                   boxSizing: "border-box",
                 }}
               >
-                {/* Médaillon drapeau en superposition sur l'arête supérieure */}
-                <div className="roum-flag-medaillon">
-                  <CircularFlag countryCode="CN" size={20} />
-                </div>
-                {/* Badge d'identification */}
-                <div className="roum-badge-superpose-right">
-                  CN · 01
-                </div>
-
                 <div>
-                  <div style={{ marginTop: "4px", marginBottom: "4px" }}>
-                    <h3 style={{ fontSize: "1.12rem", fontWeight: 800, color: "#111827", margin: 0 }}>
-                      Chine ➔ Afrique
-                    </h3>
-                  </div>
-                  <div style={{ fontSize: "0.8rem", color: "#6B7280", marginBottom: "16px" }}>
-                    Guangzhou & Yiwu (2 départs / semaine)
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "10px",
+                      backgroundColor: "#111827",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <Plane size={22} color="#FFFFFF" />
                   </div>
 
-                  <div style={{ display: "grid", gap: "10px", fontSize: "0.84rem", borderTop: "1px solid #F3F4F6", paddingTop: "14px", marginBottom: "18px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#4B5563" }}>Voie express :</span>
-                      <strong style={{ color: "#111827" }}>4 - 5 jours</strong>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#4B5563" }}>Voie normale :</span>
-                      <strong style={{ color: "#111827" }}>12 - 14 jours</strong>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#4B5563" }}>Par Bateau (CBM) :</span>
-                      <strong style={{ color: "#111827" }}>35 - 45 jours</strong>
-                    </div>
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111827", margin: "0 0 8px 0" }}>
+                    Fret Aérien Express (Avion)
+                  </h3>
+
+                  <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.55, margin: "0 0 16px 0" }}>
+                    La solution la plus rapide pour vos téléphones, ordinateurs, vêtements et petits colis urgents.
+                  </p>
+
+                  <div style={{ fontSize: "0.82rem", color: "#111827", fontWeight: 700, marginBottom: "20px" }}>
+                    Délai : 4 à 5 jours seulement
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    backgroundColor: "#F8FAFC",
-                    borderTop: "1px solid #E2E8F0",
-                    margin: "0 -24px -20px -24px",
-                    padding: "12px 24px",
-                    borderRadius: "0 0 14px 14px",
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSimMode("AIR");
+                    scrollToElement("tariffs");
                   }}
+                  className="roum-btn-secondary"
+                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.84rem" }}
                 >
-                  <div style={{ fontSize: "0.7rem", color: "#6B7280", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.06em" }}>Tarif de base</div>
-                  <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#111827" }}>
-                    Dès 10 000 FCFA / kg
-                  </div>
-                </div>
+                  <span>Calculer le prix avion</span>
+                  <ArrowRight size={14} />
+                </button>
               </div>
             </ScrollReveal>
 
-            {/* Couloir 2 : Dubaï */}
-            <ScrollReveal delay={90}>
+            {/* Service 2 : Bateau */}
+            <ScrollReveal delay={80}>
               <div
-                className="roum-cadran"
                 style={{
-                  padding: "28px 24px 20px 24px",
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "14px",
+                  padding: "24px",
                   height: "100%",
                   display: "flex",
                   flexDirection: "column",
@@ -439,62 +386,58 @@ export default function HomePage() {
                   boxSizing: "border-box",
                 }}
               >
-                <div className="roum-flag-medaillon">
-                  <CircularFlag countryCode="AE" size={20} />
-                </div>
-                <div className="roum-badge-superpose-right">
-                  AE · 02
-                </div>
-
                 <div>
-                  <div style={{ marginTop: "4px", marginBottom: "4px" }}>
-                    <h3 style={{ fontSize: "1.12rem", fontWeight: 800, color: "#111827", margin: 0 }}>
-                      Dubaï ➔ Afrique
-                    </h3>
-                  </div>
-                  <div style={{ fontSize: "0.8rem", color: "#6B7280", marginBottom: "16px" }}>
-                    Cargo Dubaï & Deira Wholesale
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "10px",
+                      backgroundColor: "#111827",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <Ship size={22} color="#FFFFFF" />
                   </div>
 
-                  <div style={{ display: "grid", gap: "10px", fontSize: "0.84rem", borderTop: "1px solid #F3F4F6", paddingTop: "14px", marginBottom: "18px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#4B5563" }}>Voie express :</span>
-                      <strong style={{ color: "#111827" }}>4 - 5 jours</strong>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#4B5563" }}>Marchandises spéciales :</span>
-                      <strong style={{ color: "#111827" }}>7 - 10 jours</strong>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#4B5563" }}>Bateau Dubaï :</span>
-                      <strong style={{ color: "#111827" }}>30 - 40 jours</strong>
-                    </div>
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111827", margin: "0 0 8px 0" }}>
+                    Fret Maritime (Bateau)
+                  </h3>
+
+                  <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.55, margin: "0 0 16px 0" }}>
+                    Le moyen le plus économique pour les gros cartons, meubles, machines et marchandises au mètre cube (CBM).
+                  </p>
+
+                  <div style={{ fontSize: "0.82rem", color: "#111827", fontWeight: 700, marginBottom: "20px" }}>
+                    Délai : 35 à 45 jours par conteneur
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    backgroundColor: "#F8FAFC",
-                    borderTop: "1px solid #E2E8F0",
-                    margin: "0 -24px -20px -24px",
-                    padding: "12px 24px",
-                    borderRadius: "0 0 14px 14px",
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSimMode("SEA");
+                    scrollToElement("tariffs");
                   }}
+                  className="roum-btn-secondary"
+                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.84rem" }}
                 >
-                  <div style={{ fontSize: "0.7rem", color: "#6B7280", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.06em" }}>Tarif de base</div>
-                  <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#111827" }}>
-                    Dès 10 000 FCFA / kg
-                  </div>
-                </div>
+                  <span>Calculer le prix bateau</span>
+                  <ArrowRight size={14} />
+                </button>
               </div>
             </ScrollReveal>
 
-            {/* Couloir 3 : Maroc */}
-            <ScrollReveal delay={140}>
+            {/* Service 3 : Réception Fournisseurs */}
+            <ScrollReveal delay={120}>
               <div
-                className="roum-cadran"
                 style={{
-                  padding: "28px 24px 20px 24px",
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "14px",
+                  padding: "24px",
                   height: "100%",
                   display: "flex",
                   flexDirection: "column",
@@ -502,62 +445,55 @@ export default function HomePage() {
                   boxSizing: "border-box",
                 }}
               >
-                <div className="roum-flag-medaillon">
-                  <CircularFlag countryCode="MA" size={20} />
-                </div>
-                <div className="roum-badge-superpose-right">
-                  MA · 03
-                </div>
-
                 <div>
-                  <div style={{ marginTop: "4px", marginBottom: "4px" }}>
-                    <h3 style={{ fontSize: "1.12rem", fontWeight: 800, color: "#111827", margin: 0 }}>
-                      Maroc ➔ 5 Pays
-                    </h3>
-                  </div>
-                  <div style={{ fontSize: "0.8rem", color: "#6B7280", marginBottom: "16px" }}>
-                    Casablanca (5 jours chrono)
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "10px",
+                      backgroundColor: "#111827",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <PackageCheck size={22} color="#FFFFFF" />
                   </div>
 
-                  <div style={{ display: "grid", gap: "10px", fontSize: "0.84rem", borderTop: "1px solid #F3F4F6", paddingTop: "14px", marginBottom: "18px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#4B5563" }}>Côte d&apos;Ivoire :</span>
-                      <strong style={{ color: "#111827" }}>6 500 F / kg</strong>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#4B5563" }}>Sénégal & Mali :</span>
-                      <strong style={{ color: "#111827" }}>7 000 F / kg</strong>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#4B5563" }}>Burkina & Gabon :</span>
-                      <strong style={{ color: "#111827" }}>7 500 F / kg</strong>
-                    </div>
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111827", margin: "0 0 8px 0" }}>
+                    Réception Magasin & Contrôle
+                  </h3>
+
+                  <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.55, margin: "0 0 16px 0" }}>
+                    Nos équipes reçoivent vos achats de 1688, Taobao ou fournisseurs, les vérifient et les pèsent sur place.
+                  </p>
+
+                  <div style={{ fontSize: "0.82rem", color: "#111827", fontWeight: 700, marginBottom: "20px" }}>
+                    Pesée exacte garantie à 100%
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    backgroundColor: "#F8FAFC",
-                    borderTop: "1px solid #E2E8F0",
-                    margin: "0 -24px -20px -24px",
-                    padding: "12px 24px",
-                    borderRadius: "0 0 14px 14px",
-                  }}
+                <button
+                  type="button"
+                  onClick={() => scrollToElement("warehouses")}
+                  className="roum-btn-secondary"
+                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.84rem" }}
                 >
-                  <div style={{ fontSize: "0.7rem", color: "#6B7280", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.06em" }}>Tarif de base</div>
-                  <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#111827" }}>
-                    Dès 6 500 FCFA / kg
-                  </div>
-                </div>
+                  <span>Voir les adresses magasins</span>
+                  <ArrowRight size={14} />
+                </button>
               </div>
             </ScrollReveal>
 
-            {/* Couloir 4 : France */}
-            <ScrollReveal delay={190}>
+            {/* Service 4 : Dédouanement & Retrait */}
+            <ScrollReveal delay={160}>
               <div
-                className="roum-cadran"
                 style={{
-                  padding: "28px 24px 20px 24px",
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "14px",
+                  padding: "24px",
                   height: "100%",
                   display: "flex",
                   flexDirection: "column",
@@ -565,53 +501,45 @@ export default function HomePage() {
                   boxSizing: "border-box",
                 }}
               >
-                <div className="roum-flag-medaillon">
-                  <CircularFlag countryCode="FR" size={20} />
-                </div>
-                <div className="roum-badge-superpose-right">
-                  FR · 04
-                </div>
-
                 <div>
-                  <div style={{ marginTop: "4px", marginBottom: "4px" }}>
-                    <h3 style={{ fontSize: "1.12rem", fontWeight: 800, color: "#111827", margin: 0 }}>
-                      France ↔ Abidjan
-                    </h3>
-                  </div>
-                  <div style={{ fontSize: "0.8rem", color: "#6B7280", marginBottom: "16px" }}>
-                    Ligne aérienne directe Paris
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "10px",
+                      backgroundColor: "#111827",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <ShieldCheck size={22} color="#FFFFFF" />
                   </div>
 
-                  <div style={{ display: "grid", gap: "10px", fontSize: "0.84rem", borderTop: "1px solid #F3F4F6", paddingTop: "14px", marginBottom: "18px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#4B5563" }}>Articles divers :</span>
-                      <strong style={{ color: "#111827" }}>8 500 F / kg</strong>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#4B5563" }}>Cosmétiques :</span>
-                      <strong style={{ color: "#111827" }}>9 000 F / kg</strong>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#4B5563" }}>Plis / Documents :</span>
-                      <strong style={{ color: "#111827" }}>13 000 F forfait</strong>
-                    </div>
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111827", margin: "0 0 8px 0" }}>
+                    Douane Comprise & Retrait Agence
+                  </h3>
+
+                  <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.55, margin: "0 0 16px 0" }}>
+                    Zéro mauvaise surprise à l&apos;arrivée. Vous retirez vos colis directement à notre agence d&apos;Abidjan Bingerville.
+                  </p>
+
+                  <div style={{ fontSize: "0.82rem", color: "#111827", fontWeight: 700, marginBottom: "20px" }}>
+                    Formalités et taxes incluses
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    backgroundColor: "#F8FAFC",
-                    borderTop: "1px solid #E2E8F0",
-                    margin: "0 -24px -20px -24px",
-                    padding: "12px 24px",
-                    borderRadius: "0 0 14px 14px",
-                  }}
+                <a
+                  href="https://wa.me/2250153638569?text=Bonjour%20Roum%20Transit,%20j%27ai%20une%20question%20sur%20vos%20services."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="roum-btn-secondary"
+                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.84rem", textDecoration: "none" }}
                 >
-                  <div style={{ fontSize: "0.7rem", color: "#6B7280", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.06em" }}>Tarif de base</div>
-                  <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#111827" }}>
-                    Dès 8 500 FCFA / kg
-                  </div>
-                </div>
+                  <MessageCircle size={14} />
+                  <span>Poser une question</span>
+                </a>
               </div>
             </ScrollReveal>
           </div>
@@ -619,327 +547,320 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================
-          SECTION 02 : SIMULATEUR TARIFAIRE & BORDEREAU EN SUPERPOSITION
+          SECTION COMMENT ÇA MARCHE : SIMPLE COMME UN JEU D'ENFANT
+          ============================================================ */}
+      <section
+        style={{
+          padding: "68px 20px",
+          borderBottom: "1px solid #E5E7EB",
+          backgroundColor: "#FFFFFF",
+        }}
+      >
+        <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
+          <ScrollReveal>
+            <div style={{ textAlign: "center", marginBottom: "44px" }}>
+              <div
+                style={{
+                  display: "inline-block",
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  color: "#6B7280",
+                  marginBottom: "8px",
+                }}
+              >
+                En 3 étapes faciles
+              </div>
+              <h2
+                style={{
+                  fontSize: "clamp(1.7rem, 3vw, 2.2rem)",
+                  fontWeight: 800,
+                  color: "#111827",
+                  margin: 0,
+                }}
+              >
+                Comment envoyer un colis ?
+              </h2>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                gap: "24px",
+              }}
+            >
+              <div
+                style={{
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "12px",
+                  padding: "24px",
+                  backgroundColor: "#FAFAFA",
+                }}
+              >
+                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#111827", marginBottom: "10px" }}>
+                  1. Vous achetez
+                </div>
+                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.55, margin: 0 }}>
+                  Vous passez commande chez votre fournisseur et vous lui donnez l&apos;adresse de notre magasin avec votre nom.
+                </p>
+              </div>
+
+              <div
+                style={{
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "12px",
+                  padding: "24px",
+                  backgroundColor: "#FAFAFA",
+                }}
+              >
+                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#111827", marginBottom: "10px" }}>
+                  2. Nous recevons
+                </div>
+                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.55, margin: 0 }}>
+                  Dès réception dans notre entrepôt, nous pesons votre colis et nous vous remettons votre numéro de suivi officiel.
+                </p>
+              </div>
+
+              <div
+                style={{
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "12px",
+                  padding: "24px",
+                  backgroundColor: "#FAFAFA",
+                }}
+              >
+                <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#111827", marginBottom: "10px" }}>
+                  3. Vous récupérez
+                </div>
+                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.55, margin: 0 }}>
+                  Votre colis arrive à Abidjan. Vous recevez un message et venez le retirer tranquillement à notre agence.
+                </p>
+              </div>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION SIMULATEUR DE TARIFS DIRECT
           ============================================================ */}
       <section
         id="tariffs"
         style={{
-          padding: "84px 20px",
+          padding: "72px 20px",
           borderBottom: "1px solid #E5E7EB",
-          backgroundColor: "#FAFAFA",
+          backgroundColor: "#F9FAFB",
         }}
       >
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
           <ScrollReveal>
-            <div style={{ marginBottom: "40px" }}>
-              <div className="roum-numero-ligne">
-                <span style={{ fontSize: "0.9rem", fontWeight: 800, color: "#111827" }}>02</span>
-                <span style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "#6B7280", marginLeft: "10px" }}>
-                  SIMULATEUR DE COTATION IMMÉDIATE
-                </span>
+            <div style={{ textAlign: "center", marginBottom: "40px" }}>
+              <div
+                style={{
+                  display: "inline-block",
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  color: "#6B7280",
+                  marginBottom: "8px",
+                }}
+              >
+                Calculateur Transparent
               </div>
               <h2
                 style={{
                   fontSize: "clamp(1.8rem, 3.2vw, 2.4rem)",
                   fontWeight: 800,
                   color: "#111827",
-                  letterSpacing: "-0.025em",
                   margin: "0 0 10px 0",
                 }}
               >
-                Calculer une expédition
+                Estimer le prix de votre colis
               </h2>
-              <p style={{ fontSize: "1rem", color: "#4B5563", maxWidth: "660px", margin: 0, lineHeight: 1.55 }}>
-                Estimation directe selon les grilles en vigueur. Frais de dédouanement et sécurisation inclus.
+              <p style={{ fontSize: "0.98rem", color: "#4B5563", margin: 0 }}>
+                Choisissez votre pays de départ et le poids pour voir le prix total avec douane incluse.
               </p>
             </div>
-          </ScrollReveal>
 
-          <ScrollReveal delay={80}>
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-                gap: "28px",
+                gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                gap: "24px",
                 alignItems: "stretch",
               }}
             >
-              {/* Cadran gauche : Pupitre de Configuration */}
+              {/* Panneau Réglages */}
               <div
-                className="roum-cadran"
                 style={{
-                  padding: "32px 26px",
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "14px",
+                  padding: "26px",
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "space-between",
+                  gap: "18px",
                 }}
               >
-                <div className="roum-badge-superpose">
-                  CONFIGURATION D&apos;EXPÉDITION
+                <div>
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>
+                    Pays de départ (Où se trouve votre fournisseur ?)
+                  </label>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", border: "1px solid #D1D5DB", borderRadius: "8px", padding: "0 10px", height: "46px" }}>
+                    <CircularFlag countryName={simOrigin} size={18} />
+                    <select
+                      value={simOrigin}
+                      onChange={(e) => setSimOrigin(e.target.value)}
+                      style={{
+                        border: "none",
+                        backgroundColor: "transparent",
+                        width: "100%",
+                        height: "100%",
+                        fontSize: "15px",
+                        color: "#111827",
+                        outline: "none",
+                        fontWeight: 700,
+                      }}
+                    >
+                      <option value="Chine">Chine (Guangzhou / Yiwu)</option>
+                      <option value="Émirats Arabes Unis (Dubaï)">Dubaï (Émirats Arabes Unis)</option>
+                      <option value="Maroc">Maroc (Casablanca)</option>
+                      <option value="France">France (Paris)</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "20px", marginTop: "4px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 800, color: "#374151", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                        Départ (Origine)
-                      </label>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", border: "1px solid #D1D5DB", borderRadius: "10px", padding: "0 12px", height: "46px", backgroundColor: "#FFFFFF" }}>
-                        <CircularFlag countryName={simOrigin} size={18} />
-                        <select
-                          value={simOrigin}
-                          onChange={(e) => setSimOrigin(e.target.value)}
-                          style={{
-                            border: "none",
-                            backgroundColor: "transparent",
-                            width: "100%",
-                            height: "100%",
-                            fontSize: "14px",
-                            color: "#111827",
-                            outline: "none",
-                            fontWeight: 700,
-                          }}
-                        >
-                          <option value="Chine">Chine (Guangzhou / Yiwu)</option>
-                          <option value="Émirats Arabes Unis (Dubaï)">Émirats Arabes Unis (Dubaï)</option>
-                          <option value="Maroc">Maroc (Casablanca)</option>
-                          <option value="France">France (Paris)</option>
-                          <option value="Turquie">Turquie (Istanbul)</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 800, color: "#374151", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                        Arrivée (Destination)
-                      </label>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", border: "1px solid #D1D5DB", borderRadius: "10px", padding: "0 12px", height: "46px", backgroundColor: "#FFFFFF" }}>
-                        <CircularFlag countryName={simDest} size={18} />
-                        <select
-                          value={simDest}
-                          onChange={(e) => setSimDest(e.target.value)}
-                          style={{
-                            border: "none",
-                            backgroundColor: "transparent",
-                            width: "100%",
-                            height: "100%",
-                            fontSize: "14px",
-                            color: "#111827",
-                            outline: "none",
-                            fontWeight: 700,
-                          }}
-                        >
-                          {AFRICAN_COUNTRIES.map((c) => (
-                            <option key={c.code} value={c.name}>
-                              {c.name} ({c.hubCity || c.code})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Mode de transport avec boutons tactiles */}
-                  <div style={{ marginBottom: "20px" }}>
-                    <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 800, color: "#374151", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                      Mode d&apos;acheminement
-                    </label>
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                      {[
-                        { id: "AIR", label: "Aérien Express (4 - 5j)", icon: Plane },
-                        { id: "SEA", label: "Maritime Groupage (CBM)", icon: Ship },
-                        { id: "ROAD", label: "Terrestre Transfrontalier", icon: Truck },
-                      ].map((mode) => {
-                        const Icon = mode.icon;
-                        const isSelected = simMode === mode.id;
-                        return (
-                          <button
-                            key={mode.id}
-                            type="button"
-                            onClick={() => setSimMode(mode.id as any)}
-                            className={isSelected ? "roum-btn-primary" : "roum-btn-secondary"}
-                            style={{
-                              padding: "9px 14px",
-                              fontSize: "0.82rem",
-                              borderRadius: "8px",
-                            }}
-                          >
-                            <Icon size={14} />
-                            <span>{mode.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Poids / Catégorie */}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" }}>
-                    {simMode === "SEA" ? (
-                      <div>
-                        <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 800, color: "#374151", marginBottom: "8px", textTransform: "uppercase" }}>
-                          Volume en m³ (CBM)
-                        </label>
-                        <input
-                          type="number"
-                          min="0.1"
-                          step="0.1"
-                          value={simCbm}
-                          onChange={(e) => setSimCbm(Math.max(0.1, Number(e.target.value)))}
-                          style={{
-                            width: "100%",
-                            height: "46px",
-                            padding: "0 14px",
-                            fontSize: "15px",
-                            border: "1px solid #D1D5DB",
-                            borderRadius: "10px",
-                            backgroundColor: "#FFFFFF",
-                            color: "#111827",
-                            boxSizing: "border-box",
-                            fontWeight: 700,
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      <>
-                        <div>
-                          <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 800, color: "#374151", marginBottom: "8px", textTransform: "uppercase" }}>
-                            Poids (kg)
-                          </label>
-                          <input
-                            type="number"
-                            min="1"
-                            step="1"
-                            value={simWeight}
-                            onChange={(e) => setSimWeight(Math.max(1, Number(e.target.value)))}
-                            style={{
-                              width: "100%",
-                              height: "46px",
-                              padding: "0 14px",
-                              fontSize: "15px",
-                              border: "1px solid #D1D5DB",
-                              borderRadius: "10px",
-                              backgroundColor: "#FFFFFF",
-                              color: "#111827",
-                              boxSizing: "border-box",
-                              fontWeight: 700,
-                            }}
-                          />
-                        </div>
-
-                        <div>
-                          <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 800, color: "#374151", marginBottom: "8px", textTransform: "uppercase" }}>
-                            Nature de la marchandise
-                          </label>
-                          <select
-                            value={simCategory}
-                            onChange={(e) => setSimCategory(e.target.value)}
-                            style={{
-                              width: "100%",
-                              height: "46px",
-                              padding: "0 12px",
-                              fontSize: "14px",
-                              border: "1px solid #D1D5DB",
-                              borderRadius: "10px",
-                              backgroundColor: "#FFFFFF",
-                              color: "#111827",
-                              outline: "none",
-                              boxSizing: "border-box",
-                              fontWeight: 700,
-                            }}
-                          >
-                            <option value="express">Marchandises Générales (Express 4-5j)</option>
-                            <option value="normal">Marchandises Générales (Normale 2 sem)</option>
-                            <option value="battery">Batteries & Compléments</option>
-                            <option value="pc">Pièces d&apos;ordinateur & High-Tech</option>
-                            <option value="cosmetic">Cosmétiques & Beauté</option>
-                            <option value="doc">Pli & Document Administratif</option>
-                          </select>
-                        </div>
-                      </>
-                    )}
+                  <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>
+                    Moyen de transport
+                  </label>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button
+                      type="button"
+                      onClick={() => setSimMode("AIR")}
+                      className={simMode === "AIR" ? "roum-btn-primary" : "roum-btn-secondary"}
+                      style={{ flex: 1, padding: "10px", borderRadius: "8px", fontSize: "0.85rem" }}
+                    >
+                      <Plane size={15} />
+                      <span>Avion (Express)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSimMode("SEA")}
+                      className={simMode === "SEA" ? "roum-btn-primary" : "roum-btn-secondary"}
+                      style={{ flex: 1, padding: "10px", borderRadius: "8px", fontSize: "0.85rem" }}
+                    >
+                      <Ship size={15} />
+                      <span>Bateau (Maritime)</span>
+                    </button>
                   </div>
                 </div>
+
+                {simMode === "AIR" ? (
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>
+                      Poids estimé (en kg)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={simWeight}
+                      onChange={(e) => setSimWeight(Math.max(1, Number(e.target.value)))}
+                      style={{
+                        width: "100%",
+                        height: "46px",
+                        padding: "0 12px",
+                        fontSize: "16px",
+                        border: "1px solid #D1D5DB",
+                        borderRadius: "8px",
+                        color: "#111827",
+                        fontWeight: 700,
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>
+                      Volume estimé (en m³ / CBM)
+                    </label>
+                    <input
+                      type="number"
+                      min="0.1"
+                      step="0.1"
+                      value={simCbm}
+                      onChange={(e) => setSimCbm(Math.max(0.1, Number(e.target.value)))}
+                      style={{
+                        width: "100%",
+                        height: "46px",
+                        padding: "0 12px",
+                        fontSize: "16px",
+                        border: "1px solid #D1D5DB",
+                        borderRadius: "8px",
+                        color: "#111827",
+                        fontWeight: 700,
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Cadran droit : Bordereau Officiel Superposé */}
+              {/* Panneau Résultat */}
               <div
-                className="roum-bordereau-superpose"
                 style={{
-                  padding: "32px 28px",
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "14px",
+                  padding: "26px",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
                 }}
               >
-                <div className="roum-badge-superpose">
-                  BORDEREAU D&apos;ESTIMATION OFFICIEL
-                </div>
-
-                <div className="roum-badge-superpose-right">
-                  DOUANE INCLUSE
-                </div>
-
-                <div style={{ marginTop: "4px" }}>
-                  <div style={{ fontSize: "0.74rem", fontWeight: 800, textTransform: "uppercase", color: "#6B7280", letterSpacing: "0.08em", marginBottom: "8px" }}>
-                    Montant estimé net
+                <div>
+                  <div style={{ fontSize: "0.76rem", fontWeight: 700, textTransform: "uppercase", color: "#6B7280", marginBottom: "6px" }}>
+                    Prix total estimé (douane incluse)
                   </div>
 
                   <div
                     style={{
-                      fontSize: "clamp(2.2rem, 3.8vw, 2.9rem)",
+                      fontSize: "clamp(2rem, 3.4vw, 2.8rem)",
                       fontWeight: 800,
                       color: "#111827",
-                      letterSpacing: "-0.025em",
-                      lineHeight: 1.05,
-                      margin: "0 0 12px 0",
+                      lineHeight: 1.1,
+                      margin: "0 0 10px 0",
                     }}
                     className="tabular-nums"
                   >
                     {estimate.amountFcfa.toLocaleString("fr-FR")} FCFA
                   </div>
 
-                  <div style={{ fontSize: "0.92rem", color: "#374151", lineHeight: 1.55 }}>
-                    {estimate.details} · <strong>Délai garanti : {estimate.duration}</strong>
+                  <div style={{ fontSize: "0.88rem", color: "#374151", marginBottom: "14px" }}>
+                    {estimate.description}
                   </div>
 
-                  {/* Ligne pointillée technique façon LTA */}
-                  <div style={{ borderTop: "1.5px dashed #CBD5E1", margin: "18px 0" }} />
-
-                  <div style={{ display: "grid", gap: "8px", fontSize: "0.82rem", color: "#4B5563" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span>Trajet :</span>
-                      <strong style={{ color: "#111827" }}>{simOrigin} ➔ {simDest}</strong>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span>Conditionnement :</span>
-                      <strong style={{ color: "#111827" }}>{simMode === "SEA" ? `${simCbm} m³` : `${simWeight} kg net`}</strong>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span>Point de retrait :</span>
-                      <strong style={{ color: "#111827" }}>Agence Abidjan Bingerville</strong>
-                    </div>
+                  <div style={{ fontSize: "0.82rem", color: "#4B5563", borderTop: "1px solid #F3F4F6", paddingTop: "12px" }}>
+                    Délai prévu : <strong>{estimate.duration}</strong><br />
+                    Lieu de retrait : <strong>Agence Roum Transit Abidjan Bingerville</strong>
                   </div>
                 </div>
 
-                <div style={{ marginTop: "24px" }}>
+                <div style={{ marginTop: "20px" }}>
                   <a
                     href={getSimulatorWaUrl()}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="roum-btn-primary"
-                    style={{
-                      width: "100%",
-                      height: "48px",
-                      fontSize: "0.92rem",
-                      boxSizing: "border-box",
-                    }}
+                    style={{ width: "100%", height: "48px", boxSizing: "border-box" }}
                   >
-                    <MessageCircle size={17} />
-                    <span>Valider & Réserver sur WhatsApp</span>
+                    <MessageCircle size={16} />
+                    <span>Confirmer ce devis sur WhatsApp</span>
                   </a>
-                  <div style={{ textAlign: "center", fontSize: "0.74rem", color: "#9CA3AF", marginTop: "8px" }}>
-                    Confirmation sans engagement · Assistance humaine directe
-                  </div>
                 </div>
               </div>
             </div>
@@ -948,38 +869,44 @@ export default function HomePage() {
       </section>
 
       {/* ============================================================
-          SECTION 03 : ENTREPÔTS & ADRESSES DE RÉCEPTION (POCHOIR STENCIL)
+          SECTION ADRESSES DES MAGASINS
           ============================================================ */}
       <section
         id="warehouses"
         style={{
-          padding: "84px 20px",
+          padding: "72px 20px",
           borderBottom: "1px solid #E5E7EB",
           backgroundColor: "#FFFFFF",
         }}
       >
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <ScrollReveal>
-            <div style={{ marginBottom: "44px" }}>
-              <div className="roum-numero-ligne">
-                <span style={{ fontSize: "0.9rem", fontWeight: 800, color: "#111827" }}>03</span>
-                <span style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "#6B7280", marginLeft: "10px" }}>
-                  ENTREPÔTS MONDAUX & GROUPAGE SÉCURISÉ
-                </span>
+            <div style={{ textAlign: "center", marginBottom: "44px" }}>
+              <div
+                style={{
+                  display: "inline-block",
+                  fontSize: "0.76rem",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  color: "#6B7280",
+                  marginBottom: "8px",
+                }}
+              >
+                Pour vos fournisseurs
               </div>
               <h2
                 style={{
                   fontSize: "clamp(1.8rem, 3.2vw, 2.4rem)",
                   fontWeight: 800,
                   color: "#111827",
-                  letterSpacing: "-0.025em",
                   margin: "0 0 10px 0",
                 }}
               >
-                Adresses de réception pour vos fournisseurs
+                Nos Adresses de Réception
               </h2>
-              <p style={{ fontSize: "1rem", color: "#4B5563", maxWidth: "660px", margin: 0, lineHeight: 1.55 }}>
-                Transmettez ces adresses à vos usines ou expéditeurs avec le marquage obligatoire en Shipping Mark.
+              <p style={{ fontSize: "0.98rem", color: "#4B5563", margin: 0 }}>
+                Donnez ces adresses à vos vendeurs en ajoutant toujours votre nom pour identifier vos colis.
               </p>
             </div>
           </ScrollReveal>
@@ -988,322 +915,232 @@ export default function HomePage() {
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-              gap: "28px 22px",
+              gap: "20px",
             }}
           >
             {/* Chine */}
-            <ScrollReveal delay={40}>
-              <div
-                className="roum-cadran"
-                style={{
-                  padding: "28px 24px 22px 24px",
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxSizing: "border-box",
-                }}
-              >
-                <div className="roum-flag-medaillon">
-                  <CircularFlag countryCode="CN" size={20} />
+            <div
+              style={{
+                border: "1px solid #E5E7EB",
+                borderRadius: "12px",
+                padding: "22px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                backgroundColor: "#FFFFFF",
+              }}
+            >
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                  <CircularFlag countryCode="CN" size={18} />
+                  <strong style={{ fontSize: "1rem", color: "#111827" }}>Guangzhou (Chine)</strong>
                 </div>
-                <div className="roum-badge-superpose-right">
-                  HUB ASIE
+                <p style={{ fontSize: "0.82rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 12px 0" }}>
+                  Baiyun District, Guangzhou City, Guangdong Province, China. Réception directe de 1688 et Taobao.
+                </p>
+                <div style={{ fontSize: "0.75rem", color: "#1F2937", background: "#F3F4F6", padding: "8px 10px", borderRadius: "6px", marginBottom: "16px", fontWeight: 700 }}>
+                  Marquage : ROUM TRANSIT / [Votre Nom]
                 </div>
-
-                <div>
-                  <div style={{ marginTop: "4px", marginBottom: "4px" }}>
-                    <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: 0 }}>
-                      Guangzhou (Chine)
-                    </h3>
-                  </div>
-                  <p style={{ fontSize: "0.84rem", color: "#4B5563", lineHeight: 1.55, margin: "0 0 14px 0" }}>
-                    Baiyun District, Guangzhou City, Guangdong Province, China. Réception & consolidation 1688 / Taobao.
-                  </p>
-                  <div className="roum-stencil-mark" style={{ marginBottom: "16px" }}>
-                    SHIPPING MARK : ROUM TRANSIT / [VOTRE NOM]
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleCopy("cn", "Guangzhou Warehouse, Baiyun District, Guangzhou City, Guangdong Province, China — ROUM TRANSIT")}
-                  className="roum-btn-secondary"
-                  style={{
-                    width: "100%",
-                    height: "42px",
-                    backgroundColor: copiedKey === "cn" ? "#F0FDF4" : "#FFFFFF",
-                    color: copiedKey === "cn" ? "#15803D !important" : "#111827",
-                    borderColor: copiedKey === "cn" ? "#86EFAC" : "#D1D5DB",
-                    boxSizing: "border-box",
-                  }}
-                >
-                  {copiedKey === "cn" ? <Check size={14} color="#15803D" /> : <Copy size={14} />}
-                  <span>{copiedKey === "cn" ? "Adresse copiée !" : "Copier l'adresse de livraison"}</span>
-                </button>
               </div>
-            </ScrollReveal>
+
+              <button
+                type="button"
+                onClick={() => handleCopy("cn", "Guangzhou Warehouse, Baiyun District, Guangzhou City, Guangdong Province, China — ROUM TRANSIT")}
+                className="roum-btn-secondary"
+                style={{ width: "100%", fontSize: "0.8rem", padding: "8px 12px" }}
+              >
+                {copiedKey === "cn" ? <Check size={13} color="#15803D" /> : <Copy size={13} />}
+                <span>{copiedKey === "cn" ? "Adresse copiée !" : "Copier l'adresse Chine"}</span>
+              </button>
+            </div>
 
             {/* Dubaï */}
-            <ScrollReveal delay={90}>
-              <div
-                className="roum-cadran"
-                style={{
-                  padding: "28px 24px 22px 24px",
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxSizing: "border-box",
-                }}
-              >
-                <div className="roum-flag-medaillon">
-                  <CircularFlag countryCode="AE" size={20} />
+            <div
+              style={{
+                border: "1px solid #E5E7EB",
+                borderRadius: "12px",
+                padding: "22px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                backgroundColor: "#FFFFFF",
+              }}
+            >
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                  <CircularFlag countryCode="AE" size={18} />
+                  <strong style={{ fontSize: "1rem", color: "#111827" }}>Dubaï (Émirats)</strong>
                 </div>
-                <div className="roum-badge-superpose-right">
-                  HUB MOYEN-ORIENT
+                <p style={{ fontSize: "0.82rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 12px 0" }}>
+                  Deira Wholesale Cargo Hub, Dubai, UAE. Pour vos commandes de parfumerie, cosmétiques et électronique.
+                </p>
+                <div style={{ fontSize: "0.75rem", color: "#1F2937", background: "#F3F4F6", padding: "8px 10px", borderRadius: "6px", marginBottom: "16px", fontWeight: 700 }}>
+                  Marquage : ROUM TRANSIT DUBAI / [Votre Nom]
                 </div>
-
-                <div>
-                  <div style={{ marginTop: "4px", marginBottom: "4px" }}>
-                    <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: 0 }}>
-                      Dubaï (Émirats)
-                    </h3>
-                  </div>
-                  <p style={{ fontSize: "0.84rem", color: "#4B5563", lineHeight: 1.55, margin: "0 0 14px 0" }}>
-                    Deira Wholesale District, Dubaï Cargo Hub. Parfumerie, compléments, cosmétiques et électronique.
-                  </p>
-                  <div className="roum-stencil-mark" style={{ marginBottom: "16px" }}>
-                    SHIPPING MARK : ROUM TRANSIT DUBAI / [VOTRE NOM]
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleCopy("ae", "Deira Cargo Hub, Dubai, UAE — ROUM TRANSIT DUBAI")}
-                  className="roum-btn-secondary"
-                  style={{
-                    width: "100%",
-                    height: "42px",
-                    backgroundColor: copiedKey === "ae" ? "#F0FDF4" : "#FFFFFF",
-                    color: copiedKey === "ae" ? "#15803D !important" : "#111827",
-                    borderColor: copiedKey === "ae" ? "#86EFAC" : "#D1D5DB",
-                    boxSizing: "border-box",
-                  }}
-                >
-                  {copiedKey === "ae" ? <Check size={14} color="#15803D" /> : <Copy size={14} />}
-                  <span>{copiedKey === "ae" ? "Adresse copiée !" : "Copier l'adresse de livraison"}</span>
-                </button>
               </div>
-            </ScrollReveal>
+
+              <button
+                type="button"
+                onClick={() => handleCopy("ae", "Deira Cargo Hub, Dubai, UAE — ROUM TRANSIT DUBAI")}
+                className="roum-btn-secondary"
+                style={{ width: "100%", fontSize: "0.8rem", padding: "8px 12px" }}
+              >
+                {copiedKey === "ae" ? <Check size={13} color="#15803D" /> : <Copy size={13} />}
+                <span>{copiedKey === "ae" ? "Adresse copiée !" : "Copier l'adresse Dubaï"}</span>
+              </button>
+            </div>
 
             {/* Maroc */}
-            <ScrollReveal delay={140}>
-              <div
-                className="roum-cadran"
-                style={{
-                  padding: "28px 24px 22px 24px",
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxSizing: "border-box",
-                }}
-              >
-                <div className="roum-flag-medaillon">
-                  <CircularFlag countryCode="MA" size={20} />
+            <div
+              style={{
+                border: "1px solid #E5E7EB",
+                borderRadius: "12px",
+                padding: "22px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                backgroundColor: "#FFFFFF",
+              }}
+            >
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                  <CircularFlag countryCode="MA" size={18} />
+                  <strong style={{ fontSize: "1rem", color: "#111827" }}>Casablanca (Maroc)</strong>
                 </div>
-                <div className="roum-badge-superpose-right">
-                  HUB MAGHREB
+                <p style={{ fontSize: "0.82rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 12px 0" }}>
+                  Zone Industrielle Ain Sebaa, Casablanca, Maroc. Départ régulier express en 5 jours chrono.
+                </p>
+                <div style={{ fontSize: "0.75rem", color: "#1F2937", background: "#F3F4F6", padding: "8px 10px", borderRadius: "6px", marginBottom: "16px", fontWeight: 700 }}>
+                  Marquage : ROUM TRANSIT MAROC / [Votre Nom]
                 </div>
-
-                <div>
-                  <div style={{ marginTop: "4px", marginBottom: "4px" }}>
-                    <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: 0 }}>
-                      Casablanca (Maroc)
-                    </h3>
-                  </div>
-                  <p style={{ fontSize: "0.84rem", color: "#4B5563", lineHeight: 1.55, margin: "0 0 14px 0" }}>
-                    Zone Industrielle Ain Sebaa, Casablanca. Groupage subsaharien express départ garanti.
-                  </p>
-                  <div className="roum-stencil-mark" style={{ marginBottom: "16px" }}>
-                    SHIPPING MARK : ROUM TRANSIT MAROC / [VOTRE NOM]
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleCopy("ma", "Zone Industrielle Ain Sebaa, Casablanca, Maroc — ROUM TRANSIT")}
-                  className="roum-btn-secondary"
-                  style={{
-                    width: "100%",
-                    height: "42px",
-                    backgroundColor: copiedKey === "ma" ? "#F0FDF4" : "#FFFFFF",
-                    color: copiedKey === "ma" ? "#15803D !important" : "#111827",
-                    borderColor: copiedKey === "ma" ? "#86EFAC" : "#D1D5DB",
-                    boxSizing: "border-box",
-                  }}
-                >
-                  {copiedKey === "ma" ? <Check size={14} color="#15803D" /> : <Copy size={14} />}
-                  <span>{copiedKey === "ma" ? "Adresse copiée !" : "Copier l'adresse de livraison"}</span>
-                </button>
               </div>
-            </ScrollReveal>
+
+              <button
+                type="button"
+                onClick={() => handleCopy("ma", "Zone Industrielle Ain Sebaa, Casablanca, Maroc — ROUM TRANSIT")}
+                className="roum-btn-secondary"
+                style={{ width: "100%", fontSize: "0.8rem", padding: "8px 12px" }}
+              >
+                {copiedKey === "ma" ? <Check size={13} color="#15803D" /> : <Copy size={13} />}
+                <span>{copiedKey === "ma" ? "Adresse copiée !" : "Copier l'adresse Maroc"}</span>
+              </button>
+            </div>
 
             {/* France */}
-            <ScrollReveal delay={190}>
-              <div
-                className="roum-cadran"
-                style={{
-                  padding: "28px 24px 22px 24px",
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxSizing: "border-box",
-                }}
-              >
-                <div className="roum-flag-medaillon">
-                  <CircularFlag countryCode="FR" size={20} />
+            <div
+              style={{
+                border: "1px solid #E5E7EB",
+                borderRadius: "12px",
+                padding: "22px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                backgroundColor: "#FFFFFF",
+              }}
+            >
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                  <CircularFlag countryCode="FR" size={18} />
+                  <strong style={{ fontSize: "1rem", color: "#111827" }}>Paris (France)</strong>
                 </div>
-                <div className="roum-badge-superpose-right">
-                  HUB EUROPE
+                <p style={{ fontSize: "0.82rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 12px 0" }}>
+                  Plateforme Logistique Paris Île-de-France. Expédition directe vers Abidjan pour colis et documents.
+                </p>
+                <div style={{ fontSize: "0.75rem", color: "#1F2937", background: "#F3F4F6", padding: "8px 10px", borderRadius: "6px", marginBottom: "16px", fontWeight: 700 }}>
+                  Marquage : ROUM TRANSIT PARIS / [Votre Nom]
                 </div>
-
-                <div>
-                  <div style={{ marginTop: "4px", marginBottom: "4px" }}>
-                    <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: 0 }}>
-                      Paris (France)
-                    </h3>
-                  </div>
-                  <p style={{ fontSize: "0.84rem", color: "#4B5563", lineHeight: 1.55, margin: "0 0 14px 0" }}>
-                    Plateforme logistique Île-de-France. Expédition aérienne directe vers Abidjan.
-                  </p>
-                  <div className="roum-stencil-mark" style={{ marginBottom: "16px" }}>
-                    SHIPPING MARK : ROUM TRANSIT PARIS / [VOTRE NOM]
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleCopy("fr", "Plateforme Logistique Paris Île-de-France — ROUM TRANSIT PARIS")}
-                  className="roum-btn-secondary"
-                  style={{
-                    width: "100%",
-                    height: "42px",
-                    backgroundColor: copiedKey === "fr" ? "#F0FDF4" : "#FFFFFF",
-                    color: copiedKey === "fr" ? "#15803D !important" : "#111827",
-                    borderColor: copiedKey === "fr" ? "#86EFAC" : "#D1D5DB",
-                    boxSizing: "border-box",
-                  }}
-                >
-                  {copiedKey === "fr" ? <Check size={14} color="#15803D" /> : <Copy size={14} />}
-                  <span>{copiedKey === "fr" ? "Adresse copiée !" : "Copier l'adresse de livraison"}</span>
-                </button>
               </div>
-            </ScrollReveal>
+
+              <button
+                type="button"
+                onClick={() => handleCopy("fr", "Plateforme Logistique Paris Île-de-France — ROUM TRANSIT PARIS")}
+                className="roum-btn-secondary"
+                style={{ width: "100%", fontSize: "0.8rem", padding: "8px 12px" }}
+              >
+                {copiedKey === "fr" ? <Check size={13} color="#15803D" /> : <Copy size={13} />}
+                <span>{copiedKey === "fr" ? "Adresse copiée !" : "Copier l'adresse France"}</span>
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ============================================================
-          SECTION 04 : LA DÉMARCHE OPÉRATIONNELLE (DOCUMENTATION ARCHITECTURALE)
-          Inspirée fidèlement de la planche Medscan de Mohamed Boubacar Seini
+          SECTION POURQUOI ROUM TRANSIT ? (SIMPLE & RASSURANT)
           ============================================================ */}
       <section
         id="exigence"
         style={{
-          padding: "84px 20px 104px 20px",
-          backgroundColor: "#FFFFFF",
+          padding: "72px 20px 84px 20px",
+          backgroundColor: "#FAFAFA",
         }}
       >
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
           <ScrollReveal>
-            <div style={{ marginBottom: "52px" }}>
-              <div className="roum-numero-ligne">
-                <span style={{ fontSize: "0.9rem", fontWeight: 800, color: "#111827" }}>04</span>
-                <span style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.14em", color: "#6B7280", marginLeft: "10px" }}>
-                  DOCUMENTATION & ENGAGEMENT DU FONDATEUR
-                </span>
-              </div>
+            <div style={{ textAlign: "center", marginBottom: "40px" }}>
               <h2
                 style={{
-                  fontSize: "clamp(1.8rem, 3.2vw, 2.4rem)",
+                  fontSize: "clamp(1.7rem, 3vw, 2.2rem)",
                   fontWeight: 800,
                   color: "#111827",
-                  letterSpacing: "-0.025em",
-                  margin: 0,
+                  margin: "0 0 10px 0",
                 }}
               >
-                La Démarche Opérationnelle
+                Pourquoi choisir Roum Transit ?
               </h2>
+              <p style={{ fontSize: "0.96rem", color: "#4B5563", margin: 0 }}>
+                Notre engagement pour que chacun de vos colis arrive en toute sérénité.
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: "20px",
+              }}
+            >
+              <div style={{ backgroundColor: "#FFFFFF", padding: "20px", borderRadius: "10px", border: "1px solid #E5E7EB" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "8px", backgroundColor: "#F3F4F6", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}>
+                  <Scale size={18} color="#111827" />
+                </div>
+                <strong style={{ fontSize: "0.95rem", color: "#111827", display: "block", marginBottom: "6px" }}>Pesée Exacte</strong>
+                <p style={{ fontSize: "0.82rem", color: "#4B5563", margin: 0, lineHeight: 1.5 }}>
+                  Vos colis sont pesés avec rigueur. Vous payez exactement ce que pèse votre marchandise, rien de plus.
+                </p>
+              </div>
+
+              <div style={{ backgroundColor: "#FFFFFF", padding: "20px", borderRadius: "10px", border: "1px solid #E5E7EB" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "8px", backgroundColor: "#F3F4F6", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}>
+                  <PackageCheck size={18} color="#111827" />
+                </div>
+                <strong style={{ fontSize: "0.95rem", color: "#111827", display: "block", marginBottom: "6px" }}>Suivi Unitaire</strong>
+                <p style={{ fontSize: "0.82rem", color: "#4B5563", margin: 0, lineHeight: 1.5 }}>
+                  Un numéro de bordereau pour suivre votre paquet du magasin jusqu&apos;à l&apos;arrivée à Abidjan.
+                </p>
+              </div>
+
+              <div style={{ backgroundColor: "#FFFFFF", padding: "20px", borderRadius: "10px", border: "1px solid #E5E7EB" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "8px", backgroundColor: "#F3F4F6", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}>
+                  <Clock size={18} color="#111827" />
+                </div>
+                <strong style={{ fontSize: "0.95rem", color: "#111827", display: "block", marginBottom: "6px" }}>Délais Respectés</strong>
+                <p style={{ fontSize: "0.82rem", color: "#4B5563", margin: 0, lineHeight: 1.5 }}>
+                  Des départs réguliers chaque semaine pour que vos articles arrivent à temps sans attente inutile.
+                </p>
+              </div>
+
+              <div style={{ backgroundColor: "#FFFFFF", padding: "20px", borderRadius: "10px", border: "1px solid #E5E7EB" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "8px", backgroundColor: "#F3F4F6", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}>
+                  <MapPin size={18} color="#111827" />
+                </div>
+                <strong style={{ fontSize: "0.95rem", color: "#111827", display: "block", marginBottom: "6px" }}>Agence Locale</strong>
+                <p style={{ fontSize: "0.82rem", color: "#4B5563", margin: 0, lineHeight: 1.5 }}>
+                  Une équipe physique à Abidjan Bingerville prête à vous accueillir et disponible sur WhatsApp.
+                </p>
+              </div>
             </div>
           </ScrollReveal>
-
-          {/* Grille 4 colonnes éditoriales monumentales */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-              gap: "40px 32px",
-            }}
-          >
-            <ScrollReveal delay={40}>
-              <div style={{ borderTop: "2px solid #111827", paddingTop: "18px" }}>
-                <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#111827", marginBottom: "8px" }} className="tabular-nums">
-                  01
-                </div>
-                <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: "0 0 10px 0" }}>
-                  Pesée Certifiée & Rigueur
-                </h3>
-                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.65, margin: 0, textWrap: "pretty" }}>
-                  Chaque colis entrant en magasin fait l&apos;objet d&apos;une pesée officielle et d&apos;une vérification physique de son conditionnement. Zéro surfacturation, facturation stricte au poids réel constaté.
-                </p>
-              </div>
-            </ScrollReveal>
-
-            <ScrollReveal delay={90}>
-              <div style={{ borderTop: "2px solid #111827", paddingTop: "18px" }}>
-                <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#111827", marginBottom: "8px" }} className="tabular-nums">
-                  02
-                </div>
-                <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: "0 0 10px 0" }}>
-                  Traçabilité Unitaire
-                </h3>
-                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.65, margin: 0, textWrap: "pretty" }}>
-                  Dès la prise en charge, une référence de bordereau standardisée vous est remise. Votre dossier est tracé à chaque étape clé (réception magasin, vol/mer, douane, mise à disposition en agence).
-                </p>
-              </div>
-            </ScrollReveal>
-
-            <ScrollReveal delay={140}>
-              <div style={{ borderTop: "2px solid #111827", paddingTop: "18px" }}>
-                <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#111827", marginBottom: "8px" }} className="tabular-nums">
-                  03
-                </div>
-                <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: "0 0 10px 0" }}>
-                  Transparence des Délais
-                </h3>
-                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.65, margin: 0, textWrap: "pretty" }}>
-                  Nos plannings d&apos;embarquement sont réguliers et tenus : 4 à 5 jours en aérien express, 5 jours chrono depuis le Maroc, et 35 à 45 jours par conteneur maritime groupé.
-                </p>
-              </div>
-            </ScrollReveal>
-
-            <ScrollReveal delay={190}>
-              <div style={{ borderTop: "2px solid #111827", paddingTop: "18px" }}>
-                <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#111827", marginBottom: "8px" }} className="tabular-nums">
-                  04
-                </div>
-                <h3 style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", margin: "0 0 10px 0" }}>
-                  Disponibilité & Permanence
-                </h3>
-                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.65, margin: 0, textWrap: "pretty" }}>
-                  Une équipe opérationnelle dédiée à votre écoute directe par WhatsApp et à l&apos;agence d&apos;Abidjan Bingerville pour retirer vos colis en toute sérénité.
-                </p>
-              </div>
-            </ScrollReveal>
-          </div>
         </div>
       </section>
     </div>

@@ -1297,6 +1297,13 @@ select.input-clean {
   }
 }
 
+/* Bottom Nav Bar Responsive */
+@media (max-width: 640px) {
+  .bottom-nav-label {
+    display: none;
+  }
+}
+
 /* ============================================================
    ROUM DESIGN SYSTEM : BOUTONS TACTILES & CADRANS EN SUPERPOSITION
    Inspiré de l'esthétique suisse éditoriale, pure et architecturale
