@@ -142,16 +142,14 @@ export default function PublicLayout({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "5px",
-                padding: "8px 12px",
-                borderRadius: "9999px",
-                border: "1px solid rgba(28, 25, 23, 0.08)",
-                background: "#FAF9F7",
-                transition: "all 0.15s ease",
+                padding: "7px 12px",
+                borderRadius: "8px",
+                border: "1px solid #E5E7EB",
+                background: "#FFFFFF",
               }}
               title="Portail de direction et gestion interne"
             >
-              <Shield size={13} color="#6B7280" />
-              <span>Direction</span>
+              <span>Accès Direction</span>
             </Link>
 
             <a
@@ -161,29 +159,18 @@ export default function PublicLayout({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "8px",
-                fontSize: "0.84rem",
-                fontWeight: 800,
+                gap: "6px",
+                fontSize: "0.82rem",
+                fontWeight: 700,
                 backgroundColor: "#18181B",
                 color: "#FFFFFF",
-                padding: "9px 16px",
-                borderRadius: "9999px",
+                padding: "8px 14px",
+                borderRadius: "8px",
                 textDecoration: "none",
                 whiteSpace: "nowrap",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.12)",
-                transition: "all 0.15s ease",
               }}
             >
-              <span
-                style={{
-                  width: "7px",
-                  height: "7px",
-                  borderRadius: "50%",
-                  backgroundColor: "#10B981",
-                  boxShadow: "0 0 0 2px rgba(16, 185, 129, 0.25)",
-                }}
-              />
-              <span>WhatsApp Direct</span>
+              <span>WhatsApp : +225 01 53 638 569</span>
             </a>
           </div>
         </div>
@@ -225,10 +212,6 @@ export default function PublicLayout({
               <p style={{ color: "#4B5563", fontSize: "0.88rem", lineHeight: 1.65, margin: "0 0 16px 0", maxWidth: "340px" }}>
                 Roum Transit International — Spécialiste du fret aérien express, groupage maritime et approvisionnement direct entre l&apos;Asie, les Émirats, l&apos;Europe et l&apos;Afrique de l&apos;Ouest.
               </p>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#059669", fontWeight: 700 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#059669" }} />
-                <span>Expéditions régulières garanties</span>
-              </div>
             </div>
 
             {/* Colonne 2 : Couloirs Stratégiques */}
