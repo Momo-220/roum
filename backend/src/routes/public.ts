@@ -238,6 +238,58 @@ publicRouter.post(
       formattedCargo
     ).run();
 
+    // Synchronisation vers customer_requests (table d'administration métier)
+    const reqType = data.service_type === "ALIBABA"
+      ? "ALIBABA"
+      : data.service_type === "FORWARDING"
+        ? "SUPPLIER_TRANSIT"
+        : "PARCEL_SHIPPING";
+    const shippingMark = `ROUM / ${quoteRef} / ${data.client_name.toUpperCase()}`;
+
+    try {
+      await c.env.DB.prepare(`
+        INSERT INTO customer_requests (
+          id, reference, client_name, client_phone, client_email,
+          request_type, origin_country, destination_country, shipping_mode_id,
+          description, estimated_weight_kg, estimated_cbm, supplier_name,
+          shipping_mark, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'NEW')
+      `).bind(
+        id,
+        quoteRef,
+        data.client_name,
+        data.client_phone,
+        data.client_email || null,
+        reqType,
+        data.origin_country,
+        data.destination_country,
+        data.shipping_mode_id || null,
+        formattedCargo,
+        data.estimated_weight_kg || null,
+        data.estimated_cbm || null,
+        data.supplier_info || null,
+        shippingMark
+      ).run();
+
+      if (data.service_type === "ALIBABA" && (data.product_url || data.product_specs)) {
+        await c.env.DB.prepare(`
+          INSERT INTO request_items (
+            id, request_id, item_index, product_name, product_url,
+            quantity, variants_description
+          ) VALUES (?, ?, 1, ?, ?, ?, ?)
+        `).bind(
+          crypto.randomUUID(),
+          id,
+          data.product_specs || "Article Alibaba",
+          data.product_url || null,
+          parseInt(data.product_quantity || "1", 10) || 1,
+          data.product_specs || null
+        ).run();
+      }
+    } catch (err) {
+      console.error("Erreur synchronisation customer_requests:", err);
+    }
+
     // Lien WhatsApp d'assistance pré-rempli pour le client
     const supportPhone = "+2250153638569";
     let waText = "";

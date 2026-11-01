@@ -458,7 +458,6 @@ export function formatShipmentStatusShort(status?: string): string {
 export function formatShippingModeShort(modeName?: string, modeId?: string): string {
   const raw = (modeName || "").toLowerCase();
   if (modeId === "SEA_LCL" || raw.includes("maritime") || raw.includes("bateau")) return "Maritime (CBM)";
-  if (modeId === "ROAD_STANDARD" || raw.includes("terrestre")) return "Terrestre";
   if (modeId === "AIR_STANDARD" || raw.includes("standard")) return "Aérien Standard";
   if (modeId === "AIR_EXPRESS" || raw.includes("express") || raw.includes("aérien")) return "Aérien Express";
   return modeName || "Aérien Express";
@@ -1163,8 +1162,8 @@ const DEFAULT_15_SHIPMENTS = [
     destination_country: "Mali",
     current_status: "DELIVERED",
     status_label: "Livré en agence Bamako",
-    shipping_mode_name: "Voie Terrestre Transfrontalière",
-    shipping_mode_id: "ROAD_STANDARD",
+    shipping_mode_name: "Groupage Aérien Subsaharien (5 jours)",
+    shipping_mode_id: "AIR_EXPRESS",
     total_parcels_count: 5,
     total_weight_kg: 180.0,
     total_volume_cbm: 1.4,
@@ -3313,7 +3312,6 @@ export default function AdminPage() {
     try {
       const modeObj = modesList.find((m) => m.id === newTariff.shipping_mode_id);
       const isSea = newTariff.shipping_mode_id.includes("SEA") || (modeObj?.type === "SEA");
-      const isRoad = newTariff.shipping_mode_id.includes("ROAD") || (modeObj?.type === "ROAD");
 
       const res = await fetch("/api/admin/tariffs", {
         method: "POST",
@@ -3342,9 +3340,9 @@ export default function AdminPage() {
         origin_city: newTariff.origin_city,
         destination_country: newTariff.destination_country,
         destination_city: newTariff.destination_city,
-        shipping_mode_name: newTariff.service_name || modeObj?.name || (isSea ? "Voie Maritime (Le CBM)" : isRoad ? "Voie Terrestre Transfrontalière" : "Voie Aérienne Express (4 jours)"),
-        shipping_mode_type: isSea ? "SEA" : isRoad ? "ROAD" : "AIR",
-        category_tag: newTariff.category_tag || (isSea ? "Voie Maritime" : isRoad ? "Voie Terrestre" : "Voie Aérienne"),
+        shipping_mode_name: newTariff.service_name || modeObj?.name || (isSea ? "Voie Maritime (Le CBM)" : "Voie Aérienne Express (4 jours)"),
+        shipping_mode_type: isSea ? "SEA" : "AIR",
+        category_tag: newTariff.category_tag || (isSea ? "Voie Maritime" : "Voie Aérienne"),
         pricing_basis: isSea ? "PER_CBM" : "PER_KG",
         currency: newTariff.currency,
         price_per_unit_minor: Math.round(Number(newTariff.price_per_unit) * 100),
@@ -4205,7 +4203,7 @@ export default function AdminPage() {
     { id: "requests", label: "Commandes clients", icon: ShoppingBag, badge: stats?.pending_requests },
     { id: "shipments", label: "Expéditions & Colis", icon: Package },
     { id: "clients", label: "Clients", icon: Users },
-    { id: "tariffs", label: "Tarifs & Routes", icon: Truck },
+    { id: "tariffs", label: "Tarifs & Grilles", icon: DollarSign },
     { id: "finances", label: "Finances & Paiements", icon: HandCoins },
     { id: "tasks", label: "Tâches", icon: CheckSquare, badge: stats?.pending_tasks },
   ];
@@ -6098,8 +6096,6 @@ export default function AdminPage() {
                               <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontWeight: "600", fontSize: "0.78rem" }}>
                                 {shortMode.includes("Maritime") ? (
                                   <Ship size={13} color="var(--brown-light)" />
-                                ) : shortMode.includes("Terrestre") ? (
-                                  <Truck size={13} color="var(--brown-light)" />
                                 ) : (
                                   <Plane size={13} color="var(--brown-light)" />
                                 )}
@@ -6583,8 +6579,6 @@ export default function AdminPage() {
                             <div style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
                               {shortMode.includes("Maritime") ? (
                                 <Ship size={13} color="var(--brown-light)" />
-                              ) : shortMode.includes("Terrestre") ? (
-                                <Truck size={13} color="var(--brown-light)" />
                               ) : (
                                 <Plane size={13} color="var(--brown-light)" />
                               )}
@@ -6799,7 +6793,6 @@ export default function AdminPage() {
               const nameLower = (t.shipping_mode_name || "").toLowerCase();
               if (tariffModeFilter === "AIR" && t.shipping_mode_type !== "AIR" && !nameLower.includes("aérien") && !nameLower.includes("vol") && !nameLower.includes("express")) return false;
               if (tariffModeFilter === "SEA" && t.shipping_mode_type !== "SEA" && !nameLower.includes("maritime") && !nameLower.includes("bateau") && !nameLower.includes("cbm")) return false;
-              if (tariffModeFilter === "ROAD" && t.shipping_mode_type !== "ROAD" && !nameLower.includes("terrestre")) return false;
             }
             if (tariffCurrencyFilter !== "ALL" && (t.currency || "FCFA").toUpperCase() !== tariffCurrencyFilter.toUpperCase()) {
               return false;
@@ -7571,7 +7564,6 @@ export default function AdminPage() {
                       { id: "ALL", label: "Tous modes" },
                       { id: "AIR", label: "Aérien", icon: <Plane size={13} /> },
                       { id: "SEA", label: "Bateau (CBM)", icon: <Ship size={13} /> },
-                      { id: "ROAD", label: "Terrestre", icon: <Truck size={13} /> },
                     ].map((m) => (
                       <button
                         key={m.id}
@@ -7643,7 +7635,6 @@ export default function AdminPage() {
                       {filteredTariffs.length > 0 ? (
                         filteredTariffs.map((t) => {
                           const isSea = t.shipping_mode_type === "SEA" || (t.shipping_mode_name || "").toLowerCase().includes("maritime") || (t.shipping_mode_name || "").toLowerCase().includes("bateau") || (t.pricing_basis === "PER_CBM");
-                          const isRoad = t.shipping_mode_type === "ROAD" || (t.shipping_mode_name || "").toLowerCase().includes("terrestre");
                           const isUnit = t.pricing_basis === "PER_UNIT";
                           const unitLabel = isSea ? "Par m³ (CBM)" : isUnit ? "Par pièce / pli" : "Par kg";
                           const cleanTag = (t.category_tag || t.shipping_mode_name || "").replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
@@ -7685,8 +7676,6 @@ export default function AdminPage() {
                                 >
                                   {isSea ? (
                                     <Ship size={13} strokeWidth={1.8} />
-                                  ) : isRoad ? (
-                                    <Truck size={13} strokeWidth={1.8} />
                                   ) : cleanTag.includes("Express") ? (
                                     <Zap size={13} strokeWidth={1.8} />
                                   ) : cleanTag.includes("Batterie") || cleanTag.includes("Complément") ? (
@@ -8254,7 +8243,7 @@ export default function AdminPage() {
                             gap: "5px",
                           }}
                         >
-                          {t.category === "WEIGHING" ? <Scale size={12} /> : t.category === "CUSTOMS" ? <Truck size={12} /> : <FileText size={12} />}
+                          {t.category === "WEIGHING" ? <Scale size={12} /> : t.category === "CUSTOMS" ? <ShieldCheck size={12} /> : <FileText size={12} />}
                           {formatTaskCategory(t.category)}
                         </span>
 
@@ -10809,7 +10798,6 @@ export default function AdminPage() {
                       <option value="AIR_EXPRESS">Voie Aérienne Express</option>
                       <option value="AIR_STANDARD">Voie Aérienne Standard</option>
                       <option value="SEA_LCL">Voie Maritime (Bateau / CBM)</option>
-                      <option value="ROAD_STANDARD">Voie Terrestre Transfrontalière</option>
                     </select>
                   </div>
 
@@ -11668,7 +11656,6 @@ export default function AdminPage() {
                     <option value="AIR_STANDARD">Aérien Standard</option>
                     <option value="AIR_EXPRESS">Aérien Express</option>
                     <option value="SEA_GROUPAGE">Maritime Groupage</option>
-                    <option value="ROAD">Routier</option>
                   </select>
                 </div>
                 <div>

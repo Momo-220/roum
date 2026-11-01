@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ShoppingBag,
-  Truck,
+  PackageCheck,
   Search,
   Plane,
   Ship,
@@ -214,7 +214,7 @@ export default function HomePage() {
                       marginBottom: "18px",
                     }}
                   >
-                    <Truck size={24} color="#FFFFFF" strokeWidth={2.2} />
+                    <PackageCheck size={24} color="#FFFFFF" strokeWidth={2.2} />
                   </div>
 
                   <div style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", color: "#6B7280", letterSpacing: "0.06em", marginBottom: "4px" }}>

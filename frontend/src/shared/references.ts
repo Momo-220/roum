@@ -17,7 +17,7 @@
 export const REFERENCE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 export const REFERENCE_SUFFIX_LENGTH = 6;
 
-export const TRANSPORT_TYPES = ["AIR", "SEA", "ROAD"] as const;
+export const TRANSPORT_TYPES = ["AIR", "SEA"] as const;
 export type TransportType = (typeof TRANSPORT_TYPES)[number];
 
 /** Source d'aléa injectable (pour des tests déterministes). Doit renvoyer `length` octets aléatoires. */
@@ -32,7 +32,7 @@ const cryptoRandomBytes: RandomBytesSource = (length) => {
 const SUFFIX_PATTERN = `[${REFERENCE_ALPHABET}]{${REFERENCE_SUFFIX_LENGTH}}`;
 const PERIOD_PATTERN = "\\d{2}(?:0[1-9]|1[0-2])";
 
-export const TRACKING_NUMBER_REGEX = new RegExp(`^RM-(?:AIR|SEA|ROAD)-${PERIOD_PATTERN}-${SUFFIX_PATTERN}$`);
+export const TRACKING_NUMBER_REGEX = new RegExp(`^RM-(?:AIR|SEA)-${PERIOD_PATTERN}-${SUFFIX_PATTERN}$`);
 export const QUOTE_REFERENCE_REGEX = new RegExp(`^DEV-${PERIOD_PATTERN}-${SUFFIX_PATTERN}$`);
 
 export function generateReferenceSuffix(randomBytes: RandomBytesSource = cryptoRandomBytes): string {
@@ -88,7 +88,7 @@ export function isValidTrackingNumber(value: string): boolean {
  */
 export function normalizeTrackingNumber(input: string): string | null {
   const compact = input.toUpperCase().replace(/[^A-Z0-9]/g, "");
-  const match = /^RM(AIR|SEA|ROAD)(\d{4})([A-Z0-9]{6})$/.exec(compact);
+  const match = /^RM(AIR|SEA)(\d{4})([A-Z0-9]{6})$/.exec(compact);
   if (!match) return null;
   const [, type, period, suffix] = match;
   const candidate = `RM-${type}-${period}-${suffix}`;

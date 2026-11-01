@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ShoppingBag,
-  Truck,
+  PackageCheck,
   Search,
   Plane,
   Ship,
@@ -15,7 +15,6 @@ import {
   MessageCircle,
   Copy,
   Check,
-  PackageCheck,
   Clock,
   ShieldCheck,
   MapPin,
@@ -323,7 +322,7 @@ function ServicesContent() {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                <Truck size={20} color={activeTab === "forwarding" ? "#FFFFFF" : "#111827"} />
+                <PackageCheck size={20} color={activeTab === "forwarding" ? "#FFFFFF" : "#111827"} />
                 <span style={{ fontSize: "0.76rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", opacity: 0.8 }}>
                   Service 02
                 </span>
