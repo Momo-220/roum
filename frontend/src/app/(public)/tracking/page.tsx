@@ -155,40 +155,59 @@ export default function TrackingPage() {
             </form>
           </div>
 
-          {/* Les 3 étapes de traçabilité */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: "16px",
-              marginBottom: "32px",
-            }}
-          >
-            <div style={{ padding: "16px", backgroundColor: "#F9FAFB", borderRadius: "10px", border: "1px solid #E5E7EB" }}>
-              <strong style={{ fontSize: "0.9rem", color: "#111827", display: "block", marginBottom: "4px" }}>
-                1. Reçu au magasin
-              </strong>
-              <p style={{ fontSize: "0.8rem", color: "#6B7280", margin: 0 }}>
-                Votre colis est réceptionné, pesé et étiqueté.
-              </p>
+          {/* Les 9 étapes de suivi d'une commande ou d'un colis */}
+          <div style={{ marginBottom: "36px" }}>
+            <div style={{ fontSize: "0.86rem", fontWeight: 800, color: "#111827", marginBottom: "14px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              Les 9 étapes de suivi d&apos;une commande et d&apos;une expédition :
             </div>
 
-            <div style={{ padding: "16px", backgroundColor: "#F9FAFB", borderRadius: "10px", border: "1px solid #E5E7EB" }}>
-              <strong style={{ fontSize: "0.9rem", color: "#111827", display: "block", marginBottom: "4px" }}>
-                2. En transit
-              </strong>
-              <p style={{ fontSize: "0.8rem", color: "#6B7280", margin: 0 }}>
-                Le colis voyage en avion (4-5j) ou par bateau (35-45j).
-              </p>
-            </div>
-
-            <div style={{ padding: "16px", backgroundColor: "#F9FAFB", borderRadius: "10px", border: "1px solid #E5E7EB" }}>
-              <strong style={{ fontSize: "0.9rem", color: "#111827", display: "block", marginBottom: "4px" }}>
-                3. Disponible à Abidjan
-              </strong>
-              <p style={{ fontSize: "0.8rem", color: "#6B7280", margin: 0 }}>
-                Vous venez le retirer à notre agence de Bingerville.
-              </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+                gap: "10px",
+              }}
+            >
+              {[
+                { step: "01", label: "Demande reçue" },
+                { step: "02", label: "Devis envoyé" },
+                { step: "03", label: "Paiement confirmé" },
+                { step: "04", label: "Commande effectuée" },
+                { step: "05", label: "Marchandises reçues en Chine" },
+                { step: "06", label: "Colis expédié" },
+                { step: "07", label: "Colis arrivé à destination" },
+                { step: "08", label: "Colis disponible pour retrait" },
+                { step: "09", label: "Colis livré" },
+              ].map((item) => (
+                <div
+                  key={item.step}
+                  style={{
+                    backgroundColor: "#F9FAFB",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontSize: "0.82rem",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "0.74rem",
+                      fontWeight: 800,
+                      backgroundColor: "#111827",
+                      color: "#FFFFFF",
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {item.step}
+                  </span>
+                  <span style={{ fontWeight: 700, color: "#374151" }}>{item.label}</span>
+                </div>
+              ))}
             </div>
           </div>
 

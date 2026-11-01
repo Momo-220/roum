@@ -162,6 +162,7 @@ publicRouter.get("/tariffs", async (c) => {
 });
 
 const quoteRequestSchema = z.object({
+  service_type: z.enum(["ALIBABA", "FORWARDING", "GENERAL"]).optional().default("GENERAL"),
   client_name: z.string().min(2, "Le nom est requis").max(120),
   client_phone: phoneSchema,
   client_email: z.string().email("Email invalide").max(160).optional().or(z.literal("")),
@@ -170,11 +171,15 @@ const quoteRequestSchema = z.object({
   shipping_mode_id: z.string().max(64).optional(),
   estimated_weight_kg: z.number().positive().max(1_000_000).optional(),
   estimated_cbm: z.number().positive().max(10_000).optional(),
-  cargo_type: z.string().max(500).optional(),
+  cargo_type: z.string().max(1000).optional(),
+  product_url: z.string().max(1000).optional(),
+  product_quantity: z.string().max(200).optional(),
+  product_specs: z.string().max(1000).optional(),
+  supplier_info: z.string().max(1000).optional(),
 });
 
 /**
- * 3. Enregistrement d'une demande de devis client (avec protection anti-spam)
+ * 3. Enregistrement d'une demande client (Commande Alibaba ou Fret Transitaire)
  */
 publicRouter.post(
   "/quotes",
@@ -184,7 +189,7 @@ publicRouter.post(
       c.req.header("CF-Connecting-IP") ||
       c.req.header("X-Forwarded-For")?.split(",")[0]?.trim() ||
       "local-ip";
-    const rateCheck = checkRateLimit(`quotes:${clientIp}`, 10, 10 * 60 * 1000);
+    const rateCheck = checkRateLimit(`quotes:${clientIp}`, 15, 10 * 60 * 1000);
     if (!rateCheck.allowed) {
       c.header("Retry-After", String(rateCheck.retryAfterSec));
       return c.json(
@@ -194,7 +199,23 @@ publicRouter.post(
     }
 
     const data = c.req.valid("json");
-    const quoteRef = generateQuoteReference();
+    
+    // Génération d'une référence explicite selon le service
+    let quoteRef = generateQuoteReference();
+    if (data.service_type === "ALIBABA") {
+      quoteRef = `RM-ALI-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    } else if (data.service_type === "FORWARDING") {
+      quoteRef = `RM-FWD-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    }
+
+    // Formatage descriptif complet dans cargo_type
+    let formattedCargo = data.cargo_type || "";
+    if (data.service_type === "ALIBABA") {
+      formattedCargo = `[COMMANDE ALIBABA] Qté: ${data.product_quantity || "1"} | Spécifications: ${data.product_specs || "N/A"} | Lien: ${data.product_url || "Non fourni"}`;
+    } else if (data.service_type === "FORWARDING") {
+      formattedCargo = `[FRET TRANSITAIRE] Marchandises: ${data.cargo_type || "Colis divers"} | Fournisseur: ${data.supplier_info || "Non précisé"}`;
+    }
+
     const id = crypto.randomUUID();
 
     await c.env.DB.prepare(`
@@ -214,20 +235,35 @@ publicRouter.post(
       data.shipping_mode_id || null,
       data.estimated_weight_kg || null,
       data.estimated_cbm || null,
-      data.cargo_type || null
+      formattedCargo
     ).run();
 
-    // Lien WhatsApp d'information pour le client avec la référence du devis
-    const supportPhone = "+22370000000";
-    const waText = `Bonjour ROUM TRANSIT, je viens de faire une demande de devis n° ${quoteRef} (${data.origin_country} -> ${data.destination_country}).`;
+    // Lien WhatsApp d'assistance pré-rempli pour le client
+    const supportPhone = "+2250153638569";
+    let waText = "";
+    if (data.service_type === "ALIBABA") {
+      waText = `Bonjour ROUM TRANSIT, j'ai soumis une demande de commande Alibaba n° ${quoteRef} (${data.origin_country} -> ${data.destination_country}). Pouvez-vous préparer mon devis d'achat et de transport ?`;
+    } else if (data.service_type === "FORWARDING") {
+      waText = `Bonjour ROUM TRANSIT, j'ai enregistré mon expédition n° ${quoteRef} (${data.origin_country} -> ${data.destination_country}). J'ai déjà mon fournisseur et je souhaite obtenir les instructions d'entrepôt.`;
+    } else {
+      waText = `Bonjour ROUM TRANSIT, je viens de faire une demande de devis n° ${quoteRef} (${data.origin_country} -> ${data.destination_country}).`;
+    }
     const whatsappUrl = buildWhatsAppUrl(supportPhone, waText);
 
     return c.json(
       {
         success: true,
         quote_reference: quoteRef,
-        message: "Votre demande de devis a été enregistrée avec succès.",
+        service_type: data.service_type,
+        message: data.service_type === "ALIBABA"
+          ? "Votre demande de commande Alibaba a été reçue. Notre équipe prépare votre devis."
+          : "Votre demande de transport a été enregistrée. Voici les instructions pour votre fournisseur.",
         whatsapp_url: whatsappUrl,
+        warehouse_china: {
+          address: "Guangzhou Baiyun Logistics Center, District de Baiyun, Guangzhou, Guangdong, Chine",
+          contact_phone: "+86 138 0000 0000",
+          shipping_mark: `ROUM / ${quoteRef} / ${data.client_name.toUpperCase()}`,
+        },
       },
       201
     );

@@ -4,16 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
+  ShoppingBag,
+  Truck,
   Search,
   Plane,
   Ship,
-  ShieldCheck,
-  CreditCard,
-  MapPin,
-  Scale,
   ArrowRight,
+  ShieldCheck,
+  Scale,
+  MapPin,
   Clock,
-  Layers,
 } from "lucide-react";
 import { normalizeTrackingNumber } from "@/shared";
 import { ScrollReveal } from "@/components/ScrollReveal";
@@ -46,17 +46,17 @@ export default function HomePage() {
         boxSizing: "border-box",
       }}
     >
-      <div style={{ maxWidth: "1080px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1120px", margin: "0 auto" }}>
         <ScrollReveal>
           {/* Section Hero */}
-          <div style={{ textAlign: "center", marginBottom: "48px" }}>
+          <div style={{ textAlign: "center", marginBottom: "52px" }}>
             <div
               style={{
                 display: "inline-block",
                 padding: "4px 14px",
                 borderRadius: "9999px",
                 backgroundColor: "#F3F4F6",
-                fontSize: "0.78rem",
+                fontSize: "0.76rem",
                 fontWeight: 700,
                 color: "#4B5563",
                 textTransform: "uppercase",
@@ -64,22 +64,22 @@ export default function HomePage() {
                 marginBottom: "16px",
               }}
             >
-              Fret International Simple & Direct
+              Transitaire & Centrale d&apos;Achat International
             </div>
 
             <h1
               style={{
                 fontSize: "clamp(2.2rem, 5vw, 3.8rem)",
                 fontWeight: 800,
-                lineHeight: 1.12,
+                lineHeight: 1.14,
                 letterSpacing: "-0.03em",
                 color: "#111827",
                 margin: "0 auto 18px auto",
-                maxWidth: "860px",
+                maxWidth: "880px",
                 textWrap: "balance",
               }}
             >
-              Vos colis de Chine, Dubaï, Maroc et France livrés à Abidjan.
+              Vos commandes et marchandises de Chine, Dubaï, Maroc et France acheminées en toute sécurité.
             </h1>
 
             <p
@@ -87,136 +87,114 @@ export default function HomePage() {
                 fontSize: "clamp(1.02rem, 1.6vw, 1.18rem)",
                 lineHeight: 1.6,
                 color: "#4B5563",
-                maxWidth: "680px",
+                maxWidth: "700px",
                 margin: "0 auto",
                 textWrap: "pretty",
               }}
             >
-              Vous achetez chez vos fournisseurs, ils déposent dans nos magasins, nous pesons et nous expédions. Aucun frais caché : le dédouanement est déjà compris dans le tarif.
+              ROUM TRANSIT vous accompagne dans vos achats sur Alibaba ou prend en charge vos colis chez vos fournisseurs pour les transporter par avion ou par bateau avec dédouanement tout compris.
             </p>
           </div>
 
-          {/* Section Services Proposés avec Boutons */}
+          {/* Les 3 Grands Services de ROUM TRANSIT */}
           <div style={{ marginBottom: "56px" }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-end",
-                marginBottom: "20px",
-                flexWrap: "wrap",
-                gap: "12px",
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    fontSize: "0.74rem",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    color: "#6B7280",
-                    marginBottom: "4px",
-                  }}
-                >
-                  Ce que nous faisons
-                </div>
-                <h2
-                  style={{
-                    fontSize: "1.5rem",
-                    fontWeight: 800,
-                    color: "#111827",
-                    letterSpacing: "-0.02em",
-                    margin: 0,
-                  }}
-                >
-                  Nos formules de transport direct
-                </h2>
-              </div>
-
-              <Link
-                href="/services"
+            <div style={{ textAlign: "center", marginBottom: "28px" }}>
+              <div
                 style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "0.88rem",
+                  fontSize: "0.74rem",
                   fontWeight: 700,
-                  color: "#111827",
-                  textDecoration: "underline",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  color: "#6B7280",
+                  marginBottom: "4px",
                 }}
               >
-                <Layers size={16} />
-                <span>Voir le catalogue complet des 10 services</span>
-              </Link>
+                Comment pouvons-nous vous aider ?
+              </div>
+              <h2
+                style={{
+                  fontSize: "1.6rem",
+                  fontWeight: 800,
+                  color: "#111827",
+                  letterSpacing: "-0.02em",
+                  margin: 0,
+                }}
+              >
+                Choisissez votre service ROUM TRANSIT
+              </h2>
             </div>
 
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-                gap: "18px",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: "20px",
               }}
             >
-              {/* Carte 1 : Avion Express */}
+              {/* Service 1 : Commander sur Alibaba */}
               <div
                 style={{
                   backgroundColor: "#FFFFFF",
                   border: "2px solid #111827",
-                  borderRadius: "14px",
-                  padding: "22px",
+                  borderRadius: "16px",
+                  padding: "28px",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  boxShadow: "0 4px 14px rgba(17, 24, 39, 0.06)",
+                  boxShadow: "0 8px 24px -4px rgba(17, 24, 39, 0.08)",
                 }}
               >
                 <div>
                   <div
                     style={{
-                      width: "44px",
-                      height: "44px",
-                      borderRadius: "10px",
+                      width: "48px",
+                      height: "48px",
+                      borderRadius: "12px",
                       backgroundColor: "#111827",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      marginBottom: "16px",
+                      marginBottom: "18px",
                     }}
                   >
-                    <Plane size={22} color="#FFFFFF" strokeWidth={2.2} />
+                    <ShoppingBag size={24} color="#FFFFFF" strokeWidth={2.2} />
                   </div>
 
-                  <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#111827", margin: "0 0 6px 0" }}>
-                    Voie Express Avion
+                  <div style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", color: "#6B7280", letterSpacing: "0.06em", marginBottom: "4px" }}>
+                    Service 01 · Achat & Fret
+                  </div>
+
+                  <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#111827", margin: "0 0 10px 0" }}>
+                    Je souhaite commander sur Alibaba
                   </h3>
 
-                  <p style={{ fontSize: "0.86rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 14px 0" }}>
-                    Le plus rapide pour vêtements, téléphones, ordinateurs et colis urgents.
+                  <p style={{ fontSize: "0.9rem", color: "#4B5563", lineHeight: 1.55, margin: "0 0 16px 0" }}>
+                    Vous souhaitez acheter des marchandises sur Alibaba mais avez besoin d&apos;accompagnement pour payer votre fournisseur en Yuans (RMB) et organiser le transport jusqu&apos;à votre porte.
                   </p>
 
-                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", marginBottom: "18px" }}>
-                    Délai : 4 à 5 jours
+                  <div style={{ fontSize: "0.82rem", color: "#374151", backgroundColor: "#F9FAFB", padding: "10px 14px", borderRadius: "8px", border: "1px solid #E5E7EB", marginBottom: "22px" }}>
+                    <div style={{ fontWeight: 700, marginBottom: "4px", color: "#111827" }}>Ce service comprend :</div>
+                    <div>Recherche produit, négociation, paiement fournisseur, transport et suivi.</div>
                   </div>
                 </div>
 
                 <Link
-                  href="/tariffs"
+                  href="/services?tab=alibaba"
                   className="roum-btn-primary"
-                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.84rem", padding: "10px 16px" }}
+                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.9rem", padding: "12px 18px", justifyContent: "center" }}
                 >
-                  <span>Calculer le prix</span>
-                  <ArrowRight size={14} />
+                  <span>Lancer ma commande Alibaba</span>
+                  <ArrowRight size={15} />
                 </Link>
               </div>
 
-              {/* Carte 2 : Bateau CBM */}
+              {/* Service 2 : J'ai déjà mon fournisseur */}
               <div
                 style={{
                   backgroundColor: "#FFFFFF",
                   border: "1px solid #E5E7EB",
-                  borderRadius: "14px",
-                  padding: "22px",
+                  borderRadius: "16px",
+                  padding: "28px",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
@@ -226,234 +204,254 @@ export default function HomePage() {
                 <div>
                   <div
                     style={{
-                      width: "44px",
-                      height: "44px",
-                      borderRadius: "10px",
+                      width: "48px",
+                      height: "48px",
+                      borderRadius: "12px",
                       backgroundColor: "#111827",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      marginBottom: "16px",
+                      marginBottom: "18px",
                     }}
                   >
-                    <Ship size={22} color="#FFFFFF" strokeWidth={2.2} />
+                    <Truck size={24} color="#FFFFFF" strokeWidth={2.2} />
                   </div>
 
-                  <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#111827", margin: "0 0 6px 0" }}>
-                    Maritime au Mètre Cube
+                  <div style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", color: "#6B7280", letterSpacing: "0.06em", marginBottom: "4px" }}>
+                    Service 02 · Transitaire Pur
+                  </div>
+
+                  <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#111827", margin: "0 0 10px 0" }}>
+                    J&apos;ai déjà mon fournisseur, je recherche un transitaire
                   </h3>
 
-                  <p style={{ fontSize: "0.86rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 14px 0" }}>
-                    Idéal et très économique pour les gros cartons, meubles et machines.
+                  <p style={{ fontSize: "0.9rem", color: "#4B5563", lineHeight: 1.55, margin: "0 0 16px 0" }}>
+                    Vous avez déjà trouvé votre fournisseur ou acheté vos colis. Obtenez immédiatement l&apos;adresse de notre entrepôt en Chine pour faire livrer vos marchandises.
                   </p>
 
-                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", marginBottom: "18px" }}>
-                    Délai : 35 à 45 jours
+                  <div style={{ fontSize: "0.82rem", color: "#374151", backgroundColor: "#F9FAFB", padding: "10px 14px", borderRadius: "8px", border: "1px solid #E5E7EB", marginBottom: "22px" }}>
+                    <div style={{ fontWeight: 700, marginBottom: "4px", color: "#111827" }}>Ce service comprend :</div>
+                    <div>Adresse entrepôt Chine, identification colis, pesée certifiée et transport.</div>
                   </div>
                 </div>
 
                 <Link
-                  href="/tariffs"
+                  href="/services?tab=forwarding"
                   className="roum-btn-secondary"
-                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.84rem", padding: "10px 16px" }}
+                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.9rem", padding: "12px 18px", justifyContent: "center" }}
                 >
-                  <span>Estimer le volume CBM</span>
-                  <ArrowRight size={14} />
+                  <span>Obtenir l&apos;adresse entrepôt</span>
+                  <ArrowRight size={15} />
                 </Link>
               </div>
 
-              {/* Carte 3 : Paiement Fournisseurs */}
+              {/* Service 3 : Suivre une commande ou un colis */}
               <div
                 style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "14px",
-                  padding: "22px",
+                  backgroundColor: "#FAF9F6",
+                  border: "1px solid #D1D5DB",
+                  borderRadius: "16px",
+                  padding: "28px",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
                 }}
               >
                 <div>
                   <div
                     style={{
-                      width: "44px",
-                      height: "44px",
-                      borderRadius: "10px",
+                      width: "48px",
+                      height: "48px",
+                      borderRadius: "12px",
                       backgroundColor: "#111827",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      marginBottom: "16px",
+                      marginBottom: "18px",
                     }}
                   >
-                    <CreditCard size={22} color="#FFFFFF" strokeWidth={2.2} />
+                    <Search size={24} color="#FFFFFF" strokeWidth={2.2} />
                   </div>
 
-                  <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#111827", margin: "0 0 6px 0" }}>
-                    Paiement Fournisseurs
+                  <div style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", color: "#6B7280", letterSpacing: "0.06em", marginBottom: "4px" }}>
+                    Service 03 · Traçabilité
+                  </div>
+
+                  <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#111827", margin: "0 0 10px 0" }}>
+                    Suivre une commande ou un colis
                   </h3>
 
-                  <p style={{ fontSize: "0.86rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 14px 0" }}>
-                    Règlement direct de vos achats sur 1688, Taobao ou usines en Yuans (RMB) et Dirhams (AED).
+                  <p style={{ fontSize: "0.9rem", color: "#4B5563", lineHeight: 1.55, margin: "0 0 16px 0" }}>
+                    Consultez l&apos;état d&apos;avancement de vos marchandises en temps réel sans devoir contacter systématiquement le service commercial.
                   </p>
 
-                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", marginBottom: "18px" }}>
-                    Règlement sous 24h
-                  </div>
+                  <form onSubmit={handleTrackingSubmit} style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
+                    <input
+                      type="text"
+                      value={trackingInput}
+                      onChange={(e) => {
+                        setTrackingInput(e.target.value);
+                        if (trackingError) setTrackingError("");
+                      }}
+                      placeholder="Ex : RM-AIR-2610-K8P9Q2"
+                      style={{
+                        width: "100%",
+                        boxSizing: "border-box",
+                        height: "44px",
+                        padding: "0 12px",
+                        fontSize: "14px",
+                        border: "1px solid #D1D5DB",
+                        borderRadius: "8px",
+                        backgroundColor: "#FFFFFF",
+                        outline: "none",
+                        fontWeight: 600,
+                      }}
+                    />
+
+                    {trackingError && (
+                      <div style={{ fontSize: "0.8rem", color: "#DC2626", fontWeight: 600 }}>
+                        {trackingError}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      className="roum-btn-primary"
+                      style={{ width: "100%", boxSizing: "border-box", fontSize: "0.88rem", padding: "10px 16px", justifyContent: "center" }}
+                    >
+                      <Search size={15} />
+                      <span>Retrouver mon colis</span>
+                    </button>
+                  </form>
                 </div>
 
-                <Link
-                  href="/services"
-                  className="roum-btn-secondary"
-                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.84rem", padding: "10px 16px" }}
-                >
-                  <span>Détails & assistance</span>
-                  <ArrowRight size={14} />
+                <div style={{ fontSize: "0.78rem", color: "#6B7280", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span>Test rapide :</span>
+                  <button
+                    type="button"
+                    onClick={() => setTrackingInput("RM-AIR-2610-K8P9Q2")}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      color: "#111827",
+                      fontWeight: 700,
+                      textDecoration: "underline",
+                      cursor: "pointer",
+                      fontSize: "0.78rem",
+                    }}
+                  >
+                    RM-AIR-2610-K8P9Q2
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Les Moyens de Transport : Aérien & Maritime */}
+          <div style={{ marginBottom: "56px" }}>
+            <div style={{ textAlign: "center", marginBottom: "24px" }}>
+              <div style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", color: "#6B7280", letterSpacing: "0.08em", marginBottom: "4px" }}>
+                Modes d&apos;expédition
+              </div>
+              <h2 style={{ fontSize: "1.5rem", fontWeight: 800, color: "#111827", margin: 0 }}>
+                Deux modes de transport adaptés à vos besoins
+              </h2>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
+              <div style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: "14px", padding: "24px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+                  <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: "#111827", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Plane size={20} color="#FFFFFF" />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#111827", margin: 0 }}>
+                      Transport Aérien (Avion)
+                    </h3>
+                    <span style={{ fontSize: "0.8rem", color: "#4B5563" }}>Délai : 4 à 5 jours</span>
+                  </div>
+                </div>
+                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 16px 0" }}>
+                  Pour l&apos;expédition rapide des marchandises par avion. Facturation au poids (kg) avec douane comprise.
+                </p>
+                <Link href="/tariffs" style={{ fontSize: "0.84rem", fontWeight: 700, color: "#111827", textDecoration: "underline" }}>
+                  Calculer le tarif aérien &rarr;
                 </Link>
               </div>
 
-              {/* Carte 4 : Douane & Retrait */}
-              <div
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "14px",
-                  padding: "22px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      width: "44px",
-                      height: "44px",
-                      borderRadius: "10px",
-                      backgroundColor: "#111827",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    <ShieldCheck size={22} color="#FFFFFF" strokeWidth={2.2} />
+              <div style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: "14px", padding: "24px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+                  <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: "#111827", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Ship size={20} color="#FFFFFF" />
                   </div>
-
-                  <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#111827", margin: "0 0 6px 0" }}>
-                    Douane 100% Incluse
-                  </h3>
-
-                  <p style={{ fontSize: "0.86rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 14px 0" }}>
-                    Zéro mauvaise surprise à l&apos;arrivée. Retrait direct à Bingerville Carrefour Safari.
-                  </p>
-
-                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", marginBottom: "18px" }}>
-                    Formalités gérées par Roum
+                  <div>
+                    <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#111827", margin: 0 }}>
+                      Transport Maritime (Bateau)
+                    </h3>
+                    <span style={{ fontSize: "0.8rem", color: "#4B5563" }}>Délai : 35 à 45 jours</span>
                   </div>
                 </div>
-
-                <Link
-                  href="/warehouses"
-                  className="roum-btn-secondary"
-                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.84rem", padding: "10px 16px" }}
-                >
-                  <span>Adresse de l&apos;agence</span>
-                  <ArrowRight size={14} />
+                <p style={{ fontSize: "0.88rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 16px 0" }}>
+                  Pour l&apos;expédition économique des gros volumes et conteneurs. Facturation au mètre cube (CBM).
+                </p>
+                <Link href="/tariffs" style={{ fontSize: "0.84rem", fontWeight: 700, color: "#111827", textDecoration: "underline" }}>
+                  Calculer le volume CBM &rarr;
                 </Link>
               </div>
             </div>
           </div>
 
-          {/* Boîte de Suivi Rapide */}
+          {/* Les Destinations Desservies */}
           <div
             style={{
-              maxWidth: "640px",
-              margin: "0 auto 48px auto",
               backgroundColor: "#FAF9F6",
               border: "1px solid #E5E7EB",
               borderRadius: "16px",
-              padding: "24px 26px",
-              textAlign: "left",
+              padding: "32px 26px",
+              marginBottom: "48px",
             }}
           >
-            <div style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#6B7280", marginBottom: "4px" }}>
-              Suivi en temps réel
-            </div>
-            <div style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", marginBottom: "14px" }}>
-              Vous attendez un colis ? Entrez son numéro :
-            </div>
-
-            <form onSubmit={handleTrackingSubmit} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                <input
-                  type="text"
-                  value={trackingInput}
-                  onChange={(e) => {
-                    setTrackingInput(e.target.value);
-                    if (trackingError) setTrackingError("");
-                  }}
-                  placeholder="Ex : RM-AIR-2610-K8P9Q2"
-                  style={{
-                    flex: "1 1 240px",
-                    height: "46px",
-                    padding: "0 14px",
-                    fontSize: "15px",
-                    border: "1px solid #D1D5DB",
-                    borderRadius: "8px",
-                    color: "#111827",
-                    backgroundColor: "#FFFFFF",
-                    outline: "none",
-                    fontWeight: 600,
-                  }}
-                />
-
-                <button
-                  type="submit"
-                  className="roum-btn-primary"
-                  style={{
-                    height: "46px",
-                    padding: "0 20px",
-                    fontSize: "0.88rem",
-                  }}
-                >
-                  <Search size={16} />
-                  <span>Trouver mon colis</span>
-                </button>
+            <div style={{ textAlign: "center", marginBottom: "22px" }}>
+              <div style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", color: "#6B7280", letterSpacing: "0.08em", marginBottom: "4px" }}>
+                Lignes Opérationnelles
               </div>
+              <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: "#111827", margin: 0 }}>
+                Les destinations desservies mentionnées dans le projet
+              </h2>
+            </div>
 
-              {trackingError && (
-                <div style={{ fontSize: "0.82rem", color: "#DC2626", fontWeight: 600, marginTop: "2px" }}>
-                  {trackingError}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "14px" }}>
+              <div style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: "12px", padding: "18px" }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#6B7280", textTransform: "uppercase", marginBottom: "4px" }}>
+                  Départ Chine
                 </div>
-              )}
-
-              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#6B7280", marginTop: "4px" }}>
-                <span>Exemple :</span>
-                <button
-                  type="button"
-                  onClick={() => setTrackingInput("RM-AIR-2610-K8P9Q2")}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    padding: 0,
-                    color: "#111827",
-                    fontWeight: 700,
-                    textDecoration: "underline",
-                    cursor: "pointer",
-                    fontSize: "0.78rem",
-                  }}
-                >
-                  RM-AIR-2610-K8P9Q2
-                </button>
+                <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#111827" }}>
+                  Côte d&apos;Ivoire, Niger, Sénégal et Mali
+                </div>
               </div>
-            </form>
+
+              <div style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: "12px", padding: "18px" }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#6B7280", textTransform: "uppercase", marginBottom: "4px" }}>
+                  Départ Côte d&apos;Ivoire
+                </div>
+                <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#111827" }}>
+                  France, Maroc, Gabon, Sénégal et Mali
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: "12px", padding: "18px" }}>
+                <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#6B7280", textTransform: "uppercase", marginBottom: "4px" }}>
+                  Départ Maroc
+                </div>
+                <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#111827" }}>
+                  Côte d&apos;Ivoire
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Garanties Simples & Brefs */}
+          {/* Garanties */}
           <div
             style={{
               display: "flex",
@@ -463,8 +461,6 @@ export default function HomePage() {
               fontSize: "0.85rem",
               color: "#4B5563",
               fontWeight: 600,
-              paddingTop: "24px",
-              borderTop: "1px solid #F3F4F6",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>

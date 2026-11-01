@@ -8,9 +8,37 @@ import { ScrollReveal } from "@/components/ScrollReveal";
 
 export default function TariffsPage() {
   const [origin, setOrigin] = useState("Chine");
+  const [destination, setDestination] = useState("Côte d'Ivoire");
   const [mode, setMode] = useState<"AIR" | "SEA">("AIR");
   const [weight, setWeight] = useState(5);
   const [cbm, setCbm] = useState(0.5);
+
+  const getDestinationsForOrigin = (orig: string) => {
+    if (orig === "Chine") {
+      return ["Côte d'Ivoire", "Niger", "Sénégal", "Mali"];
+    }
+    if (orig === "Côte d'Ivoire") {
+      return ["France", "Maroc", "Gabon", "Sénégal", "Mali"];
+    }
+    if (orig === "Maroc") {
+      return ["Côte d'Ivoire"];
+    }
+    if (orig.includes("Dubaï")) {
+      return ["Côte d'Ivoire", "Sénégal", "Mali"];
+    }
+    if (orig === "France") {
+      return ["Côte d'Ivoire"];
+    }
+    return ["Côte d'Ivoire", "Niger", "Sénégal", "Mali"];
+  };
+
+  const handleOriginChange = (newOrigin: string) => {
+    setOrigin(newOrigin);
+    const availableDests = getDestinationsForOrigin(newOrigin);
+    if (!availableDests.includes(destination)) {
+      setDestination(availableDests[0]);
+    }
+  };
 
   const calculateTotal = () => {
     if (mode === "SEA") {
@@ -18,7 +46,7 @@ export default function TariffsPage() {
       return {
         amountFcfa: Math.max(150000, amount),
         duration: "35 à 45 jours",
-        label: "Groupage maritime en conteneur",
+        label: "Groupage maritime en conteneur (CBM)",
       };
     }
 
@@ -34,19 +62,22 @@ export default function TariffsPage() {
     } else if (origin === "Chine" || origin.includes("Dubaï")) {
       rate = 10000;
       duration = "4 à 5 jours";
+    } else if (origin === "Côte d'Ivoire") {
+      rate = 8500;
+      duration = "4 à 6 jours";
     }
 
     return {
       amountFcfa: weight * rate,
       duration,
-      label: `Fret aérien express (${rate.toLocaleString("fr-FR")} FCFA / kg)`,
+      label: `Fret aérien (${rate.toLocaleString("fr-FR")} FCFA / kg)`,
     };
   };
 
   const estimate = calculateTotal();
 
   const getWaLink = () => {
-    const text = `Bonjour Roum Transit, je souhaite une confirmation de devis :\n- Origine : ${origin}\n- Destination : Abidjan (Côte d'Ivoire)\n- Mode : ${mode === "AIR" ? "Avion" : "Bateau"}\n- Quantité : ${mode === "SEA" ? cbm + " m³" : weight + " kg"}\n- Total estimé : ${estimate.amountFcfa.toLocaleString("fr-FR")} FCFA (Douane comprise)\n- Délai : ${estimate.duration}`;
+    const text = `Bonjour Roum Transit, je souhaite une confirmation de devis :\n- Origine : ${origin}\n- Destination : ${destination}\n- Mode : ${mode === "AIR" ? "Avion" : "Bateau"}\n- Quantité : ${mode === "SEA" ? cbm + " m³" : weight + " kg"}\n- Total estimé : ${estimate.amountFcfa.toLocaleString("fr-FR")} FCFA (Douane comprise)\n- Délai : ${estimate.duration}`;
     return buildWhatsAppUrl("+2250153638569", text);
   };
 
@@ -60,7 +91,7 @@ export default function TariffsPage() {
         boxSizing: "border-box",
       }}
     >
-      <div style={{ maxWidth: "960px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "980px", margin: "0 auto" }}>
         <ScrollReveal>
           <div style={{ textAlign: "center", marginBottom: "40px" }}>
             <div
@@ -93,14 +124,14 @@ export default function TariffsPage() {
             </h1>
 
             <p style={{ fontSize: "1.02rem", color: "#4B5563", margin: 0, lineHeight: 1.55 }}>
-              Choisissez d&apos;où part votre colis et sa quantité pour voir le montant total avec douane comprise.
+              Choisissez le pays de départ, la destination et le volume pour voir le montant total avec douane comprise.
             </p>
           </div>
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
               gap: "24px",
               alignItems: "stretch",
             }}
@@ -114,19 +145,19 @@ export default function TariffsPage() {
                 padding: "26px",
                 display: "flex",
                 flexDirection: "column",
-                gap: "20px",
+                gap: "18px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
               }}
             >
               <div>
                 <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#374151", marginBottom: "8px" }}>
-                  1. D&apos;où part votre colis ?
+                  1. Pays de départ
                 </label>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", border: "1px solid #D1D5DB", borderRadius: "8px", padding: "0 12px", height: "46px" }}>
                   <CircularFlag countryName={origin} size={18} />
                   <select
                     value={origin}
-                    onChange={(e) => setOrigin(e.target.value)}
+                    onChange={(e) => handleOriginChange(e.target.value)}
                     style={{
                       border: "none",
                       backgroundColor: "transparent",
@@ -139,8 +170,9 @@ export default function TariffsPage() {
                     }}
                   >
                     <option value="Chine">Chine (Guangzhou / Yiwu)</option>
-                    <option value="Émirats Arabes Unis (Dubaï)">Dubaï (Émirats)</option>
+                    <option value="Côte d'Ivoire">Côte d&apos;Ivoire (Abidjan)</option>
                     <option value="Maroc">Maroc (Casablanca)</option>
+                    <option value="Émirats Arabes Unis (Dubaï)">Dubaï (Émirats)</option>
                     <option value="France">France (Paris)</option>
                   </select>
                 </div>
@@ -148,7 +180,36 @@ export default function TariffsPage() {
 
               <div>
                 <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#374151", marginBottom: "8px" }}>
-                  2. Par quel moyen souhaitez-vous envoyer ?
+                  2. Pays de destination
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", border: "1px solid #D1D5DB", borderRadius: "8px", padding: "0 12px", height: "46px" }}>
+                  <CircularFlag countryName={destination} size={18} />
+                  <select
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    style={{
+                      border: "none",
+                      backgroundColor: "transparent",
+                      width: "100%",
+                      height: "100%",
+                      fontSize: "15px",
+                      color: "#111827",
+                      outline: "none",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {getDestinationsForOrigin(origin).map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#374151", marginBottom: "8px" }}>
+                  3. Moyen de transport
                 </label>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button
@@ -158,7 +219,7 @@ export default function TariffsPage() {
                     style={{ flex: 1, padding: "10px", borderRadius: "8px", fontSize: "0.85rem" }}
                   >
                     <Plane size={15} />
-                    <span>Avion (4 à 5j)</span>
+                    <span>Avion</span>
                   </button>
                   <button
                     type="button"
@@ -167,7 +228,7 @@ export default function TariffsPage() {
                     style={{ flex: 1, padding: "10px", borderRadius: "8px", fontSize: "0.85rem" }}
                   >
                     <Ship size={15} />
-                    <span>Bateau (35 à 45j)</span>
+                    <span>Bateau</span>
                   </button>
                 </div>
               </div>
@@ -175,7 +236,7 @@ export default function TariffsPage() {
               {mode === "AIR" ? (
                 <div>
                   <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#374151", marginBottom: "8px" }}>
-                    3. Poids estimé (en kg)
+                    4. Poids estimé (en kg)
                   </label>
                   <input
                     type="number"
@@ -199,7 +260,7 @@ export default function TariffsPage() {
               ) : (
                 <div>
                   <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#374151", marginBottom: "8px" }}>
-                    3. Volume estimé (en m³ / CBM)
+                    4. Volume estimé (en m³ / CBM)
                   </label>
                   <input
                     type="number"
@@ -238,7 +299,7 @@ export default function TariffsPage() {
             >
               <div>
                 <div style={{ fontSize: "0.76rem", fontWeight: 700, textTransform: "uppercase", color: "#6B7280", letterSpacing: "0.06em", marginBottom: "8px" }}>
-                  Montant total à payer à l&apos;arrivée
+                  Montant estimé (Dédouanement compris)
                 </div>
 
                 <div
@@ -260,13 +321,16 @@ export default function TariffsPage() {
 
                 <div style={{ borderTop: "1px solid #E5E7EB", paddingTop: "14px", display: "grid", gap: "8px", fontSize: "0.84rem", color: "#4B5563" }}>
                   <div>
-                    Délai d&apos;arrivée : <strong>{estimate.duration}</strong>
+                    Trajet : <strong>{origin} &rarr; {destination}</strong>
+                  </div>
+                  <div>
+                    Délai estimé : <strong>{estimate.duration}</strong>
                   </div>
                   <div>
                     Dédouanement : <strong>100% Inclus (Zéro taxe supplémentaire)</strong>
                   </div>
                   <div>
-                    Point de retrait : <strong>Agence Abidjan Bingerville</strong>
+                    Moyen de transport : <strong>{mode === "AIR" ? "Avion" : "Bateau"}</strong>
                   </div>
                 </div>
               </div>
@@ -290,4 +354,3 @@ export default function TariffsPage() {
     </div>
   );
 }
-
