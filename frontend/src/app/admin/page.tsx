@@ -3929,7 +3929,7 @@ export default function AdminPage() {
             borderRadius: "26px",
             border: "1px solid rgba(28, 25, 23, 0.08)",
             boxShadow: "0 24px 48px -12px rgba(28, 25, 23, 0.08), 0 2px 6px rgba(28, 25, 23, 0.02)",
-            padding: "38px 34px 28px 34px",
+            padding: "38px 34px 34px 34px",
             position: "relative",
             zIndex: 1,
           }}
@@ -3987,21 +3987,18 @@ export default function AdminPage() {
 
           <form onSubmit={handleLogin} style={{ display: "grid", gap: "16px" }}>
             <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                <label
-                  style={{
-                    fontSize: "0.76rem",
-                    color: "#374151",
-                    fontWeight: "700",
-                    letterSpacing: "0.01em",
-                  }}
-                >
-                  Identifiant / Email
-                </label>
-                <span style={{ fontSize: "0.68rem", color: "var(--text-dim)", fontWeight: "600" }}>
-                  Accès certifié
-                </span>
-              </div>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "0.78rem",
+                  color: "#374151",
+                  fontWeight: "700",
+                  marginBottom: "7px",
+                  letterSpacing: "0.01em",
+                }}
+              >
+                Identifiant / Email
+              </label>
               <div style={{ position: "relative" }}>
                 <input
                   type="email"
@@ -4048,21 +4045,18 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                <label
-                  style={{
-                    fontSize: "0.76rem",
-                    color: "#374151",
-                    fontWeight: "700",
-                    letterSpacing: "0.01em",
-                  }}
-                >
-                  Mot de Passe
-                </label>
-                <span style={{ fontSize: "0.68rem", color: "var(--text-dim)", fontWeight: "600" }}>
-                  Chiffrement AES
-                </span>
-              </div>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "0.78rem",
+                  color: "#374151",
+                  fontWeight: "700",
+                  marginBottom: "7px",
+                  letterSpacing: "0.01em",
+                }}
+              >
+                Mot de Passe
+              </label>
               <div style={{ position: "relative" }}>
                 <input
                   type={showPassword ? "text" : "password"}
@@ -4176,38 +4170,6 @@ export default function AdminPage() {
               )}
             </button>
           </form>
-
-          <div
-            style={{
-              marginTop: "24px",
-              paddingTop: "16px",
-              borderTop: "1px solid rgba(28, 25, 23, 0.07)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "7px",
-              fontSize: "0.73rem",
-              color: "var(--text-muted)",
-            }}
-          >
-            <span
-              style={{
-                width: "18px",
-                height: "18px",
-                borderRadius: "50%",
-                background: "rgba(5, 150, 105, 0.08)",
-                border: "1px solid rgba(5, 150, 105, 0.2)",
-                color: "#059669",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <Lock size={10} strokeWidth={2.4} />
-            </span>
-            <span>Session chiffrée SSL · Accès réservé aux administrateurs</span>
-          </div>
         </div>
 
         <div
