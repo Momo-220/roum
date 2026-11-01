@@ -8,7 +8,6 @@ import {
   Layers,
   Calculator,
   MapPin,
-  ShieldCheck,
 } from "lucide-react";
 
 export function FloatingBottomNav() {
@@ -77,39 +76,6 @@ export function FloatingBottomNav() {
             </Link>
           );
         })}
-
-        {/* Séparateur discret */}
-        <div
-          style={{
-            width: "1px",
-            height: "18px",
-            backgroundColor: "rgba(255, 255, 255, 0.18)",
-            margin: "0 4px",
-          }}
-        />
-
-        {/* Bouton Direction discret */}
-        <Link
-          href="/admin"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "5px",
-            padding: "8px 12px",
-            borderRadius: "9999px",
-            fontSize: "0.8rem",
-            fontWeight: 700,
-            textDecoration: "none",
-            backgroundColor: "rgba(255, 255, 255, 0.08)",
-            color: "#9CA3AF",
-            whiteSpace: "nowrap",
-            transition: "all 0.18s ease",
-          }}
-          title="Accès réservé Direction & Gestion"
-        >
-          <ShieldCheck size={14} color="#9CA3AF" />
-          <span className="bottom-nav-label">Direction</span>
-        </Link>
       </nav>
     </div>
   );

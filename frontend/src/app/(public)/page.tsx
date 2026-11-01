@@ -3,7 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, Plane, Ship, MapPin, ArrowRight, ShieldCheck, Scale, Clock } from "lucide-react";
+import {
+  Search,
+  Plane,
+  Ship,
+  ShieldCheck,
+  CreditCard,
+  MapPin,
+  Scale,
+  ArrowRight,
+  Clock,
+  Layers,
+} from "lucide-react";
 import { normalizeTrackingNumber } from "@/shared";
 import { ScrollReveal } from "@/components/ScrollReveal";
 
@@ -31,114 +42,349 @@ export default function HomePage() {
         backgroundColor: "#FFFFFF",
         color: "#111827",
         minHeight: "calc(100vh - 110px)",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        padding: "40px 20px 60px 20px",
+        padding: "48px 20px 80px 20px",
         boxSizing: "border-box",
       }}
     >
-      <div style={{ maxWidth: "900px", margin: "0 auto", textAlign: "center", width: "100%" }}>
+      <div style={{ maxWidth: "1080px", margin: "0 auto" }}>
         <ScrollReveal>
-          {/* Badge discret */}
-          <div
-            style={{
-              display: "inline-block",
-              padding: "4px 14px",
-              borderRadius: "9999px",
-              backgroundColor: "#F3F4F6",
-              fontSize: "0.78rem",
-              fontWeight: 700,
-              color: "#4B5563",
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              marginBottom: "18px",
-            }}
-          >
-            Fret International Simple & Direct
+          {/* Section Hero */}
+          <div style={{ textAlign: "center", marginBottom: "48px" }}>
+            <div
+              style={{
+                display: "inline-block",
+                padding: "4px 14px",
+                borderRadius: "9999px",
+                backgroundColor: "#F3F4F6",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                color: "#4B5563",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                marginBottom: "16px",
+              }}
+            >
+              Fret International Simple & Direct
+            </div>
+
+            <h1
+              style={{
+                fontSize: "clamp(2.2rem, 5vw, 3.8rem)",
+                fontWeight: 800,
+                lineHeight: 1.12,
+                letterSpacing: "-0.03em",
+                color: "#111827",
+                margin: "0 auto 18px auto",
+                maxWidth: "860px",
+                textWrap: "balance",
+              }}
+            >
+              Vos colis de Chine, Dubaï, Maroc et France livrés à Abidjan.
+            </h1>
+
+            <p
+              style={{
+                fontSize: "clamp(1.02rem, 1.6vw, 1.18rem)",
+                lineHeight: 1.6,
+                color: "#4B5563",
+                maxWidth: "680px",
+                margin: "0 auto",
+                textWrap: "pretty",
+              }}
+            >
+              Vous achetez chez vos fournisseurs, ils déposent dans nos magasins, nous pesons et nous expédions. Aucun frais caché : le dédouanement est déjà compris dans le tarif.
+            </p>
           </div>
 
-          {/* Titre Majeur */}
-          <h1
-            style={{
-              fontSize: "clamp(2.2rem, 5vw, 3.8rem)",
-              fontWeight: 800,
-              lineHeight: 1.12,
-              letterSpacing: "-0.03em",
-              color: "#111827",
-              margin: "0 auto 18px auto",
-              maxWidth: "840px",
-              textWrap: "balance",
-            }}
-          >
-            Vos colis de Chine, Dubaï, Maroc et France livrés à Abidjan.
-          </h1>
-
-          {/* Message clair et compréhensible par un enfant */}
-          <p
-            style={{
-              fontSize: "clamp(1.02rem, 1.6vw, 1.18rem)",
-              lineHeight: 1.6,
-              color: "#4B5563",
-              maxWidth: "680px",
-              margin: "0 auto 36px auto",
-              textWrap: "pretty",
-            }}
-          >
-            Vous achetez chez vos fournisseurs, ils déposent dans nos magasins, nous pesons et nous expédions. Aucun frais caché : le dédouanement est déjà compris dans le tarif.
-          </p>
-
-          {/* Boutons d'action rapides vers les autres écrans */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: "12px",
-              flexWrap: "wrap",
-              marginBottom: "40px",
-            }}
-          >
-            <Link
-              href="/services"
-              className="roum-btn-primary"
-              style={{ padding: "12px 24px", fontSize: "0.92rem" }}
+          {/* Section Services Proposés avec Boutons */}
+          <div style={{ marginBottom: "56px" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-end",
+                marginBottom: "20px",
+                flexWrap: "wrap",
+                gap: "12px",
+              }}
             >
-              <span>Découvrir nos services</span>
-              <ArrowRight size={16} />
-            </Link>
+              <div>
+                <div
+                  style={{
+                    fontSize: "0.74rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    color: "#6B7280",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Ce que nous faisons
+                </div>
+                <h2
+                  style={{
+                    fontSize: "1.5rem",
+                    fontWeight: 800,
+                    color: "#111827",
+                    letterSpacing: "-0.02em",
+                    margin: 0,
+                  }}
+                >
+                  Nos formules de transport direct
+                </h2>
+              </div>
 
-            <Link
-              href="/tariffs"
-              className="roum-btn-secondary"
-              style={{ padding: "12px 22px", fontSize: "0.92rem" }}
-            >
-              <span>Calculer un prix</span>
-            </Link>
+              <Link
+                href="/services"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "0.88rem",
+                  fontWeight: 700,
+                  color: "#111827",
+                  textDecoration: "underline",
+                }}
+              >
+                <Layers size={16} />
+                <span>Voir le catalogue complet des 10 services</span>
+              </Link>
+            </div>
 
-            <Link
-              href="/warehouses"
-              className="roum-btn-secondary"
-              style={{ padding: "12px 22px", fontSize: "0.92rem" }}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: "18px",
+              }}
             >
-              <span>Adresses magasins</span>
-            </Link>
+              {/* Carte 1 : Avion Express */}
+              <div
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  border: "2px solid #111827",
+                  borderRadius: "14px",
+                  padding: "22px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  boxShadow: "0 4px 14px rgba(17, 24, 39, 0.06)",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "10px",
+                      backgroundColor: "#111827",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <Plane size={22} color="#FFFFFF" strokeWidth={2.2} />
+                  </div>
+
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#111827", margin: "0 0 6px 0" }}>
+                    Voie Express Avion
+                  </h3>
+
+                  <p style={{ fontSize: "0.86rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 14px 0" }}>
+                    Le plus rapide pour vêtements, téléphones, ordinateurs et colis urgents.
+                  </p>
+
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", marginBottom: "18px" }}>
+                    Délai : 4 à 5 jours
+                  </div>
+                </div>
+
+                <Link
+                  href="/tariffs"
+                  className="roum-btn-primary"
+                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.84rem", padding: "10px 16px" }}
+                >
+                  <span>Calculer le prix</span>
+                  <ArrowRight size={14} />
+                </Link>
+              </div>
+
+              {/* Carte 2 : Bateau CBM */}
+              <div
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "14px",
+                  padding: "22px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "10px",
+                      backgroundColor: "#111827",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <Ship size={22} color="#FFFFFF" strokeWidth={2.2} />
+                  </div>
+
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#111827", margin: "0 0 6px 0" }}>
+                    Maritime au Mètre Cube
+                  </h3>
+
+                  <p style={{ fontSize: "0.86rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 14px 0" }}>
+                    Idéal et très économique pour les gros cartons, meubles et machines.
+                  </p>
+
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", marginBottom: "18px" }}>
+                    Délai : 35 à 45 jours
+                  </div>
+                </div>
+
+                <Link
+                  href="/tariffs"
+                  className="roum-btn-secondary"
+                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.84rem", padding: "10px 16px" }}
+                >
+                  <span>Estimer le volume CBM</span>
+                  <ArrowRight size={14} />
+                </Link>
+              </div>
+
+              {/* Carte 3 : Paiement Fournisseurs */}
+              <div
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "14px",
+                  padding: "22px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "10px",
+                      backgroundColor: "#111827",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <CreditCard size={22} color="#FFFFFF" strokeWidth={2.2} />
+                  </div>
+
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#111827", margin: "0 0 6px 0" }}>
+                    Paiement Fournisseurs
+                  </h3>
+
+                  <p style={{ fontSize: "0.86rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 14px 0" }}>
+                    Règlement direct de vos achats sur 1688, Taobao ou usines en Yuans (RMB) et Dirhams (AED).
+                  </p>
+
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", marginBottom: "18px" }}>
+                    Règlement sous 24h
+                  </div>
+                </div>
+
+                <Link
+                  href="/services"
+                  className="roum-btn-secondary"
+                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.84rem", padding: "10px 16px" }}
+                >
+                  <span>Détails & assistance</span>
+                  <ArrowRight size={14} />
+                </Link>
+              </div>
+
+              {/* Carte 4 : Douane & Retrait */}
+              <div
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "14px",
+                  padding: "22px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "10px",
+                      backgroundColor: "#111827",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <ShieldCheck size={22} color="#FFFFFF" strokeWidth={2.2} />
+                  </div>
+
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#111827", margin: "0 0 6px 0" }}>
+                    Douane 100% Incluse
+                  </h3>
+
+                  <p style={{ fontSize: "0.86rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 14px 0" }}>
+                    Zéro mauvaise surprise à l&apos;arrivée. Retrait direct à Bingerville Carrefour Safari.
+                  </p>
+
+                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", marginBottom: "18px" }}>
+                    Formalités gérées par Roum
+                  </div>
+                </div>
+
+                <Link
+                  href="/warehouses"
+                  className="roum-btn-secondary"
+                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.84rem", padding: "10px 16px" }}
+                >
+                  <span>Adresse de l&apos;agence</span>
+                  <ArrowRight size={14} />
+                </Link>
+              </div>
+            </div>
           </div>
 
-          {/* Boîte de recherche de colis intégrée */}
+          {/* Boîte de Suivi Rapide */}
           <div
             style={{
-              maxWidth: "580px",
-              margin: "0 auto",
-              backgroundColor: "#FFFFFF",
-              border: "1px solid #D1D5DB",
-              borderRadius: "14px",
-              padding: "20px 22px",
-              boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.05)",
+              maxWidth: "640px",
+              margin: "0 auto 48px auto",
+              backgroundColor: "#FAF9F6",
+              border: "1px solid #E5E7EB",
+              borderRadius: "16px",
+              padding: "24px 26px",
               textAlign: "left",
             }}
           >
-            <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#111827", marginBottom: "10px" }}>
-              Vous attendez déjà un colis ? Entrez son numéro :
+            <div style={{ fontSize: "0.74rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#6B7280", marginBottom: "4px" }}>
+              Suivi en temps réel
+            </div>
+            <div style={{ fontSize: "1.08rem", fontWeight: 800, color: "#111827", marginBottom: "14px" }}>
+              Vous attendez un colis ? Entrez son numéro :
             </div>
 
             <form onSubmit={handleTrackingSubmit} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -153,9 +399,9 @@ export default function HomePage() {
                   placeholder="Ex : RM-AIR-2610-K8P9Q2"
                   style={{
                     flex: "1 1 240px",
-                    height: "48px",
+                    height: "46px",
                     padding: "0 14px",
-                    fontSize: "16px",
+                    fontSize: "15px",
                     border: "1px solid #D1D5DB",
                     borderRadius: "8px",
                     color: "#111827",
@@ -169,9 +415,9 @@ export default function HomePage() {
                   type="submit"
                   className="roum-btn-primary"
                   style={{
-                    height: "48px",
-                    padding: "0 22px",
-                    fontSize: "0.9rem",
+                    height: "46px",
+                    padding: "0 20px",
+                    fontSize: "0.88rem",
                   }}
                 >
                   <Search size={16} />
@@ -186,7 +432,7 @@ export default function HomePage() {
               )}
 
               <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#6B7280", marginTop: "4px" }}>
-                <span>Exemple de test :</span>
+                <span>Exemple :</span>
                 <button
                   type="button"
                   onClick={() => setTrackingInput("RM-AIR-2610-K8P9Q2")}
@@ -207,29 +453,30 @@ export default function HomePage() {
             </form>
           </div>
 
-          {/* Garanties en bas de page */}
+          {/* Garanties Simples & Brefs */}
           <div
             style={{
               display: "flex",
               justifyContent: "center",
-              gap: "28px",
-              marginTop: "44px",
+              gap: "32px",
               flexWrap: "wrap",
-              fontSize: "0.84rem",
-              color: "#6B7280",
+              fontSize: "0.85rem",
+              color: "#4B5563",
               fontWeight: 600,
+              paddingTop: "24px",
+              borderTop: "1px solid #F3F4F6",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <Scale size={16} color="#111827" />
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Scale size={17} color="#111827" />
               <span>Pesée certifiée au gramme près</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <ShieldCheck size={16} color="#111827" />
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <ShieldCheck size={17} color="#111827" />
               <span>Dédouanement garanti & inclus</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <MapPin size={16} color="#111827" />
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <MapPin size={17} color="#111827" />
               <span>Agence à Abidjan Bingerville</span>
             </div>
           </div>

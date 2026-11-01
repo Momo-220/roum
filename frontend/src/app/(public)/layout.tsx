@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Phone, ArrowUpRight, Shield } from "lucide-react";
+import { MapPin, Phone, ArrowUpRight } from "lucide-react";
 import { CircularFlag } from "@/components/CircularFlag";
 import { FloatingBottomNav } from "@/components/FloatingBottomNav";
 
@@ -186,9 +186,7 @@ export default function PublicLayout({
               <span>·</span>
               <span>Dédouanement garanti</span>
               <span>·</span>
-              <Link href="/admin" style={{ color: "#9CA3AF", textDecoration: "none" }}>
-                Accès Personnel
-              </Link>
+              <span>Retrait sécurisé en agence</span>
             </div>
           </div>
         </div>
