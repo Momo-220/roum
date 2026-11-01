@@ -29,7 +29,7 @@ const cryptoRandomBytes: RandomBytesSource = (length) => {
   return bytes;
 };
 
-const SUFFIX_PATTERN = `[${REFERENCE_ALPHABET}]{${REFERENCE_SUFFIX_LENGTH}}`;
+const SUFFIX_PATTERN = `[A-Z0-9]{${REFERENCE_SUFFIX_LENGTH}}`;
 const PERIOD_PATTERN = "\\d{2}(?:0[1-9]|1[0-2])";
 
 export const TRACKING_NUMBER_REGEX = new RegExp(`^RM-(?:AIR|SEA)-${PERIOD_PATTERN}-${SUFFIX_PATTERN}$`);
@@ -76,7 +76,12 @@ export function generateQuoteReference(
 }
 
 export function isValidTrackingNumber(value: string): boolean {
-  return TRACKING_NUMBER_REGEX.test(value);
+  if (!value || typeof value !== "string") return false;
+  const clean = value.trim().toUpperCase();
+  if (TRACKING_NUMBER_REGEX.test(clean)) return true;
+  if (/^RT-\d{4,10}$/.test(clean)) return true;
+  if (/^RM-[A-Z0-9]{3,12}-[A-Z0-9]{4,12}$/.test(clean)) return true;
+  return false;
 }
 
 /**
@@ -87,10 +92,27 @@ export function isValidTrackingNumber(value: string): boolean {
  *   " rm air 2610 k8p9q2 " -> "RM-AIR-2610-K8P9Q2"
  */
 export function normalizeTrackingNumber(input: string): string | null {
-  const compact = input.toUpperCase().replace(/[^A-Z0-9]/g, "");
-  const match = /^RM(AIR|SEA)(\d{4})([A-Z0-9]{6})$/.exec(compact);
-  if (!match) return null;
-  const [, type, period, suffix] = match;
-  const candidate = `RM-${type}-${period}-${suffix}`;
-  return isValidTrackingNumber(candidate) ? candidate : null;
+  if (!input || typeof input !== "string") return null;
+  const raw = input.trim().toUpperCase();
+  const compact = raw.replace(/[^A-Z0-9]/g, "");
+
+  // Cas 1 : Format standard RM-AIR / RM-SEA
+  const rmMatch = /^RM(AIR|SEA)(\d{4})([A-Z0-9]{6})$/.exec(compact);
+  if (rmMatch) {
+    const [, type, period, suffix] = rmMatch;
+    return `RM-${type}-${period}-${suffix}`;
+  }
+
+  // Cas 2 : Format interne RT-XXXXXX
+  const rtMatch = /^RT(\d{4,10})$/.exec(compact);
+  if (rtMatch) {
+    return `RT-${rtMatch[1]}`;
+  }
+
+  // Cas 3 : Format avec tirets déjà valide
+  if (isValidTrackingNumber(raw)) {
+    return raw;
+  }
+
+  return null;
 }

@@ -58,47 +58,36 @@ export default function WarehousesPage() {
   return (
     <div
       style={{
-        backgroundColor: "#FFFFFF",
-        color: "#111827",
+        backgroundColor: "transparent",
+        color: "var(--c-text-main)",
         minHeight: "calc(100vh - 110px)",
-        padding: "48px 20px 64px 20px",
+        padding: "36px 20px 80px 20px",
         boxSizing: "border-box",
       }}
     >
       <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
         <ScrollReveal>
           <div style={{ textAlign: "center", marginBottom: "40px" }}>
-            <div
-              style={{
-                display: "inline-block",
-                padding: "4px 12px",
-                borderRadius: "9999px",
-                backgroundColor: "#F3F4F6",
-                fontSize: "0.76rem",
-                fontWeight: 700,
-                color: "#4B5563",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                marginBottom: "12px",
-              }}
-            >
-              Adresses Magasins
+            <div className="client-eyebrow" style={{ justifyContent: "center", marginBottom: "12px" }}>
+              <span style={{ color: "var(--c-accent-red)" }}>●</span>
+              <span>ENTREPÔTS MONDIAUX & GROUPAGE SÉCURISÉ</span>
             </div>
 
             <h1
               style={{
-                fontSize: "clamp(2rem, 4vw, 3rem)",
-                fontWeight: 800,
-                letterSpacing: "-0.03em",
-                color: "#111827",
+                fontFamily: "var(--c-font-display)",
+                fontSize: "clamp(2.2rem, 4.6vw, 3.4rem)",
+                fontWeight: 700,
+                letterSpacing: "-0.04em",
+                color: "var(--c-text-main)",
                 margin: "0 0 12px 0",
               }}
             >
-              Où faire livrer vos colis ?
+              Adresses de Réception pour vos Fournisseurs
             </h1>
 
-            <p style={{ fontSize: "1.05rem", color: "#4B5563", maxWidth: "640px", margin: "0 auto", lineHeight: 1.55 }}>
-              Copiez simplement l&apos;adresse du pays où vous achetez et donnez-la à votre fournisseur.
+            <p style={{ fontSize: "1.02rem", color: "var(--c-text-muted)", maxWidth: "660px", margin: "0 auto", lineHeight: 1.55 }}>
+              Copiez simplement l&apos;adresse du pays où vous achetez et donnez-la à votre fournisseur avec votre code client.
             </p>
           </div>
 

@@ -1,524 +1,554 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ShoppingBag,
-  PackageCheck,
   Search,
-  Plane,
-  Ship,
   ArrowRight,
-  ShieldCheck,
-  Scale,
+  ArrowLeft,
+  Calculator,
   MapPin,
-  Clock,
-  Zap,
 } from "lucide-react";
-import { normalizeTrackingNumber, getLiveTariffs, findTariff, formatTariffPrice, OfficialTariff } from "@/shared";
+import { normalizeTrackingNumber } from "@/shared";
 import { ScrollReveal } from "@/components/ScrollReveal";
-import { CircularFlag } from "@/components/CircularFlag";
+import { WorldMap } from "@/components/WorldMap";
 
 export default function HomePage() {
   const router = useRouter();
+
+  // Suivi rapide de colis
   const [trackingInput, setTrackingInput] = useState("");
   const [trackingError, setTrackingError] = useState("");
-  const [tariffs, setTariffs] = useState<OfficialTariff[]>(() => getLiveTariffs());
-
-  useEffect(() => {
-    const handleSync = () => setTariffs(getLiveTariffs());
-    window.addEventListener("storage", handleSync);
-    return () => window.removeEventListener("storage", handleSync);
-  }, []);
 
   const handleTrackingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setTrackingError("");
-
     const normalized = normalizeTrackingNumber(trackingInput);
     if (!normalized) {
       setTrackingError("Numéro de colis invalide (Ex : RM-AIR-2610-K8P9Q2).");
       return;
     }
-
     router.push(`/tracking/${normalized}`);
   };
 
-  // Tarifs dynamiques en direct
-  const cnExpress = findTariff(tariffs, "chine", "express");
-  const aeExpress = findTariff(tariffs, "émirat", "express") || findTariff(tariffs, "duba", "express");
-  const maCi = findTariff(tariffs, "maroc", "côte d'ivoire") || findTariff(tariffs, "maroc", "abidjan");
-  const frCi = findTariff(tariffs, "france", "divers");
-
   return (
-    <div
-      style={{
-        backgroundColor: "#FFFFFF",
-        color: "#111827",
-        minHeight: "calc(100vh - 110px)",
-        padding: "36px 20px 80px 20px",
-        boxSizing: "border-box",
-      }}
-    >
-      <div style={{ maxWidth: "1160px", margin: "0 auto" }}>
-        <ScrollReveal>
-          {/* Hero Section Épurée & Pesante */}
-          <div style={{ textAlign: "center", marginBottom: "40px" }}>
-            <div
-              style={{
-                display: "inline-block",
-                padding: "4px 14px",
-                borderRadius: "9999px",
-                backgroundColor: "#F3F4F6",
-                fontSize: "0.76rem",
-                fontWeight: 700,
-                color: "#4B5563",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                marginBottom: "14px",
-              }}
-            >
-              Fret & Centrale d&apos;Achat International
-            </div>
-
+    <div style={{ maxWidth: "1120px", margin: "0 auto", padding: "40px 24px 80px 24px" }}>
+      {/* ========================================================
+          HERO : TITRE EN IMMERSION ARRIÈRE-PLAN ("BIEN EN ARRIÈRE")
+          ET CARTE MONDIALE EN AVANT-PLAN AVEC DÉBUT TRANSPARENT
+          (Immersion pure, zéro coupure, animations fluides et simples)
+         ======================================================== */}
+      <ScrollReveal>
+        <section style={{ textAlign: "center", marginBottom: "72px", position: "relative" }}>
+          {/* Titre Pesant Host Grotesk placé bien en Arrière-Plan */}
+          <div
+            style={{
+              position: "relative",
+              zIndex: 1,
+              maxWidth: "920px",
+              margin: "0 auto",
+              padding: "16px 16px 0 16px",
+            }}
+          >
             <h1
               style={{
-                fontSize: "clamp(2.1rem, 4.6vw, 3.5rem)",
-                fontWeight: 800,
-                lineHeight: 1.16,
-                letterSpacing: "-0.03em",
-                color: "#111827",
-                margin: "0 auto 14px auto",
-                maxWidth: "860px",
-                textWrap: "balance",
+                fontFamily: "var(--c-font-display)",
+                fontSize: "clamp(2.4rem, 5.6vw, 4.2rem)",
+                fontWeight: 700,
+                lineHeight: 1.05,
+                letterSpacing: "-0.038em",
+                color: "var(--c-text-main)",
+                margin: 0,
               }}
             >
-              Vos colis de Chine, Dubaï, Maroc et France livrés en toute sécurité.
+              Transport maritime & aérien direct vers l&apos;Afrique.
             </h1>
-
-            <p
-              style={{
-                fontSize: "clamp(1rem, 1.5vw, 1.12rem)",
-                lineHeight: 1.55,
-                color: "#4B5563",
-                maxWidth: "680px",
-                margin: "0 auto",
-                textWrap: "pretty",
-              }}
-            >
-              Nous payons vos fournisseurs sur Alibaba ou transportons vos marchandises par avion et par bateau avec
-              <strong> douane entièrement comprise</strong>.
-            </p>
           </div>
 
-          {/* Boîte de Suivi Direct au Coeur de la Page */}
+          {/* Carte Mondiale au Premier Plan (Remontée en immersion, avec début semi-transparent) */}
           <div
             style={{
-              maxWidth: "640px",
-              margin: "0 auto 48px auto",
-              backgroundColor: "#FAF9F6",
-              border: "1px solid #D1D5DB",
-              borderRadius: "16px",
-              padding: "20px 24px",
-              textAlign: "left",
-              boxShadow: "0 6px 18px rgba(0, 0, 0, 0.03)",
+              width: "100%",
+              maxWidth: "1000px",
+              margin: "clamp(-110px, -9.2vw, -60px) auto 0 auto",
+              position: "relative",
+              zIndex: 2,
+              pointerEvents: "none",
+              WebkitMaskImage: "linear-gradient(to bottom, rgba(0, 0, 0, 0.22) 0%, rgba(0, 0, 0, 0.55) 20%, #000000 42%, #000000 78%, transparent 100%)",
+              maskImage: "linear-gradient(to bottom, rgba(0, 0, 0, 0.22) 0%, rgba(0, 0, 0, 0.55) 20%, #000000 42%, #000000 78%, transparent 100%)",
             }}
           >
-            <div style={{ fontSize: "0.92rem", fontWeight: 800, color: "#111827", marginBottom: "10px" }}>
-              Vous attendez un colis ? Suivez son arrivée en direct :
-            </div>
-
-            <form onSubmit={handleTrackingSubmit} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                <input
-                  type="text"
-                  value={trackingInput}
-                  onChange={(e) => {
-                    setTrackingInput(e.target.value);
-                    if (trackingError) setTrackingError("");
-                  }}
-                  placeholder="Ex : RM-AIR-2610-K8P9Q2"
-                  style={{
-                    flex: "1 1 240px",
-                    height: "44px",
-                    padding: "0 12px",
-                    fontSize: "14px",
-                    border: "1px solid #D1D5DB",
-                    borderRadius: "8px",
-                    backgroundColor: "#FFFFFF",
-                    outline: "none",
-                    fontWeight: 600,
-                  }}
-                />
-
-                <button
-                  type="submit"
-                  className="roum-btn-primary"
-                  style={{
-                    height: "44px",
-                    padding: "0 20px",
-                    fontSize: "0.88rem",
-                  }}
-                >
-                  <Search size={15} />
-                  <span>Suivre mon colis</span>
-                </button>
-              </div>
-
-              {trackingError && (
-                <div style={{ fontSize: "0.8rem", color: "#DC2626", fontWeight: 600, marginTop: "4px" }}>
-                  {trackingError}
-                </div>
-              )}
-            </form>
+            <WorldMap lineColor="#0EA5E9" />
           </div>
 
-          {/* Grille des 5 Services Réels Exactement Synchronisés avec l'Admin */}
-          <div style={{ marginBottom: "48px" }}>
-            <div style={{ textAlign: "center", marginBottom: "26px" }}>
-              <div style={{ fontSize: "0.76rem", fontWeight: 800, textTransform: "uppercase", color: "#6B7280", letterSpacing: "0.08em", marginBottom: "4px" }}>
-                Catalogue Intégral
-              </div>
-              <h2 style={{ fontSize: "1.55rem", fontWeight: 800, color: "#111827", margin: 0 }}>
-                Nos 5 Services Officiels de Transit & Achat
-              </h2>
-            </div>
-
-            <div
+          {/* Module de Recherche Épuré Flottant Naturellement */}
+          <div
+            style={{
+              maxWidth: "560px",
+              margin: "clamp(-38px, -3.8vw, -18px) auto 0 auto",
+              position: "relative",
+              zIndex: 10,
+            }}
+          >
+            <form
+              onSubmit={handleTrackingSubmit}
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))",
-                gap: "18px",
+                display: "flex",
+                alignItems: "center",
+                backgroundColor: "#FFFFFF",
+                border: "1px solid var(--c-border)",
+                borderRadius: "9999px",
+                padding: "6px 8px 6px 20px",
+                boxShadow: "0 4px 20px -2px rgba(27, 20, 17, 0.05)",
               }}
             >
-              {/* 1. Commander sur Alibaba */}
-              <div
+              <Search size={17} color="#8C7D75" style={{ marginRight: "12px", flexShrink: 0 }} />
+              <input
+                type="text"
+                value={trackingInput}
+                onChange={(e) => {
+                  setTrackingInput(e.target.value);
+                  if (trackingError) setTrackingError("");
+                }}
+                placeholder="Numéro de bordereau (Ex : RM-AIR-2610-K8P9Q2)"
                 style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "2px solid #111827",
-                  borderRadius: "16px",
-                  padding: "24px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxShadow: "0 4px 16px rgba(17, 24, 39, 0.05)",
+                  flex: 1,
+                  border: "none",
+                  outline: "none",
+                  fontSize: "0.88rem",
+                  fontFamily: "var(--c-font-mono)",
+                  backgroundColor: "transparent",
+                  color: "var(--c-text-main)",
+                }}
+              />
+              <button
+                type="submit"
+                style={{
+                  backgroundColor: "var(--c-text-main)",
+                  color: "var(--c-bg)",
+                  border: "none",
+                  borderRadius: "9999px",
+                  padding: "10px 22px",
+                  fontSize: "0.84rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  transition: "opacity 0.15s ease",
                 }}
               >
-                <div>
-                  <div
-                    style={{
-                      width: "44px",
-                      height: "44px",
-                      borderRadius: "10px",
-                      backgroundColor: "#111827",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    <ShoppingBag size={22} color="#FFFFFF" strokeWidth={2.2} />
-                  </div>
+                Suivre
+              </button>
+            </form>
 
-                  <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", color: "#6B7280", letterSpacing: "0.06em", marginBottom: "4px" }}>
-                    Service 01 · Achat Chine
-                  </div>
+            {trackingError && (
+              <div style={{ fontSize: "0.78rem", color: "#DC2626", marginTop: "8px", fontWeight: 500 }}>
+                {trackingError}
+              </div>
+            )}
+          </div>
+        </section>
+      </ScrollReveal>
 
-                  <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111827", margin: "0 0 8px 0" }}>
-                    Commander sur Alibaba
-                  </h3>
+      {/* ========================================================
+          DISPOSITION EN ZIGZAG NATURELLE (SANS AUCUN CADRAN NI BOÎTE) :
+          SECTION 01 : ACHAT ALIBABA (À GAUCHE, BOUTON REGARDANT VERS LA DROITE)
+          SECTION 02 : TRANSIT INTERNATIONAL (À DROITE, BOUTON REGARDANT VERS LA GAUCHE)
+          SECTION 03 : ENVOI DE COLIS (À GAUCHE, BOUTON REGARDANT VERS LA DROITE)
+         ======================================================== */}
+      <section style={{ marginBottom: "64px" }}>
+        {/* ========================================================
+            SECTION 01 : ACHAT ASSISTÉ ALIBABA EN PREMIER (À GAUCHE)
+           ======================================================== */}
+        <ScrollReveal delay={80}>
+          <article
+            style={{
+              padding: "52px 0",
+              borderTop: "1px solid var(--c-border)",
+            }}
+          >
+            <div style={{ maxWidth: "780px", marginRight: "auto", marginLeft: 0 }}>
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  fontFamily: "var(--c-font-mono)",
+                  fontWeight: 700,
+                  color: "var(--c-text-light)",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  marginBottom: "12px",
+                }}
+              >
+                01 / CENTRALE D&apos;ACHAT · PAIEMENT EN YUANS CHINOIS (RMB)
+              </div>
 
-                  <p style={{ fontSize: "0.86rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 14px 0" }}>
-                    Nous payons vos fournisseurs en Chine en Yuans (RMB), contrôlons vos articles en magasin et livrons à Abidjan.
-                  </p>
+              <h2
+                style={{
+                  fontFamily: "var(--c-font-display)",
+                  fontSize: "clamp(2rem, 4.4vw, 3.1rem)",
+                  fontWeight: 700,
+                  lineHeight: 1.08,
+                  letterSpacing: "-0.035em",
+                  color: "var(--c-text-main)",
+                  margin: "0 0 16px 0",
+                }}
+              >
+                Nous payons directement vos fournisseurs en Chine sans blocage bancaire.
+              </h2>
 
-                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", backgroundColor: "#F3F4F6", padding: "4px 10px", borderRadius: "6px", display: "inline-block", marginBottom: "18px" }}>
-                    Paiement Yuans & Vérification
-                  </div>
-                </div>
+              <p
+                style={{
+                  fontSize: "1.06rem",
+                  color: "var(--c-text-muted)",
+                  lineHeight: 1.6,
+                  margin: "0 0 20px 0",
+                }}
+              >
+                Choisissez simplement vos articles sur Alibaba ou 1688. Vous réglez en FCFA à Abidjan à un taux négocié : notre équipe paie le fournisseur chinois directement en Yuans, vérifie la conformité de vos cartons en magasin et prend en charge l&apos;acheminement.
+              </p>
 
+              {/* Détails intégrés naturellement sans aucun cadran */}
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: "14px 22px",
+                  fontSize: "0.84rem",
+                  color: "var(--c-text-light)",
+                  marginBottom: "26px",
+                  lineHeight: 1.5,
+                }}
+              >
+                <span><strong>Zéro carte bancaire :</strong> Aucun blocage international</span>
+                <span>•</span>
+                <span><strong>Règlement en FCFA :</strong> Nous payons en Yuans (RMB)</span>
+                <span>•</span>
+                <span><strong>Contrôle qualité :</strong> Inspection avant départ</span>
+              </div>
+
+              <div>
                 <Link
                   href="/services?tab=alibaba"
-                  className="roum-btn-primary"
-                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.86rem", padding: "10px 14px", justifyContent: "center" }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "12px 24px",
+                    borderRadius: "9999px",
+                    backgroundColor: "var(--c-text-main)",
+                    color: "#FAF5F0",
+                    fontSize: "0.88rem",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                    transition: "transform 0.18s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateX(4px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateX(0)";
+                  }}
                 >
-                  <span>Lancer une commande</span>
-                  <ArrowRight size={14} />
-                </Link>
-              </div>
-
-              {/* 2. Transit & Fret Chine */}
-              <div
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "16px",
-                  padding: "24px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      width: "44px",
-                      height: "44px",
-                      borderRadius: "10px",
-                      backgroundColor: "#111827",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    <CircularFlag countryCode="CN" size={24} />
-                  </div>
-
-                  <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", color: "#6B7280", letterSpacing: "0.06em", marginBottom: "4px" }}>
-                    Service 02 · Magasins Chine
-                  </div>
-
-                  <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111827", margin: "0 0 8px 0" }}>
-                    Fret & Transit Chine
-                  </h3>
-
-                  <p style={{ fontSize: "0.86rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 14px 0" }}>
-                    Réception dans nos entrepôts de Guangzhou et Yiwu. Voie normale (10 000 F), Express 4j ({formatTariffPrice(cnExpress?.price_per_unit_minor || 1200000)}), Batteries ou Bateau.
-                  </p>
-
-                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", backgroundColor: "#F3F4F6", padding: "4px 10px", borderRadius: "6px", display: "inline-block", marginBottom: "18px" }}>
-                    Avion 4-5j · Bateau 35j
-                  </div>
-                </div>
-
-                <Link
-                  href="/services?tab=china"
-                  className="roum-btn-secondary"
-                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.86rem", padding: "10px 14px", justifyContent: "center" }}
-                >
-                  <span>Adresse magasin Chine</span>
-                  <ArrowRight size={14} />
-                </Link>
-              </div>
-
-              {/* 3. Transit Dubaï */}
-              <div
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "16px",
-                  padding: "24px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      width: "44px",
-                      height: "44px",
-                      borderRadius: "10px",
-                      backgroundColor: "#111827",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    <CircularFlag countryCode="AE" size={24} />
-                  </div>
-
-                  <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", color: "#6B7280", letterSpacing: "0.06em", marginBottom: "4px" }}>
-                    Service 03 · Émirats Arabes Unis
-                  </div>
-
-                  <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111827", margin: "0 0 8px 0" }}>
-                    Fret & Transit Dubaï
-                  </h3>
-
-                  <p style={{ fontSize: "0.86rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 14px 0" }}>
-                    Achats à Deira et Al Sabkha : parfums, cosmétiques, bijoux et téléphones. Vol direct DXB ou bateau Jebel Ali.
-                  </p>
-
-                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", backgroundColor: "#F3F4F6", padding: "4px 10px", borderRadius: "6px", display: "inline-block", marginBottom: "18px" }}>
-                    Dubaï Express 4 jours
-                  </div>
-                </div>
-
-                <Link
-                  href="/services?tab=dubai"
-                  className="roum-btn-secondary"
-                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.86rem", padding: "10px 14px", justifyContent: "center" }}
-                >
-                  <span>Adresse magasin Dubaï</span>
-                  <ArrowRight size={14} />
-                </Link>
-              </div>
-
-              {/* 4. Groupage Maroc (Casablanca) */}
-              <div
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "16px",
-                  padding: "24px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      width: "44px",
-                      height: "44px",
-                      borderRadius: "10px",
-                      backgroundColor: "#111827",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    <CircularFlag countryCode="MA" size={24} />
-                  </div>
-
-                  <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", color: "#6B7280", letterSpacing: "0.06em", marginBottom: "4px" }}>
-                    Service 04 · N°1 Groupage Maroc
-                  </div>
-
-                  <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111827", margin: "0 0 8px 0" }}>
-                    Groupage Maroc Express
-                  </h3>
-
-                  <p style={{ fontSize: "0.86rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 14px 0" }}>
-                    Casablanca vers Abidjan, Bamako, Dakar, Ouagadougou et Libreville. Vol direct garanti 5 jours chrono.
-                  </p>
-
-                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#166534", backgroundColor: "#DCFCE7", padding: "4px 10px", borderRadius: "6px", display: "inline-block", marginBottom: "18px" }}>
-                    Dès {formatTariffPrice(maCi?.price_per_unit_minor || 650000)} / kg · 5 jours
-                  </div>
-                </div>
-
-                <Link
-                  href="/services?tab=morocco"
-                  className="roum-btn-secondary"
-                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.86rem", padding: "10px 14px", justifyContent: "center" }}
-                >
-                  <span>Dépôt Casablanca</span>
-                  <ArrowRight size={14} />
-                </Link>
-              </div>
-
-              {/* 5. Groupage France (Paris ↔ Abidjan) */}
-              <div
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "16px",
-                  padding: "24px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      width: "44px",
-                      height: "44px",
-                      borderRadius: "10px",
-                      backgroundColor: "#111827",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    <CircularFlag countryCode="FR" size={24} />
-                  </div>
-
-                  <div style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", color: "#6B7280", letterSpacing: "0.06em", marginBottom: "4px" }}>
-                    Service 05 · Paris ↔ Abidjan
-                  </div>
-
-                  <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111827", margin: "0 0 8px 0" }}>
-                    Liaison France & Côte d&apos;Ivoire
-                  </h3>
-
-                  <p style={{ fontSize: "0.86rem", color: "#4B5563", lineHeight: 1.5, margin: "0 0 14px 0" }}>
-                    Ligne bilatérale dans les deux sens : colis personnels, cosmétiques et plis administratifs urgents en 3 à 5 jours.
-                  </p>
-
-                  <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "#111827", backgroundColor: "#F3F4F6", padding: "4px 10px", borderRadius: "6px", display: "inline-block", marginBottom: "18px" }}>
-                    Dès {formatTariffPrice(frCi?.price_per_unit_minor || 850000)} / 12 € le kg
-                  </div>
-                </div>
-
-                <Link
-                  href="/services?tab=france"
-                  className="roum-btn-secondary"
-                  style={{ width: "100%", boxSizing: "border-box", fontSize: "0.86rem", padding: "10px 14px", justifyContent: "center" }}
-                >
-                  <span>Expédier Paris ↔ Abidjan</span>
-                  <ArrowRight size={14} />
+                  <span>Commander sur Alibaba</span>
+                  <ArrowRight size={15} />
                 </Link>
               </div>
             </div>
-          </div>
+          </article>
+        </ScrollReveal>
 
-          {/* Bandeau Transparence Finale */}
-          <div
+        {/* ========================================================
+            SECTION 02 : TRANSIT INTERNATIONAL (À DROITE, BOUTON REGARDANT À GAUCHE)
+           ======================================================== */}
+        <ScrollReveal delay={120}>
+          <article
             style={{
-              padding: "28px 24px",
-              backgroundColor: "#FAF9F6",
-              borderRadius: "16px",
-              border: "1px solid #E5E7EB",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "18px",
+              padding: "52px 0",
+              borderTop: "1px solid var(--c-border)",
             }}
           >
-            <div>
-              <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111827", marginBottom: "4px" }}>
-                Besoin d&apos;une estimation de prix ou d&apos;un conseil immédiat ?
+            <div style={{ maxWidth: "780px", marginLeft: "auto", marginRight: 0, textAlign: "right" }}>
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  fontFamily: "var(--c-font-mono)",
+                  fontWeight: 700,
+                  color: "var(--c-text-light)",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  marginBottom: "12px",
+                }}
+              >
+                02 / TRANSIT INTERNATIONAL · CHINE, DUBAÏ, MAROC
               </div>
-              <div style={{ fontSize: "0.88rem", color: "#4B5563" }}>
-                Nos équipes à Abidjan Bingerville et sur WhatsApp répondent à toutes vos questions 7j/7.
-              </div>
-            </div>
 
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <Link
-                href="/tariffs"
-                className="roum-btn-primary"
-                style={{ fontSize: "0.88rem", padding: "10px 18px" }}
+              <h2
+                style={{
+                  fontFamily: "var(--c-font-display)",
+                  fontSize: "clamp(2rem, 4.4vw, 3.1rem)",
+                  fontWeight: 700,
+                  lineHeight: 1.08,
+                  letterSpacing: "-0.035em",
+                  color: "var(--c-text-main)",
+                  margin: "0 0 16px 0",
+                }}
               >
-                <span>Calculer mon tarif</span>
-                <ArrowRight size={14} />
-              </Link>
-              <a
-                href="https://wa.me/2250153638569"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="roum-btn-secondary"
-                style={{ fontSize: "0.88rem", padding: "10px 18px" }}
+                Acheminement direct de vos marchandises par avion et par bateau.
+              </h2>
+
+              <p
+                style={{
+                  fontSize: "1.06rem",
+                  color: "var(--c-text-muted)",
+                  lineHeight: 1.6,
+                  margin: "0 0 20px 0",
+                }}
               >
-                <span>WhatsApp Direct</span>
-              </a>
+                Départs réguliers chaque semaine depuis nos magasins de Guangzhou, Yiwu, Dubaï et Casablanca.
+                Voie express par avion en 4 à 6 jours, voie normale en 10 à 14 jours ou conteneurs maritimes, avec dédouanement 100% compris jusqu&apos;à Abidjan et 5 pays d&apos;Afrique.
+              </p>
+
+              {/* Détails intégrés naturellement sans aucun cadran, alignés à droite */}
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: "14px 22px",
+                  fontSize: "0.84rem",
+                  color: "var(--c-text-light)",
+                  marginBottom: "26px",
+                  lineHeight: 1.5,
+                }}
+              >
+                <span><strong>Chine :</strong> Express (4-6j) & Normal (10-14j)</span>
+                <span>•</span>
+                <span><strong>Dubaï :</strong> Parfums, téléphones & électronique</span>
+                <span>•</span>
+                <span><strong>Maroc :</strong> 5 jours chrono</span>
+                <span>•</span>
+                <span style={{ color: "#166534", fontWeight: 600 }}>Douane 100% comprise</span>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <Link
+                  href="/services?tab=transit"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "12px 24px",
+                    borderRadius: "9999px",
+                    backgroundColor: "var(--c-text-main)",
+                    color: "#FAF5F0",
+                    fontSize: "0.88rem",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                    transition: "transform 0.18s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateX(-4px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateX(0)";
+                  }}
+                >
+                  <ArrowLeft size={15} />
+                  <span>Découvrir le Transit</span>
+                </Link>
+              </div>
             </div>
-          </div>
+          </article>
         </ScrollReveal>
-      </div>
+
+        {/* ========================================================
+            SECTION 03 : ENVOI DE COLIS FRANCE (À GAUCHE, BOUTON REGARDANT À DROITE)
+           ======================================================== */}
+        <ScrollReveal delay={160}>
+          <article
+            style={{
+              padding: "52px 0",
+              borderTop: "1px solid var(--c-border)",
+              borderBottom: "1px solid var(--c-border)",
+            }}
+          >
+            <div style={{ maxWidth: "780px", marginRight: "auto", marginLeft: 0 }}>
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  fontFamily: "var(--c-font-mono)",
+                  fontWeight: 700,
+                  color: "var(--c-text-light)",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  marginBottom: "12px",
+                }}
+              >
+                03 / LIAISON RÉGULIÈRE · PARIS ↔ ABIDJAN
+              </div>
+
+              <h2
+                style={{
+                  fontFamily: "var(--c-font-display)",
+                  fontSize: "clamp(2rem, 4.4vw, 3.1rem)",
+                  fontWeight: 700,
+                  lineHeight: 1.08,
+                  letterSpacing: "-0.035em",
+                  color: "var(--c-text-main)",
+                  margin: "0 0 16px 0",
+                }}
+              >
+                Liaison aérienne régulière pour vos colis personnels et plis urgents.
+              </h2>
+
+              <p
+                style={{
+                  fontSize: "1.06rem",
+                  color: "var(--c-text-muted)",
+                  lineHeight: 1.6,
+                  margin: "0 0 20px 0",
+                }}
+              >
+                Expédiez rapidement vos valises, effets personnels, produits de beauté ou documents administratifs urgents depuis Paris. Réception directe à notre agence de Bingerville ou livraison à votre porte.
+              </p>
+
+              {/* Détails intégrés naturellement sans aucun cadran */}
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  gap: "14px 22px",
+                  fontSize: "0.84rem",
+                  color: "var(--c-text-light)",
+                  marginBottom: "26px",
+                  lineHeight: 1.5,
+                }}
+              >
+                <span><strong>Marchandises & valises :</strong> Dès 6 500 FCFA / kg</span>
+                <span>•</span>
+                <span><strong>Cosmétiques :</strong> Ligne sécurisée</span>
+                <span>•</span>
+                <span><strong>Plis urgents :</strong> 13 000 FCFA (20 €)</span>
+                <span>•</span>
+                <span style={{ color: "#166534", fontWeight: 600 }}>Retrait Bingerville ou domicile</span>
+              </div>
+
+              <div>
+                <Link
+                  href="/services?tab=colis"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "12px 24px",
+                    borderRadius: "9999px",
+                    backgroundColor: "var(--c-text-main)",
+                    color: "#FAF5F0",
+                    fontSize: "0.88rem",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                    transition: "transform 0.18s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateX(4px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateX(0)";
+                  }}
+                >
+                  <span>Expédier un Colis</span>
+                  <ArrowRight size={15} />
+                </Link>
+              </div>
+            </div>
+          </article>
+        </ScrollReveal>
+      </section>
+
+      {/* ========================================================
+          OUTILS & PASSERELLES RAPIDES : SIMULATEUR & ENTREPÔTS
+          (Deux sections sobres, intégrées sans lourdeur)
+         ======================================================== */}
+      <ScrollReveal delay={200}>
+        <section
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: "24px",
+          }}
+        >
+          {/* Bloc Simulateur */}
+          <div
+            style={{
+              padding: "24px 0",
+              borderTop: "1px solid var(--c-border)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+              <Calculator size={18} color="var(--c-text-main)" />
+              <h3 style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", margin: 0, fontFamily: "var(--c-font-display)" }}>
+                Simulateur de Prix
+              </h3>
+            </div>
+            <p style={{ fontSize: "0.88rem", color: "var(--c-text-muted)", lineHeight: 1.55, margin: "0 0 16px 0" }}>
+              Estimez le montant exact de votre envoi selon le poids, le mode et le pays de départ. Dédouanement 100% compris.
+            </p>
+
+            <Link
+              href="/tariffs"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "0.84rem",
+                fontWeight: 600,
+                color: "var(--c-text-main)",
+                textDecoration: "none",
+              }}
+            >
+              <span>Calculer mon tarif</span>
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          {/* Bloc Entrepôts */}
+          <div
+            style={{
+              padding: "24px 0",
+              borderTop: "1px solid var(--c-border)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+              <MapPin size={18} color="var(--c-text-main)" />
+              <h3 style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", margin: 0, fontFamily: "var(--c-font-display)" }}>
+                Adresses de Réception
+              </h3>
+            </div>
+            <p style={{ fontSize: "0.88rem", color: "var(--c-text-muted)", lineHeight: 1.55, margin: "0 0 16px 0" }}>
+              Copiez les adresses de nos magasins de Guangzhou, Yiwu, Dubaï, Casablanca et Paris à donner à vos expéditeurs.
+            </p>
+
+            <Link
+              href="/warehouses"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "0.84rem",
+                fontWeight: 600,
+                color: "var(--c-text-main)",
+                textDecoration: "none",
+              }}
+            >
+              <span>Voir les magasins</span>
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+        </section>
+      </ScrollReveal>
     </div>
   );
 }

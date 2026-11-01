@@ -63,7 +63,7 @@ publicRouter.get("/tracking/:trackingNumber", async (c) => {
     JOIN shipment_statuses st ON s.current_status = st.code
     JOIN routes r ON s.route_id = r.id
     JOIN shipping_modes sm ON s.shipping_mode_id = sm.id
-    WHERE s.tracking_number = ?
+    WHERE UPPER(s.tracking_number) = UPPER(?)
   `).bind(normalized).first();
 
   if (!shipment) {

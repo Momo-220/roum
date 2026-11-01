@@ -1500,6 +1500,215 @@ select.input-clean {
   user-select: none;
 }
 
+/* ==========================================================================
+   PORTAIL CLIENT ROUM TRANSIT — STYLE ÉDITORIAL LUXE & LOGISTIQUE
+   (Inspiré de la maquette de référence — Strictement réservé au côté client)
+   ========================================================================== */
+.client-portal {
+  --c-font-display: 'Host Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --c-font-serif: 'Host Grotesk', 'Newsreader', -apple-system, sans-serif;
+  --c-font-sans: 'Host Grotesk', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --c-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+
+  --c-bg: #FAF5F0;             /* Fond crème lin chaud signature Linea */
+  --c-surface: #FFFFFF;        /* Cartes blanc pur */
+  --c-surface-subtle: #F5EFE8; /* Fond carte secondaire */
+  --c-text-main: #1B1411;      /* Noir d'encre chaud Linea (#1b1411) */
+  --c-text-muted: #5C4F48;     /* Gris chaud Linea (#5c4f48) */
+  --c-text-light: #8C7D75;     /* Métadonnées & sous-titres Linea */
+  --c-text-dim: #B8ABA3;       /* Gris discret Linea (#b8aba3) */
+
+  --c-accent-red: #C2410C;     /* Terracotta chaleureux */
+  --c-accent-green: #25D366;   /* Vert WhatsApp */
+  --c-border: #EEE5DC;         /* Filet fin élégant Linea (#eee5dc) */
+  --c-border-subtle: #E8DFD5;
+  --c-border-hover: rgba(27, 20, 17, 0.22);
+
+  --c-badge-bg: #EAE6DF;
+  --c-badge-text: #292524;
+  --c-badge-green-bg: #DCFCE7;
+  --c-badge-green-text: #166534;
+
+  --c-btn-primary-bg: #140D09;
+  --c-btn-primary-text: #FFFFFF;
+  --c-btn-secondary-bg: #FFFFFF;
+  --c-btn-secondary-border: #D6D3D1;
+  --c-btn-secondary-text: #140D09;
+
+  background-color: var(--c-bg);
+  color: var(--c-text-main);
+  font-family: var(--c-font-sans);
+  min-height: 100vh;
+}
+
+.client-portal h1,
+.client-portal h2,
+.client-portal h3,
+.client-portal .client-serif,
+.client-portal .client-display {
+  font-family: var(--c-font-display);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  color: var(--c-text-main);
+}
+
+.client-portal .client-mono {
+  font-family: var(--c-font-mono);
+}
+
+.client-portal .client-card {
+  background-color: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.client-portal .client-card:hover {
+  border-color: var(--c-border-hover);
+  box-shadow: 0 4px 12px rgba(28, 25, 23, 0.04);
+}
+
+.client-portal .client-badge {
+  font-family: var(--c-font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background-color: var(--c-badge-bg);
+  color: var(--c-badge-text);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.client-portal .client-badge-red {
+  background-color: #FEE2E2;
+  color: #991B1B;
+}
+
+.client-portal .client-badge-green {
+  background-color: var(--c-badge-green-bg);
+  color: var(--c-badge-green-text);
+}
+
+.client-portal .client-eyebrow {
+  font-family: var(--c-font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--c-text-light);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.client-portal .client-price-red {
+  color: var(--c-accent-red);
+  font-weight: 700;
+}
+
+.client-portal .client-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--c-btn-primary-bg);
+  color: var(--c-btn-primary-text);
+  font-family: var(--c-font-sans);
+  font-weight: 700;
+  font-size: 0.86rem;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--c-btn-primary-bg);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.client-portal .client-btn-primary:hover {
+  background-color: #292524;
+  border-color: #292524;
+  color: #FFFFFF;
+}
+
+.client-portal .client-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--c-btn-secondary-bg);
+  color: var(--c-btn-secondary-text);
+  font-family: var(--c-font-sans);
+  font-weight: 600;
+  font-size: 0.86rem;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--c-btn-secondary-border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.client-portal .client-btn-secondary:hover {
+  background-color: var(--c-surface-subtle);
+  border-color: #A8A29E;
+}
+
+.client-portal .client-shipping-mark-box {
+  background-color: #FAF8F5;
+  border: 1px dashed #D6D3D1;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: var(--c-font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--c-text-main);
+  letter-spacing: 0.04em;
+}
+
+/* ==========================================================================
+   DISPOSITION EN ZIGZAG ALTERNÉ (STYLE LINEA / ÉDITORIAL HAUT DE GAMME)
+   ========================================================================== */
+.client-portal .zigzag-section {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+  padding: 48px 0;
+  border-top: 1px solid var(--c-border);
+  align-items: center;
+}
+
+@media (min-width: 900px) {
+  .client-portal .zigzag-section {
+    grid-template-columns: 1.18fr 0.82fr;
+    gap: 54px;
+    padding: 64px 0;
+  }
+  .client-portal .zigzag-section.zigzag-reverse {
+    grid-template-columns: 0.82fr 1.18fr;
+  }
+  .client-portal .zigzag-section.zigzag-reverse .zigzag-content {
+    order: 2;
+  }
+  .client-portal .zigzag-section.zigzag-reverse .zigzag-side {
+    order: 1;
+  }
+}
+
+.client-portal .zigzag-card {
+  background-color: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 16px;
+  padding: 26px 28px;
+  box-shadow: 0 4px 24px -4px rgba(27, 20, 17, 0.04);
+}
+
+
+
 
 
 

@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home,
-  Search,
   Layers,
   Calculator,
   MapPin,
+  Search,
 } from "lucide-react";
 
 export function FloatingBottomNav() {
@@ -15,17 +15,17 @@ export function FloatingBottomNav() {
 
   const navItems = [
     { id: "home", label: "Accueil", icon: Home, href: "/", isActive: pathname === "/" },
-    { id: "services", label: "Services", icon: Layers, href: "/services", isActive: pathname === "/services" },
+    { id: "services", label: "Services", icon: Layers, href: "/services", isActive: pathname.startsWith("/services") },
+    { id: "tariffs", label: "Simulateur", icon: Calculator, href: "/tariffs", isActive: pathname.startsWith("/tariffs") },
+    { id: "warehouses", label: "Entrepôts", icon: MapPin, href: "/warehouses", isActive: pathname.startsWith("/warehouses") },
     { id: "tracking", label: "Suivi", icon: Search, href: "/tracking", isActive: pathname.startsWith("/tracking") },
-    { id: "tariffs", label: "Tarifs", icon: Calculator, href: "/tariffs", isActive: pathname === "/tariffs" },
-    { id: "warehouses", label: "Entrepôts", icon: MapPin, href: "/warehouses", isActive: pathname === "/warehouses" },
   ];
 
   return (
     <div
       style={{
         position: "fixed",
-        bottom: "22px",
+        bottom: "18px",
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 999,
@@ -38,13 +38,13 @@ export function FloatingBottomNav() {
           display: "flex",
           alignItems: "center",
           gap: "4px",
-          padding: "6px 8px",
-          backgroundColor: "rgba(17, 24, 39, 0.94)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
+          padding: "5px 6px",
+          backgroundColor: "rgba(255, 255, 255, 0.95)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
           borderRadius: "9999px",
-          border: "1px solid rgba(255, 255, 255, 0.12)",
-          boxShadow: "0 10px 30px -5px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.15)",
+          border: "1px solid rgba(28, 25, 23, 0.12)",
+          boxShadow: "0 10px 28px -4px rgba(28, 25, 23, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04)",
         }}
       >
         {navItems.map((item) => {
@@ -57,22 +57,23 @@ export function FloatingBottomNav() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "6px",
-                padding: "8px 14px",
+                padding: "8px 13px",
                 borderRadius: "9999px",
-                fontSize: "0.82rem",
-                fontWeight: 700,
+                fontSize: "0.74rem",
+                fontWeight: item.isActive ? 700 : 600,
+                letterSpacing: "0.01em",
                 textDecoration: "none",
-                transition: "all 0.18s cubic-bezier(0.16, 1, 0.3, 1)",
-                backgroundColor: item.isActive ? "#FFFFFF" : "transparent",
-                color: item.isActive ? "#111827" : "#D1D5DB",
+                transition: "all 0.16s ease",
+                backgroundColor: item.isActive ? "#140D09" : "transparent",
+                color: item.isActive ? "#FFFFFF" : "#57534E",
                 whiteSpace: "nowrap",
                 touchAction: "manipulation",
                 userSelect: "none",
               }}
               title={item.label}
             >
-              <Icon size={15} strokeWidth={item.isActive ? 2.5 : 2} color={item.isActive ? "#111827" : "#D1D5DB"} />
-              <span className="bottom-nav-label">{item.label}</span>
+              <Icon size={14} strokeWidth={item.isActive ? 2.4 : 1.9} color={item.isActive ? "#FFFFFF" : "#57534E"} />
+              <span>{item.label}</span>
             </Link>
           );
         })}

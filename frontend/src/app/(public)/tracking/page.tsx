@@ -27,49 +27,38 @@ export default function TrackingPage() {
   return (
     <div
       style={{
-        backgroundColor: "#FFFFFF",
-        color: "#111827",
+        backgroundColor: "transparent",
+        color: "var(--c-text-main)",
         minHeight: "calc(100vh - 110px)",
-        padding: "48px 20px 64px 20px",
+        padding: "36px 20px 80px 20px",
         boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
       }}
     >
-      <div style={{ maxWidth: "720px", margin: "0 auto", width: "100%" }}>
+      <div style={{ maxWidth: "760px", margin: "0 auto", width: "100%" }}>
         <ScrollReveal>
           <div style={{ textAlign: "center", marginBottom: "36px" }}>
-            <div
-              style={{
-                display: "inline-block",
-                padding: "4px 12px",
-                borderRadius: "9999px",
-                backgroundColor: "#F3F4F6",
-                fontSize: "0.76rem",
-                fontWeight: 700,
-                color: "#4B5563",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                marginBottom: "12px",
-              }}
-            >
-              Traçabilité en Direct
+            <div className="client-eyebrow" style={{ justifyContent: "center", marginBottom: "12px" }}>
+              <span style={{ color: "var(--c-accent-red)" }}>●</span>
+              <span>TRAÇABILITÉ EN DIRECT & BORDEREAU</span>
             </div>
 
             <h1
               style={{
-                fontSize: "clamp(2rem, 4vw, 2.8rem)",
-                fontWeight: 800,
-                letterSpacing: "-0.03em",
-                color: "#111827",
+                fontFamily: "var(--c-font-display)",
+                fontSize: "clamp(2.2rem, 4.6vw, 3.4rem)",
+                fontWeight: 700,
+                letterSpacing: "-0.04em",
+                color: "var(--c-text-main)",
                 margin: "0 0 12px 0",
               }}
             >
-              Suivre mon Colis
+              Suivre mon Colis en Temps Réel
             </h1>
 
-            <p style={{ fontSize: "1.02rem", color: "#4B5563", margin: 0, lineHeight: 1.55 }}>
+            <p style={{ fontSize: "1.02rem", color: "var(--c-text-muted)", margin: 0, lineHeight: 1.55 }}>
               Entrez le numéro inscrit sur votre bordereau pour savoir exactement où se trouve votre paquet en temps réel.
             </p>
           </div>

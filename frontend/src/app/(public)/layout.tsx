@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { MapPin, Phone, ArrowUpRight } from "lucide-react";
-import { CircularFlag } from "@/components/CircularFlag";
 import { FloatingBottomNav } from "@/components/FloatingBottomNav";
+import { WhatsAppFloatingButton } from "@/components/WhatsAppFloatingButton";
 
 export default function PublicLayout({
   children,
@@ -9,189 +8,125 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#FFFFFF" }}>
-      {/* Header Épuré : UNIQUEMENT LE LOGO BIEN IMPOSANT */}
+    <div className="client-portal" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      {/* ========================================================
+          HEADER ROUM TRANSIT : LE LOGO ET STRICTEMENT RIEN D'AUTRE
+          (Zéro bordure, fond lin naturel continu avec le body)
+         ======================================================== */}
       <header
         style={{
-          backgroundColor: "#FFFFFF",
-          borderBottom: "1px solid #E5E7EB",
-          padding: "18px 24px",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
+          backgroundColor: "transparent",
+          borderBottom: "none",
+          padding: "20px 28px 10px 28px",
+          position: "relative",
+          zIndex: 50,
         }}
       >
-        <Link
-          href="/"
+        <div
           style={{
-            display: "inline-flex",
+            maxWidth: "1160px",
+            margin: "0 auto",
+            display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            textDecoration: "none",
           }}
-          title="Roum Transit International"
         >
-          <img
-            src="/images/roum-logo-tight.png"
-            alt="Roum Transit International"
+          <Link
+            href="/"
             style={{
-              height: "68px",
-              width: "auto",
-              objectFit: "contain",
-              display: "block",
+              display: "inline-flex",
+              alignItems: "center",
+              textDecoration: "none",
             }}
-          />
-        </Link>
+            title="ROUM TRANSIT INTERNATIONAL"
+          >
+            <img
+              src="/images/roum-logo-transparent.png"
+              alt="Roum Transit"
+              style={{
+                height: "46px",
+                width: "auto",
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
+          </Link>
+        </div>
       </header>
 
-      {/* Contenu de la page avec marge basse pour la nav bar flottante */}
-      <main style={{ flex: 1, paddingBottom: "80px" }}>{children}</main>
+      {/* Contenu principal */}
+      <main style={{ flex: 1, paddingBottom: "90px" }}>{children}</main>
 
-      {/* Navigation Flottante en Bas : Format Pills avec Icônes SVG */}
+      {/* Navigation Flottante en Bas pour mobile et desktop */}
       <FloatingBottomNav />
 
-      {/* Footer Minimaliste & Architectural Grand Format */}
+      {/* Vrai bouton WhatsApp flottant en bas à droite (widget chatbot) */}
+      <WhatsAppFloatingButton />
+
+      {/* Pied de page sobre */}
       <footer
         style={{
           borderTop: "1px solid rgba(28, 25, 23, 0.08)",
-          backgroundColor: "#FAF9F6",
-          padding: "72px 24px 40px 24px",
+          backgroundColor: "#F7F5F0",
+          padding: "36px 24px 28px 24px",
         }}
       >
-        <div style={{ maxWidth: "1240px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1160px", margin: "0 auto" }}>
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: "48px 32px",
-              marginBottom: "56px",
-            }}
-          >
-            {/* Colonne 1 : Identité & Vocation */}
-            <div>
-              <img
-                src="/images/roum-logo-tight.png"
-                alt="Logo Roum Transit"
-                style={{
-                  height: "56px",
-                  width: "auto",
-                  objectFit: "contain",
-                  marginBottom: "16px",
-                  display: "block",
-                }}
-              />
-              <p style={{ color: "#4B5563", fontSize: "0.88rem", lineHeight: 1.65, margin: "0 0 16px 0", maxWidth: "340px" }}>
-                Roum Transit International — Spécialiste du fret aérien express, groupage maritime et approvisionnement direct entre l&apos;Asie, les Émirats, l&apos;Europe et l&apos;Afrique de l&apos;Ouest.
-              </p>
-            </div>
-
-            {/* Colonne 2 : Couloirs Stratégiques */}
-            <div>
-              <div style={{ fontSize: "0.72rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em", color: "#9CA3AF", marginBottom: "16px" }}>
-                01 / COULOIRS ACTIFS
-              </div>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0, color: "#374151", fontSize: "0.85rem", display: "grid", gap: "12px" }}>
-                <li style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <CircularFlag countryCode="CN" size={17} />
-                  <span>Chine (Guangzhou / Yiwu) vers Afrique</span>
-                </li>
-                <li style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <CircularFlag countryCode="AE" size={17} />
-                  <span>Dubaï (Émirats) vers Afrique (4 à 5j)</span>
-                </li>
-                <li style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <CircularFlag countryCode="MA" size={17} />
-                  <span>Maroc (Casablanca) vers 5 Pays (5j)</span>
-                </li>
-                <li style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <CircularFlag countryCode="FR" size={17} />
-                  <span>France (Paris) et Côte d&apos;Ivoire</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Colonne 3 : Entrepôts & Hubs */}
-            <div>
-              <div style={{ fontSize: "0.72rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em", color: "#9CA3AF", marginBottom: "16px" }}>
-                02 / PLATEFORMES PHYSIQUES
-              </div>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0, color: "#4B5563", fontSize: "0.85rem", display: "grid", gap: "10px" }}>
-                <li>
-                  <strong style={{ color: "#18181B" }}>Guangzhou (Chine) :</strong> Magasin de consolidation & pesée
-                </li>
-                <li>
-                  <strong style={{ color: "#18181B" }}>Dubaï (Émirats) :</strong> Entrepôt fret & parfumerie
-                </li>
-                <li>
-                  <strong style={{ color: "#18181B" }}>Casablanca (Maroc) :</strong> Hub groupage subsaharien
-                </li>
-                <li>
-                  <strong style={{ color: "#18181B" }}>Abidjan (CI) :</strong> Agence principale Bingerville Carrefour Safari
-                </li>
-              </ul>
-            </div>
-
-            {/* Colonne 4 : Permanence & Ligne Directe */}
-            <div>
-              <div style={{ fontSize: "0.72rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em", color: "#9CA3AF", marginBottom: "16px" }}>
-                03 / CONTACT & PERMANENCE
-              </div>
-              <p style={{ color: "#4B5563", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "8px", margin: "0 0 10px 0" }}>
-                <MapPin size={15} color="#18181B" style={{ flexShrink: 0 }} />
-                <span>Abidjan, Bingerville Carrefour Safari</span>
-              </p>
-              <p style={{ color: "#4B5563", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "8px", margin: "0 0 16px 0" }}>
-                <Phone size={15} color="#18181B" style={{ flexShrink: 0 }} />
-                <span>Ligne directe : <strong style={{ color: "#18181B" }}>+225 01 53 638 569</strong></span>
-              </p>
-              <a
-                href="https://wa.me/2250153638569"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "0.8rem",
-                  fontWeight: 700,
-                  color: "#18181B",
-                  textDecoration: "underline",
-                }}
-              >
-                <span>Échanger avec un conseiller sur WhatsApp</span>
-                <ArrowUpRight size={13} />
-              </a>
-            </div>
-          </div>
-
-          {/* Mentions Bas de Page */}
-          <div
-            style={{
-              paddingTop: "24px",
-              borderTop: "1px solid rgba(28, 25, 23, 0.08)",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
               flexWrap: "wrap",
               gap: "16px",
-              fontSize: "0.78rem",
-              color: "#9CA3AF",
+              marginBottom: "20px",
             }}
           >
-            <div>
-              © 2026 ROUM TRANSIT INTERNATIONAL. Tous droits réservés.
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <img
+                src="/images/roum-logo-transparent.png"
+                alt="Roum Transit"
+                style={{ height: "34px", width: "auto" }}
+              />
+              <span style={{ fontSize: "0.82rem", color: "#57534E" }}>
+                Agence Abidjan : Bingerville Carrefour Safari
+              </span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-              <span>Traçabilité certifiée</span>
-              <span>·</span>
-              <span>Dédouanement garanti</span>
-              <span>·</span>
-              <span>Retrait sécurisé en agence</span>
+
+            <div style={{ display: "flex", gap: "18px", fontSize: "0.82rem", color: "#57534E" }}>
+              <Link href="/services" style={{ textDecoration: "none", color: "inherit" }}>
+                Services
+              </Link>
+              <Link href="/tariffs" style={{ textDecoration: "none", color: "inherit" }}>
+                Tarifs
+              </Link>
+              <Link href="/warehouses" style={{ textDecoration: "none", color: "inherit" }}>
+                Entrepôts
+              </Link>
+              <Link href="/tracking" style={{ textDecoration: "none", color: "inherit" }}>
+                Suivi Colis
+              </Link>
             </div>
+          </div>
+
+          <div
+            style={{
+              paddingTop: "14px",
+              borderTop: "1px solid rgba(28, 25, 23, 0.06)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "8px",
+              fontSize: "0.72rem",
+              color: "#78716C",
+              fontFamily: "var(--c-font-mono)",
+            }}
+          >
+            <div>© 2026 ROUM TRANSIT INTERNATIONAL</div>
+            <div>DÉDOUANEMENT COMPRIS · PESÉE CERTIFIÉE · ABIDJAN</div>
           </div>
         </div>
       </footer>
     </div>
   );
 }
-

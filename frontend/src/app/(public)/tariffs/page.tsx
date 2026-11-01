@@ -235,7 +235,7 @@ export default function TariffsPage() {
     return {
       amountFcfa: weight * 10000,
       duration: "4 à 5 jours",
-      label: `Fret Aérien Régulier (10 000 FCFA / kg)`,
+      label: `Transport Aérien Régulier (10 000 FCFA / kg)`,
       rateFormatted: "10 000 FCFA / kg",
       mode: "AIR" as const,
     };
@@ -255,8 +255,8 @@ export default function TariffsPage() {
   return (
     <div
       style={{
-        backgroundColor: "#FFFFFF",
-        color: "#111827",
+        backgroundColor: "transparent",
+        color: "var(--c-text-main)",
         minHeight: "calc(100vh - 110px)",
         padding: "36px 20px 80px 20px",
         boxSizing: "border-box",
@@ -266,36 +266,25 @@ export default function TariffsPage() {
         <ScrollReveal>
           {/* Titre & Explications Limpides */}
           <div style={{ textAlign: "center", marginBottom: "36px" }}>
-            <div
-              style={{
-                display: "inline-block",
-                padding: "4px 14px",
-                borderRadius: "9999px",
-                backgroundColor: "#F3F4F6",
-                fontSize: "0.76rem",
-                fontWeight: 700,
-                color: "#4B5563",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                marginBottom: "12px",
-              }}
-            >
-              Calculateur Transparent
+            <div className="client-eyebrow" style={{ justifyContent: "center", marginBottom: "12px" }}>
+              <span style={{ color: "var(--c-accent-red)" }}>●</span>
+              <span>SIMULATEUR DE COTATION IMMÉDIATE</span>
             </div>
 
             <h1
               style={{
-                fontSize: "clamp(2rem, 4vw, 2.9rem)",
-                fontWeight: 800,
-                letterSpacing: "-0.03em",
-                color: "#111827",
+                fontFamily: "var(--c-font-display)",
+                fontSize: "clamp(2.2rem, 4.6vw, 3.4rem)",
+                fontWeight: 700,
+                letterSpacing: "-0.04em",
+                color: "var(--c-text-main)",
                 margin: "0 0 10px 0",
               }}
             >
               Estimez le Prix Exact de votre Colis
             </h1>
 
-            <p style={{ fontSize: "1.02rem", color: "#4B5563", margin: "0 auto", maxWidth: "660px", lineHeight: 1.55 }}>
+            <p style={{ fontSize: "1.02rem", color: "var(--c-text-muted)", margin: "0 auto", maxWidth: "660px", lineHeight: 1.55 }}>
               Sélectionnez votre pays de départ, votre destination et votre type de marchandises.
               Le tarif affiché <strong>inclut 100% des frais de douane</strong>, sans mauvaise surprise.
             </p>

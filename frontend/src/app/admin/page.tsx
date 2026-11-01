@@ -1193,103 +1193,103 @@ const DEFAULT_15_SHIPMENTS = [
   },
   {
     id: "tx-11",
-    tracking_number: "RM-AIR-2610-D4E5F6",
-    client_name: "Mariam Bamba",
-    client_phone: "+225 01 23 45 67",
-    origin_city: "Guangzhou",
-    origin_country: "Chine",
-    destination_city: "Abidjan",
-    destination_country: "Côte d'Ivoire",
-    current_status: "DELIVERED",
-    status_label: "Livré au client",
-    shipping_mode_name: "Voie Aérienne Express",
-    shipping_mode_id: "AIR_EXPRESS",
-    total_parcels_count: 1,
-    total_weight_kg: 16.0,
-    total_volume_cbm: 0.11,
-    payment_status: "PAID",
-    total_price_minor: 22400,
-    created_at: "2026-10-21 14:10:00",
-  },
-  {
-    id: "tx-12",
-    tracking_number: "RM-AIR-2610-T7U8V9",
-    client_name: "Sékou Touré",
-    client_phone: "+221 70 345 67 89",
+    tracking_number: "RM-AIR-2610-J4K5L6",
+    client_name: "Fatoumata Bamba",
+    client_phone: "+221 70 334 45 55",
     origin_city: "Casablanca",
     origin_country: "Maroc",
     destination_city: "Dakar",
     destination_country: "Sénégal",
     current_status: "DELIVERED",
-    status_label: "Remis en main propre",
-    shipping_mode_name: "Voie Aérienne Standard",
-    shipping_mode_id: "AIR_STANDARD",
-    total_parcels_count: 3,
-    total_weight_kg: 31.0,
-    total_volume_cbm: 0.22,
+    status_label: "Livré à Dakar",
+    shipping_mode_name: "Voie Aérienne Express",
+    shipping_mode_id: "AIR_EXPRESS",
+    total_parcels_count: 1,
+    total_weight_kg: 16.5,
+    total_volume_cbm: 0.1,
     payment_status: "PAID",
-    total_price_minor: 37200,
-    created_at: "2026-10-17 10:00:00",
+    total_price_minor: 115500,
+    created_at: "2026-10-18 23:49:23",
+  },
+  {
+    id: "tx-12",
+    tracking_number: "RM-SEA-2610-N7P8Q9",
+    client_name: "Cheick Oumar",
+    client_phone: "+224 66 55 44 33",
+    origin_city: "Guangzhou",
+    origin_country: "Chine",
+    destination_city: "Conakry",
+    destination_country: "Guinée",
+    current_status: "DELIVERED",
+    status_label: "Livré à Conakry",
+    shipping_mode_name: "Voie Maritime (Bateau)",
+    shipping_mode_id: "SEA_LCL",
+    total_parcels_count: 3,
+    total_weight_kg: 290.0,
+    total_volume_cbm: 1.95,
+    payment_status: "PAID",
+    total_price_minor: 585000,
+    created_at: "2026-09-27 23:49:23",
   },
   {
     id: "tx-13",
-    tracking_number: "RM-AIR-2610-H8J9K0",
-    client_name: "Ousmane Fofana",
-    client_phone: "+223 78 90 12 34",
-    origin_city: "Casablanca",
-    origin_country: "Maroc",
+    tracking_number: "RM-AIR-2610-U1V2W3",
+    client_name: "Marie-Claire Kouassi",
+    client_phone: "+225 01 22 33 44",
+    origin_city: "Paris",
+    origin_country: "France",
+    destination_city: "Abidjan",
+    destination_country: "Côte d'Ivoire",
+    current_status: "IN_TRANSIT",
+    status_label: "En vol Paris → Abidjan",
+    shipping_mode_name: "Voie Aérienne Express",
+    shipping_mode_id: "AIR_EXPRESS",
+    total_parcels_count: 1,
+    total_weight_kg: 8.0,
+    total_volume_cbm: 0.05,
+    payment_status: "PAID",
+    total_price_minor: 68000,
+    created_at: "2026-10-26 23:49:23",
+  },
+  {
+    id: "tx-14",
+    tracking_number: "RM-AIR-2610-D8E9F1",
+    client_name: "Bakary Dembélé",
+    client_phone: "+223 78 99 88 77",
+    origin_city: "Guangzhou",
+    origin_country: "Chine",
     destination_city: "Bamako",
     destination_country: "Mali",
     current_status: "RECEIVED_AT_HUB",
-    status_label: "Réceptionné magasin Casablanca",
+    status_label: "Reçu au magasin de Guangzhou",
     shipping_mode_name: "Voie Aérienne Express",
     shipping_mode_id: "AIR_EXPRESS",
     total_parcels_count: 1,
     total_weight_kg: 12.0,
     total_volume_cbm: 0.08,
     payment_status: "PENDING",
-    total_price_minor: 16800,
-    created_at: "2026-10-27 14:20:00",
-  },
-  {
-    id: "tx-14",
-    tracking_number: "RM-AIR-2610-L1M2N3",
-    client_name: "Fatoumata Barry",
-    client_phone: "+228 91 23 45 67",
-    origin_city: "Yiwu",
-    origin_country: "Chine",
-    destination_city: "Lomé",
-    destination_country: "Togo",
-    current_status: "RECEIVED_AT_HUB",
-    status_label: "Groupage en cours magasin Yiwu",
-    shipping_mode_name: "Voie Maritime (Bateau)",
-    shipping_mode_id: "SEA_LCL",
-    total_parcels_count: 4,
-    total_weight_kg: 45.0,
-    total_volume_cbm: 0.3,
-    payment_status: "PENDING",
-    total_price_minor: 25000,
-    created_at: "2026-10-27 11:45:00",
+    total_price_minor: 144000,
+    created_at: "2026-10-27 19:49:23",
   },
   {
     id: "tx-15",
-    tracking_number: "RM-AIR-2610-K3L4P5",
-    client_name: "Modibo Samaké",
-    client_phone: "+229 97 89 01 23",
-    origin_city: "Dubaï",
-    origin_country: "Émirats AU",
-    destination_city: "Cotonou",
-    destination_country: "Bénin",
+    tracking_number: "RM-SEA-2610-S4T5U6",
+    client_name: "Salif Traoré",
+    client_phone: "+225 07 88 99 00",
+    origin_city: "Yiwu",
+    origin_country: "Chine",
+    destination_city: "Abidjan",
+    destination_country: "Côte d'Ivoire",
     current_status: "RECEIVED_AT_HUB",
-    status_label: "Colis en attente de pesée Dubaï",
-    shipping_mode_name: "Voie Aérienne Express",
-    shipping_mode_id: "AIR_EXPRESS",
-    total_parcels_count: 2,
-    total_weight_kg: 30.0,
-    total_volume_cbm: 0.2,
+    status_label: "Empotage conteneur à Yiwu",
+    shipping_mode_name: "Voie Maritime (Bateau)",
+    shipping_mode_id: "SEA_LCL",
+    total_parcels_count: 5,
+    total_weight_kg: 250.0,
+    total_volume_cbm: 1.8,
     payment_status: "PENDING",
-    total_price_minor: 42000,
-    created_at: "2026-10-27 16:30:00",
+    total_price_minor: 540000,
+    created_at: "2026-10-27 17:49:23",
   },
 ];
 
@@ -1599,7 +1599,21 @@ export default function AdminPage() {
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem("roum_shipments_data");
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const BANNED_MOCKS = new Set([
+              "RM-AIR-2610-D4E5F6",
+              "RM-AIR-2610-T7U8V9",
+              "RM-AIR-2610-H8J9K0",
+              "RM-AIR-2610-L1M2N3",
+              "RM-AIR-2610-K3L4P5",
+              "RM-AIR-2610-N1P2Q3",
+            ]);
+            const filtered = parsed.filter((s: any) => !BANNED_MOCKS.has(s.tracking_number));
+            if (filtered.length > 0) return filtered;
+          }
+        }
       } catch {}
     }
     return DEFAULT_15_SHIPMENTS;
@@ -2727,12 +2741,12 @@ export default function AdminPage() {
         .then((r) => r.json())
         .then((d) => {
           if (d.shipments && d.shipments.length > 0) {
-            const existingTracking = new Set(d.shipments.map((s: any) => s.tracking_number));
-            const merged = [
-              ...d.shipments,
-              ...DEFAULT_15_SHIPMENTS.filter((s) => !existingTracking.has(s.tracking_number)),
-            ];
-            setShipments(merged);
+            setShipments(d.shipments);
+            if (typeof window !== "undefined") {
+              try {
+                localStorage.setItem("roum_shipments_data", JSON.stringify(d.shipments));
+              } catch {}
+            }
           } else {
             setShipments(DEFAULT_15_SHIPMENTS);
           }
