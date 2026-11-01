@@ -3935,7 +3935,7 @@ export default function AdminPage() {
           }}
         >
           <div style={{ textAlign: "center", marginBottom: "26px" }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: "18px" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
               <img
                 src="/images/roum-logo-tight.png"
                 alt="Logo Officiel Roum Transit"
@@ -3947,26 +3947,6 @@ export default function AdminPage() {
                   display: "block",
                 }}
               />
-            </div>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "7px",
-                padding: "3px 11px",
-                borderRadius: "9999px",
-                background: "#FAF8F5",
-                border: "1px solid rgba(28, 25, 23, 0.09)",
-                fontSize: "0.68rem",
-                fontWeight: "700",
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: "var(--text-secondary)",
-                marginBottom: "10px",
-              }}
-            >
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#059669" }} />
-              Portail Direction & Opérations
             </div>
             <h1
               style={{
