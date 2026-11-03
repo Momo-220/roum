@@ -9,16 +9,29 @@ import {
   findTariff,
   formatTariffPrice,
   saveClientRequest,
+  getLiveCompanySettings,
   OfficialTariff,
 } from "@/shared";
 
 export default function TariffsPage() {
   const [tariffs, setTariffs] = useState<OfficialTariff[]>(() => getLiveTariffs());
+  const [settings, setSettings] = useState<Record<string, string>>(() => getLiveCompanySettings());
 
   // Synchronisation temps réel avec le Dashboard Admin
   useEffect(() => {
+    fetch("/api/v1/public/settings")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.settings) {
+          setSettings((prev) => ({ ...prev, ...d.settings }));
+          localStorage.setItem("roum_company_settings", JSON.stringify(d.settings));
+        }
+      })
+      .catch(() => {});
+
     const handleSync = () => {
       setTariffs(getLiveTariffs());
+      setSettings(getLiveCompanySettings());
     };
     window.addEventListener("storage", handleSync);
     return () => window.removeEventListener("storage", handleSync);
@@ -596,6 +609,31 @@ export default function TariffsPage() {
                   </div>
                   <div>
                     Retrait : <strong>Gratuit en agence locale ou livraison à destination</strong>
+                  </div>
+                </div>
+
+                {/* Moyens de Paiement Autorisés configurés par l'Admin */}
+                <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px dashed #D1D5DB" }}>
+                  <div style={{ fontSize: "0.74rem", fontWeight: 800, textTransform: "uppercase", color: "#111827", letterSpacing: "0.04em", marginBottom: "8px" }}>
+                    Moyens de Règlement Acceptés :
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", fontSize: "0.78rem" }}>
+                    <div style={{ background: "#FFFFFF", padding: "6px 8px", borderRadius: "6px", border: "1px solid #E5E7EB" }}>
+                      <strong style={{ color: "#1D4ED8" }}>Wave : </strong>
+                      <span>{settings.payment_wave_ci || "+225 01 53 63 85 69"}</span>
+                    </div>
+                    <div style={{ background: "#FFFFFF", padding: "6px 8px", borderRadius: "6px", border: "1px solid #E5E7EB" }}>
+                      <strong style={{ color: "#EA580C" }}>Orange : </strong>
+                      <span>{settings.payment_orange_money_ci || "+225 07 48 29 11 00"}</span>
+                    </div>
+                    <div style={{ background: "#FFFFFF", padding: "6px 8px", borderRadius: "6px", border: "1px solid #E5E7EB" }}>
+                      <strong style={{ color: "#CA8A04" }}>MTN : </strong>
+                      <span>{settings.payment_mtn_momo_ci || "MOMO-749201"}</span>
+                    </div>
+                    <div style={{ background: "#FFFFFF", padding: "6px 8px", borderRadius: "6px", border: "1px solid #E5E7EB" }}>
+                      <strong style={{ color: "#0F766E" }}>Banque : </strong>
+                      <span>{settings.payment_bank_name || "BACI (Abidjan)"}</span>
+                    </div>
                   </div>
                 </div>
               </div>

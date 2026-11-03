@@ -33,7 +33,7 @@ export default function WarehousesPage() {
       countryCode: "AE",
       description: "Pour vos achats de parfumerie, cosmétiques, téléphones et électronique à Deira.",
       shippingMark: "ROUM TRANSIT DUBAI / [Votre Nom]",
-      addressToCopy: "Deira Wholesale Cargo Hub, Dubai, UAE — ROUM TRANSIT DUBAI",
+      addressToCopy: "Deira Wholesale Market, Dubai, UAE — ROUM TRANSIT DUBAI",
     },
     {
       id: "ma",

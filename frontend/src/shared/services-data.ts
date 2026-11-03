@@ -630,3 +630,55 @@ export async function saveClientRequest(data: {
   };
 }
 
+/**
+ * Coordonnées de paiement et paramètres officiels synchronisés avec l'Admin
+ */
+export const DEFAULT_COMPANY_SETTINGS: Record<string, string> = {
+  company_name: "ROUM TRANSIT INTERNATIONAL SARL",
+  company_headquarters: "Abidjan, Côte d'Ivoire",
+  company_email: "contact@roumtransit.com",
+  whatsapp_official_number: "+225 01 53 63 85 69",
+  whatsapp_support: "+225 01 53 63 85 69",
+  phone_secondary: "+225 07 48 29 11 00",
+
+  // Adresses de réception
+  warehouse_china_address: "Entrepôt Central Baiyun, Guangzhou, Guangdong, Chine",
+  warehouse_china_contact: "+86 138 0000 0000 (WhatsApp Chine)",
+  warehouse_dubai_address: "Al Sabkha Road, Deira Wholesale Market, Dubaï, Émirats Arabes Unis",
+  warehouse_dubai_contact: "+971 50 892 4110 (WhatsApp Dubaï)",
+  agency_paris_address: "Plateforme Cargo Roissy CDG / Dépôt Île-de-France, France",
+  agency_paris_contact: "+33 6 52 90 14 30 (Liaison Paris)",
+
+  // Moyens de paiement & Comptes officiels configurés par l'administration
+  payment_wave_ci: "+225 01 53 63 85 69",
+  payment_wave_name: "ROUM TRANSIT SARL",
+  payment_wave_merchant: "wave.me/roumtransit",
+  payment_orange_money_ci: "#144*389278# / +225 07 48 29 11 00",
+  payment_orange_name: "ROUM TRANSIT INTERNATIONAL",
+  payment_mtn_momo_ci: "MOMO-749201 / +225 05 94 32 10 05",
+  payment_mtn_name: "ROUM LOGISTICS",
+  payment_moov_money: "+225 01 02 03 04 05 (ROUM TRANSIT)",
+  payment_bank_name: "Banque Atlantique Côte d'Ivoire (BACI)",
+  payment_bank_account_holder: "ROUM TRANSIT INTERNATIONAL SARL",
+  payment_bank_rib: "CI092 01001 012345678901 24",
+  payment_bank_swift: "ATBKCIAB",
+  payment_cash_desks: "Guichets Espèces : Agence Abidjan & Magasin Guangzhou",
+  payment_receipt_terms: "Tout règlement donne lieu à un reçu officiel numéroté pour retrait de vos colis.",
+};
+
+export function getLiveCompanySettings(): Record<string, string> {
+  if (typeof window !== "undefined") {
+    try {
+      const saved = localStorage.getItem("roum_company_settings");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === "object") {
+          return { ...DEFAULT_COMPANY_SETTINGS, ...parsed };
+        }
+      }
+    } catch {}
+  }
+  return DEFAULT_COMPANY_SETTINGS;
+}
+
+

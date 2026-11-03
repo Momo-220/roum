@@ -168,14 +168,14 @@ function ServicesContent() {
       city: "Yiwu (Chine)",
       name: "Entrepôt Yiwu International Trade City",
       chinese: "浙江省金华市义乌市稠江街道长春小区 (ROUM TRANSIT)",
-      contact: "Contact Réception : +86 139 1111 2222 · Hub Yiwu",
+      contact: "Contact Réception : +86 139 1111 2222 · Dépôt Yiwu",
       mark: "ROUM / [VOTRE-NOM] / [VOTRE-VILLE] / [AIR ou BATEAU]",
     },
     dubai: {
       city: "Dubaï (Émirats Arabes Unis)",
       name: "Comptoir Dubaï Deira Creek",
       chinese: "Al Sabkha Road, Deira Wholesale Market, Dubai, UAE",
-      contact: "Contact Dubaï : +971 50 000 0000 · Hub Deira",
+      contact: "Contact Dubaï : +971 50 000 0000 · Agence Deira",
       mark: "ROUM / [VOTRE-NOM] / [VOTRE-VILLE] / AIR-DXB",
     },
     paris: {
@@ -376,7 +376,7 @@ function ServicesContent() {
                 <div>
                   <h2 className="bento-card-title">Comptoirs Internationaux</h2>
                   <div className="bento-stat-highlight" style={{ fontSize: "1.42rem", color: "#FFA066" }}>
-                    3 HUBS STRATÉGIQUES
+                    3 PAYS DESSERVIS
                   </div>
                   <p className="bento-card-subtitle">
                     Expéditions directes vers l&apos;Afrique depuis nos comptoirs de réception et ramassage partenaires.
@@ -406,7 +406,7 @@ function ServicesContent() {
                       }}
                       className="bento-cta-pill"
                     >
-                      <span>Expédier depuis un hub</span>
+                      <span>Lancer une expédition</span>
                       <ArrowRight size={14} />
                     </button>
                   </div>

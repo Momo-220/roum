@@ -161,6 +161,55 @@ publicRouter.get("/tariffs", async (c) => {
   return c.json({ tariffs: routes });
 });
 
+/**
+ * 2b. Consultation publique des coordonnées de paiement et paramètres de l'entreprise
+ * configurés par l'administration dans business_settings
+ */
+publicRouter.get("/settings", async (c) => {
+  const { results: settings } = await c.env.DB.prepare(
+    `SELECT key, value FROM business_settings`
+  ).all();
+
+  const publicMap: Record<string, string> = {};
+  const allowedKeys = new Set([
+    "company_name",
+    "company_tagline",
+    "company_headquarters",
+    "company_email",
+    "whatsapp_official_number",
+    "whatsapp_support",
+    "phone_secondary",
+    "payment_wave_ci",
+    "payment_wave_name",
+    "payment_wave_merchant",
+    "payment_orange_money_ci",
+    "payment_orange_name",
+    "payment_mtn_momo_ci",
+    "payment_mtn_name",
+    "payment_moov_money",
+    "payment_bank_name",
+    "payment_bank_account_holder",
+    "payment_bank_rib",
+    "payment_bank_swift",
+    "payment_cash_desks",
+    "payment_receipt_terms",
+    "warehouse_china_address",
+    "warehouse_china_contact",
+    "warehouse_dubai_address",
+    "warehouse_dubai_contact",
+    "agency_paris_address",
+    "agency_paris_contact",
+  ]);
+
+  for (const s of (settings as any[]) || []) {
+    if (allowedKeys.has(s.key)) {
+      publicMap[s.key] = s.value;
+    }
+  }
+
+  return c.json({ settings: publicMap });
+});
+
 const quoteRequestSchema = z.object({
   service_type: z.enum(["ALIBABA", "FORWARDING", "GENERAL"]).optional().default("GENERAL"),
   client_name: z.string().min(2, "Le nom est requis").max(120),

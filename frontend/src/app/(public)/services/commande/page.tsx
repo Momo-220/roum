@@ -11,8 +11,11 @@ import {
   Copy,
   Check,
   Sparkles,
+  CreditCard,
+  Building2,
+  Smartphone,
 } from "lucide-react";
-import { saveClientRequest } from "@/shared";
+import { saveClientRequest, getLiveCompanySettings } from "@/shared";
 
 export default function CommandeAchatPage() {
   const [option, setOption] = useState<"sans_fournisseur" | "avec_fournisseur">("sans_fournisseur");
@@ -25,6 +28,10 @@ export default function CommandeAchatPage() {
   } | null>(null);
   const [copiedRef, setCopiedRef] = useState(false);
   const [copiedMark, setCopiedMark] = useState(false);
+  const [copiedPay, setCopiedPay] = useState<string | null>(null);
+
+  // Paramètres et Moyens de Paiement synchronisés en direct avec l'Admin
+  const [settings, setSettings] = useState<Record<string, string>>(() => getLiveCompanySettings());
 
   // Form states
   const [clientName, setClientName] = useState("");
@@ -41,6 +48,29 @@ export default function CommandeAchatPage() {
   const [rmbAmount, setRmbAmount] = useState("");
   const [supplierContact, setSupplierContact] = useState("");
   const [goodsDescription, setGoodsDescription] = useState("");
+
+  // Synchronisation temps réel des coordonnées de paiement avec l'Admin
+  useState(() => {
+    if (typeof window !== "undefined") {
+      fetch("/api/v1/public/settings")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.settings) {
+            setSettings((prev) => ({ ...prev, ...d.settings }));
+            localStorage.setItem("roum_company_settings", JSON.stringify(d.settings));
+          }
+        })
+        .catch(() => {});
+    }
+  });
+
+  const copyPayMethod = (key: string, val: string) => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(val);
+      setCopiedPay(key);
+      setTimeout(() => setCopiedPay(null), 2000);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,6 +252,59 @@ export default function CommandeAchatPage() {
                     {copiedMark ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
                     <span>{copiedMark ? "Copié !" : "Copier"}</span>
                   </button>
+                </div>
+
+                {/* Coordonnées officielles de paiement configurées par l'administration */}
+                <div style={{ borderTop: "1px solid #E5E7EB", paddingTop: "14px", marginTop: "4px" }}>
+                  <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "8px" }}>
+                    Comptes Officiels de Règlement (Mobile Money &amp; Banque)
+                  </div>
+                  <div style={{ display: "grid", gap: "8px", fontSize: "0.82rem" }}>
+                    {/* Wave */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F9FAFB", padding: "8px 12px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
+                      <div>
+                        <strong style={{ color: "#1D4ED8" }}>Wave : </strong>
+                        <span>{settings.payment_wave_ci || "+225 01 53 63 85 69"} ({settings.payment_wave_name || "ROUM TRANSIT SARL"})</span>
+                      </div>
+                      <button type="button" onClick={() => copyPayMethod("wave", settings.payment_wave_ci || "+225 01 53 63 85 69")} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px" }}>
+                        {copiedPay === "wave" ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
+                      </button>
+                    </div>
+
+                    {/* Orange Money */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F9FAFB", padding: "8px 12px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
+                      <div>
+                        <strong style={{ color: "#EA580C" }}>Orange Money : </strong>
+                        <span>{settings.payment_orange_money_ci || "+225 07 48 29 11 00"} ({settings.payment_orange_name || "ROUM TRANSIT"})</span>
+                      </div>
+                      <button type="button" onClick={() => copyPayMethod("orange", settings.payment_orange_money_ci || "+225 07 48 29 11 00")} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px" }}>
+                        {copiedPay === "orange" ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
+                      </button>
+                    </div>
+
+                    {/* MTN MoMo */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F9FAFB", padding: "8px 12px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
+                      <div>
+                        <strong style={{ color: "#CA8A04" }}>MTN MoMo : </strong>
+                        <span>{settings.payment_mtn_momo_ci || "MOMO-749201"} ({settings.payment_mtn_name || "ROUM LOGISTICS"})</span>
+                      </div>
+                      <button type="button" onClick={() => copyPayMethod("mtn", settings.payment_mtn_momo_ci || "MOMO-749201")} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px" }}>
+                        {copiedPay === "mtn" ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
+                      </button>
+                    </div>
+
+                    {/* Virement BACI */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F9FAFB", padding: "8px 12px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
+                      <div>
+                        <strong style={{ color: "#0F766E" }}>Virement : </strong>
+                        <span style={{ fontFamily: "monospace", fontSize: "0.78rem" }}>{settings.payment_bank_rib || "CI092 01001 012345678901 24"}</span>
+                        <span style={{ fontSize: "0.74rem", color: "#6B7280", marginLeft: "4px" }}>({settings.payment_bank_name || "BACI"})</span>
+                      </div>
+                      <button type="button" onClick={() => copyPayMethod("bank", settings.payment_bank_rib || "CI092 01001 012345678901 24")} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px" }}>
+                        {copiedPay === "bank" ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -418,15 +501,33 @@ export default function CommandeAchatPage() {
                 </div>
               )}
 
-              {/* Bannière de réassurance paiement Mobile Money */}
+              {/* Bannière de réassurance paiement Mobile Money avec comptes en direct de l'Admin */}
               <div className="payment-notice">
-                <ShieldCheck size={20} color="#CC4E16" />
+                <ShieldCheck size={22} color="#CC4E16" />
                 <div className="notice-content">
-                  <strong>Paiement 100% Mobile Money garanti</strong>
+                  <strong>Paiement 100% Mobile Money &amp; Comptes de Règlement</strong>
                   <p>
-                    Réglez votre facture en Francs CFA via Wave, Orange Money ou MTN.
-                    Nous convertissons en Yuans et réglons votre usine sous 24h avec quittance certifiée.
+                    Réglez en Francs CFA via nos comptes officiels. Nous convertissons en Yuans et réglons votre usine sous 24h avec quittance certifiée.
                   </p>
+
+                  <div style={{ marginTop: "12px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "8px" }}>
+                    <div style={{ background: "rgba(255,255,255,0.85)", padding: "8px 10px", borderRadius: "8px", border: "1px solid #E5E7EB", fontSize: "0.78rem" }}>
+                      <strong style={{ color: "#1D4ED8" }}>Wave : </strong>
+                      <span>{settings.payment_wave_ci || "+225 01 53 63 85 69"}</span>
+                    </div>
+                    <div style={{ background: "rgba(255,255,255,0.85)", padding: "8px 10px", borderRadius: "8px", border: "1px solid #E5E7EB", fontSize: "0.78rem" }}>
+                      <strong style={{ color: "#EA580C" }}>Orange Money : </strong>
+                      <span>{settings.payment_orange_money_ci || "+225 07 48 29 11 00"}</span>
+                    </div>
+                    <div style={{ background: "rgba(255,255,255,0.85)", padding: "8px 10px", borderRadius: "8px", border: "1px solid #E5E7EB", fontSize: "0.78rem" }}>
+                      <strong style={{ color: "#CA8A04" }}>MTN MoMo : </strong>
+                      <span>{settings.payment_mtn_momo_ci || "MOMO-749201"}</span>
+                    </div>
+                    <div style={{ background: "rgba(255,255,255,0.85)", padding: "8px 10px", borderRadius: "8px", border: "1px solid #E5E7EB", fontSize: "0.78rem" }}>
+                      <strong style={{ color: "#0F766E" }}>Banque BACI : </strong>
+                      <span>{settings.payment_bank_name || "BACI (Abidjan)"}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

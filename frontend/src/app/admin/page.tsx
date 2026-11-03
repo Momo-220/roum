@@ -2849,6 +2849,15 @@ export default function AdminPage() {
     }
   };
 
+  // Synchronisation automatique en arrière-plan toutes les 25s (multi-appareils / clients distants)
+  useEffect(() => {
+    if (!token) return;
+    const timer = setInterval(() => {
+      loadDashboardData(token);
+    }, 25000);
+    return () => clearInterval(timer);
+  }, [token]);
+
   const handleCreateShipment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
