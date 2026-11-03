@@ -1707,6 +1707,41 @@ select.input-clean {
   box-shadow: 0 4px 24px -4px rgba(27, 20, 17, 0.04);
 }
 
+/* Bento Services Card Action Links & Arrows - Espacement Garanti */
+.bento-cta-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  background: transparent !important;
+  color: #FFFFFF !important;
+  font-size: 0.84rem !important;
+  font-weight: 700 !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  cursor: pointer !important;
+  transition: color 0.18s ease !important;
+}
+
+.bento-cta-pill:hover {
+  color: #FFA066 !important;
+}
+
+.bento-cta-pill span {
+  margin-right: 8px !important;
+}
+
+.bento-cta-pill svg {
+  margin-left: 6px !important;
+  flex-shrink: 0 !important;
+  transition: transform 0.18s ease !important;
+}
+
+.bento-cta-pill:hover svg {
+  transform: translateX(5px) !important;
+}
+
+
 
 
 

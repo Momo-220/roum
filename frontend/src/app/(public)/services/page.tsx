@@ -161,9 +161,10 @@ function ServicesContent() {
                     <Link
                       href="/services/commande"
                       className="bento-cta-pill"
+                      style={{ display: "inline-flex", alignItems: "center", gap: "10px", color: "#FFFFFF", textDecoration: "none", fontWeight: 700, fontSize: "0.84rem", whiteSpace: "nowrap" }}
                     >
-                      <span>Lancer une commande</span>
-                      <ArrowRight size={14} />
+                      <span style={{ marginRight: "8px" }}>Lancer une commande</span>
+                      <ArrowRight size={15} style={{ flexShrink: 0 }} />
                     </Link>
                   </div>
                 </div>
@@ -211,9 +212,10 @@ function ServicesContent() {
                     <Link
                       href="/tariffs?mode=AIR"
                       className="bento-cta-pill"
+                      style={{ display: "inline-flex", alignItems: "center", gap: "10px", color: "#FFFFFF", textDecoration: "none", fontWeight: 700, fontSize: "0.84rem", whiteSpace: "nowrap" }}
                     >
-                      <span>Voir les tarifs</span>
-                      <ArrowRight size={14} />
+                      <span style={{ marginRight: "8px" }}>Voir les tarifs</span>
+                      <ArrowRight size={15} style={{ flexShrink: 0 }} />
                     </Link>
                   </div>
                 </div>
@@ -258,9 +260,13 @@ function ServicesContent() {
                     <span style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.72)" }}>
                       Scellés sécurisés &amp; suivi direct
                     </span>
-                    <Link href="/tariffs?mode=SEA" className="bento-cta-pill">
-                      <span>Voir les tarifs maritimes</span>
-                      <ArrowRight size={14} />
+                    <Link
+                      href="/tariffs?mode=SEA"
+                      className="bento-cta-pill"
+                      style={{ display: "inline-flex", alignItems: "center", gap: "10px", color: "#FFFFFF", textDecoration: "none", fontWeight: 700, fontSize: "0.84rem", whiteSpace: "nowrap" }}
+                    >
+                      <span style={{ marginRight: "8px" }}>Voir les tarifs maritimes</span>
+                      <ArrowRight size={15} style={{ flexShrink: 0 }} />
                     </Link>
                   </div>
                 </div>
@@ -328,9 +334,10 @@ function ServicesContent() {
                     <Link
                       href="/tariffs"
                       className="bento-cta-pill"
+                      style={{ display: "inline-flex", alignItems: "center", gap: "10px", color: "#FFFFFF", textDecoration: "none", fontWeight: 700, fontSize: "0.84rem", whiteSpace: "nowrap" }}
                     >
-                      <span>Voir les tarifs des comptoirs</span>
-                      <ArrowRight size={14} />
+                      <span style={{ marginRight: "8px" }}>Voir les tarifs des comptoirs</span>
+                      <ArrowRight size={15} style={{ flexShrink: 0 }} />
                     </Link>
                   </div>
                 </div>
@@ -700,7 +707,7 @@ function ServicesContent() {
         .bento-cta-pill {
           display: inline-flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
           background: transparent;
           color: #FFFFFF;
           font-size: 0.84rem;
@@ -718,14 +725,18 @@ function ServicesContent() {
           color: #FFA066;
         }
 
-        .bento-cta-pill svg {
-          margin-left: 6px;
-          flex-shrink: 0;
-          transition: transform 0.18s ease;
+        :global(.bento-cta-pill span) {
+          margin-right: 8px !important;
         }
 
-        .bento-cta-pill:hover svg {
-          transform: translateX(5px);
+        :global(.bento-cta-pill svg) {
+          margin-left: 6px !important;
+          flex-shrink: 0 !important;
+          transition: transform 0.18s ease !important;
+        }
+
+        :global(.bento-cta-pill:hover svg) {
+          transform: translateX(5px) !important;
         }
 
         /* SPANS ASYMÉTRIQUES */
@@ -1306,7 +1317,7 @@ function ServicesContent() {
             color: #FFFFFF !important;
             padding: 4px 0 !important;
             font-size: 0.82rem !important;
-            gap: 10px !important;
+            gap: 12px !important;
             box-shadow: none !important;
             border-radius: 0 !important;
             font-weight: 700 !important;
@@ -1314,7 +1325,11 @@ function ServicesContent() {
             flex-shrink: 0 !important;
           }
 
-          .bento-cta-pill svg {
+          :global(.bento-cta-pill span) {
+            margin-right: 8px !important;
+          }
+
+          :global(.bento-cta-pill svg) {
             margin-left: 6px !important;
             flex-shrink: 0 !important;
           }
@@ -1392,14 +1407,18 @@ function ServicesContent() {
             justify-content: flex-start !important;
             padding: 4px 0 !important;
             font-size: 0.84rem !important;
-            gap: 10px !important;
+            gap: 12px !important;
             box-shadow: none !important;
             border-radius: 0 !important;
             white-space: nowrap !important;
             box-sizing: border-box !important;
           }
 
-          .bento-cta-pill svg {
+          :global(.bento-cta-pill span) {
+            margin-right: 8px !important;
+          }
+
+          :global(.bento-cta-pill svg) {
             margin-left: 6px !important;
             flex-shrink: 0 !important;
           }

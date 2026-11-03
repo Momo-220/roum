@@ -6775,14 +6775,18 @@ export default function AdminPage() {
                 <div className="card-clean" style={{ padding: "18px 20px", borderRadius: "18px", background: "#FFFFFF" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
                     <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                      Canaux de Réception CFA
+                      Canaux de Réception Officiels
                     </span>
                     <span style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#FAF5FF", display: "flex", alignItems: "center", justifyContent: "center", color: "#7E22CE" }}>
                       <ShieldCheck size={16} />
                     </span>
                   </div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#140D09", marginTop: "4px" }}>
-                    Wave · Orange Money · Maroc
+                  <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#140D09", marginTop: "4px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px" }}>
+                    <span style={{ color: "#1E40AF" }}>Wave</span>
+                    <span style={{ color: "#9CA3AF", fontWeight: 400 }}>·</span>
+                    <span style={{ color: "#C2410C" }}>Orange Money</span>
+                    <span style={{ color: "#9CA3AF", fontWeight: 400 }}>·</span>
+                    <span style={{ color: "#047857" }}>Compte Maroc</span>
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: "6px" }}>
                     Comptes synchronisés en direct sur le site public

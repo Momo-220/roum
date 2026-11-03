@@ -45,7 +45,7 @@ const SERVICES_DATA: ServiceItem[] = [
       },
     ],
     features: [
-      "Paiement Mobile Money (Wave, Orange, MTN, Moov)",
+      "Paiement direct (Wave, Orange Money, Compte Maroc)",
       "Zéro carte bancaire internationale requise",
       "Pesée vidéo & contrôle des cartons à Guangzhou",
       "Dédouanement complet inclus jusqu'à destination",

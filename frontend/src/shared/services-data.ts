@@ -689,16 +689,16 @@ export const DEFAULT_COMPANY_SETTINGS: Record<string, string> = {
   agency_paris_address: "Plateforme Cargo Roissy CDG / Dépôt Île-de-France, France",
   agency_paris_contact: "+33 6 52 90 14 30 (Liaison Paris)",
 
-  // Moyens de paiement officiels configurés par l'administration (Wave, OM, Maroc UNIQUEMENT)
+  // Moyens de paiement & Comptes officiels configurés par l'administration (Wave, Orange Money, Maroc UNIQUEMENT)
   payment_wave_ci: "+225 01 53 63 85 69",
   payment_wave_name: "ROUM TRANSIT SARL",
   payment_wave_merchant: "wave.me/roumtransit",
   payment_orange_money_ci: "#144*389278# / +225 07 48 29 11 00",
   payment_orange_name: "ROUM TRANSIT INTERNATIONAL",
-  payment_morocco_bank: "Attijariwafa Bank / CIH Bank Casablanca",
+  payment_morocco_bank: "CIH Bank / Attijariwafa Bank Casablanca",
   payment_morocco_holder: "ROUM TRANSIT MAROC",
   payment_morocco_rib: "230 780 0001234567890123 45",
-  payment_morocco_whatsapp: "+212 6 00 00 00 00",
+  payment_morocco_whatsapp: "Casablanca Maarif · WhatsApp : +212 6 00 00 00 00",
   payment_cash_desks: "Guichets Espèces : Agence Abidjan & Magasin Guangzhou",
   payment_receipt_terms: "Tout règlement donne lieu à un reçu officiel numéroté pour retrait de vos colis.",
 };
@@ -710,7 +710,7 @@ export function getLiveCompanySettings(): Record<string, string> {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === "object") {
-          // Nettoyage strict : uniquement Wave, Orange Money et Maroc
+          // Filtrage strict : uniquement Wave, Orange Money et Maroc
           const {
             payment_mtn_momo_ci: _m,
             payment_mtn_name: _mn,
