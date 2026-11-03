@@ -6758,7 +6758,7 @@ export default function AdminPage() {
                     </span>
                   </div>
                   <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#140D09", marginTop: "4px" }}>
-                    Wave · Orange · MTN · BACI
+                    Wave · Orange Money · Maroc
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: "6px" }}>
                     Comptes synchronisés en direct sur le site public
@@ -12844,7 +12844,7 @@ export default function AdminPage() {
                     <option value="WAVE">Wave Côte d&apos;Ivoire</option>
                     <option value="ORANGE_MONEY">Orange Money</option>
                     <option value="CASH">Espèces au Guichet</option>
-                    <option value="BANK_TRANSFER">Virement Bancaire (BACI)</option>
+                    <option value="BANK_TRANSFER">Virement Bancaire (Compte Transit)</option>
                   </select>
                 </div>
               </div>

@@ -45,7 +45,7 @@ function ServicesContent() {
     if (tabParam === "alibaba") {
       router.push("/services/commande");
     } else if (tabParam === "forwarding" || tabParam === "chine" || tabParam === "dubai" || tabParam === "france" || tabParam === "maroc") {
-      router.push("/services/commande?mode=forwarding");
+      router.push("/tariffs");
     }
   }, [tabParam, router]);
 
@@ -163,7 +163,7 @@ function ServicesContent() {
                   <div className="bento-bottom-row">
                     <div className="bento-bullet">
                       <span className="bento-bullet-dot" />
-                      <span>Règlement client : <strong>100% Mobile Money (Wave, Orange, MTN)</strong></span>
+                      <span>Règlement client : <strong>Mobile Money (Wave &amp; Orange Money)</strong></span>
                     </div>
                     <Link
                       href="/services/commande"
@@ -334,10 +334,10 @@ function ServicesContent() {
 
                   <div className="bento-bottom-row">
                     <Link
-                      href="/services/commande?mode=forwarding"
+                      href="/tariffs"
                       className="bento-cta-pill"
                     >
-                      <span>Lancer une expédition</span>
+                      <span>Voir les tarifs des comptoirs</span>
                       <ArrowRight size={14} />
                     </Link>
                   </div>

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -11,22 +10,12 @@ import {
   MessageCircle,
   Copy,
   Check,
-  Sparkles,
-  Plane,
-  Ship,
-  Globe2,
 } from "lucide-react";
-import { CircularFlag } from "@/components/CircularFlag";
 import { saveClientRequest, getLiveCompanySettings } from "@/shared";
 import { AFRICAN_COUNTRIES, ALL_WORLD_COUNTRIES } from "@/data/countries";
 
 function CommandeFormContent() {
-  const searchParams = useSearchParams();
-  const initialMode = searchParams.get("mode");
-
-  const [option, setOption] = useState<"sans_fournisseur" | "avec_fournisseur" | "forwarding">(
-    initialMode === "forwarding" ? "forwarding" : "sans_fournisseur"
-  );
+  const [option, setOption] = useState<"sans_fournisseur" | "avec_fournisseur">("sans_fournisseur");
 
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -58,17 +47,6 @@ function CommandeFormContent() {
   const [supplierContact, setSupplierContact] = useState("");
   const [goodsDescription, setGoodsDescription] = useState("");
 
-  // Option 3 : Expédition Internationale directe (Dubaï, France, Maroc, Chine)
-  const [fwdOrigin, setFwdOrigin] = useState("Dubaï (Émirats Arabes Unis)");
-  const [fwdMode, setFwdMode] = useState<"AIR" | "SEA">("AIR");
-  const [fwdCargo, setFwdCargo] = useState("");
-
-  useEffect(() => {
-    if (initialMode === "forwarding") {
-      setOption("forwarding");
-    }
-  }, [initialMode]);
-
   // Synchronisation temps réel des coordonnées de paiement avec l'Admin
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -98,55 +76,30 @@ function CommandeFormContent() {
 
     setSubmitting(true);
     try {
-      let serviceType: "ALIBABA" | "FORWARDING" | "DUBAI" | "MAROC" | "FRANCE" = "ALIBABA";
       let cargoDescription = "";
-      let originCountry = "Chine";
-      let shippingMode: "AIR" | "SEA" = "AIR";
 
       if (option === "sans_fournisseur") {
-        serviceType = "ALIBABA";
         cargoDescription = `[SOURCING SANS FOURNISSEUR] Produit: ${productQuery.trim()} | Qté: ${targetQuantity.trim() || "1"} | Budget: ${targetBudget.trim() || "À négocier"} | Réf: ${productLink.trim()}`;
-        originCountry = "Chine";
-      } else if (option === "avec_fournisseur") {
-        serviceType = "ALIBABA";
-        cargoDescription = `[PAIEMENT FOURNISSEUR RMB] Montant: ${rmbAmount.trim()} ¥ | Usine: ${supplierContact.trim()} | Marchandise: ${goodsDescription.trim()} | Réf: ${productLink.trim()}`;
-        originCountry = "Chine";
       } else {
-        // Expédition Internationale groupée
-        if (fwdOrigin.includes("Dubaï")) serviceType = "DUBAI";
-        else if (fwdOrigin.includes("Maroc")) serviceType = "MAROC";
-        else if (fwdOrigin.includes("France")) serviceType = "FRANCE";
-        else serviceType = "FORWARDING";
-
-        originCountry = fwdOrigin;
-        shippingMode = fwdMode;
-        cargoDescription = `[EXPÉDITION INTERNATIONALE ${fwdMode}] Départ: ${fwdOrigin} | Colis: ${fwdCargo.trim() || "Marchandises générales"}`;
+        cargoDescription = `[PAIEMENT FOURNISSEUR RMB] Montant: ${rmbAmount.trim()} ¥ | Usine: ${supplierContact.trim()} | Marchandise: ${goodsDescription.trim()} | Réf: ${productLink.trim()}`;
       }
 
       // Enregistrement unifié : Base de données D1 + Synchronisation temps réel Admin
       const res = await saveClientRequest({
-        service_type: serviceType,
-        option_type:
-          option === "avec_fournisseur"
-            ? "AVEC_FOURNISSEUR"
-            : option === "sans_fournisseur"
-            ? "SANS_FOURNISSEUR"
-            : "FORWARDING",
+        service_type: "ALIBABA",
+        option_type: option === "avec_fournisseur" ? "AVEC_FOURNISSEUR" : "SANS_FOURNISSEUR",
         rmb_amount: option === "avec_fournisseur" ? rmbAmount.trim() : undefined,
         supplier_contact: option === "avec_fournisseur" ? supplierContact.trim() : undefined,
         client_name: clientName.trim(),
         client_phone: clientPhone.trim(),
-        origin_country: originCountry,
+        origin_country: "Chine",
         destination_country: destinationCity.trim() || "Côte d'Ivoire (Abidjan)",
-        product_url: option === "forwarding" ? "" : productLink.trim(),
+        product_url: productLink.trim(),
         product_quantity: option === "sans_fournisseur" ? targetQuantity.trim() || "1" : "1",
         product_specs:
           option === "sans_fournisseur"
             ? `Produit: ${productQuery.trim()} | Budget: ${targetBudget.trim() || "À négocier"}`
-            : option === "avec_fournisseur"
-            ? `Montant proforma: ${rmbAmount.trim()} RMB | Usine: ${supplierContact.trim()}`
-            : `Mode: ${fwdMode === "AIR" ? "Avion Express" : "Bateau Maritime"} | Départ: ${fwdOrigin}`,
-        shipping_mode_type: option === "forwarding" ? shippingMode : undefined,
+            : `Montant proforma: ${rmbAmount.trim()} RMB | Usine: ${supplierContact.trim()}`,
         cargo_type: cargoDescription,
       });
 
@@ -163,7 +116,7 @@ function CommandeFormContent() {
           `• Quantité : ${targetQuantity || "À définir"}\n` +
           `• Budget : ${targetBudget || "À négocier"}\n` +
           `• Règlement : 100% Mobile Money`;
-      } else if (option === "avec_fournisseur") {
+      } else {
         message =
           `*DOSSIER PAIEMENT FOURNISSEUR RMB N° ${res.reference}*\n` +
           `• Client : ${clientName}\n` +
@@ -174,16 +127,6 @@ function CommandeFormContent() {
           `• Lien Produit / Proforma : ${productLink}\n` +
           `• Marchandise : ${goodsDescription}\n` +
           `• Règlement : 100% Mobile Money`;
-      } else {
-        message =
-          `*DOSSIER EXPÉDITION INTERNATIONALE N° ${res.reference}*\n` +
-          `• Client : ${clientName}\n` +
-          `• Téléphone : ${clientPhone}\n` +
-          `• Départ : ${fwdOrigin}\n` +
-          `• Destination : ${destinationCity}\n` +
-          `• Mode : ${fwdMode === "AIR" ? "Avion Express (4 à 5j)" : "Bateau Groupage CBM (35 à 45j)"}\n` +
-          `• Nature des colis : ${fwdCargo || "Colis standards"}\n` +
-          `• Dédouanement : 100% inclus`;
       }
 
       const customWaUrl = `https://wa.me/2250787994412?text=${encodeURIComponent(message)}`;
@@ -231,25 +174,14 @@ function CommandeFormContent() {
         <div className="page-header">
           <div className="badge-eyebrow">
             <span className="dot" />
-            <span>FORMULAIRE OFFICIEL UNIFIÉ</span>
+            <span>CENTRALE D&apos;ACHAT CHINE &amp; RÈGLEMENT RMB</span>
           </div>
           <h1 className="page-title">
-            {option === "forwarding"
-              ? "Expédition Internationale Directe"
-              : "Centrale d'Achat & Règlement RMB"}
+            Passer une Commande en Chine
           </h1>
           <p className="page-subtitle">
-            {option === "forwarding" ? (
-              <>
-                Expédiez vos marchandises depuis Dubaï, la France, le Maroc ou la Chine.
-                <strong> Dédouanement 100% compris</strong> jusqu&apos;à votre ville.
-              </>
-            ) : (
-              <>
-                Achetez et réglez vos fournisseurs en Chine sans carte bancaire internationale.
-                Règlement sécurisé en Francs CFA via nos comptes <strong>Wave, Orange Money &amp; MTN</strong>.
-              </>
-            )}
+            Achetez et réglez vos usines ou fournisseurs sur <strong>Alibaba, 1688 ou WeChat</strong> sans carte bancaire internationale.
+            Règlement sécurisé en Francs CFA via nos comptes officiels <strong>Wave &amp; Orange Money</strong>.
           </p>
         </div>
 
@@ -324,56 +256,51 @@ function CommandeFormContent() {
                 </button>
               </div>
 
-              {/* Coordonnées officielles de paiement configurées par l'administration */}
+              {/* Coordonnées officielles de paiement synchronisées en direct avec l'Admin */}
               <div style={{ borderTop: "1px solid #E5E7EB", paddingTop: "14px", marginTop: "4px" }}>
                 <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#111827", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "8px" }}>
-                  Comptes Officiels de Règlement (Mobile Money &amp; Banque)
+                  Comptes Officiels de Règlement (Mobile Money &amp; Virement)
                 </div>
                 <div style={{ display: "grid", gap: "8px", fontSize: "0.82rem" }}>
                   {/* Wave */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F9FAFB", padding: "8px 12px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
-                    <div>
-                      <strong style={{ color: "#1D4ED8" }}>Wave : </strong>
-                      <span>{settings.payment_wave_ci || "+225 01 53 63 85 69"} ({settings.payment_wave_name || "ROUM TRANSIT SARL"})</span>
+                  {settings.payment_wave_ci && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F9FAFB", padding: "8px 12px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
+                      <div>
+                        <strong style={{ color: "#1D4ED8" }}>Wave : </strong>
+                        <span>{settings.payment_wave_ci} ({settings.payment_wave_name || "ROUM TRANSIT SARL"})</span>
+                      </div>
+                      <button type="button" onClick={() => copyPayMethod("wave", settings.payment_wave_ci)} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px" }}>
+                        {copiedPay === "wave" ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
+                      </button>
                     </div>
-                    <button type="button" onClick={() => copyPayMethod("wave", settings.payment_wave_ci || "+225 01 53 63 85 69")} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px" }}>
-                      {copiedPay === "wave" ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
-                    </button>
-                  </div>
+                  )}
 
                   {/* Orange Money */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F9FAFB", padding: "8px 12px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
-                    <div>
-                      <strong style={{ color: "#EA580C" }}>Orange Money : </strong>
-                      <span>{settings.payment_orange_money_ci || "+225 07 48 29 11 00"} ({settings.payment_orange_name || "ROUM TRANSIT"})</span>
+                  {settings.payment_orange_money_ci && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F9FAFB", padding: "8px 12px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
+                      <div>
+                        <strong style={{ color: "#EA580C" }}>Orange Money : </strong>
+                        <span>{settings.payment_orange_money_ci} ({settings.payment_orange_name || "ROUM TRANSIT INTERNATIONAL"})</span>
+                      </div>
+                      <button type="button" onClick={() => copyPayMethod("orange", settings.payment_orange_money_ci)} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px" }}>
+                        {copiedPay === "orange" ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
+                      </button>
                     </div>
-                    <button type="button" onClick={() => copyPayMethod("orange", settings.payment_orange_money_ci || "+225 07 48 29 11 00")} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px" }}>
-                      {copiedPay === "orange" ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
-                    </button>
-                  </div>
+                  )}
 
-                  {/* MTN MoMo */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F9FAFB", padding: "8px 12px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
-                    <div>
-                      <strong style={{ color: "#CA8A04" }}>MTN MoMo : </strong>
-                      <span>{settings.payment_mtn_momo_ci || "MOMO-749201"} ({settings.payment_mtn_name || "ROUM LOGISTICS"})</span>
+                  {/* Compte Maroc / Virement Bancaire */}
+                  {settings.payment_morocco_bank && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F9FAFB", padding: "8px 12px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
+                      <div>
+                        <strong style={{ color: "#0F766E" }}>Virement Bancaire : </strong>
+                        <span>{settings.payment_morocco_bank} · RIB: {settings.payment_morocco_rib}</span>
+                        {settings.payment_morocco_holder && <span style={{ fontSize: "0.74rem", color: "#6B7280", marginLeft: "4px" }}>({settings.payment_morocco_holder})</span>}
+                      </div>
+                      <button type="button" onClick={() => copyPayMethod("morocco", settings.payment_morocco_rib || settings.payment_morocco_bank)} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px" }}>
+                        {copiedPay === "morocco" ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
+                      </button>
                     </div>
-                    <button type="button" onClick={() => copyPayMethod("mtn", settings.payment_mtn_momo_ci || "MOMO-749201")} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px" }}>
-                      {copiedPay === "mtn" ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
-                    </button>
-                  </div>
-
-                  {/* Virement BACI */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F9FAFB", padding: "8px 12px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
-                    <div>
-                      <strong style={{ color: "#0F766E" }}>Virement : </strong>
-                      <span style={{ fontFamily: "monospace", fontSize: "0.78rem" }}>{settings.payment_bank_rib || "CI092 01001 012345678901 24"}</span>
-                      <span style={{ fontSize: "0.74rem", color: "#6B7280", marginLeft: "4px" }}>({settings.payment_bank_name || "BACI"})</span>
-                    </div>
-                    <button type="button" onClick={() => copyPayMethod("bank", settings.payment_bank_rib || "CI092 01001 012345678901 24")} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px" }}>
-                      {copiedPay === "bank" ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
-                    </button>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -395,7 +322,7 @@ function CommandeFormContent() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="order-form">
-            {/* Choix des 3 options claires */}
+            {/* Choix des 2 options claires : Centrale d'Achat */}
             <div className="options-selector">
               <button
                 type="button"
@@ -403,12 +330,12 @@ function CommandeFormContent() {
                 onClick={() => setOption("sans_fournisseur")}
               >
                 <div className="option-card-top">
-                  <span className="option-num">CENTRALE CHINE</span>
+                  <span className="option-num">OPTION 1 · SOURCING</span>
                   <span className="option-radio" />
                 </div>
                 <h3 className="option-title">Sans Fournisseur</h3>
                 <p className="option-desc">
-                  Sourcing de produits sur Alibaba / 1688. Négociation directe avec usines certifiées au meilleur prix.
+                  Sourcing de produits sur Alibaba / 1688 / Taobao. Négociation directe avec usines certifiées au meilleur prix.
                 </p>
               </button>
 
@@ -418,27 +345,12 @@ function CommandeFormContent() {
                 onClick={() => setOption("avec_fournisseur")}
               >
                 <div className="option-card-top">
-                  <span className="option-num">PAIEMENT RMB</span>
+                  <span className="option-num">OPTION 2 · PAIEMENT RMB</span>
                   <span className="option-radio" />
                 </div>
                 <h3 className="option-title">Avec Fournisseur</h3>
                 <p className="option-desc">
-                  Vous avez déjà votre proforma Alibaba ou WeChat. Nous réglons votre usine en Yuans sous 24h.
-                </p>
-              </button>
-
-              <button
-                type="button"
-                className={`option-card ${option === "forwarding" ? "selected" : ""}`}
-                onClick={() => setOption("forwarding")}
-              >
-                <div className="option-card-top">
-                  <span className="option-num">TRANSIT DIRECT</span>
-                  <span className="option-radio" />
-                </div>
-                <h3 className="option-title">Expédition Directe</h3>
-                <p className="option-desc">
-                  Envois depuis Dubaï, la France, le Maroc ou la Chine vers l&apos;Afrique par avion ou bateau.
+                  Vous avez déjà votre proforma Alibaba ou WeChat. Nous réglons votre usine en Yuans RMB sous 24h.
                 </p>
               </button>
             </div>
@@ -516,9 +428,7 @@ function CommandeFormContent() {
                 <h3>
                   {option === "sans_fournisseur"
                     ? "Détails du Produit Alibaba Recherché"
-                    : option === "avec_fournisseur"
-                    ? "Détails de la Facture Fournisseur (RMB)"
-                    : "Détails de l'Expédition Internationale"}
+                    : "Détails de la Facture Fournisseur (RMB)"}
                 </h3>
               </div>
 
@@ -575,7 +485,7 @@ function CommandeFormContent() {
                     />
                   </div>
                 </div>
-              ) : option === "avec_fournisseur" ? (
+              ) : (
                 <div className="form-grid">
                   <div className="input-group">
                     <label htmlFor="rmbAmount">
@@ -636,54 +546,9 @@ function CommandeFormContent() {
                     />
                   </div>
                 </div>
-              ) : (
-                /* OPTION 3 : EXPÉDITION INTERNATIONALE GROUPÉE (DUBAÏ, FRANCE, MAROC, CHINE) */
-                <div className="form-grid">
-                  <div className="input-group">
-                    <label htmlFor="fwdOrigin">Pays de départ *</label>
-                    <select
-                      id="fwdOrigin"
-                      className="styled-select"
-                      value={fwdOrigin}
-                      onChange={(e) => setFwdOrigin(e.target.value)}
-                    >
-                      <option value="Dubaï (Émirats Arabes Unis)">Émirats Arabes Unis (Dubaï · Deira Wholesale)</option>
-                      <option value="France (Paris)">France (Paris Île-de-France)</option>
-                      <option value="Maroc (Casablanca)">Maroc (Casablanca direct)</option>
-                      <option value="Chine (Guangzhou / Yiwu)">Chine (Guangzhou &amp; Yiwu)</option>
-                    </select>
-                  </div>
-
-                  <div className="input-group">
-                    <label htmlFor="fwdMode">Mode d&apos;acheminement *</label>
-                    <select
-                      id="fwdMode"
-                      className="styled-select"
-                      value={fwdMode}
-                      onChange={(e) => setFwdMode(e.target.value as "AIR" | "SEA")}
-                    >
-                      <option value="AIR">Avion Express Cargo (4 à 5 jours chrono)</option>
-                      <option value="SEA">Bateau Groupage CBM / Conteneur (35 à 45 jours)</option>
-                    </select>
-                  </div>
-
-                  <div className="input-group full-width">
-                    <label htmlFor="fwdCargo">
-                      Nature des marchandises / colis <span style={{ color: "#DC2626" }}>*</span>
-                    </label>
-                    <textarea
-                      id="fwdCargo"
-                      required
-                      rows={3}
-                      placeholder="Ex : Téléphones neufs et reconditionnés, effets personnels, parfums, outillage..."
-                      value={fwdCargo}
-                      onChange={(e) => setFwdCargo(e.target.value)}
-                    />
-                  </div>
-                </div>
               )}
 
-              {/* Bannière de réassurance paiement Mobile Money avec comptes en direct de l'Admin */}
+              {/* Bannière de réassurance paiement Mobile Money avec comptes réels configurés en Admin */}
               <div className="payment-notice">
                 <ShieldCheck size={22} color="#CC4E16" />
                 <div className="notice-content">
@@ -692,23 +557,45 @@ function CommandeFormContent() {
                     Réglez en Francs CFA via nos comptes officiels. Nous convertissons et réglons votre usine sous 24h avec quittance certifiée.
                   </p>
 
-                  <div style={{ marginTop: "12px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "8px" }}>
-                    <div style={{ background: "rgba(255,255,255,0.85)", padding: "8px 10px", borderRadius: "8px", border: "1px solid #E5E7EB", fontSize: "0.78rem" }}>
-                      <strong style={{ color: "#1D4ED8" }}>Wave : </strong>
-                      <span>{settings.payment_wave_ci || "+225 01 53 63 85 69"}</span>
-                    </div>
-                    <div style={{ background: "rgba(255,255,255,0.85)", padding: "8px 10px", borderRadius: "8px", border: "1px solid #E5E7EB", fontSize: "0.78rem" }}>
-                      <strong style={{ color: "#EA580C" }}>Orange Money : </strong>
-                      <span>{settings.payment_orange_money_ci || "+225 07 48 29 11 00"}</span>
-                    </div>
-                    <div style={{ background: "rgba(255,255,255,0.85)", padding: "8px 10px", borderRadius: "8px", border: "1px solid #E5E7EB", fontSize: "0.78rem" }}>
-                      <strong style={{ color: "#CA8A04" }}>MTN MoMo : </strong>
-                      <span>{settings.payment_mtn_momo_ci || "MOMO-749201"}</span>
-                    </div>
-                    <div style={{ background: "rgba(255,255,255,0.85)", padding: "8px 10px", borderRadius: "8px", border: "1px solid #E5E7EB", fontSize: "0.78rem" }}>
-                      <strong style={{ color: "#0F766E" }}>Banque BACI : </strong>
-                      <span>{settings.payment_bank_name || "BACI (Abidjan)"}</span>
-                    </div>
+                  <div style={{ marginTop: "12px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "10px" }}>
+                    {settings.payment_wave_ci && (
+                      <div style={{ background: "rgba(255,255,255,0.9)", padding: "10px 12px", borderRadius: "10px", border: "1px solid #E5E7EB", fontSize: "0.8rem" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <strong style={{ color: "#1D4ED8" }}>Wave :</strong>
+                          <button type="button" onClick={() => copyPayMethod("wave", settings.payment_wave_ci)} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "2px", color: copiedPay === "wave" ? "#16A34A" : "#6B7280" }}>
+                            {copiedPay === "wave" ? <Check size={13} /> : <Copy size={13} />}
+                          </button>
+                        </div>
+                        <div style={{ fontWeight: 700, color: "#111827", marginTop: "3px" }}>{settings.payment_wave_ci}</div>
+                        <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: "1px" }}>{settings.payment_wave_name || "ROUM TRANSIT SARL"}</div>
+                      </div>
+                    )}
+                    {settings.payment_orange_money_ci && (
+                      <div style={{ background: "rgba(255,255,255,0.9)", padding: "10px 12px", borderRadius: "10px", border: "1px solid #E5E7EB", fontSize: "0.8rem" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <strong style={{ color: "#EA580C" }}>Orange Money :</strong>
+                          <button type="button" onClick={() => copyPayMethod("orange", settings.payment_orange_money_ci)} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "2px", color: copiedPay === "orange" ? "#16A34A" : "#6B7280" }}>
+                            {copiedPay === "orange" ? <Check size={13} /> : <Copy size={13} />}
+                          </button>
+                        </div>
+                        <div style={{ fontWeight: 700, color: "#111827", marginTop: "3px" }}>{settings.payment_orange_money_ci}</div>
+                        <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: "1px" }}>{settings.payment_orange_name || "ROUM TRANSIT INTERNATIONAL"}</div>
+                      </div>
+                    )}
+                    {settings.payment_morocco_bank && (
+                      <div style={{ background: "rgba(255,255,255,0.9)", padding: "10px 12px", borderRadius: "10px", border: "1px solid #E5E7EB", fontSize: "0.8rem" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <strong style={{ color: "#0F766E" }}>Compte Maroc / Virement :</strong>
+                          <button type="button" onClick={() => copyPayMethod("morocco", settings.payment_morocco_rib || settings.payment_morocco_bank)} style={{ background: "transparent", border: "none", cursor: "pointer", padding: "2px", color: copiedPay === "morocco" ? "#16A34A" : "#6B7280" }}>
+                            {copiedPay === "morocco" ? <Check size={13} /> : <Copy size={13} />}
+                          </button>
+                        </div>
+                        <div style={{ fontWeight: 700, color: "#111827", marginTop: "3px" }}>{settings.payment_morocco_bank}</div>
+                        <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: "1px" }}>
+                          RIB: {settings.payment_morocco_rib} ({settings.payment_morocco_holder})
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
