@@ -6,10 +6,7 @@ import {
   ArrowDownRight,
   ArrowRight,
   Check,
-  Clock,
-  ShieldCheck,
   X,
-  ChevronRight,
 } from "lucide-react";
 
 interface ServiceItem {
@@ -92,19 +89,48 @@ const SERVICES_DATA: ServiceItem[] = [
 ];
 
 export function ServicesVisualCards() {
-  // Par défaut, le premier service peut être étendu ou null selon l'interaction.
-  // Quand l'utilisateur clique sur une carte, elle se déploie en rectangle vers la droite.
+  // activeId : null (3 colonnes égales côte-à-côte), ou l'id du service sélectionné
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
   const handleCardClick = (id: string, e: React.MouseEvent) => {
-    // Si on clique sur le bouton de fermeture ou le CTA, laisser l'action se faire.
     const target = e.target as HTMLElement;
+    // Laisser les clics sur les boutons CTA et fermeture se propager normalement
     if (target.closest(".service-cta-button") || target.closest(".service-close-button")) {
       return;
     }
-    // Bascule : si déjà actif, referme, sinon déploie la carte sélectionnée vers la droite
+    // Bascule : si on reclique sur la carte déjà active, elle se replie
     setActiveId((prev) => (prev === id ? null : id));
+  };
+
+  // Calcule la position dans la grille CSS Grid :
+  // - Mode repos (activeId === null) : 3 colonnes égales (1 / 2, 2 / 3, 3 / 4)
+  // - Mode actif : la carte active prend la colonne 1 (toute la hauteur, lignes 1 à 3)
+  //   et les 2 autres cartes deviennent 2 carrés superposés dans la colonne 2 (ligne 1/2 et ligne 2/3)
+  const getGridPlacement = (serviceId: string): React.CSSProperties => {
+    if (activeId === null) {
+      const idx = SERVICES_DATA.findIndex((s) => s.id === serviceId);
+      return {
+        gridColumn: `${idx + 1} / ${idx + 2}`,
+        gridRow: "1 / 2",
+      };
+    }
+
+    if (activeId === serviceId) {
+      return {
+        gridColumn: "1 / 2",
+        gridRow: "1 / 3",
+      };
+    }
+
+    // Les 2 autres cartes inactives sont empilées verticalement
+    const inactiveCards = SERVICES_DATA.filter((s) => s.id !== activeId);
+    const inactiveIndex = inactiveCards.findIndex((s) => s.id === serviceId);
+
+    return {
+      gridColumn: "2 / 3",
+      gridRow: inactiveIndex === 0 ? "1 / 2" : "2 / 3",
+    };
   };
 
   return (
@@ -153,14 +179,20 @@ export function ServicesVisualCards() {
       </div>
 
       {/* ========================================================
-          CONTENEUR FLUIDE À DÉPLOIEMENT VERS LA DROITE (ACCORDÉON HORIZONTAL)
-          - Desktop : Déploiement horizontal fluide vers la droite (flex-grow)
-          - Mobile : Déploiement vertical fluide avec détails immersifs
+          GRILLE FLUIDE DES SERVICES :
+          - Par défaut : 3 cartes cinématographiques égales côte à côte
+          - Au clic sur une carte :
+            * Carte active : grand rectangle étendu avec détails et CTA (~68% de largeur)
+            * 2 autres cartes : 2 carrés superposés l'un sur l'autre à droite (~32% de largeur)
          ======================================================== */}
-      <div className="services-interactive-wrapper">
+      <div
+        className={`services-grid-container ${activeId !== null ? "has-active" : "is-default"}`}
+      >
         {SERVICES_DATA.map((service) => {
           const isExpanded = activeId === service.id;
+          const isStackedSquare = activeId !== null && !isExpanded;
           const isHovered = hoveredCard === service.id;
+          const placementStyle = getGridPlacement(service.id);
 
           return (
             <div
@@ -168,26 +200,32 @@ export function ServicesVisualCards() {
               onClick={(e) => handleCardClick(service.id, e)}
               onMouseEnter={() => setHoveredCard(service.id)}
               onMouseLeave={() => setHoveredCard(null)}
-              className={`service-morph-card ${isExpanded ? "is-expanded" : ""}`}
+              className={`service-card-item ${
+                isExpanded ? "is-expanded" : isStackedSquare ? "is-stacked-square" : "is-default-card"
+              }`}
               style={{
+                ...placementStyle,
                 position: "relative",
-                borderRadius: "28px",
+                borderRadius: isStackedSquare ? "22px" : "28px",
                 overflow: "hidden",
                 cursor: "pointer",
                 border: isExpanded
                   ? "1px solid rgba(255, 255, 255, 0.45)"
-                  : "1px solid rgba(28, 25, 23, 0.09)",
+                  : isHovered
+                  ? "1px solid rgba(255, 255, 255, 0.38)"
+                  : "1px solid rgba(28, 25, 23, 0.12)",
                 boxShadow: isExpanded
                   ? "0 24px 50px -10px rgba(20, 13, 9, 0.28), 0 8px 20px -4px rgba(20, 13, 9, 0.12)"
                   : isHovered
-                  ? "0 16px 36px -8px rgba(27, 20, 17, 0.18)"
+                  ? "0 16px 36px -8px rgba(27, 20, 17, 0.22)"
                   : "0 10px 30px -8px rgba(27, 20, 17, 0.12), 0 2px 8px -2px rgba(27, 20, 17, 0.04)",
                 backgroundColor: "#1B1411",
+                transform: isHovered && !isExpanded ? "scale(1.015)" : "scale(1.0)",
                 transition:
-                  "flex 0.55s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s ease, box-shadow 0.4s ease, border-color 0.3s ease",
+                  "transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.25s ease, border-radius 0.3s ease",
               }}
             >
-              {/* 1. Photographie de fond (Même image, zoom progressif doux) */}
+              {/* 1. Photographie de fond (Même image, zoom doux au survol) */}
               <img
                 src={service.image}
                 alt={service.title}
@@ -197,7 +235,11 @@ export function ServicesVisualCards() {
                   width: "100%",
                   height: "100%",
                   objectFit: "cover",
-                  transform: isExpanded ? "scale(1.08)" : isHovered ? "scale(1.04)" : "scale(1.0)",
+                  transform: isExpanded
+                    ? "scale(1.08)"
+                    : isHovered
+                    ? "scale(1.05)"
+                    : "scale(1.0)",
                   transition: "transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
                   zIndex: 1,
                 }}
@@ -209,7 +251,9 @@ export function ServicesVisualCards() {
                   position: "absolute",
                   inset: 0,
                   background: isExpanded
-                    ? "linear-gradient(to right, rgba(20, 13, 9, 0.95) 0%, rgba(20, 13, 9, 0.88) 45%, rgba(20, 13, 9, 0.82) 100%)"
+                    ? "linear-gradient(to right, rgba(20, 13, 9, 0.96) 0%, rgba(20, 13, 9, 0.90) 45%, rgba(20, 13, 9, 0.82) 100%)"
+                    : isStackedSquare
+                    ? "linear-gradient(to top, rgba(20, 13, 9, 0.95) 0%, rgba(20, 13, 9, 0.55) 50%, rgba(20, 13, 9, 0.2) 100%)"
                     : "linear-gradient(to top, rgba(20, 13, 9, 0.94) 0%, rgba(20, 13, 9, 0.55) 45%, rgba(20, 13, 9, 0.12) 75%, rgba(0, 0, 0, 0.2) 100%)",
                   zIndex: 2,
                   transition: "background 0.5s ease",
@@ -227,7 +271,7 @@ export function ServicesVisualCards() {
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
-                  padding: isExpanded ? "26px" : "22px",
+                  padding: isExpanded ? "28px" : isStackedSquare ? "16px 18px" : "22px",
                   boxSizing: "border-box",
                 }}
               >
@@ -245,14 +289,14 @@ export function ServicesVisualCards() {
                       display: "inline-flex",
                       alignItems: "center",
                       gap: "6px",
-                      padding: "6px 14px",
+                      padding: isStackedSquare ? "5px 12px" : "6px 14px",
                       borderRadius: "9999px",
                       backgroundColor: "rgba(255, 255, 255, 0.18)",
                       backdropFilter: "blur(12px)",
                       WebkitBackdropFilter: "blur(12px)",
                       border: "1px solid rgba(255, 255, 255, 0.32)",
                       color: "#FFFFFF",
-                      fontSize: "0.72rem",
+                      fontSize: isStackedSquare ? "0.68rem" : "0.72rem",
                       fontWeight: 700,
                       letterSpacing: "0.06em",
                       textTransform: "uppercase",
@@ -271,7 +315,7 @@ export function ServicesVisualCards() {
                     <span>{service.badge}</span>
                   </div>
 
-                  {/* Bouton pour replier quand déplié */}
+                  {/* Bouton pour replier quand la carte est dépliée */}
                   {isExpanded && (
                     <button
                       type="button"
@@ -311,10 +355,94 @@ export function ServicesVisualCards() {
                 </div>
 
                 {/* ========================================================
-                    ZONE PRINCIPALE : DEUX ÉTATS (PLIÉ VS DÉROULÉ VERS LA DROITE)
+                    CORPS DE LA CARTE SELON LE FORMAT :
+                    1. isStackedSquare : Format carré compact superposé
+                    2. isExpanded : Grand rectangle détaillé avec métriques & CTA
+                    3. isDefaultCard : Format vertical original (3 colonnes)
                    ======================================================== */}
-                {!isExpanded ? (
-                  /* État Compact : Titre + Sous-titre + Bouton ArrowDownRight */
+                {isStackedSquare ? (
+                  /* ==============================================
+                     FORMAT CARRÉ SUPERPOSÉ (UN SUR L'AUTRE)
+                     ============================================== */
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-end",
+                      justifyContent: "space-between",
+                      gap: "12px",
+                      width: "100%",
+                      animation: "fadeInExpand 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h3
+                        style={{
+                          fontFamily: "var(--c-font-display)",
+                          fontSize: "1.22rem",
+                          fontWeight: 700,
+                          lineHeight: 1.15,
+                          letterSpacing: "-0.03em",
+                          color: "#FFFFFF",
+                          margin: "0 0 4px 0",
+                          textShadow: "0 2px 4px rgba(0, 0, 0, 0.4)",
+                        }}
+                      >
+                        {service.title}
+                      </h3>
+                      <p
+                        style={{
+                          fontSize: "0.78rem",
+                          color: "rgba(255, 255, 255, 0.85)",
+                          lineHeight: 1.35,
+                          margin: 0,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          textShadow: "0 1px 3px rgba(0, 0, 0, 0.4)",
+                        }}
+                      >
+                        {service.subtitle}
+                      </p>
+                    </div>
+
+                    {/* Badge flèche compact */}
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "50%",
+                        backgroundColor: isHovered
+                          ? "#FFFFFF"
+                          : "rgba(255, 255, 255, 0.18)",
+                        backdropFilter: "blur(12px)",
+                        WebkitBackdropFilter: "blur(12px)",
+                        border: isHovered
+                          ? "1px solid #FFFFFF"
+                          : "1px solid rgba(255, 255, 255, 0.38)",
+                        color: isHovered ? "#140D09" : "#FFFFFF",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        boxShadow: "0 4px 10px rgba(0, 0, 0, 0.25)",
+                        transform: isHovered ? "scale(1.08)" : "scale(1.0)",
+                        transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+                      }}
+                    >
+                      <ArrowDownRight
+                        size={17}
+                        strokeWidth={2.4}
+                        style={{
+                          transform: isHovered ? "translate(1px, 1px)" : "translate(0, 0)",
+                          transition: "transform 0.2s ease",
+                        }}
+                      />
+                    </div>
+                  </div>
+                ) : !isExpanded ? (
+                  /* ==============================================
+                     FORMAT VERTICAL PAR DÉFAUT (3 COLONNES AU REPOS)
+                     ============================================== */
                   <div
                     style={{
                       display: "flex",
@@ -387,7 +515,9 @@ export function ServicesVisualCards() {
                     </div>
                   </div>
                 ) : (
-                  /* État Déroulé vers la Droite : Description complète + Garanties + CTA */
+                  /* ==============================================
+                     FORMAT GRAND RECTANGLE ACTIF (DÉTAILS COMPLETS)
+                     ============================================== */
                   <div
                     className="service-expanded-body"
                     style={{
@@ -544,33 +674,40 @@ export function ServicesVisualCards() {
       </div>
 
       {/* ========================================================
-          STYLES CSS RESPONSIFS ET ANIMATIONS DE DÉPLOIEMENT
+          STYLES CSS RESPONSIFS ET ANIMATIONS DE DISPOSITION
          ======================================================== */}
       <style jsx>{`
-        /* Desktop : Accordéon horizontal fluide */
-        .services-interactive-wrapper {
-          display: flex;
-          gap: 20px;
+        /* Desktop : Grille fluide 480px de haut */
+        .services-grid-container {
+          display: grid;
           width: 100%;
-          min-height: 440px;
-          align-items: stretch;
+          gap: 18px;
+          height: 480px;
+          transition: grid-template-columns 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                      grid-template-rows 0.45s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .service-morph-card {
-          flex: 1;
-          min-width: 0;
-          height: 440px;
+        /* 3 colonnes égales côte-à-côte au repos */
+        .services-grid-container.is-default {
+          grid-template-columns: repeat(3, 1fr);
+          grid-template-rows: 1fr;
         }
 
-        /* Quand une carte est cliquée, elle se déploie vers la droite */
-        .service-morph-card.is-expanded {
-          flex: 2.8;
+        /* Quand un service est cliqué : le grand rectangle à gauche et les 2 carrés superposés à droite */
+        .services-grid-container.has-active {
+          grid-template-columns: 2.15fr 1fr;
+          grid-template-rows: 1fr 1fr;
+        }
+
+        .service-card-item {
+          width: 100%;
+          height: 100%;
         }
 
         @keyframes fadeInExpand {
           0% {
             opacity: 0;
-            transform: translateY(8px);
+            transform: translateY(6px);
           }
           100% {
             opacity: 1;
@@ -580,23 +717,31 @@ export function ServicesVisualCards() {
 
         /* Mobile : Accordéon vertical fluide sous le pouce */
         @media (max-width: 860px) {
-          .services-interactive-wrapper {
+          .services-grid-container {
+            display: flex !important;
             flex-direction: column !important;
             gap: 16px !important;
-            min-height: auto !important;
+            height: auto !important;
           }
 
-          .service-morph-card {
-            flex: none !important;
+          .service-card-item {
+            grid-column: auto !important;
+            grid-row: auto !important;
             width: 100% !important;
+            transition: height 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease !important;
+          }
+
+          .service-card-item.is-default-card {
             height: 240px !important;
-            transition: height 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease !important;
           }
 
-          .service-morph-card.is-expanded {
-            flex: none !important;
-            width: 100% !important;
-            height: 520px !important;
+          .service-card-item.is-stacked-square {
+            height: 170px !important;
+          }
+
+          .service-card-item.is-expanded {
+            height: auto !important;
+            min-height: 520px !important;
           }
         }
       `}</style>
