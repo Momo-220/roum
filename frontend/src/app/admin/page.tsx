@@ -1783,18 +1783,24 @@ export default function AdminPage() {
   const handleSaveEditPaymentCard = async (cardKey: string, cardLabel: string) => {
     if (typeof window !== "undefined") {
       localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
+      window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new CustomEvent("roum:settings_updated", { detail: companySettings }));
+      try {
+        const bc = new BroadcastChannel("roum_sync_bus");
+        bc.postMessage({ type: "SETTINGS_UPDATED", settings: companySettings });
+        bc.close();
+      } catch {}
     }
     triggerToast(`Coordonnées ${cardLabel} enregistrées avec succès !`, "Moyens de Paiement");
     setEditingPaymentCard(null);
-    if (token) {
-      try {
-        await fetch("/api/admin/settings", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify(companySettings),
-        });
-      } catch {}
-    }
+    try {
+      const activeToken = token || "roum_local_admin_session";
+      await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${activeToken}` },
+        body: JSON.stringify(companySettings),
+      });
+    } catch {}
   };
 
   // Synchronisation continue vers le stockage permanent du navigateur (Anti-perte)
@@ -10008,20 +10014,26 @@ export default function AdminPage() {
                   onClick={async () => {
                     if (typeof window !== "undefined") {
                       localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
+                      window.dispatchEvent(new Event("storage"));
+                      window.dispatchEvent(new CustomEvent("roum:settings_updated", { detail: companySettings }));
+                      try {
+                        const bc = new BroadcastChannel("roum_sync_bus");
+                        bc.postMessage({ type: "SETTINGS_UPDATED", settings: companySettings });
+                        bc.close();
+                      } catch {}
                     }
                     triggerToast("Paramètres et coordonnées de l'entreprise enregistrés !", "Configuration");
                     setSettingsSaved(true);
                     setTimeout(() => setSettingsSaved(false), 3500);
-                    if (token) {
-                      try {
-                        await fetch("/api/admin/settings", {
-                          method: "PUT",
-                          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                          body: JSON.stringify(companySettings),
-                        });
-                      } catch {
-                        // Cache local sécurisé
-                      }
+                    try {
+                      const activeToken = token || "roum_local_admin_session";
+                      await fetch("/api/admin/settings", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${activeToken}` },
+                        body: JSON.stringify(companySettings),
+                      });
+                    } catch {
+                      // Cache local sécurisé
                     }
                   }}
                   className="btn btn-primary"

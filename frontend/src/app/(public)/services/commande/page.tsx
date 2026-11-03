@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useRef } from "react";
+import { useState, useEffect, useMemo, Suspense, useRef } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { saveClientRequest, getLiveCompanySettings } from "@/shared";
 import { AFRICAN_COUNTRIES, ALL_WORLD_COUNTRIES } from "@/data/countries";
+import { WaveLogo, OrangeMoneyLogo, MtnMomoLogo, BankBaciLogo } from "@/components/PaymentLogos";
+import { CircularFlag } from "@/components/CircularFlag";
 
 interface ExtractedProduct {
   platform: string;
@@ -86,20 +88,179 @@ function CommandeFormContent() {
   const [receiptFileName, setReceiptFileName] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Synchronisation temps réel des coordonnées de paiement avec l'Admin
+  // Synchronisation infaillible en temps réel des coordonnées de paiement avec l'Admin (Multi-canaux & Temps Réel)
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      fetch("/api/v1/public/settings")
-        .then((r) => r.json())
-        .then((d) => {
-          if (d.settings) {
-            setSettings((prev) => ({ ...prev, ...d.settings }));
+    if (typeof window === "undefined") return;
+
+    const fetchLiveSettings = async () => {
+      try {
+        const res = await fetch(`/api/v1/public/settings?_t=${Date.now()}`);
+        if (res.ok) {
+          const d = await res.json();
+          if (d && d.settings) {
+            setSettings(d.settings);
             localStorage.setItem("roum_company_settings", JSON.stringify(d.settings));
           }
-        })
-        .catch(() => {});
-    }
+        }
+      } catch {}
+    };
+
+    fetchLiveSettings();
+
+    // 1. Écoute des mises à jour inter-onglets (storage event)
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "roum_company_settings" && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setSettings(parsed);
+        } catch {}
+      }
+    };
+    window.addEventListener("storage", onStorage);
+
+    // 2. Écoute des événements locaux envoyés par l'Admin
+    const onLocalUpdated = (e: any) => {
+      if (e.detail) {
+        setSettings(e.detail);
+      }
+    };
+    window.addEventListener("roum:settings_updated", onLocalUpdated);
+
+    // 3. Canal de communication direct BroadcastChannel
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel("roum_sync_bus");
+      bc.onmessage = (event) => {
+        if (event.data?.type === "SETTINGS_UPDATED" && event.data.settings) {
+          setSettings(event.data.settings);
+        }
+      };
+    } catch {}
+
+    // 4. Re-synchronisation dès que l'utilisateur revient sur l'onglet
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchLiveSettings();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", fetchLiveSettings);
+
+    // 5. Polling régulier de secours toutes les 8 secondes (détection des modifs inter-appareils)
+    const pollInterval = setInterval(fetchLiveSettings, 8000);
+
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("roum:settings_updated", onLocalUpdated);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", fetchLiveSettings);
+      clearInterval(pollInterval);
+      if (bc) bc.close();
+    };
   }, []);
+
+  // SEULS les moyens de paiement expressément configurés dans l'Admin apparaissent
+  const activePaymentMethods = useMemo(() => {
+    const list: Array<{
+      id: string;
+      label: string;
+      type: string;
+      accountNumber: string;
+      accountHolder: string;
+      color: string;
+      copyValue: string;
+      logo: React.ReactNode;
+    }> = [];
+
+    // 1. Wave (uniquement si configuré dans l'admin)
+    const waveNum = settings.payment_wave_ci?.trim();
+    if (waveNum) {
+      list.push({
+        id: "wave",
+        label: "Wave",
+        type: "Mobile Money",
+        accountNumber: waveNum,
+        accountHolder: settings.payment_wave_name?.trim() || "ROUM TRANSIT SARL",
+        color: "#1D4ED8",
+        copyValue: waveNum,
+        logo: <WaveLogo size={32} />,
+      });
+    }
+
+    // 2. Orange Money (uniquement si configuré dans l'admin)
+    const omNum = settings.payment_orange_money_ci?.trim();
+    if (omNum) {
+      list.push({
+        id: "orange",
+        label: "Orange Money",
+        type: "Code Marchand & Transfert",
+        accountNumber: omNum,
+        accountHolder: settings.payment_orange_name?.trim() || "ROUM TRANSIT INTERNATIONAL",
+        color: "#EA580C",
+        copyValue: omNum,
+        logo: <OrangeMoneyLogo size={32} />,
+      });
+    }
+
+    // 3. MTN MoMo (uniquement si configuré dans l'admin)
+    const mtnNum = settings.payment_mtn_momo_ci?.trim();
+    if (mtnNum) {
+      list.push({
+        id: "mtn",
+        label: "MTN MoMo",
+        type: "Mobile Money",
+        accountNumber: mtnNum,
+        accountHolder: settings.payment_mtn_name?.trim() || "ROUM LOGISTICS",
+        color: "#CA8A04",
+        copyValue: mtnNum,
+        logo: <MtnMomoLogo size={32} />,
+      });
+    }
+
+    // 4. Banque Atlantique / BACI (uniquement si configuré dans l'admin)
+    const bankRib = settings.payment_bank_rib?.trim();
+    const bankName = settings.payment_bank_name?.trim();
+    if (bankRib || bankName) {
+      list.push({
+        id: "bank",
+        label: bankName || "Banque BACI",
+        type: "Virement Bancaire UEMOA",
+        accountNumber: bankRib || "RIB bancaire officiel",
+        accountHolder: settings.payment_bank_account_holder?.trim() || "ROUM TRANSIT INTERNATIONAL",
+        color: "#0F766E",
+        copyValue: bankRib || bankName || "",
+        logo: <BankBaciLogo size={32} />,
+      });
+    }
+
+    // 5. Compte Maroc (uniquement si configuré dans l'admin)
+    const moroccoBank = settings.payment_morocco_bank?.trim();
+    const moroccoRib = settings.payment_morocco_rib?.trim();
+    if (moroccoBank || moroccoRib) {
+      list.push({
+        id: "morocco",
+        label: moroccoBank || "Compte Maroc",
+        type: "Casablanca",
+        accountNumber: moroccoRib || moroccoBank || "",
+        accountHolder: settings.payment_morocco_holder?.trim() || "ROUM TRANSIT MAROC",
+        color: "#B91C1C",
+        copyValue: moroccoRib || moroccoBank || "",
+        logo: <CircularFlag countryCode="MA" size={32} />,
+      });
+    }
+
+    return list;
+  }, [settings]);
+
+  // Si le moyen actuellement sélectionné n'est plus actif, basculer sur le premier moyen actif
+  useEffect(() => {
+    if (activePaymentMethods.length > 0) {
+      const exists = activePaymentMethods.some((m) => m.id === selectedPayMethod);
+      if (!exists) {
+        setSelectedPayMethod(activePaymentMethods[0].id);
+      }
+    }
+  }, [activePaymentMethods, selectedPayMethod]);
 
   // Détection & extraction automatique du produit dès que le lien est collé
   const handleExtractProduct = async (urlToExtract?: string) => {
@@ -877,138 +1038,52 @@ function CommandeFormContent() {
                 <div>
                   <h3>Comptes Officiels de Règlement</h3>
                   <p style={{ fontSize: "0.8rem", color: "#6B7280", margin: "2px 0 0 0" }}>
-                    Effectuez votre virement de <strong>{grandTotalFCFA.toLocaleString("fr-FR")} FCFA</strong> vers nos comptes certifiés
+                    Effectuez votre règlement de <strong>{grandTotalFCFA.toLocaleString("fr-FR")} FCFA</strong> vers nos comptes officiels validés par l&apos;administration
                   </p>
                 </div>
               </div>
 
-              <div className="payment-methods-grid">
-                {/* 1. Wave */}
-                <div
-                  className={`payment-method-card ${selectedPayMethod === "wave" ? "active" : ""}`}
-                  onClick={() => setSelectedPayMethod("wave")}
-                >
-                  <div className="pay-card-top">
-                    <strong style={{ color: "#1D4ED8", fontSize: "0.92rem" }}>Wave</strong>
-                    <span className="pay-pill-tag">Mobile Money</span>
-                  </div>
-                  <div className="pay-account-num">{settings.payment_wave_ci || "+225 01 53 63 85 69"}</div>
-                  <div className="pay-holder-name">{settings.payment_wave_name || "ROUM TRANSIT SARL"}</div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      copyPayMethod("wave", settings.payment_wave_ci || "+225 01 53 63 85 69");
-                    }}
-                    className="pay-copy-btn"
-                  >
-                    {copiedPay === "wave" ? <Check size={13} color="#16A34A" /> : <Copy size={13} />}
-                    <span>{copiedPay === "wave" ? "Copié !" : "Copier le numéro"}</span>
-                  </button>
+              {activePaymentMethods.length > 0 ? (
+                <div className="payment-methods-grid">
+                  {activePaymentMethods.map((pm) => {
+                    const isSelected = selectedPayMethod === pm.id;
+                    return (
+                      <div
+                        key={pm.id}
+                        className={`payment-method-card ${isSelected ? "active" : ""}`}
+                        onClick={() => setSelectedPayMethod(pm.id)}
+                      >
+                        <div className="pay-card-top">
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            {pm.logo}
+                            <strong style={{ color: pm.color, fontSize: "0.92rem" }}>{pm.label}</strong>
+                          </div>
+                          <span className="pay-pill-tag">{pm.type}</span>
+                        </div>
+                        <div className="pay-account-num" style={{ fontFamily: pm.id === "bank" ? "monospace" : "inherit" }}>
+                          {pm.accountNumber}
+                        </div>
+                        <div className="pay-holder-name">{pm.accountHolder}</div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyPayMethod(pm.id, pm.copyValue);
+                          }}
+                          className="pay-copy-btn"
+                        >
+                          {copiedPay === pm.id ? <Check size={13} color="#16A34A" /> : <Copy size={13} />}
+                          <span>{copiedPay === pm.id ? "Copié !" : "Copier"}</span>
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
-
-                {/* 2. Orange Money */}
-                <div
-                  className={`payment-method-card ${selectedPayMethod === "orange" ? "active" : ""}`}
-                  onClick={() => setSelectedPayMethod("orange")}
-                >
-                  <div className="pay-card-top">
-                    <strong style={{ color: "#EA580C", fontSize: "0.92rem" }}>Orange Money</strong>
-                    <span className="pay-pill-tag">Code Marchand</span>
-                  </div>
-                  <div className="pay-account-num">{settings.payment_orange_money_ci || "#144*389278# / +225 07 48 29 11 00"}</div>
-                  <div className="pay-holder-name">{settings.payment_orange_name || "ROUM TRANSIT INTERNATIONAL"}</div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      copyPayMethod("orange", settings.payment_orange_money_ci || "+225 07 48 29 11 00");
-                    }}
-                    className="pay-copy-btn"
-                  >
-                    {copiedPay === "orange" ? <Check size={13} color="#16A34A" /> : <Copy size={13} />}
-                    <span>{copiedPay === "orange" ? "Copié !" : "Copier"}</span>
-                  </button>
+              ) : (
+                <div style={{ padding: "16px", borderRadius: "12px", background: "#FFFBEB", border: "1px solid #FDE68A", color: "#92400E", fontSize: "0.86rem" }}>
+                  Les comptes de règlement sont en cours de mise à jour par la direction. Vous pouvez valider votre commande et nos équipes vous transmettront les coordonnées sur WhatsApp.
                 </div>
-
-                {/* 3. MTN MoMo */}
-                <div
-                  className={`payment-method-card ${selectedPayMethod === "mtn" ? "active" : ""}`}
-                  onClick={() => setSelectedPayMethod("mtn")}
-                >
-                  <div className="pay-card-top">
-                    <strong style={{ color: "#CA8A04", fontSize: "0.92rem" }}>MTN MoMo</strong>
-                    <span className="pay-pill-tag">Mobile Money</span>
-                  </div>
-                  <div className="pay-account-num">{settings.payment_mtn_momo_ci || "MOMO-749201 / +225 05 94 32 10 05"}</div>
-                  <div className="pay-holder-name">{settings.payment_mtn_name || "ROUM LOGISTICS"}</div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      copyPayMethod("mtn", settings.payment_mtn_momo_ci || "MOMO-749201");
-                    }}
-                    className="pay-copy-btn"
-                  >
-                    {copiedPay === "mtn" ? <Check size={13} color="#16A34A" /> : <Copy size={13} />}
-                    <span>{copiedPay === "mtn" ? "Copié !" : "Copier"}</span>
-                  </button>
-                </div>
-
-                {/* 4. Banque Atlantique / BACI */}
-                <div
-                  className={`payment-method-card ${selectedPayMethod === "bank" ? "active" : ""}`}
-                  onClick={() => setSelectedPayMethod("bank")}
-                >
-                  <div className="pay-card-top">
-                    <strong style={{ color: "#0F766E", fontSize: "0.92rem" }}>Virement BACI</strong>
-                    <span className="pay-pill-tag">Bancaire UEMOA</span>
-                  </div>
-                  <div className="pay-account-num" style={{ fontFamily: "monospace", fontSize: "0.76rem" }}>
-                    {settings.payment_bank_rib || "CI092 01001 012345678901 24"}
-                  </div>
-                  <div className="pay-holder-name">{settings.payment_bank_account_holder || "ROUM TRANSIT INTERNATIONAL"}</div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      copyPayMethod("bank", settings.payment_bank_rib || "CI092 01001 012345678901 24");
-                    }}
-                    className="pay-copy-btn"
-                  >
-                    {copiedPay === "bank" ? <Check size={13} color="#16A34A" /> : <Copy size={13} />}
-                    <span>{copiedPay === "bank" ? "Copié !" : "Copier le RIB"}</span>
-                  </button>
-                </div>
-
-                {/* 5. Compte Maroc */}
-                {settings.payment_morocco_bank && (
-                  <div
-                    className={`payment-method-card ${selectedPayMethod === "morocco" ? "active" : ""}`}
-                    onClick={() => setSelectedPayMethod("morocco")}
-                  >
-                    <div className="pay-card-top">
-                      <strong style={{ color: "#B91C1C", fontSize: "0.92rem" }}>Compte Maroc</strong>
-                      <span className="pay-pill-tag">Casablanca</span>
-                    </div>
-                    <div className="pay-account-num" style={{ fontSize: "0.76rem" }}>
-                      {settings.payment_morocco_bank} · RIB: {settings.payment_morocco_rib}
-                    </div>
-                    <div className="pay-holder-name">{settings.payment_morocco_holder || "ROUM TRANSIT MAROC"}</div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copyPayMethod("morocco", settings.payment_morocco_rib || settings.payment_morocco_bank);
-                      }}
-                      className="pay-copy-btn"
-                    >
-                      {copiedPay === "morocco" ? <Check size={13} color="#16A34A" /> : <Copy size={13} />}
-                      <span>{copiedPay === "morocco" ? "Copié !" : "Copier"}</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+              )}
 
               <div className="section-divider" />
 

@@ -630,9 +630,21 @@ export default function TariffsPage() {
                         <span>{settings.payment_orange_money_ci}</span>
                       </div>
                     )}
+                    {settings.payment_mtn_momo_ci && (
+                      <div style={{ background: "#FFFFFF", padding: "6px 8px", borderRadius: "6px", border: "1px solid #E5E7EB" }}>
+                        <strong style={{ color: "#CA8A04" }}>MTN MoMo : </strong>
+                        <span>{settings.payment_mtn_momo_ci}</span>
+                      </div>
+                    )}
+                    {settings.payment_bank_rib && (
+                      <div style={{ background: "#FFFFFF", padding: "6px 8px", borderRadius: "6px", border: "1px solid #E5E7EB" }}>
+                        <strong style={{ color: "#0F766E" }}>BACI : </strong>
+                        <span>{settings.payment_bank_rib}</span>
+                      </div>
+                    )}
                     {settings.payment_morocco_bank && (
                       <div style={{ background: "#FFFFFF", padding: "6px 8px", borderRadius: "6px", border: "1px solid #E5E7EB" }}>
-                        <strong style={{ color: "#0F766E" }}>Virement / Agence : </strong>
+                        <strong style={{ color: "#B91C1C" }}>Maroc : </strong>
                         <span>{settings.payment_morocco_bank}</span>
                       </div>
                     )}

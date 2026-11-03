@@ -716,8 +716,8 @@ export function getLiveCompanySettings(): Record<string, string> {
       const saved = localStorage.getItem("roum_company_settings");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === "object") {
-          return { ...DEFAULT_COMPANY_SETTINGS, ...parsed };
+        if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
+          return parsed;
         }
       }
     } catch {}

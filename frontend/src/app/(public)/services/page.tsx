@@ -163,7 +163,7 @@ function ServicesContent() {
                   <div className="bento-bottom-row">
                     <div className="bento-bullet">
                       <span className="bento-bullet-dot" />
-                      <span>Règlement client : <strong>Mobile Money (Wave &amp; Orange Money)</strong></span>
+                      <span>Règlement client : <strong>Mobile Money &amp; Comptes certifiés (Wave, Orange, MTN, BACI)</strong></span>
                     </div>
                     <Link
                       href="/services/commande"
