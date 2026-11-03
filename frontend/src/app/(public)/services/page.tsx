@@ -325,7 +325,7 @@ function ServicesContent() {
               <MapPin size={20} color="var(--c-text-main)" />
               <div>
                 <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--c-text-main)" }}>Retrait ou Livraison</div>
-                <div style={{ fontSize: "0.78rem", color: "var(--c-text-muted)" }}>Magasin Bingerville Safari ou domicile</div>
+                <div style={{ fontSize: "0.78rem", color: "var(--c-text-muted)" }}>Agence de destination ou domicile</div>
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

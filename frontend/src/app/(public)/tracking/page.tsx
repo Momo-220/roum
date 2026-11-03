@@ -14,7 +14,7 @@ const TRACKING_STEPS = [
   { step: "05", label: "Reçu en entrepôt", desc: "Photos & pesée", isHigh: false },
   { step: "06", label: "Colis expédié", desc: "Vol / Bateau", isHigh: true },
   { step: "07", label: "Arrivé au pays", desc: "Dédouanement", isHigh: false },
-  { step: "08", label: "Prêt en agence", desc: "Bingerville Safari", isHigh: true },
+  { step: "08", label: "Prêt en agence", desc: "Agence de destination", isHigh: true },
   { step: "09", label: "Colis livré", desc: "Remis au client", isHigh: false },
 ];
 

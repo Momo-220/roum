@@ -595,7 +595,7 @@ export default function TariffsPage() {
                     Dédouanement : <strong style={{ color: "#166534" }}>100% Inclus (Zéro frais caché)</strong>
                   </div>
                   <div>
-                    Retrait : <strong>Gratuit agence Bingerville Safari ou livraison</strong>
+                    Retrait : <strong>Gratuit en agence locale ou livraison à destination</strong>
                   </div>
                 </div>
               </div>

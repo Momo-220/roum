@@ -87,7 +87,7 @@ export default function PublicLayout({
                 style={{ height: "34px", width: "auto" }}
               />
               <span style={{ fontSize: "0.82rem", color: "#57534E" }}>
-                Agence Abidjan : Bingerville Carrefour Safari
+                Expéditions directes vers l&apos;Afrique &amp; International
               </span>
             </div>
 
@@ -122,7 +122,7 @@ export default function PublicLayout({
             }}
           >
             <div>© 2026 ROUM TRANSIT INTERNATIONAL</div>
-            <div>DÉDOUANEMENT COMPRIS · PESÉE CERTIFIÉE · ABIDJAN</div>
+            <div>DÉDOUANEMENT COMPRIS · PESÉE CERTIFIÉE · LIVRAISON JUSQU&apos;À DESTINATION</div>
           </div>
         </div>
       </footer>

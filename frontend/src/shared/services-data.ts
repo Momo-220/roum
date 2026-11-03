@@ -386,7 +386,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     estimated_days_max: 5,
     flyer_source: "Paris ↔ Abidjan",
     secondary_display: "8 500 F / 12 € le kg",
-    note: "Expédition depuis notre agence de Bingerville vers toute la France",
+    note: "Expédition directe vers toute la France",
     is_active: 1,
   },
   {

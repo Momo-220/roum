@@ -48,7 +48,7 @@ const SERVICES_DATA: ServiceItem[] = [
       "Paiement Mobile Money (Wave, Orange, MTN, Moov)",
       "Zéro carte bancaire internationale requise",
       "Pesée vidéo & contrôle des cartons à Guangzhou",
-      "Dédouanement complet inclus jusqu'à Bingerville",
+      "Dédouanement complet inclus jusqu'à destination",
     ],
     metrics: [
       { label: "Paiement client", value: "Mobile Money (FCFA)" },
@@ -61,7 +61,7 @@ const SERVICES_DATA: ServiceItem[] = [
     title: "Voie Maritime",
     subtitle: "Groupage CBM & Conteneurs FCL",
     description:
-      "Acheminement maritime économique au m³ depuis la Chine. Dédouanement 100% compris avec retrait direct à Bingerville.",
+      "Acheminement maritime économique au m³ depuis la Chine. Dédouanement 100% compris jusqu'à destination finale.",
     image: "/images/services/maritime.jpg",
     href: "/tariffs?mode=SEA",
     ctaText: "Voir les tarifs maritimes",
