@@ -37,7 +37,7 @@ const SERVICES_DATA: ServiceItem[] = [
     options: [
       {
         tag: "Option 1 · Sans fournisseur",
-        desc: "Vous n'avez pas de fournisseur ? Nous cherchons l'article, vérifions la fiabilité de l'usine chinoise et négocions le tarif direct usine.",
+        desc: "Vous n'avez pas de fournisseur ? Nous cherchons le produit, vérifions la fiabilité de l'usine chinoise et négocions le tarif direct usine.",
       },
       {
         tag: "Option 2 · Avec fournisseur",
@@ -109,7 +109,7 @@ export function ServicesVisualCards() {
 
   const handleCardClick = (id: string, e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest(".service-cta-button") || target.closest(".service-close-button") || target.closest(".service-action-badge")) {
+    if (target.closest(".service-cta-button") || target.closest(".service-close-button")) {
       return;
     }
     setActiveId((prev) => (prev === id ? null : id));
@@ -200,6 +200,22 @@ export function ServicesVisualCards() {
                   }}
                 />
 
+                {/* BOUTON FERMER STRICTEMENT À L'EXTRÉMITÉ SUPÉRIEURE DROITE */}
+                {isExpanded && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveId(null);
+                    }}
+                    className="service-close-button"
+                    title="Replier ce volet"
+                    aria-label="Fermer"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+
                 {/* 3. Contenu de la carte (Plein cadre absolu : 100% hauteur garantie) */}
                 <div
                   className={`service-card-content ${
@@ -211,21 +227,6 @@ export function ServicesVisualCards() {
                     <div className="service-micro-badge">
                       <span>{service.badge}</span>
                     </div>
-
-                    {isExpanded && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveId(null);
-                        }}
-                        className="service-close-button"
-                        title="Fermer"
-                        aria-label="Fermer"
-                      >
-                        <X size={16} />
-                      </button>
-                    )}
                   </div>
 
                   {/* Bas : Corps selon état */}
@@ -235,32 +236,22 @@ export function ServicesVisualCards() {
                         <h3 className="service-title-stacked">{service.title}</h3>
                         <p className="service-subtitle-stacked">{service.subtitle}</p>
                       </div>
-                      <Link
-                        href={service.href}
-                        onClick={(e) => e.stopPropagation()}
-                        className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}
-                        title={`Accéder à ${service.title}`}
-                        aria-label={`Accéder à ${service.title}`}
-                      >
+                      {/* Flèche d'ouverture de la carte */}
+                      <div className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}>
                         <ArrowDownRight size={16} strokeWidth={2.4} />
-                      </Link>
+                      </div>
                     </div>
                   ) : !isExpanded ? (
-                    /* Vue au repos : STRICTEMENT EN BAS AVEC MARGIN-TOP AUTO */
+                    /* Vue au repos : Flèche d'origine qui ouvre la carte au clic */
                     <div className="service-default-bottom">
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <h3 className="service-title-default">{service.title}</h3>
                         <p className="service-subtitle-default">{service.subtitle}</p>
                       </div>
-                      <Link
-                        href={service.href}
-                        onClick={(e) => e.stopPropagation()}
-                        className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}
-                        title={`Accéder à ${service.title}`}
-                        aria-label={`Accéder à ${service.title}`}
-                      >
+                      {/* Flèche d'origine rétablie */}
+                      <div className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}>
                         <ArrowDownRight size={18} strokeWidth={2.4} />
-                      </Link>
+                      </div>
                     </div>
                   ) : (
                     /* Vue étendue complète : ZÉRO CADRE, POINTS ÉLÉGANTS, BOUTON REDIRECTION PROÉMINENT */
@@ -302,7 +293,7 @@ export function ServicesVisualCards() {
                         ))}
                       </div>
 
-                      {/* Bouton de Redirection Sans Contour */}
+                      {/* Bouton de Redirection Sans Contour (Uniquement quand ça déplie) */}
                       <div style={{ paddingTop: "10px" }}>
                         <Link href={service.href} className="service-cta-button">
                           <span>{service.ctaText}</span>
@@ -353,15 +344,10 @@ export function ServicesVisualCards() {
                       <h3 className="service-title-default">{service.title}</h3>
                       <p className="service-subtitle-default">{service.subtitle}</p>
                     </div>
-                    <Link
-                      href={service.href}
-                      onClick={(e) => e.stopPropagation()}
-                      className="service-action-badge"
-                      title={`Accéder à ${service.title}`}
-                      aria-label={`Accéder à ${service.title}`}
-                    >
+                    {/* Flèche d'origine mobile qui ouvre la carte */}
+                    <div className="service-action-badge">
                       <ArrowDownRight size={18} strokeWidth={2.4} />
-                    </Link>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -385,20 +371,23 @@ export function ServicesVisualCards() {
                         "linear-gradient(to bottom, rgba(20, 13, 9, 0.96) 0%, rgba(20, 13, 9, 0.90) 100%)",
                     }}
                   />
+
+                  {/* Bouton croix strictement à l'extrémité sur mobile */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveId(null)}
+                    className="service-close-button"
+                    title="Fermer"
+                    aria-label="Fermer"
+                  >
+                    <X size={16} />
+                  </button>
+
                   <div className="service-card-content content-expanded">
                     <div className="service-card-top-bar">
                       <div className="service-micro-badge">
                         <span>{activeService.badge}</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setActiveId(null)}
-                        className="service-close-button"
-                        title="Fermer"
-                        aria-label="Fermer"
-                      >
-                        <X size={16} />
-                      </button>
                     </div>
 
                     <div className="service-expanded-body">
@@ -439,6 +428,7 @@ export function ServicesVisualCards() {
                         ))}
                       </div>
 
+                      {/* Bouton de redirection déployé sans contour */}
                       <div style={{ paddingTop: "10px" }}>
                         <Link href={activeService.href} className="service-cta-button">
                           <span>{activeService.ctaText}</span>
@@ -486,16 +476,9 @@ export function ServicesVisualCards() {
                           {service.subtitle}
                         </p>
                       </div>
-                      <Link
-                        href={service.href}
-                        onClick={(e) => e.stopPropagation()}
-                        className="service-action-badge"
-                        style={{ width: "32px", height: "32px" }}
-                        title={`Accéder à ${service.title}`}
-                        aria-label={`Accéder à ${service.title}`}
-                      >
+                      <div className="service-action-badge" style={{ width: "32px", height: "32px" }}>
                         <ArrowDownRight size={15} strokeWidth={2.4} />
-                      </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -672,23 +655,29 @@ export function ServicesVisualCards() {
           text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.6);
         }
 
+        /* BOUTON FERMER : STRICTEMENT À L'EXTRÉMITÉ SUPÉRIEURE DROITE */
         .service-close-button {
-          width: 32px;
-          height: 32px;
+          position: absolute;
+          top: 22px;
+          right: 22px;
+          width: 34px;
+          height: 34px;
           border-radius: 50%;
-          background-color: rgba(255, 255, 255, 0.18);
+          background-color: rgba(255, 255, 255, 0.2);
           border: none !important;
-          backdrop-filter: blur(10px);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
           color: #FFFFFF;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
+          z-index: 25;
           transition: all 0.2s ease;
         }
 
         .service-close-button:hover {
-          background-color: rgba(255, 255, 255, 0.35);
+          background-color: rgba(255, 255, 255, 0.38);
           transform: scale(1.08);
         }
 
@@ -751,7 +740,7 @@ export function ServicesVisualCards() {
           text-overflow: ellipsis;
         }
 
-        /* Action Badge Flèche : SANS CONTOUR, REDIRIGE VERS LA PAGE */
+        /* Action Badge Flèche D'ORIGINE : OUVERTURE DE CARTE AU CLIC */
         .service-action-badge {
           width: 40px;
           height: 40px;
@@ -767,10 +756,9 @@ export function ServicesVisualCards() {
           flex-shrink: 0;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
           transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-          text-decoration: none;
         }
 
-        .service-action-badge:hover,
+        .service-card-item:hover .service-action-badge,
         .service-action-badge.is-hovered {
           background-color: #FFFFFF;
           color: #140D09;
@@ -892,7 +880,7 @@ export function ServicesVisualCards() {
           flex-shrink: 0;
         }
 
-        /* Bouton de Redirection Sans Contour */
+        /* Bouton de Redirection Sans Contour (Uniquement quand ça déplie) */
         .service-cta-button {
           display: inline-flex;
           align-items: center;
@@ -935,6 +923,13 @@ export function ServicesVisualCards() {
 
           .mobile-cards-container {
             display: block !important;
+          }
+
+          .service-close-button {
+            top: 16px !important;
+            right: 16px !important;
+            width: 32px !important;
+            height: 32px !important;
           }
 
           .mobile-horizontal-scroll {
