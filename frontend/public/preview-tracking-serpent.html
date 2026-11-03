@@ -14,7 +14,8 @@
       --c-text-muted: #5C4F48;     /* Gris chaud Linea */
       --c-text-light: #8C7D75;     /* Métadonnées */
       --c-accent-red: #C2410C;     /* Terracotta signature */
-      --c-accent-green: #16A34A;   /* Vert succès */
+      --c-accent-brown: #8C6D58;   /* Marron clair signature */
+      --c-border-brown: #A88A72;   /* Bordure marron clair */
       --c-btn-primary-bg: #140D09; /* Obsidian sombre */
     }
 
@@ -24,15 +25,17 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       margin: 0;
       padding: 0;
+      padding-bottom: 90px;
     }
 
-    /* Le cercle du chiffre (Seul élément géométrique, aucun cadran) */
+    /* Le cercle du chiffre (TRANSPARENT AVEC COULEUR MARRON CLAIR, ZÉRO CADRAN) */
     .num-circle {
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      background-color: var(--c-btn-primary-bg);
-      color: #FFFFFF;
+      background-color: rgba(200, 184, 158, 0.12);
+      border: 1.8px solid rgba(168, 138, 114, 0.45);
+      color: #8C6D58;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -41,29 +44,27 @@
       letter-spacing: -0.02em;
       position: relative;
       z-index: 10;
-      opacity: 0.22;
-      transform: scale(0.72);
-      transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, background-color 0.3s ease;
-      box-shadow: 0 4px 12px rgba(20, 13, 9, 0.15);
+      opacity: 0.35;
+      transform: scale(0.76);
+      transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+      box-shadow: 0 2px 8px rgba(140, 109, 88, 0.08);
     }
 
     .num-circle.active {
       opacity: 1;
       transform: scale(1.08);
-      box-shadow: 0 8px 24px -2px rgba(20, 13, 9, 0.35);
+      background-color: rgba(200, 184, 158, 0.32);
+      border-color: #8C6D58;
+      color: #4A3323;
+      box-shadow: 0 6px 20px -2px rgba(140, 109, 88, 0.3);
     }
 
-    .num-circle.done {
-      background-color: var(--c-accent-green) !important;
-      box-shadow: 0 8px 24px -2px rgba(22, 163, 74, 0.45) !important;
-    }
-
-    /* Onde pulsante au moment où la ligne touche le cercle */
+    /* Onde pulsante marron clair (AUCUN VERT) */
     .pulse-ring {
       position: absolute;
       inset: -6px;
       border-radius: 50%;
-      border: 2px solid var(--c-accent-green);
+      border: 2px solid #A88A72;
       opacity: 0;
       transform: scale(0.8);
       pointer-events: none;
@@ -99,23 +100,98 @@
     .no-scrollbar::-webkit-scrollbar {
       display: none;
     }
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
+
+    /* BARRE DE NAVIGATION FLOTTANTE MOBILE RESPONSIVE (ZÉRO DÉBORDEMENT) */
+    .floating-nav-wrapper {
+      position: fixed;
+      bottom: max(14px, env(safe-area-inset-bottom, 14px));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      width: max-content;
+      max-width: calc(100vw - 16px);
+      box-sizing: border-box;
+    }
+
+    .floating-nav-pill-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 4px 5px;
+      background-color: rgba(20, 13, 9, 0.94);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-radius: 9999px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 14px 34px -4px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.2);
+      box-sizing: border-box;
+      white-space: nowrap;
+      max-width: 100%;
+    }
+
+    .nav-pill-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 11px;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      text-decoration: none;
+      color: rgba(255, 255, 255, 0.82);
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all 0.16s ease;
+    }
+
+    .nav-pill-item.active {
+      color: #140D09;
+      background-color: #FFFFFF;
+      font-weight: 700;
+    }
+
+    .nav-label-mobile { display: none; }
+    .nav-label-desktop { display: inline; }
+
+    @media (max-width: 540px) {
+      .nav-label-desktop { display: none; }
+      .nav-label-mobile { display: inline; }
+      .nav-pill-item {
+        padding: 6px 9px;
+        font-size: 0.69rem;
+        gap: 4px;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .nav-pill-item {
+        padding: 5px 7px;
+        font-size: 0.65rem;
+        gap: 3px;
+      }
+      .nav-icon {
+        width: 13px !important;
+        height: 13px !important;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .nav-pill-item {
+        padding: 4px 5.5px;
+        font-size: 0.61rem;
+        gap: 2.5px;
+      }
+      .nav-icon {
+        width: 12px !important;
+        height: 12px !important;
+      }
     }
   </style>
 </head>
-<body class="p-4 sm:p-6 md:p-8 flex flex-col items-center justify-start min-h-screen">
+<body class="min-h-screen">
 
-  <!-- Contrôles de démonstration -->
-  <div class="mb-5 flex items-center gap-3">
-    <button onclick="startSynchronizedAnimation()" class="px-5 py-2.5 rounded-full bg-[#140D09] hover:bg-[#2A201A] text-white text-xs font-bold flex items-center gap-2 shadow-md active:scale-95 transition-all">
-      <svg class="w-3.5 h-3.5 text-[#16A34A]" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-      <span>Rejouer l'animation (Cambrure Prononcée & Synchronisation Parfaite)</span>
-    </button>
-  </div>
-
-  <div class="w-full max-w-[1140px] flex flex-col">
+  <div class="max-w-6xl mx-auto px-4 py-8">
 
     <!-- En-tête épuré SANS CADRAN (Code couleur officiel) -->
     <header class="text-center pt-2 pb-6">
@@ -127,12 +203,12 @@
         Suivre mon Colis en Temps Réel
       </h1>
       <p class="text-xs sm:text-sm text-[#5C4F48] max-w-[440px] mx-auto leading-relaxed">
-        Visualisez le cheminement de votre expédition, étape par étape, sans frais caché.
+        Visualisez le cheminement de votre expédition, étape par étape, sans aucun frais caché.
       </p>
     </header>
 
     <!-- MODULE DE RECHERCHE PILL (ZÉRO BORDURE) -->
-    <div class="w-full max-w-[500px] mx-auto search-pill p-1.5 pl-5 flex items-center justify-between mb-12">
+    <div class="w-full max-w-[500px] mx-auto search-pill p-1.5 pl-5 flex items-center justify-between mb-8">
       <div class="flex items-center gap-3 flex-1 min-w-0">
         <svg class="w-4 h-4 text-[#8C7D75] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" placeholder="Numéro de bordereau..." value="RM-AIR-2610-K8P9Q2" class="w-full bg-transparent text-xs sm:text-sm font-mono font-semibold text-[#1B1411] outline-none" />
@@ -142,40 +218,40 @@
       </button>
     </div>
 
-    <!-- TITRE DE SECTION SANS AUCUN CADRAN -->
+    <!-- TITRE DE SECTION SANS AUCUN CADRAN AVEC BOUTON REJOUER -->
     <div class="flex items-center justify-between mb-4 px-2">
       <span class="text-xs font-bold tracking-wider uppercase text-[#8C7D75]">
-        Le parcours officiel en 9 étapes
+        Le parcours officiel en 9 étapes synchronisées
       </span>
-      <span class="text-xs text-[#8C7D75] hidden sm:inline">
-        Glissez horizontalement ➔
-      </span>
+      <button onclick="buildCamberedSnakePath(); startSynchronizedAnimation();" class="inline-flex items-center gap-1.5 text-xs text-[#C2410C] font-semibold hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        <span>Rejouer le serpent</span>
+      </button>
     </div>
 
     <!-- ========================================================
          LE SERPENT HORIZONTAL DES 9 ÉTAPES
-         - Arches bien cambrées (cambrure accentuée de 100px d'amplitude)
-         - Ligne fine SVG continue synchronisée au milliseconde près
-         - Seuls les chiffres en cercle, zéro cadran, typographie Linea
+         - Cercles transparents avec couleur marron clair
+         - Arches bien cambrées (100% harmonieux)
+         - Ligne continue synchronisée au milliseconde près
+         - Aucun vert à la fin, zéro cadran rectangulaire
     ======================================================== -->
     <div class="relative w-full overflow-x-auto no-scrollbar py-12 px-6" id="hSnakeViewport">
-      <!-- Hauteur augmentée à 300px pour loger les grandes cambrures -->
       <div class="relative min-w-[1100px] h-[300px]" id="hSnakeContainer">
 
-        <!-- Ligne SVG en Serpent Horizontal Cambré -->
+        <!-- Ligne SVG en Serpent Horizontal Cambré (Obsidian -> Terracotta -> Marron Clair, aucun vert) -->
         <svg id="hSnakeSvg" class="absolute top-0 left-0 w-full h-full pointer-events-none z-0" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="hSnakeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <!-- Code couleur Roum Transit : Obsidian #140D09 -> Terracotta #C2410C -> Vert #16A34A -->
-              <stop offset="0%" stop-color="#140D09" stop-opacity="0.9" />
+              <stop offset="0%" stop-color="#140D09" stop-opacity="0.85" />
               <stop offset="50%" stop-color="#C2410C" stop-opacity="0.95" />
-              <stop offset="100%" stop-color="#16A34A" stop-opacity="1" />
+              <stop offset="100%" stop-color="#8C6D58" stop-opacity="1" />
             </linearGradient>
           </defs>
           <path id="hSvgPath" fill="none" stroke="url(#hSnakeGrad)" stroke-width="2.8" stroke-linecap="round" />
         </svg>
 
-        <!-- Les 9 Étapes disposées avec cambrure accentuée (alternance haut/bas de 110px) -->
+        <!-- Les 9 Étapes disposées avec cambrure accentuée -->
         <div class="relative z-10 flex justify-between items-center h-full w-full px-6" id="hStepsRow">
 
           <!-- 01 : Demande reçue (Centre bas) -->
@@ -226,7 +302,7 @@
             </div>
           </div>
 
-          <!-- 05 : Reçu en Chine (Cambré BAS) -->
+          <!-- 05 : Marchandises reçues en Chine (Cambré BAS) -->
           <div class="flex flex-col items-center text-center w-[114px]" style="margin-top: 60px;" data-step="5">
             <div class="num-circle" id="hCircle-5">
               05
@@ -250,7 +326,7 @@
             </div>
           </div>
 
-          <!-- 07 : Arrivé à destination (Cambré BAS) -->
+          <!-- 07 : Colis arrivé à destination (Cambré BAS) -->
           <div class="flex flex-col items-center text-center w-[114px]" style="margin-top: 60px;" data-step="7">
             <div class="num-circle" id="hCircle-7">
               07
@@ -262,10 +338,10 @@
             </div>
           </div>
 
-          <!-- 08 : Disponible pour retrait (Cambré HAUT) -->
+          <!-- 08 : Colis disponible pour retrait (Cambré HAUT) -->
           <div class="flex flex-col items-center text-center w-[114px]" style="margin-top: -65px;" data-step="8">
             <div class="step-meta mb-3" id="hMeta-8">
-              <div class="text-xs font-bold text-[#1B1411]">Prêt en magasin</div>
+              <div class="text-xs font-bold text-[#1B1411]">Prêt en agence</div>
               <div class="text-[10px] text-[#5C4F48] mt-0.5">Bingerville Safari</div>
             </div>
             <div class="num-circle" id="hCircle-8">
@@ -274,15 +350,15 @@
             </div>
           </div>
 
-          <!-- 09 : Colis livré (Position finale, cercle vert officiel) -->
+          <!-- 09 : Colis livré (Position finale, cercle marron clair transparent, AUCUN VERT) -->
           <div class="flex flex-col items-center text-center w-[114px]" style="margin-top: 60px;" data-step="9">
-            <div class="num-circle done" id="hCircle-9">
+            <div class="num-circle" id="hCircle-9">
               09
               <div class="pulse-ring"></div>
             </div>
             <div class="step-meta mt-3" id="hMeta-9">
-              <div class="text-xs font-bold text-[#16A34A]">Colis livré</div>
-              <div class="text-[10px] text-[#16A34A] mt-0.5">Remis au client</div>
+              <div class="text-xs font-bold text-[#1B1411]">Colis livré</div>
+              <div class="text-[10px] text-[#5C4F48] mt-0.5">Remis au client</div>
             </div>
           </div>
 
@@ -295,6 +371,37 @@
       ROUM TRANSIT INTERNATIONAL · DÉDOUANEMENT 100% INCLUS · AUCUN FRAIS SURPRISE
     </div>
 
+  </div>
+
+  <!-- BARRE DE NAVIGATION FLOTTANTE MOBILE RESPONSIVE (POUR VÉRIFICATION DIRECTE MOBILE) -->
+  <div class="floating-nav-wrapper">
+    <nav class="floating-nav-pill-box" aria-label="Navigation mobile">
+      <a href="#" class="nav-pill-item">
+        <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="nav-label-desktop">Accueil</span>
+        <span class="nav-label-mobile">Accueil</span>
+      </a>
+      <a href="#" class="nav-pill-item">
+        <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        <span class="nav-label-desktop">Services</span>
+        <span class="nav-label-mobile">Services</span>
+      </a>
+      <a href="#" class="nav-pill-item active">
+        <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span class="nav-label-desktop">Suivi</span>
+        <span class="nav-label-mobile">Suivi</span>
+      </a>
+      <a href="#" class="nav-pill-item">
+        <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
+        <span class="nav-label-desktop">Tarifs</span>
+        <span class="nav-label-mobile">Tarifs</span>
+      </a>
+      <a href="#" class="nav-pill-item">
+        <svg class="nav-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span class="nav-label-desktop">Entrepôts</span>
+        <span class="nav-label-mobile">Dépôts</span>
+      </a>
+    </nav>
   </div>
 
   <script>
@@ -322,14 +429,13 @@
       if (points.length < 2) return;
 
       // Construction de la cambrure prononcée :
-      // On utilise des points de contrôle de Bézier avec tangentes amples pour marquer la cambrure
       let d = `M ${points[0].x} ${points[0].y}`;
       for (let i = 0; i < points.length - 1; i++) {
         const p1 = points[i];
         const p2 = points[i + 1];
         const dx = (p2.x - p1.x);
 
-        // Arches bien cambrées avec contrôle horizontal étendu (dx * 0.52)
+        // Arches bien cambrées avec contrôle horizontal étendu
         const cp1x = p1.x + dx * 0.52;
         const cp1y = p1.y;
         const cp2x = p2.x - dx * 0.52;
@@ -346,10 +452,7 @@
       path.style.strokeDashoffset = totalPathLength;
 
       // Calcul des distances cumulées exactes pour chaque cercle
-      // Pour une synchronisation mathématique absolue à 100%
-      nodeDistances = [0]; // Étape 1 commence à 0
-
-      // Échantillonnage de la courbe pour trouver l'abscisse curviligne exacte de chaque point
+      nodeDistances = [0];
       const samplesCount = 1000;
       for (let i = 1; i < points.length; i++) {
         const targetPoint = points[i];
@@ -389,14 +492,13 @@
       document.getElementById('hCircle-1').classList.add('active');
       document.getElementById('hMeta-1').classList.add('active');
 
-      const duration = 11000; // 11 secondes complètes (tracé majestueux et posé)
+      const duration = 11000; // 11 secondes complètes
       const startTime = performance.now();
 
       function frame(now) {
         const elapsed = now - startTime;
         const progress = Math.min(1, elapsed / duration);
 
-        // Fonction d'accélération/décélération très douce (smooth step)
         const easedProgress = progress < 0.5 
           ? 2 * progress * progress 
           : 1 - Math.pow(-2 * progress + 2, 2) / 2;
@@ -404,9 +506,7 @@
         const currentDrawnLength = easedProgress * totalPathLength;
         path.style.strokeDashoffset = totalPathLength - currentDrawnLength;
 
-        // SYNCHRONISATION ABSOLUE :
-        // Dès que la pointe de la ligne atteint ou dépasse exactement la distance du cercle i,
-        // le cercle s'active instantanément (ni avant, ni après) !
+        // Synchronisation mathématique instantanée
         for (let i = 1; i < nodeDistances.length; i++) {
           const targetDist = nodeDistances[i];
           const circleEl = document.getElementById('hCircle-' + (i + 1));

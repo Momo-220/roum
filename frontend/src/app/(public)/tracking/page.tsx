@@ -15,7 +15,7 @@ const TRACKING_STEPS = [
   { step: "06", label: "Colis expédié", desc: "Vol / Bateau", isHigh: true },
   { step: "07", label: "Arrivé au pays", desc: "Dédouanement", isHigh: false },
   { step: "08", label: "Prêt en agence", desc: "Bingerville Safari", isHigh: true },
-  { step: "09", label: "Colis livré", desc: "Remis au client", isHigh: false, isFinal: true },
+  { step: "09", label: "Colis livré", desc: "Remis au client", isHigh: false },
 ];
 
 export default function TrackingPage() {
@@ -321,7 +321,7 @@ export default function TrackingPage() {
 
           {/* ========================================================
               LE SERPENT HORIZONTAL DES 9 ÉTAPES
-              (CAMBRURE PRONONCÉE, SYNCHRONISATION 100%, ZÉRO CADRAN)
+              (CERCLES TRANSPARENTS MARRON CLAIR, SANS VERT, ZÉRO CADRAN)
              ======================================================== */}
           <div
             className="snake-horizontal-viewport"
@@ -341,7 +341,7 @@ export default function TrackingPage() {
                 height: "290px",
               }}
             >
-              {/* Ligne SVG Cambrée */}
+              {/* Ligne SVG Cambrée harmonieuse (Obsidian -> Terracotta -> Marron Clair chaud, aucun vert) */}
               <svg
                 style={{
                   position: "absolute",
@@ -355,9 +355,9 @@ export default function TrackingPage() {
               >
                 <defs>
                   <linearGradient id="hSnakeGradOfficial" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#140D09" stopOpacity="0.9" />
+                    <stop offset="0%" stopColor="#140D09" stopOpacity="0.85" />
                     <stop offset="50%" stopColor="#C2410C" stopOpacity="0.95" />
-                    <stop offset="100%" stopColor="#16A34A" stopOpacity="1" />
+                    <stop offset="100%" stopColor="#8C6D58" stopOpacity="1" />
                   </linearGradient>
                 </defs>
                 <path
@@ -410,10 +410,10 @@ export default function TrackingPage() {
                         </div>
                       )}
 
-                      {/* Le cercle du chiffre (SEUL ÉLÉMENT GÉOMÉTRIQUE, ZÉRO CADRAN) */}
+                      {/* Le cercle du chiffre transparent marron clair */}
                       <div
                         id={`step-circle-${stepNum}`}
-                        className={`step-circle-node ${item.isFinal ? "is-final" : ""}`}
+                        className="step-circle-node"
                       >
                         {item.step}
                         <div className="pulse-ripple" />
@@ -426,7 +426,7 @@ export default function TrackingPage() {
                             style={{
                               fontSize: "0.82rem",
                               fontWeight: 700,
-                              color: item.isFinal ? "var(--c-accent-green)" : "var(--c-text-main)",
+                              color: "var(--c-text-main)",
                               whiteSpace: "nowrap",
                             }}
                           >
@@ -435,7 +435,7 @@ export default function TrackingPage() {
                           <div
                             style={{
                               fontSize: "0.7rem",
-                              color: item.isFinal ? "var(--c-accent-green)" : "var(--c-text-muted)",
+                              color: "var(--c-text-muted)",
                               marginTop: "2px",
                               whiteSpace: "nowrap",
                             }}
@@ -467,7 +467,7 @@ export default function TrackingPage() {
                 textDecoration: "none",
               }}
             >
-              <MessageCircle size={15} color="var(--c-accent-green)" />
+              <MessageCircle size={15} color="var(--c-accent-red)" />
               <span>Besoin d&apos;aide sur votre expédition ? Assistance directe en agence</span>
             </a>
           </div>
@@ -479,7 +479,7 @@ export default function TrackingPage() {
           height: 4px;
         }
         .snake-horizontal-viewport::-webkit-scrollbar-thumb {
-          background-color: rgba(20, 13, 9, 0.12);
+          background-color: rgba(200, 184, 158, 0.35);
           border-radius: 9999px;
         }
 
@@ -487,8 +487,9 @@ export default function TrackingPage() {
           width: 44px;
           height: 44px;
           border-radius: 50%;
-          background-color: var(--c-btn-primary-bg);
-          color: #ffffff;
+          background-color: rgba(200, 184, 158, 0.12);
+          border: 1.8px solid rgba(168, 138, 114, 0.45);
+          color: #8C6D58;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -497,28 +498,26 @@ export default function TrackingPage() {
           letter-spacing: -0.02em;
           position: relative;
           z-index: 10;
-          opacity: 0.25;
-          transform: scale(0.72);
-          transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, background-color 0.3s ease;
-          box-shadow: 0 4px 12px rgba(20, 13, 9, 0.15);
+          opacity: 0.35;
+          transform: scale(0.76);
+          transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+          box-shadow: 0 2px 8px rgba(140, 109, 88, 0.08);
         }
 
         :global(.step-circle-node.active) {
           opacity: 1 !important;
           transform: scale(1.08) !important;
-          box-shadow: 0 8px 24px -2px rgba(20, 13, 9, 0.35) !important;
-        }
-
-        :global(.step-circle-node.is-final.active) {
-          background-color: var(--c-accent-green) !important;
-          box-shadow: 0 8px 24px -2px rgba(22, 163, 74, 0.45) !important;
+          background-color: rgba(200, 184, 158, 0.32) !important;
+          border-color: #8C6D58 !important;
+          color: #4A3323 !important;
+          box-shadow: 0 6px 20px -2px rgba(140, 109, 88, 0.3) !important;
         }
 
         :global(.pulse-ripple) {
           position: absolute;
           inset: -6px;
           border-radius: 50%;
-          border: 2px solid var(--c-accent-green);
+          border: 2px solid #A88A72;
           opacity: 0;
           transform: scale(0.8);
           pointer-events: none;

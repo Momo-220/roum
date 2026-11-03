@@ -14,11 +14,11 @@ export function FloatingBottomNav() {
   const pathname = usePathname();
 
   const navItems = [
-    { id: "home", label: "Accueil", icon: Home, href: "/", isActive: pathname === "/" },
-    { id: "services", label: "Services", icon: Layers, href: "/services", isActive: pathname.startsWith("/services") },
-    { id: "tracking", label: "Suivi", icon: Search, href: "/tracking", isActive: pathname.startsWith("/tracking") },
-    { id: "tariffs", label: "Tarifs", icon: Calculator, href: "/tariffs", isActive: pathname.startsWith("/tariffs") },
-    { id: "warehouses", label: "Entrepôts", icon: MapPin, href: "/warehouses", isActive: pathname.startsWith("/warehouses") },
+    { id: "home", label: "Accueil", shortLabel: "Accueil", icon: Home, href: "/", isActive: pathname === "/" },
+    { id: "services", label: "Services", shortLabel: "Services", icon: Layers, href: "/services", isActive: pathname.startsWith("/services") },
+    { id: "tracking", label: "Suivi", shortLabel: "Suivi", icon: Search, href: "/tracking", isActive: pathname.startsWith("/tracking") },
+    { id: "tariffs", label: "Tarifs", shortLabel: "Tarifs", icon: Calculator, href: "/tariffs", isActive: pathname.startsWith("/tariffs") },
+    { id: "warehouses", label: "Entrepôts", shortLabel: "Dépôts", icon: MapPin, href: "/warehouses", isActive: pathname.startsWith("/warehouses") },
   ];
 
   return (
@@ -29,8 +29,10 @@ export function FloatingBottomNav() {
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 9999,
+        width: "max-content",
         maxWidth: "calc(100vw - 16px)",
         pointerEvents: "auto",
+        boxSizing: "border-box",
       }}
     >
       <nav
@@ -38,6 +40,7 @@ export function FloatingBottomNav() {
         style={{
           display: "flex",
           alignItems: "center",
+          justifyContent: "center",
           gap: "3px",
           padding: "4px 5px",
           backgroundColor: "rgba(20, 13, 9, 0.94)",
@@ -48,6 +51,7 @@ export function FloatingBottomNav() {
           boxShadow: "0 14px 34px -4px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.2)",
           boxSizing: "border-box",
           whiteSpace: "nowrap",
+          maxWidth: "100%",
         }}
       >
         {navItems.map((item) => {
@@ -82,28 +86,63 @@ export function FloatingBottomNav() {
                 size={14}
                 strokeWidth={item.isActive ? 2.5 : 1.9}
                 color={item.isActive ? "#140D09" : "rgba(255, 255, 255, 0.85)"}
+                className="roum-nav-icon"
                 style={{ flexShrink: 0 }}
               />
-              <span style={{ whiteSpace: "nowrap", lineHeight: 1 }}>{item.label}</span>
+              <span className="roum-nav-label-full">{item.label}</span>
+              <span className="roum-nav-label-short">{item.shortLabel}</span>
             </Link>
           );
         })}
       </nav>
 
       <style jsx>{`
-        @media (max-width: 420px) {
+        .roum-nav-label-short {
+          display: none;
+        }
+        .roum-nav-label-full {
+          display: inline;
+          white-space: nowrap;
+          line-height: 1;
+        }
+
+        @media (max-width: 540px) {
+          .roum-nav-label-full {
+            display: none;
+          }
+          .roum-nav-label-short {
+            display: inline;
+            white-space: nowrap;
+            line-height: 1;
+          }
           .roum-nav-pill {
-            padding: 6px 8px !important;
-            font-size: 0.67rem !important;
+            padding: 6px 9px !important;
+            font-size: 0.69rem !important;
             gap: 4px !important;
+          }
+        }
+
+        @media (max-width: 400px) {
+          .roum-nav-pill {
+            padding: 5px 7px !important;
+            font-size: 0.65rem !important;
+            gap: 3px !important;
+          }
+          :global(.roum-nav-icon) {
+            width: 13px !important;
+            height: 13px !important;
           }
         }
 
         @media (max-width: 360px) {
           .roum-nav-pill {
-            padding: 5px 6px !important;
-            font-size: 0.63rem !important;
-            gap: 3px !important;
+            padding: 4px 5.5px !important;
+            font-size: 0.61rem !important;
+            gap: 2.5px !important;
+          }
+          :global(.roum-nav-icon) {
+            width: 12px !important;
+            height: 12px !important;
           }
         }
       `}</style>
