@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowDownRight, ArrowRight, Check, X } from "lucide-react";
+import { ArrowDownRight, ArrowRight, X } from "lucide-react";
 
 interface ServiceItem {
   id: string;
@@ -89,7 +89,7 @@ export function ServicesVisualCards() {
 
   const handleCardClick = (id: string, e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest(".service-cta-button") || target.closest(".service-close-button")) {
+    if (target.closest(".service-cta-button") || target.closest(".service-close-button") || target.closest(".service-action-badge")) {
       return;
     }
     setActiveId((prev) => (prev === id ? null : id));
@@ -137,9 +137,7 @@ export function ServicesVisualCards() {
       </div>
 
       {/* ========================================================
-          DISPOSITION DESKTOP (> 860px) :
-          - Par défaut : 3 cartes côte-à-côte avec textes strictement en bas
-          - Au clic : extension fluide en grand volet + 2 cartes compactes à droite
+          DISPOSITION DESKTOP (> 860px)
          ======================================================== */}
       <div className="desktop-cards-container">
         <div className={`desktop-grid ${activeId !== null ? "has-active" : "is-default"}`}>
@@ -175,7 +173,7 @@ export function ServicesVisualCards() {
                   className="service-card-scrim"
                   style={{
                     background: isExpanded
-                      ? "linear-gradient(to right, rgba(20, 13, 9, 0.96) 0%, rgba(20, 13, 9, 0.88) 45%, rgba(20, 13, 9, 0.78) 100%)"
+                      ? "linear-gradient(to right, rgba(20, 13, 9, 0.96) 0%, rgba(20, 13, 9, 0.90) 45%, rgba(20, 13, 9, 0.82) 100%)"
                       : isStackedSquare
                       ? "linear-gradient(to top, rgba(20, 13, 9, 0.95) 0%, rgba(20, 13, 9, 0.55) 50%, rgba(20, 13, 9, 0.1) 100%)"
                       : "linear-gradient(to top, rgba(20, 13, 9, 0.95) 0%, rgba(20, 13, 9, 0.58) 45%, rgba(20, 13, 9, 0.08) 72%, rgba(0, 0, 0, 0.2) 100%)",
@@ -188,7 +186,7 @@ export function ServicesVisualCards() {
                     isExpanded ? "content-expanded" : isStackedSquare ? "content-stacked" : "content-default"
                   }`}
                 >
-                  {/* Haut : Micro Badge (SANS CONTOUR, SANS POINT VERT) */}
+                  {/* Haut : Titre Badge pur (SANS CONTOUR, SANS FOND, SANS POINT VERT) */}
                   <div className="service-card-top-bar">
                     <div className="service-micro-badge">
                       <span>{service.badge}</span>
@@ -205,7 +203,7 @@ export function ServicesVisualCards() {
                         title="Fermer"
                         aria-label="Fermer"
                       >
-                        <X size={15} />
+                        <X size={16} />
                       </button>
                     )}
                   </div>
@@ -217,9 +215,15 @@ export function ServicesVisualCards() {
                         <h3 className="service-title-stacked">{service.title}</h3>
                         <p className="service-subtitle-stacked">{service.subtitle}</p>
                       </div>
-                      <div className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}>
+                      <Link
+                        href={service.href}
+                        onClick={(e) => e.stopPropagation()}
+                        className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}
+                        title={`Accéder à ${service.title}`}
+                        aria-label={`Accéder à ${service.title}`}
+                      >
                         <ArrowDownRight size={16} strokeWidth={2.4} />
-                      </div>
+                      </Link>
                     </div>
                   ) : !isExpanded ? (
                     /* Vue au repos : STRICTEMENT EN BAS AVEC MARGIN-TOP AUTO */
@@ -228,39 +232,49 @@ export function ServicesVisualCards() {
                         <h3 className="service-title-default">{service.title}</h3>
                         <p className="service-subtitle-default">{service.subtitle}</p>
                       </div>
-                      <div className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}>
+                      <Link
+                        href={service.href}
+                        onClick={(e) => e.stopPropagation()}
+                        className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}
+                        title={`Accéder à ${service.title}`}
+                        aria-label={`Accéder à ${service.title}`}
+                      >
                         <ArrowDownRight size={18} strokeWidth={2.4} />
-                      </div>
+                      </Link>
                     </div>
                   ) : (
-                    /* Vue étendue complète */
+                    /* Vue étendue complète : ZÉRO CADRE, POINTS ÉLÉGANTS, BOUTON REDIRECTION PROÉMINENT */
                     <div className="service-expanded-body">
                       <div>
                         <h3 className="service-title-expanded">{service.title}</h3>
                         <p className="service-desc-expanded">{service.description}</p>
                       </div>
+
+                      {/* Métriques : ÉPURÉES EN LIGNE SANS CADRE NI BOÎTE */}
                       <div className="service-metrics-row">
                         {service.metrics.map((m, idx) => (
                           <div key={idx} className="service-metric-item">
-                            <span className="service-metric-label">{m.label}</span>
+                            <span className="service-metric-label">{m.label} :</span>
                             <span className="service-metric-value">{m.value}</span>
                           </div>
                         ))}
                       </div>
+
+                      {/* Points / Caractéristiques : AVEC DE VRAIS POINTS (AUCUN CHECK VERT) */}
                       <div className="service-features-grid">
                         {service.features.map((feat, idx) => (
                           <div key={idx} className="service-feature-row">
-                            <div className="service-feature-check">
-                              <Check size={10} color="#FFFFFF" strokeWidth={3} />
-                            </div>
+                            <span className="service-feature-dot" />
                             <span>{feat}</span>
                           </div>
                         ))}
                       </div>
-                      <div style={{ paddingTop: "4px" }}>
+
+                      {/* Bouton de Redirection Sans Contour */}
+                      <div style={{ paddingTop: "10px" }}>
                         <Link href={service.href} className="service-cta-button">
                           <span>{service.ctaText}</span>
-                          <ArrowRight size={15} />
+                          <ArrowRight size={16} />
                         </Link>
                       </div>
                     </div>
@@ -273,9 +287,7 @@ export function ServicesVisualCards() {
       </div>
 
       {/* ========================================================
-          DISPOSITION MOBILE (< 860px) :
-          - Au repos : Carousel horizontal fluide avec snap
-          - Au clic : Extension fluide de la carte avec ses 2 cartes associées
+          DISPOSITION MOBILE (< 860px)
          ======================================================== */}
       <div className="mobile-cards-container">
         {activeId === null ? (
@@ -309,9 +321,15 @@ export function ServicesVisualCards() {
                       <h3 className="service-title-default">{service.title}</h3>
                       <p className="service-subtitle-default">{service.subtitle}</p>
                     </div>
-                    <div className="service-action-badge">
+                    <Link
+                      href={service.href}
+                      onClick={(e) => e.stopPropagation()}
+                      className="service-action-badge"
+                      title={`Accéder à ${service.title}`}
+                      aria-label={`Accéder à ${service.title}`}
+                    >
                       <ArrowDownRight size={18} strokeWidth={2.4} />
-                    </div>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -332,7 +350,7 @@ export function ServicesVisualCards() {
                     className="service-card-scrim"
                     style={{
                       background:
-                        "linear-gradient(to bottom, rgba(20, 13, 9, 0.94) 0%, rgba(20, 13, 9, 0.88) 100%)",
+                        "linear-gradient(to bottom, rgba(20, 13, 9, 0.96) 0%, rgba(20, 13, 9, 0.90) 100%)",
                     }}
                   />
                   <div className="service-card-content content-expanded">
@@ -347,7 +365,7 @@ export function ServicesVisualCards() {
                         title="Fermer"
                         aria-label="Fermer"
                       >
-                        <X size={15} />
+                        <X size={16} />
                       </button>
                     </div>
 
@@ -357,30 +375,30 @@ export function ServicesVisualCards() {
                         <p className="service-desc-expanded">{activeService.description}</p>
                       </div>
 
+                      {/* Métriques épurées sans boîte */}
                       <div className="service-metrics-row">
                         {activeService.metrics.map((m, idx) => (
                           <div key={idx} className="service-metric-item">
-                            <span className="service-metric-label">{m.label}</span>
+                            <span className="service-metric-label">{m.label} :</span>
                             <span className="service-metric-value">{m.value}</span>
                           </div>
                         ))}
                       </div>
 
+                      {/* Points au lieu de checks */}
                       <div className="service-features-grid">
                         {activeService.features.map((feat, idx) => (
                           <div key={idx} className="service-feature-row">
-                            <div className="service-feature-check">
-                              <Check size={10} color="#FFFFFF" strokeWidth={3} />
-                            </div>
+                            <span className="service-feature-dot" />
                             <span>{feat}</span>
                           </div>
                         ))}
                       </div>
 
-                      <div style={{ paddingTop: "6px" }}>
+                      <div style={{ paddingTop: "10px" }}>
                         <Link href={activeService.href} className="service-cta-button">
                           <span>{activeService.ctaText}</span>
-                          <ArrowRight size={15} />
+                          <ArrowRight size={16} />
                         </Link>
                       </div>
                     </div>
@@ -424,9 +442,16 @@ export function ServicesVisualCards() {
                           {service.subtitle}
                         </p>
                       </div>
-                      <div className="service-action-badge" style={{ width: "32px", height: "32px" }}>
+                      <Link
+                        href={service.href}
+                        onClick={(e) => e.stopPropagation()}
+                        className="service-action-badge"
+                        style={{ width: "32px", height: "32px" }}
+                        title={`Accéder à ${service.title}`}
+                        aria-label={`Accéder à ${service.title}`}
+                      >
                         <ArrowDownRight size={15} strokeWidth={2.4} />
-                      </div>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -468,7 +493,7 @@ export function ServicesVisualCards() {
           letter-spacing: -0.035em;
           color: var(--c-text-main);
           margin: 0 auto 10px auto;
-          maxWidth: 760px;
+          max-width: 760px;
         }
 
         .services-subtext {
@@ -505,7 +530,7 @@ export function ServicesVisualCards() {
         .desktop-grid.has-active {
           grid-template-columns: 2.2fr 1fr;
           grid-template-rows: 1fr 1fr;
-          height: 480px;
+          height: 520px;
         }
 
         .service-card-item {
@@ -514,7 +539,7 @@ export function ServicesVisualCards() {
           overflow: hidden;
           cursor: pointer;
           background-color: #1B1411;
-          border: none;
+          border: none !important;
           box-shadow: 0 10px 30px -8px rgba(27, 20, 17, 0.14);
           transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
                       box-shadow 0.35s ease;
@@ -567,15 +592,15 @@ export function ServicesVisualCards() {
         }
 
         .content-default {
-          padding: 22px 20px;
+          padding: 24px 22px;
         }
 
         .content-stacked {
-          padding: 14px 16px;
+          padding: 16px 18px;
         }
 
         .content-expanded {
-          padding: 24px 26px;
+          padding: 26px 28px;
         }
 
         .service-card-top-bar {
@@ -608,7 +633,7 @@ export function ServicesVisualCards() {
           height: 32px;
           border-radius: 50%;
           background-color: rgba(255, 255, 255, 0.18);
-          border: none;
+          border: none !important;
           backdrop-filter: blur(10px);
           color: #FFFFFF;
           display: flex;
@@ -682,7 +707,7 @@ export function ServicesVisualCards() {
           text-overflow: ellipsis;
         }
 
-        /* Action Badge : SANS CONTOUR */
+        /* Action Badge Flèche : SANS CONTOUR, REDIRIGE VERS LA PAGE */
         .service-action-badge {
           width: 40px;
           height: 40px;
@@ -690,7 +715,7 @@ export function ServicesVisualCards() {
           background-color: rgba(255, 255, 255, 0.18);
           backdrop-filter: blur(10px);
           -webkit-backdrop-filter: blur(10px);
-          border: none;
+          border: none !important;
           color: #FFFFFF;
           display: flex;
           align-items: center;
@@ -698,8 +723,10 @@ export function ServicesVisualCards() {
           flex-shrink: 0;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
           transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          text-decoration: none;
         }
 
+        .service-action-badge:hover,
         .service-action-badge.is-hovered {
           background-color: #FFFFFF;
           color: #140D09;
@@ -710,14 +737,14 @@ export function ServicesVisualCards() {
         .service-expanded-body {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 14px;
           width: 100%;
           animation: cardSmoothReveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         .service-title-expanded {
           font-family: var(--c-font-display);
-          font-size: clamp(1.4rem, 2.2vw, 1.85rem);
+          font-size: clamp(1.5rem, 2.3vw, 1.95rem);
           font-weight: 700;
           line-height: 1.1;
           letter-spacing: -0.035em;
@@ -726,32 +753,32 @@ export function ServicesVisualCards() {
         }
 
         .service-desc-expanded {
-          font-size: 0.86rem;
-          line-height: 1.45;
+          font-size: 0.88rem;
+          line-height: 1.48;
           color: rgba(255, 255, 255, 0.9);
           max-width: 620px;
           margin: 0;
         }
 
+        /* Métriques : ZÉRO CADRE, ZÉRO BOÎTE */
         .service-metrics-row {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: 18px;
         }
 
         .service-metric-item {
-          background-color: rgba(255, 255, 255, 0.12);
-          backdrop-filter: blur(8px);
-          border: none;
-          border-radius: 8px;
-          padding: 6px 12px;
-          display: flex;
-          flex-direction: column;
-          gap: 1px;
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+          display: inline-flex;
+          align-items: baseline;
+          gap: 6px;
         }
 
         .service-metric-label {
-          font-size: 0.64rem;
+          font-size: 0.68rem;
           color: rgba(255, 255, 255, 0.72);
           text-transform: uppercase;
           font-family: var(--c-font-mono);
@@ -760,50 +787,51 @@ export function ServicesVisualCards() {
 
         .service-metric-value {
           font-family: 'Bricolage Grotesque', var(--font-display), sans-serif;
-          font-size: 0.85rem;
+          font-size: 0.9rem;
           font-weight: 800;
           color: #FFFFFF;
           font-variant-numeric: tabular-nums;
         }
 
+        /* Caractéristiques : LISTE AVEC POINTS (ZÉRO CHECK VERT) */
         .service-features-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 6px 12px;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 8px 16px;
         }
 
         .service-feature-row {
           display: flex;
           align-items: center;
-          gap: 6px;
-          font-size: 0.78rem;
-          color: rgba(255, 255, 255, 0.88);
+          gap: 8px;
+          font-size: 0.8rem;
+          color: rgba(255, 255, 255, 0.9);
         }
 
-        .service-feature-check {
-          width: 16px;
-          height: 16px;
+        .service-feature-dot {
+          width: 5px;
+          height: 5px;
           border-radius: 50%;
-          background-color: #22C55E;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          background-color: rgba(255, 255, 255, 0.85);
+          display: inline-block;
           flex-shrink: 0;
         }
 
+        /* Bouton de Redirection Sans Contour */
         .service-cta-button {
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          padding: 10px 22px;
+          padding: 11px 24px;
           border-radius: 9999px;
           background-color: #FFFFFF;
           color: #140D09;
-          font-size: 0.82rem;
+          border: none !important;
+          font-size: 0.84rem;
           font-weight: 700;
           text-decoration: none;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
-          transition: transform 0.18s ease, background-color 0.18s ease;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+          transition: transform 0.2s ease, background-color 0.2s ease;
         }
 
         .service-cta-button:hover {
@@ -858,7 +886,7 @@ export function ServicesVisualCards() {
             border-radius: 24px;
             overflow: hidden;
             background-color: #1B1411;
-            border: none;
+            border: none !important;
             box-shadow: 0 10px 28px -6px rgba(27, 20, 17, 0.16);
             cursor: pointer;
             box-sizing: border-box;
@@ -875,7 +903,7 @@ export function ServicesVisualCards() {
             border-radius: 24px;
             overflow: hidden;
             background-color: #1B1411;
-            border: none;
+            border: none !important;
             box-shadow: 0 14px 34px -8px rgba(20, 13, 9, 0.32);
             min-height: 440px;
             animation: cardSmoothReveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -897,7 +925,7 @@ export function ServicesVisualCards() {
             border-radius: 18px;
             overflow: hidden;
             background-color: #1B1411;
-            border: none;
+            border: none !important;
             box-shadow: 0 6px 18px -4px rgba(27, 20, 17, 0.12);
             cursor: pointer;
           }
