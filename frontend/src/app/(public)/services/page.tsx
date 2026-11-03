@@ -135,7 +135,7 @@ function ServicesContent() {
                 className="bento-card-bg"
               />
               <div className="bento-scrim" />
-              <div className="bento-content">
+              <div className="bento-content" style={{ justifyContent: "flex-end" }}>
                 <div>
                   <h2 className="bento-card-title">Centrale d&apos;Achat</h2>
                   <p className="bento-card-subtitle">
@@ -154,16 +154,16 @@ function ServicesContent() {
                   </div>
 
                   <div className="bento-bottom-row">
-                    <div className="bento-bullet">
+                    <div className="bento-bullet" style={{ whiteSpace: "nowrap" }}>
                       <span className="bento-bullet-dot" />
-                      <span>Règlement client : <strong>Mobile Money &amp; Comptes certifiés (Wave, Orange, MTN, BACI)</strong></span>
+                      <span>Règlement : <strong>Wave · Orange Money · Maroc</strong></span>
                     </div>
                     <Link
                       href="/services/commande"
                       className="bento-cta-pill"
                     >
                       <span>Lancer une commande</span>
-                      <ArrowRight size={15} />
+                      <ArrowRight size={14} />
                     </Link>
                   </div>
                 </div>
@@ -210,11 +210,11 @@ function ServicesContent() {
                     </span>
                     <Link
                       href="/tariffs?mode=AIR"
-                      className="bento-cta-pill"
+                      className="arrow-btn"
                       title="Voir les tarifs aériens"
+                      aria-label="Voir les tarifs aériens"
                     >
-                      <span>Voir les tarifs</span>
-                      <ArrowRight size={15} />
+                      <ArrowRight size={17} strokeWidth={2.4} />
                     </Link>
                   </div>
                 </div>
@@ -667,10 +667,11 @@ function ServicesContent() {
 
         .bento-bottom-row {
           display: flex;
-          align-items: flex-end;
+          align-items: center;
           justify-content: space-between;
-          gap: 12px;
+          gap: 14px;
           margin-top: 16px;
+          flex-wrap: nowrap;
         }
 
         .arrow-btn {
@@ -700,19 +701,18 @@ function ServicesContent() {
         .bento-cta-pill {
           display: inline-flex;
           align-items: center;
-          justify-content: center;
           gap: 12px;
-          padding: 11px 22px;
+          padding: 10px 20px;
           border-radius: 9999px;
           background: #FFFFFF;
           color: #140D09;
-          font-size: 0.82rem;
+          font-size: 0.80rem;
           font-weight: 700;
           text-decoration: none;
           border: none;
           box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
           cursor: pointer;
-          white-space: nowrap;
+          white-space: nowrap !important;
           flex-shrink: 0;
           transition: all 0.16s ease;
         }
@@ -1296,9 +1296,9 @@ function ServicesContent() {
             display: flex !important;
             align-items: center !important;
             justify-content: space-between !important;
-            gap: 16px !important;
-            margin-top: 18px !important;
-            flex-wrap: wrap !important;
+            gap: 14px !important;
+            margin-top: 14px !important;
+            flex-wrap: nowrap !important;
           }
 
           .bento-bottom-row span {
@@ -1306,29 +1306,30 @@ function ServicesContent() {
           }
 
           .bento-cta-pill {
-            padding: 11px 22px !important;
-            font-size: 0.82rem !important;
+            padding: 10px 20px !important;
+            font-size: 0.79rem !important;
             gap: 12px !important;
             border-radius: 9999px !important;
             font-weight: 700 !important;
             white-space: nowrap !important;
+            flex-shrink: 0 !important;
           }
 
           .bento-cta-pill svg {
-            margin-left: 3px !important;
+            margin-left: 2px !important;
             flex-shrink: 0 !important;
           }
 
           .arrow-btn {
-            width: 42px !important;
-            height: 42px !important;
+            width: 38px !important;
+            height: 38px !important;
             border-radius: 50% !important;
             flex-shrink: 0 !important;
           }
 
           .arrow-btn svg {
-            width: 18px !important;
-            height: 18px !important;
+            width: 17px !important;
+            height: 17px !important;
           }
 
           /* SECTION BORDEREAU / SHIPPING PASS BIEN ESPACÉE */
@@ -1364,15 +1365,15 @@ function ServicesContent() {
         @media (max-width: 640px) {
           .options-duo {
             grid-template-columns: 1fr !important;
-            gap: 10px !important;
+            gap: 8px !important;
           }
 
           .bento-content {
-            padding: 24px 18px !important;
+            padding: 22px 16px !important;
           }
 
           .bento-card-title {
-            font-size: 1.4rem !important;
+            font-size: 1.35rem !important;
           }
 
           .bento-stat-highlight {
@@ -1382,16 +1383,16 @@ function ServicesContent() {
           .bento-bottom-row {
             flex-direction: column !important;
             align-items: stretch !important;
-            gap: 14px !important;
-            margin-top: 18px !important;
+            gap: 12px !important;
           }
 
           .bento-cta-pill {
             width: 100% !important;
             justify-content: center !important;
-            padding: 13px 22px !important;
-            font-size: 0.84rem !important;
+            padding: 12px 20px !important;
+            font-size: 0.82rem !important;
             gap: 12px !important;
+            white-space: nowrap !important;
             box-sizing: border-box !important;
           }
 

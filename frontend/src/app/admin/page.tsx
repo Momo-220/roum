@@ -1390,17 +1390,12 @@ const DEFAULT_COMPANY_SETTINGS: Record<string, string> = {
   agency_paris_address: "14 Rue de la Logistique, 93290 Tremblay-en-France / Roissy CDG",
   agency_paris_contact: "+33 6 52 90 14 30 (Liaison Paris)",
 
-  // Moyens de paiement & Comptes de transit
+  // Moyens de paiement officiels (Wave, Orange Money, Maroc UNIQUEMENT)
   payment_wave_ci: "+225 01 53 63 85 69",
   payment_wave_name: "ROUM TRANSIT SARL",
   payment_wave_merchant: "wave.me/roumtransit",
   payment_orange_money_ci: "#144*389278# / +225 07 48 29 11 00",
   payment_orange_name: "ROUM TRANSIT INTERNATIONAL",
-  payment_mtn_momo_ci: "MOMO-749201 / +225 05 94 32 10 05",
-  payment_mtn_name: "ROUM LOGISTICS",
-  payment_bank_name: "Banque Atlantique Côte d'Ivoire (BACI)",
-  payment_bank_account_holder: "ROUM TRANSIT INTERNATIONAL SARL",
-  payment_bank_rib: "CI092 01001 012345678901 24",
   payment_morocco_bank: "CIH Bank / Attijariwafa Bank Casablanca",
   payment_morocco_holder: "ROUM TRANSIT MAROC",
   payment_morocco_rib: "230 780 0001234567890123 45",
@@ -9670,185 +9665,7 @@ export default function AdminPage() {
                   );
                 })()}
 
-                {/* 3. MTN MoMo */}
-                {(() => {
-                  const isEditing = editingPaymentCard === "mtn";
-                  return (
-                    <div
-                      style={{
-                        padding: isEditing ? "18px" : "12px 6px 20px 6px",
-                        background: isEditing ? "#FFFFFF" : "transparent",
-                        borderRadius: isEditing ? "16px" : "0",
-                        border: isEditing ? "1.5px solid var(--brown-dark)" : "none",
-                        borderBottom: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
-                        boxShadow: isEditing ? "0 8px 24px rgba(28, 25, 23, 0.08)" : "none",
-                        transition: "all 0.2s ease",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <MtnMomoLogo size={34} />
-                          <div>
-                            <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
-                              MTN Mobile Money
-                            </div>
-                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: "600" }}>
-                              Code Marchand &amp; Dépôt
-                            </span>
-                          </div>
-                        </div>
-                        {isEditing ? (
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <button
-                              type="button"
-                              onClick={handleCancelEditPaymentCard}
-                              className="btn btn-secondary"
-                              style={{ padding: "5px 10px", fontSize: "0.74rem", fontWeight: "600", borderRadius: "8px" }}
-                            >
-                              Annuler
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleSaveEditPaymentCard("mtn", "MTN MoMo")}
-                              className="btn btn-primary"
-                              style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "5px 12px", fontSize: "0.74rem", fontWeight: "700", borderRadius: "8px" }}
-                            >
-                              <Check size={13} />
-                              Enregistrer
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleStartEditPaymentCard("mtn")}
-                            className="btn btn-secondary"
-                            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", padding: 0, borderRadius: "8px" }}
-                            title="Modifier ce compte MTN"
-                          >
-                            <Edit3 size={15} />
-                          </button>
-                        )}
-                      </div>
-                      <div style={{ display: "grid", gap: "10px" }}>
-                        <div>
-                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Numéro Compte / Code Marchand MTN</label>
-                          <input
-                            type="text"
-                            readOnly={!isEditing}
-                            value={companySettings.payment_mtn_momo_ci || ""}
-                            onChange={(e) => setCompanySettings({ ...companySettings, payment_mtn_momo_ci: e.target.value })}
-                            className="input-clean"
-                            placeholder="MOMO-749201 / +225 05 94 32 10 05"
-                            style={{ background: "#FFFFFF", cursor: isEditing ? "text" : "default" }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Nom Enregistré MTN</label>
-                          <input
-                            type="text"
-                            readOnly={!isEditing}
-                            value={companySettings.payment_mtn_name || ""}
-                            onChange={(e) => setCompanySettings({ ...companySettings, payment_mtn_name: e.target.value })}
-                            className="input-clean"
-                            placeholder="ROUM LOGISTICS"
-                            style={{ background: "#FFFFFF", cursor: isEditing ? "text" : "default" }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* 4. Banque Atlantique / BACI */}
-                {(() => {
-                  const isEditing = editingPaymentCard === "baci";
-                  return (
-                    <div
-                      style={{
-                        padding: isEditing ? "18px" : "12px 6px 20px 6px",
-                        background: isEditing ? "#FFFFFF" : "transparent",
-                        borderRadius: isEditing ? "16px" : "0",
-                        border: isEditing ? "1.5px solid var(--brown-dark)" : "none",
-                        borderBottom: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
-                        boxShadow: isEditing ? "0 8px 24px rgba(28, 25, 23, 0.08)" : "none",
-                        transition: "all 0.2s ease",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <BankBaciLogo size={34} />
-                          <div>
-                            <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
-                              Banque Atlantique (BACI)
-                            </div>
-                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: "600" }}>
-                              Virement Bancaire UEMOA
-                            </span>
-                          </div>
-                        </div>
-                        {isEditing ? (
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <button
-                              type="button"
-                              onClick={handleCancelEditPaymentCard}
-                              className="btn btn-secondary"
-                              style={{ padding: "5px 10px", fontSize: "0.74rem", fontWeight: "600", borderRadius: "8px" }}
-                            >
-                              Annuler
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleSaveEditPaymentCard("baci", "Banque BACI")}
-                              className="btn btn-primary"
-                              style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "5px 12px", fontSize: "0.74rem", fontWeight: "700", borderRadius: "8px" }}
-                            >
-                              <Check size={13} />
-                              Enregistrer
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleStartEditPaymentCard("baci")}
-                            className="btn btn-secondary"
-                            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", padding: 0, borderRadius: "8px" }}
-                            title="Modifier ce compte bancaire"
-                          >
-                            <Edit3 size={15} />
-                          </button>
-                        )}
-                      </div>
-                      <div style={{ display: "grid", gap: "10px" }}>
-                        <div>
-                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Établissement &amp; Agence</label>
-                          <input
-                            type="text"
-                            readOnly={!isEditing}
-                            value={companySettings.payment_bank_name || ""}
-                            onChange={(e) => setCompanySettings({ ...companySettings, payment_bank_name: e.target.value })}
-                            className="input-clean"
-                            placeholder="Banque Atlantique Côte d'Ivoire (BACI)"
-                            style={{ background: "#FFFFFF", cursor: isEditing ? "text" : "default" }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>RIB / IBAN du Compte</label>
-                          <input
-                            type="text"
-                            readOnly={!isEditing}
-                            value={companySettings.payment_bank_rib || ""}
-                            onChange={(e) => setCompanySettings({ ...companySettings, payment_bank_rib: e.target.value })}
-                            className="input-clean"
-                            placeholder="CI092 01001 012345678901 24"
-                            style={{ background: "#FFFFFF", cursor: isEditing ? "text" : "default" }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* 5. Compte & Coordonnées Bancaires Maroc (Casablanca) */}
+                {/* 3. Compte & Coordonnées Bancaires Maroc (Casablanca) */}
                 {(() => {
                   const isEditing = editingPaymentCard === "morocco";
                   return (

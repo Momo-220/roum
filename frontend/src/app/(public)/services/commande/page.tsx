@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { saveClientRequest, getLiveCompanySettings } from "@/shared";
 import { AFRICAN_COUNTRIES, ALL_WORLD_COUNTRIES } from "@/data/countries";
-import { WaveLogo, OrangeMoneyLogo, MtnMomoLogo, BankBaciLogo } from "@/components/PaymentLogos";
+import { WaveLogo, OrangeMoneyLogo } from "@/components/PaymentLogos";
 import { CircularFlag } from "@/components/CircularFlag";
 
 interface ExtractedProduct {
@@ -202,38 +202,7 @@ function CommandeFormContent() {
       });
     }
 
-    // 3. MTN MoMo (uniquement si configuré dans l'admin)
-    const mtnNum = settings.payment_mtn_momo_ci?.trim();
-    if (mtnNum) {
-      list.push({
-        id: "mtn",
-        label: "MTN MoMo",
-        type: "Mobile Money",
-        accountNumber: mtnNum,
-        accountHolder: settings.payment_mtn_name?.trim() || "ROUM LOGISTICS",
-        color: "#CA8A04",
-        copyValue: mtnNum,
-        logo: <MtnMomoLogo size={32} />,
-      });
-    }
-
-    // 4. Banque Atlantique / BACI (uniquement si configuré dans l'admin)
-    const bankRib = settings.payment_bank_rib?.trim();
-    const bankName = settings.payment_bank_name?.trim();
-    if (bankRib || bankName) {
-      list.push({
-        id: "bank",
-        label: bankName || "Banque BACI",
-        type: "Virement Bancaire UEMOA",
-        accountNumber: bankRib || "RIB bancaire officiel",
-        accountHolder: settings.payment_bank_account_holder?.trim() || "ROUM TRANSIT INTERNATIONAL",
-        color: "#0F766E",
-        copyValue: bankRib || bankName || "",
-        logo: <BankBaciLogo size={32} />,
-      });
-    }
-
-    // 5. Compte Maroc (uniquement si configuré dans l'admin)
+    // 3. Compte Maroc (uniquement si configuré dans l'admin)
     const moroccoBank = settings.payment_morocco_bank?.trim();
     const moroccoRib = settings.payment_morocco_rib?.trim();
     if (moroccoBank || moroccoRib) {
