@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ShoppingBag,
@@ -28,13 +28,14 @@ import {
 
 function ServicesContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const tabParam = searchParams.get("tab");
 
   // Tarifs en direct synchronisés avec le Dashboard Admin
   const [tariffs, setTariffs] = useState<OfficialTariff[]>(() => getLiveTariffs());
 
-  // Modale de demande express
-  const [activeModal, setActiveModal] = useState<"alibaba" | "forwarding" | null>(null);
+  // Modale de demande express d'expédition
+  const [activeModal, setActiveModal] = useState<"forwarding" | null>(null);
 
   // Entrepôt actif dans la section Shipping Mark
   const [activeWarehouse, setActiveWarehouse] = useState<"guangzhou" | "yiwu" | "dubai" | "paris">("guangzhou");
@@ -44,11 +45,11 @@ function ServicesContent() {
   // Synchronisation des paramètres d'URL (?tab=alibaba ou ?tab=forwarding)
   useEffect(() => {
     if (tabParam === "alibaba") {
-      setActiveModal("alibaba");
+      router.push("/services/commande");
     } else if (tabParam === "forwarding" || tabParam === "chine" || tabParam === "dubai") {
       setActiveModal("forwarding");
     }
-  }, [tabParam]);
+  }, [tabParam, router]);
 
   // Synchronisation avec l'admin storage
   useEffect(() => {
@@ -210,13 +211,10 @@ function ServicesContent() {
              ======================================================== */}
           <div className="bento-grid">
             {/* CARTE 1 (60% LARGEUR) : CENTRALE D'ACHAT ALIBABA & 1688 */}
-            <article
-              className="bento-card card-alibaba"
-              onClick={() => setActiveModal("alibaba")}
-            >
+            <article className="bento-card card-alibaba">
               <img
-                src="/images/services/achats.jpg"
-                alt="Centrale d'Achat Alibaba"
+                src="/images/services/sourcing_new.jpg"
+                alt="Centrale d'Achat Alibaba & Sourcing"
                 className="bento-card-bg"
               />
               <div className="bento-scrim" />
@@ -231,17 +229,17 @@ function ServicesContent() {
                 <div>
                   <h2 className="bento-card-title">Centrale d&apos;Achat</h2>
                   <p className="bento-card-subtitle">
-                    Achetez sans carte bancaire internationale. Nous payons votre fournisseur chinois en Yuans sous 24h et contrôlons vos colis en entrepôt.
+                    Achetez sans carte bancaire internationale. Nous négocions et réglons vos fournisseurs chinois en Yuans sous 24h.
                   </p>
 
                   <div className="options-duo">
                     <div className="option-box">
                       <span className="option-tag">Option 1 · Sans fournisseur</span>
-                      <p className="option-desc">Sourcing produit &amp; négociation directe en usine.</p>
+                      <p className="option-desc">Sourcing usine certifiée &amp; négociation du meilleur tarif.</p>
                     </div>
                     <div className="option-box">
                       <span className="option-tag">Option 2 · Avec fournisseur</span>
-                      <p className="option-desc">Règlement direct de votre proforma en Yuans RMB.</p>
+                      <p className="option-desc">Règlement direct de votre proforma en Yuans RMB sous 24h.</p>
                     </div>
                   </div>
 
@@ -250,27 +248,23 @@ function ServicesContent() {
                       <span className="bento-bullet-dot" />
                       <span>Règlement client : <strong>100% Mobile Money (Wave, Orange, MTN)</strong></span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveModal("alibaba");
-                      }}
+                    <Link
+                      href="/services/commande"
                       className="bento-cta-pill"
                     >
                       <span>Lancer une commande</span>
                       <ArrowRight size={14} />
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>
             </article>
 
-            {/* CARTE 2 (40% LARGEUR, CARRÉE ÉLANCÉE) : VOIE AÉRIENNE EXPRESS */}
+            {/* CARTE 2 (40% LARGEUR) : VOIE AÉRIENNE EXPRESS */}
             <article className="bento-card card-aerien">
               <img
-                src="/images/services/aerien.jpg"
-                alt="Fret Aérien Express"
+                src="/images/services/aerien_new.jpg"
+                alt="Fret Aérien Express Cargo"
                 className="bento-card-bg"
               />
               <div className="bento-scrim" />
@@ -278,14 +272,14 @@ function ServicesContent() {
                 <div>
                   <div className="bento-tag">
                     <span className="green-dot" />
-                    <span>AVION EXPRESS</span>
+                    <span>AVION EXPRESS · DÉPARTS HEBDOMADAIRES</span>
                   </div>
                 </div>
 
                 <div>
                   <h2 className="bento-card-title">Voie Aérienne</h2>
                   <div className="bento-stat-highlight">4 À 5 JOURS</div>
-                  <p className="bento-card-subtitle" style={{ marginBottom: "8px" }}>
+                  <p className="bento-card-subtitle">
                     Chine, Dubaï, France &amp; Maroc direct. Plis urgents, téléphones &amp; colis réguliers.
                   </p>
 
@@ -317,65 +311,11 @@ function ServicesContent() {
               </div>
             </article>
 
-            {/* CARTE 3 (40% LARGEUR COMPACTE) : DUBAÏ DEIRA */}
-            <article
-              className="bento-card card-dubai"
-              onClick={() => {
-                setFwdOrigin("Dubaï (Émirats Arabes Unis)");
-                setActiveModal("forwarding");
-              }}
-            >
-              <div
-                className="bento-scrim"
-                style={{
-                  background:
-                    "linear-gradient(135deg, rgba(35, 23, 16, 0.96) 0%, rgba(20, 13, 9, 0.98) 100%)",
-                }}
-              />
-              <div className="bento-content">
-                <div>
-                  <div className="bento-tag">
-                    <span>🇦🇪 ÉMIRATS ARABES UNIS</span>
-                  </div>
-                </div>
-
-                <div>
-                  <h2 className="bento-card-title">Comptoir Dubaï</h2>
-                  <div className="bento-stat-highlight" style={{ fontSize: "1.45rem", color: "#FFA066" }}>
-                    DEIRA WHOLESALE
-                  </div>
-                  <p className="bento-card-subtitle">
-                    Téléphones neufs &amp; reconditionnés, PC et cosmétiques. Ramassage direct dans les boutiques de Deira et expédition express.
-                  </p>
-
-                  <div className="bento-bullets">
-                    <div className="bento-bullet">
-                      <span className="bento-bullet-dot" />
-                      <span>Transit express 4 à 6 jours ouvrés</span>
-                    </div>
-                    <div className="bento-bullet">
-                      <span className="bento-bullet-dot" />
-                      <span>Groupage maritime disponible</span>
-                    </div>
-                  </div>
-
-                  <div className="bento-bottom-row">
-                    <span style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.72)" }}>
-                      Hub Deira Creek
-                    </span>
-                    <div className="arrow-btn">
-                      <ArrowRight size={17} strokeWidth={2.4} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </article>
-
-            {/* CARTE 4 (60% LARGEUR PANORAMIQUE) : VOIE MARITIME CBM */}
+            {/* CARTE 3 (60% LARGEUR) : VOIE MARITIME CBM (JUSTE APRÈS LA VOIE AÉRIENNE) */}
             <article className="bento-card card-maritime">
               <img
-                src="/images/services/maritime.jpg"
-                alt="Fret Maritime Groupage"
+                src="/images/services/maritime_new.jpg"
+                alt="Fret Maritime Porte-conteneurs"
                 className="bento-card-bg"
               />
               <div className="bento-scrim" />
@@ -383,7 +323,7 @@ function ServicesContent() {
                 <div>
                   <div className="bento-tag">
                     <span className="green-dot" />
-                    <span>BATEAU · GROUPAGE CBM &amp; FCL</span>
+                    <span>BATEAU · GROUPAGE CBM &amp; CONTENEURS</span>
                   </div>
                 </div>
 
@@ -392,7 +332,6 @@ function ServicesContent() {
                   <div className="bento-stat-highlight">DÈS 300 000 FCFA / M³</div>
                   <p className="bento-card-subtitle">
                     Acheminement économique par conteneur complet ou groupage au m³ depuis Guangzhou, Ningbo et Yiwu.
-                    Idéal pour machines industrielles, matières premières et commerces.
                   </p>
 
                   <div className="options-duo" style={{ marginBottom: "10px" }}>
@@ -402,13 +341,13 @@ function ServicesContent() {
                     </div>
                     <div className="bento-bullet">
                       <span className="bento-bullet-dot" />
-                      <span>Douane &amp; taxes de port incluses</span>
+                      <span>Douane &amp; manutention portuaire incluses</span>
                     </div>
                   </div>
 
                   <div className="bento-bottom-row">
                     <span style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.72)" }}>
-                      Scellés numérotés &amp; suivi en direct
+                      Scellés sécurisés &amp; suivi direct
                     </span>
                     <Link href="/tariffs?mode=SEA" className="bento-cta-pill">
                       <span>Voir les tarifs maritimes</span>
@@ -419,89 +358,57 @@ function ServicesContent() {
               </div>
             </article>
 
-            {/* CARTE 5 (50% LARGEUR) : LIGNE PARIS ↔ AFRIQUE */}
-            <article
-              className="bento-card card-paris"
-              onClick={() => {
-                setFwdOrigin("France (Paris)");
-                setActiveModal("forwarding");
-              }}
-            >
-              <div
-                className="bento-scrim"
-                style={{
-                  background:
-                    "linear-gradient(135deg, rgba(28, 20, 16, 0.95) 0%, rgba(18, 12, 9, 0.98) 100%)",
-                }}
+            {/* CARTE 4 (40% LARGEUR) : COMPTOIRS INTERNATIONAUX REGROUPÉS (DUBAÏ, FRANCE, MAROC) */}
+            <article className="bento-card card-international">
+              <img
+                src="/images/services/international_hubs.jpg"
+                alt="Comptoirs Internationaux Roum Transit"
+                className="bento-card-bg"
               />
+              <div className="bento-scrim" />
               <div className="bento-content">
                 <div>
                   <div className="bento-tag">
-                    <span>🇫🇷 LIGNE FRANCE ↔ AFRIQUE</span>
+                    <span>🇦🇪 DUBAÏ · 🇫🇷 FRANCE · 🇲🇦 MAROC</span>
                   </div>
                 </div>
 
                 <div>
-                  <h2 className="bento-card-title" style={{ fontSize: "1.35rem" }}>
-                    Colis Paris ↔ Afrique
-                  </h2>
-                  <div className="bento-stat-highlight" style={{ fontSize: "1.25rem" }}>
-                    8 500 FCFA / KG (12 €)
+                  <h2 className="bento-card-title">Comptoirs Internationaux</h2>
+                  <div className="bento-stat-highlight" style={{ fontSize: "1.42rem", color: "#FFA066" }}>
+                    3 HUBS STRATÉGIQUES
                   </div>
                   <p className="bento-card-subtitle">
-                    Plis express, effets personnels, produits parapharmacie. Dépôt facile en Île-de-France ou ramassage.
+                    Expéditions directes vers l&apos;Afrique depuis nos comptoirs de réception et ramassage partenaires.
                   </p>
-                  <div className="bento-bottom-row">
-                    <span style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.72)" }}>
-                      Départs chaque semaine
-                    </span>
-                    <div className="arrow-btn">
-                      <ArrowRight size={17} strokeWidth={2.4} />
+
+                  <div className="bento-bullets">
+                    <div className="bento-bullet">
+                      <span className="bento-bullet-dot" />
+                      <span><strong>🇦🇪 Dubaï :</strong> Deira Wholesale · Téléphones &amp; High-Tech</span>
+                    </div>
+                    <div className="bento-bullet">
+                      <span className="bento-bullet-dot" />
+                      <span><strong>🇫🇷 France :</strong> Paris &amp; Île-de-France · Dès 8 500 FCFA/kg</span>
+                    </div>
+                    <div className="bento-bullet">
+                      <span className="bento-bullet-dot" />
+                      <span><strong>🇲🇦 Maroc :</strong> Casablanca direct vers 5 capitales africaines</span>
                     </div>
                   </div>
-                </div>
-              </div>
-            </article>
 
-            {/* CARTE 6 (50% LARGEUR) : LIGNE MAROC CASABLANCA */}
-            <article
-              className="bento-card card-maroc"
-              onClick={() => {
-                setFwdOrigin("Maroc (Casablanca)");
-                setActiveModal("forwarding");
-              }}
-            >
-              <div
-                className="bento-scrim"
-                style={{
-                  background:
-                    "linear-gradient(135deg, rgba(28, 20, 16, 0.95) 0%, rgba(18, 12, 9, 0.98) 100%)",
-                }}
-              />
-              <div className="bento-content">
-                <div>
-                  <div className="bento-tag">
-                    <span>🇲🇦 LIGNE MAROC · CASABLANCA</span>
-                  </div>
-                </div>
-
-                <div>
-                  <h2 className="bento-card-title" style={{ fontSize: "1.35rem" }}>
-                    Hub Maghreb ➔ Afrique
-                  </h2>
-                  <div className="bento-stat-highlight" style={{ fontSize: "1.15rem", color: "#FFA066" }}>
-                    5 PAYS DESSERVIS
-                  </div>
-                  <p className="bento-card-subtitle">
-                    Liaison directe depuis Casablanca vers Abidjan, Dakar, Bamako, Ouagadougou et Libreville.
-                  </p>
                   <div className="bento-bottom-row">
-                    <span style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.72)" }}>
-                      Groupage régulier direct
-                    </span>
-                    <div className="arrow-btn">
-                      <ArrowRight size={17} strokeWidth={2.4} />
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFwdOrigin("Dubaï (Émirats Arabes Unis)");
+                        setActiveModal("forwarding");
+                      }}
+                      className="bento-cta-pill"
+                    >
+                      <span>Expédier depuis un hub</span>
+                      <ArrowRight size={14} />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -616,139 +523,7 @@ function ServicesContent() {
         </ScrollReveal>
       </div>
 
-      {/* ========================================================
-          MODALE EXPRESS ALIBABA (DRAWER ÉLÉGANT SANS CASSER LA PAGE)
-         ======================================================== */}
-      {activeModal === "alibaba" && (
-        <div className="modal-backdrop" onClick={() => setActiveModal(null)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              className="modal-close-btn"
-              onClick={() => setActiveModal(null)}
-              aria-label="Fermer"
-            >
-              <X size={18} />
-            </button>
 
-            <div className="modal-badge">
-              <span className="green-dot" />
-              <span>CENTRALE D&apos;ACHAT ALIBABA &amp; 1688</span>
-            </div>
-
-            <h3 className="modal-title">Lancer une commande assistée</h3>
-            <p className="modal-desc">
-              Nous réglons votre fournisseur chinois en Yuans (RMB) sous 24h. Vous payez en FCFA par Mobile Money.
-            </p>
-
-            {aliSuccess ? (
-              <div className="modal-success-box">
-                <CheckCircle2 size={38} color="#16A34A" style={{ margin: "0 auto 8px auto" }} />
-                <div className="modal-success-title">
-                  Commande enregistrée : {aliSuccess.ref}
-                </div>
-                <p className="modal-success-desc">
-                  Votre demande est directement visible dans le tableau de bord de nos équipes. Continuez sur WhatsApp pour valider la facture proforma.
-                </p>
-                <a
-                  href={aliSuccess.waUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="modal-wa-btn"
-                >
-                  <MessageCircle size={16} />
-                  <span>Confirmer sur WhatsApp avec mon conseiller</span>
-                </a>
-              </div>
-            ) : (
-              <form onSubmit={handleAlibabaSubmit} className="modal-form">
-                <div>
-                  <label className="modal-label">Lien du produit sur Alibaba, 1688 ou description *</label>
-                  <input
-                    type="text"
-                    required
-                    value={aliProductUrl}
-                    onChange={(e) => setAliProductUrl(e.target.value)}
-                    placeholder="Collez le lien de l'article ou décrivez votre article"
-                    className="modal-input"
-                  />
-                </div>
-
-                <div className="modal-input-grid">
-                  <div>
-                    <label className="modal-label">Quantité souhaitée</label>
-                    <input
-                      type="text"
-                      value={aliQuantity}
-                      onChange={(e) => setAliQuantity(e.target.value)}
-                      placeholder="Ex : 50 pièces"
-                      className="modal-input"
-                    />
-                  </div>
-                  <div>
-                    <label className="modal-label">Destination finale</label>
-                    <select
-                      value={aliDestination}
-                      onChange={(e) => setAliDestination(e.target.value)}
-                      className="modal-input"
-                    >
-                      <option value="Côte d'Ivoire">Côte d&apos;Ivoire (Abidjan)</option>
-                      <option value="Sénégal">Sénégal (Dakar)</option>
-                      <option value="Mali">Mali (Bamako)</option>
-                      <option value="Niger">Niger (Niamey)</option>
-                      <option value="Burkina Faso">Burkina Faso (Ouagadougou)</option>
-                      <option value="Gabon">Gabon (Libreville)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="modal-label">Spécifications (couleurs, tailles, modèles)</label>
-                  <input
-                    type="text"
-                    value={aliSpecs}
-                    onChange={(e) => setAliSpecs(e.target.value)}
-                    placeholder="Ex : Couleur noire, taille L, prise européenne"
-                    className="modal-input"
-                  />
-                </div>
-
-                <div className="modal-input-grid">
-                  <div>
-                    <label className="modal-label">Votre Nom Complet *</label>
-                    <input
-                      type="text"
-                      required
-                      value={aliName}
-                      onChange={(e) => setAliName(e.target.value)}
-                      placeholder="Nom &amp; Prénom"
-                      className="modal-input"
-                    />
-                  </div>
-                  <div>
-                    <label className="modal-label">Numéro WhatsApp *</label>
-                    <input
-                      type="tel"
-                      required
-                      value={aliPhone}
-                      onChange={(e) => setAliPhone(e.target.value)}
-                      placeholder="+225 07 00 00 00 00"
-                      className="modal-input"
-                    />
-                  </div>
-                </div>
-
-                {aliError && <div className="modal-error">{aliError}</div>}
-
-                <button type="submit" disabled={aliSubmitting} className="modal-submit-btn">
-                  <span>{aliSubmitting ? "Enregistrement en cours..." : "Transmettre ma demande d'achat"}</span>
-                  <ArrowRight size={15} />
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* ========================================================
           MODALE EXPRESS TRANSIT & EXPÉDITION
@@ -1133,24 +908,14 @@ function ServicesContent() {
           min-height: 380px;
         }
 
-        .card-dubai {
-          grid-column: span 5;
-          min-height: 360px;
-        }
-
         .card-maritime {
           grid-column: span 7;
           min-height: 360px;
         }
 
-        .card-paris {
-          grid-column: span 6;
-          min-height: 280px;
-        }
-
-        .card-maroc {
-          grid-column: span 6;
-          min-height: 280px;
+        .card-international {
+          grid-column: span 5;
+          min-height: 360px;
         }
 
         .options-duo {
@@ -1601,10 +1366,8 @@ function ServicesContent() {
 
           .card-alibaba,
           .card-aerien,
-          .card-dubai,
           .card-maritime,
-          .card-paris,
-          .card-maroc {
+          .card-international {
             width: 100% !important;
             min-height: 310px !important;
             grid-column: auto !important;
