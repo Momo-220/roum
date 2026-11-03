@@ -511,6 +511,9 @@ export async function saveClientRequest(data: {
   product_quantity?: string;
   product_specs?: string;
   cargo_type?: string;
+  option_type?: "SANS_FOURNISSEUR" | "AVEC_FOURNISSEUR" | "FORWARDING";
+  rmb_amount?: string;
+  supplier_contact?: string;
 }): Promise<{
   reference: string;
   shippingMark: string;
@@ -519,8 +522,9 @@ export async function saveClientRequest(data: {
 }> {
   const timestamp = Date.now().toString(36).substring(2, 7).toUpperCase();
   let prefix = "REQ";
-  if (data.service_type === "ALIBABA") prefix = "ALI";
-  else if (data.service_type === "DUBAI") prefix = "DUB";
+  if (data.service_type === "ALIBABA") {
+    prefix = data.option_type === "AVEC_FOURNISSEUR" || data.cargo_type?.includes("[PAIEMENT FOURNISSEUR RMB]") ? "RMB" : "ALI";
+  } else if (data.service_type === "DUBAI") prefix = "DUB";
   else if (data.service_type === "MAROC") prefix = "MAR";
   else if (data.service_type === "FRANCE") prefix = "FRA";
   else prefix = "FWD";
@@ -542,7 +546,11 @@ export async function saveClientRequest(data: {
   // Description claire pour l'administrateur
   let description = data.cargo_type || "";
   if (data.service_type === "ALIBABA") {
-    description = `Achat Alibaba | Qté : ${data.product_quantity || "1"} | Spécifications : ${data.product_specs || "Standard"} | Lien : ${data.product_url || "Non renseigné"}`;
+    if (data.option_type === "AVEC_FOURNISSEUR" || data.cargo_type?.includes("[PAIEMENT FOURNISSEUR RMB]")) {
+      description = data.cargo_type || `[PAIEMENT FOURNISSEUR RMB] Montant: ${data.rmb_amount || "—"} ¥ | Contact: ${data.supplier_contact || "—"}`;
+    } else {
+      description = `Achat Alibaba | Qté : ${data.product_quantity || "1"} | Spécifications : ${data.product_specs || "Standard"} | Lien : ${data.product_url || "Non renseigné"}`;
+    }
   } else {
     description = `${data.shipping_mode_name || "Transit"} | Colis : ${data.cargo_type || "Articles divers"} | Départ : ${data.origin_country} ➔ Arrivée : ${data.destination_country}`;
   }
@@ -553,17 +561,29 @@ export async function saveClientRequest(data: {
       const saved = localStorage.getItem("roum_requests_data");
       const currentList = saved ? JSON.parse(saved) : [];
 
+      const detectedOption =
+        data.option_type ||
+        (data.cargo_type?.includes("[PAIEMENT FOURNISSEUR RMB]")
+          ? "AVEC_FOURNISSEUR"
+          : data.cargo_type?.includes("[SOURCING SANS FOURNISSEUR]")
+          ? "SANS_FOURNISSEUR"
+          : "FORWARDING");
+
       const newRequestObject = {
         id: `req-${Date.now()}`,
         reference,
         client_name: data.client_name,
         client_phone: data.client_phone,
         client_email: data.client_email || "",
-        request_type: data.service_type === "ALIBABA" ? "ALIBABA" : "GENERAL",
+        request_type: detectedOption === "AVEC_FOURNISSEUR" ? "SUPPLIER_PAYMENT" : data.service_type === "ALIBABA" ? "ALIBABA" : "GENERAL",
+        option_type: detectedOption,
+        rmb_amount: data.rmb_amount || (data.cargo_type?.match(/Montant:\s*([0-9\s.,]+)\s*¥/)?.[1]?.trim() ?? null),
+        supplier_contact: data.supplier_contact || (data.cargo_type?.match(/Usine:\s*([^|]+)/)?.[1]?.trim() ?? null),
+        product_url: data.product_url || "",
         origin_country: data.origin_country,
         origin_city: data.origin_country === "Chine" ? "Guangzhou" : data.origin_country === "France" ? "Paris" : data.origin_country === "Maroc" ? "Casablanca" : "Dubaï",
         destination_country: data.destination_country,
-        destination_city: data.destination_country === "Côte d'Ivoire" ? "Abidjan" : data.destination_country,
+        destination_city: data.destination_country.includes("(") ? data.destination_country.split("(")[1].replace(")", "").trim() : data.destination_country,
         shipping_mode_id: data.shipping_mode_type === "SEA" ? "SEA_LCL" : "AIR_EXPRESS",
         description,
         estimated_weight_kg: data.estimated_weight_kg || 5.0,

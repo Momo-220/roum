@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import {
   Package,
@@ -1403,6 +1403,41 @@ const DEFAULT_COMPANY_SETTINGS: Record<string, string> = {
 
 const DEFAULT_REQUESTS = [
   {
+    id: "req-rmb-01",
+    reference: "RM-RMB-7K2M9",
+    client_id: "cli-06",
+    client_name: "Amadou Diallo (Électro Abidjan)",
+    client_phone: "+225 07 89 44 22",
+    client_email: "amadou.electro@gmail.com",
+    request_type: "SUPPLIER_PAYMENT",
+    option_type: "AVEC_FOURNISSEUR",
+    rmb_amount: "8 450",
+    supplier_contact: "WeChat: sz_oled_display (M. Zhang)",
+    origin_country: "Chine",
+    origin_city: "Shenzhen",
+    destination_country: "Côte d'Ivoire (Abidjan)",
+    destination_city: "Abidjan",
+    shipping_mode_id: "AIR_EXPRESS",
+    description: "[PAIEMENT FOURNISSEUR RMB] Montant: 8 450 ¥ | Usine: WeChat: sz_oled_display (M. Zhang) | Marchandise: 120 Écrans OLED iPhone & Samsung | Réf: https://detail.1688.com/offer/718294.html",
+    estimated_weight_kg: 18.5,
+    estimated_cbm: 0.12,
+    supplier_name: "Shenzhen OLED Optoelectronics Co.",
+    status: "NEW",
+    items_count: 120,
+    items: [
+      {
+        id: "item-rmb-01",
+        description: "Écrans OLED iPhone 13/14 reconditionnés A+",
+        quantity: 120,
+        unit_price: 70,
+        currency: "CNY",
+        product_url: "https://detail.1688.com/offer/718294.html",
+      },
+    ],
+    created_at: "2026-11-03 10:15:00",
+    updated_at: "2026-11-03 10:15:00",
+  },
+  {
     id: "req-01",
     reference: "REQ-ALIBABA-2610-001",
     client_id: "cli-02",
@@ -1567,6 +1602,7 @@ export default function AdminPage() {
     | "assistant"
     | "dashboard"
     | "requests"
+    | "supplier_payments"
     | "shipments"
     | "clients"
     | "tariffs"
@@ -2052,6 +2088,33 @@ export default function AdminPage() {
     pendingWeighingsList.length +
     pendingRequestsList.length +
     urgentTasksList.length;
+
+  // --- GESTION DÉDIÉE OPTION 2 : PAIEMENTS FOURNISSEURS EN YUANS (RMB ¥) ---
+  const isOption2SupplierPayment = (r: any) => {
+    return (
+      r.option_type === "AVEC_FOURNISSEUR" ||
+      r.request_type === "SUPPLIER_PAYMENT" ||
+      (r.description && (
+        r.description.includes("[PAIEMENT FOURNISSEUR RMB]") ||
+        r.description.includes("¥") ||
+        r.description.toLowerCase().includes("rmb") ||
+        r.description.toLowerCase().includes("proforma")
+      )) ||
+      Boolean(r.rmb_amount)
+    );
+  };
+
+  const supplierPaymentsList = useMemo(() => {
+    return requestsList.filter(isOption2SupplierPayment);
+  }, [requestsList]);
+
+  const rmbPendingCount = supplierPaymentsList.filter(
+    (r) => r.status === "NEW" || r.status === "IN_REVIEW" || r.status === "QUOTE_SENT"
+  ).length;
+
+  const [supplierPaymentFilter, setSupplierPaymentFilter] = useState<string>("ALL");
+  const [supplierPaymentSearch, setSupplierPaymentSearch] = useState<string>("");
+  const [requestCategoryFilter, setRequestCategoryFilter] = useState<"ALL" | "OPTION_2" | "OPTION_1" | "TRANSIT">("ALL");
 
   const buildInitialCeoReport = (bossName: string) => {
     const greeting = bossName || "Madame Marouba";
@@ -4259,7 +4322,8 @@ export default function AdminPage() {
   const navItems = [
     { id: "dashboard", label: "Tableau de Bord", icon: LayoutDashboard },
     { id: "assistant", label: "Assistant Roum", icon: Compass, badge: totalAgentAlerts },
-    { id: "requests", label: "Commandes clients", icon: ShoppingBag, badge: stats?.pending_requests },
+    { id: "requests", label: "Commandes & Sourcing", icon: ShoppingBag, badge: stats?.pending_requests },
+    { id: "supplier_payments", label: "Paiements Fournisseurs (RMB)", icon: Coins, badge: rmbPendingCount || undefined },
     { id: "shipments", label: "Expéditions & Colis", icon: Package },
     { id: "clients", label: "Clients", icon: Users },
     { id: "tariffs", label: "Tarifs & Grilles", icon: DollarSign },
@@ -4676,6 +4740,7 @@ export default function AdminPage() {
               {activeTab === "assistant" && "Assistant Roum"}
               {activeTab === "dashboard" && "Tableau de Bord"}
               {activeTab === "requests" && "Commandes & Achats Clients"}
+              {activeTab === "supplier_payments" && "Paiements Fournisseurs Chine (RMB ¥)"}
               {activeTab === "shipments" && "Expéditions & Colis"}
               {activeTab === "clients" && "Répertoire Clients"}
               {activeTab === "tariffs" && "Grilles Tarifaires"}
@@ -4686,6 +4751,8 @@ export default function AdminPage() {
             <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", marginTop: "4px" }}>
               {activeTab === "assistant"
                 ? "Supervision des opérations, actions prioritaires et requêtes directes"
+                : activeTab === "supplier_payments"
+                ? "Dossiers Option 2 (Avec Fournisseur) : conversion FCFA / Yuans, contacts WeChat/WhatsApp usines & virements 24h"
                 : "Gestion Opérationnelle"}
             </p>
           </div>
@@ -6336,6 +6403,80 @@ export default function AdminPage() {
               </span>
             </div>
 
+            {/* Filtres par Catégorie de Commande (DA sobre & minimaliste) */}
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
+              <button
+                type="button"
+                onClick={() => setRequestCategoryFilter("ALL")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "9999px",
+                  fontSize: "0.78rem",
+                  fontWeight: requestCategoryFilter === "ALL" ? 700 : 500,
+                  background: requestCategoryFilter === "ALL" ? "#140D09" : "#F3F4F6",
+                  color: requestCategoryFilter === "ALL" ? "#FAF6F0" : "#4B5563",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Tous les dossiers ({requestsList.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setRequestCategoryFilter("OPTION_2")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "9999px",
+                  fontSize: "0.78rem",
+                  fontWeight: requestCategoryFilter === "OPTION_2" ? 700 : 500,
+                  background: requestCategoryFilter === "OPTION_2" ? "#CC4E16" : "#FFF7ED",
+                  color: requestCategoryFilter === "OPTION_2" ? "#FFFFFF" : "#C2410C",
+                  border: "1px solid rgba(204, 78, 22, 0.25)",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <span>Paiements Fournisseurs RMB (Option 2)</span>
+                <span style={{ background: requestCategoryFilter === "OPTION_2" ? "rgba(255,255,255,0.25)" : "#FDBA74", padding: "1px 6px", borderRadius: "9999px", fontSize: "0.7rem", fontWeight: 700 }}>
+                  {supplierPaymentsList.length}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRequestCategoryFilter("OPTION_1")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "9999px",
+                  fontSize: "0.78rem",
+                  fontWeight: requestCategoryFilter === "OPTION_1" ? 700 : 500,
+                  background: requestCategoryFilter === "OPTION_1" ? "#140D09" : "#F3F4F6",
+                  color: requestCategoryFilter === "OPTION_1" ? "#FAF6F0" : "#4B5563",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Sourcing Sans Fournisseur ({requestsList.filter((r) => !isOption2SupplierPayment(r) && r.request_type === "ALIBABA").length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setRequestCategoryFilter("TRANSIT")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "9999px",
+                  fontSize: "0.78rem",
+                  fontWeight: requestCategoryFilter === "TRANSIT" ? 700 : 500,
+                  background: requestCategoryFilter === "TRANSIT" ? "#140D09" : "#F3F4F6",
+                  color: requestCategoryFilter === "TRANSIT" ? "#FAF6F0" : "#4B5563",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Expéditions Directes ({requestsList.filter((r) => r.request_type !== "ALIBABA" && !isOption2SupplierPayment(r)).length})
+              </button>
+            </div>
+
             <div style={{ overflowX: "auto" }}>
               <table className="table-clean">
                 <thead>
@@ -6351,12 +6492,17 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {requestsList
-                    .filter((r) =>
-                      !searchTerm ||
-                      r.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      r.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      r.client_phone?.includes(searchTerm)
-                    )
+                    .filter((r) => {
+                      if (requestCategoryFilter === "OPTION_2" && !isOption2SupplierPayment(r)) return false;
+                      if (requestCategoryFilter === "OPTION_1" && (isOption2SupplierPayment(r) || r.request_type !== "ALIBABA")) return false;
+                      if (requestCategoryFilter === "TRANSIT" && (isOption2SupplierPayment(r) || r.request_type === "ALIBABA")) return false;
+                      return (
+                        !searchTerm ||
+                        r.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        r.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        r.client_phone?.includes(searchTerm)
+                      );
+                    })
                     .map((r) => (
                       <tr key={r.id} className="table-row-clean">
                         <td>
@@ -6507,6 +6653,468 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {/* SECTION DÉDIÉE : PAIEMENTS FOURNISSEURS EN YUANS (OPTION 2 "AVEC FOURNISSEUR") */}
+        {activeTab === "supplier_payments" && (() => {
+          const totalRmbToPay = supplierPaymentsList
+            .filter((r) => r.status !== "CANCELLED" && r.status !== "CLOSED")
+            .reduce((sum, r) => {
+              const str = (r.rmb_amount || r.description?.match(/Montant:\s*([0-9\s.,]+)\s*¥/)?.[1] || "0")
+                .replace(/\s/g, "")
+                .replace(",", ".");
+              const val = parseFloat(str) || 0;
+              return sum + val;
+            }, 0);
+
+          const estimatedCfaTotal = Math.round(totalRmbToPay * 88);
+
+          const filteredPayments = supplierPaymentsList.filter((r) => {
+            if (supplierPaymentFilter === "NEW" && r.status !== "NEW") return false;
+            if (supplierPaymentFilter === "IN_REVIEW" && r.status !== "IN_REVIEW" && r.status !== "QUOTE_SENT") return false;
+            if (supplierPaymentFilter === "PAID" && r.status !== "CONVERTED") return false;
+            if (!supplierPaymentSearch) return true;
+            const q = supplierPaymentSearch.toLowerCase();
+            return (
+              r.reference?.toLowerCase().includes(q) ||
+              r.client_name?.toLowerCase().includes(q) ||
+              r.client_phone?.includes(q) ||
+              r.supplier_contact?.toLowerCase().includes(q) ||
+              r.description?.toLowerCase().includes(q)
+            );
+          });
+
+          return (
+            <div key="supplier_payments" className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              {/* 1. KPIs EXÉCUTIFS PAIEMENT FOURNISSEUR CHINE (DA ÉPURÉE) */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "14px",
+                }}
+              >
+                {/* KPI 1 : Total RMB */}
+                <div className="card-clean" style={{ padding: "18px 20px", borderRadius: "18px", background: "#FFFFFF" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      Volume Yuans à Régler
+                    </span>
+                    <span style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#FFF7ED", display: "flex", alignItems: "center", justifyContent: "center", color: "#CC4E16" }}>
+                      <Coins size={16} />
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "1.65rem", fontWeight: 800, color: "#140D09", fontFamily: "var(--c-font-display)", letterSpacing: "-0.02em" }}>
+                    ¥ {totalRmbToPay.toLocaleString("fr-FR")}
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: "4px" }}>
+                    Équivalent estimé : <strong style={{ color: "#CC4E16" }}>{estimatedCfaTotal.toLocaleString("fr-FR")} FCFA</strong>
+                  </div>
+                </div>
+
+                {/* KPI 2 : Dossiers Actifs */}
+                <div className="card-clean" style={{ padding: "18px 20px", borderRadius: "18px", background: "#FFFFFF" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      Dossiers Avec Fournisseur
+                    </span>
+                    <span style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", color: "#1D4ED8" }}>
+                      <Building2 size={16} />
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "1.65rem", fontWeight: 800, color: "#140D09", fontFamily: "var(--c-font-display)", letterSpacing: "-0.02em" }}>
+                    {supplierPaymentsList.length}
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: "4px" }}>
+                    <strong style={{ color: "#1D4ED8" }}>{rmbPendingCount}</strong> en attente de virement usine
+                  </div>
+                </div>
+
+                {/* KPI 3 : Délai d'exécution */}
+                <div className="card-clean" style={{ padding: "18px 20px", borderRadius: "18px", background: "#FFFFFF" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      Délai de Virement Usine
+                    </span>
+                    <span style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#F0FDF4", display: "flex", alignItems: "center", justifyContent: "center", color: "#16A34A" }}>
+                      <Clock size={16} />
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "1.65rem", fontWeight: 800, color: "#140D09", fontFamily: "var(--c-font-display)", letterSpacing: "-0.02em" }}>
+                    &lt; 24 Heures
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#15803D", marginTop: "4px", fontWeight: 600 }}>
+                    Quittance de paiement bancaire remise au client
+                  </div>
+                </div>
+
+                {/* KPI 4 : Comptes Réception Client */}
+                <div className="card-clean" style={{ padding: "18px 20px", borderRadius: "18px", background: "#FFFFFF" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                      Canaux de Réception CFA
+                    </span>
+                    <span style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#FAF5FF", display: "flex", alignItems: "center", justifyContent: "center", color: "#7E22CE" }}>
+                      <ShieldCheck size={16} />
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#140D09", marginTop: "4px" }}>
+                    Wave · Orange · MTN · BACI
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: "6px" }}>
+                    Comptes synchronisés en direct sur le site public
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. TABLEAU PRINCIPAL DES DOSSIERS DE PAIEMENT RMB */}
+              <div className="card-clean" style={{ padding: "22px 24px", borderRadius: "22px", background: "#FFFFFF" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "18px" }}>
+                  {/* Recherche */}
+                  <div style={{ position: "relative", width: "100%", maxWidth: "340px" }}>
+                    <Search size={14} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                    <input
+                      type="text"
+                      placeholder="Rechercher fournisseur WeChat, client, réf..."
+                      value={supplierPaymentSearch}
+                      onChange={(e) => setSupplierPaymentSearch(e.target.value)}
+                      className="input-clean"
+                      style={{ paddingLeft: "36px", borderRadius: "9999px", background: "#FAFAFB" }}
+                    />
+                  </div>
+
+                  {/* Filtres d'état */}
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      onClick={() => setSupplierPaymentFilter("ALL")}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "9999px",
+                        fontSize: "0.76rem",
+                        fontWeight: supplierPaymentFilter === "ALL" ? 700 : 500,
+                        background: supplierPaymentFilter === "ALL" ? "#140D09" : "#F3F4F6",
+                        color: supplierPaymentFilter === "ALL" ? "#FAF6F0" : "#4B5563",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Tous ({supplierPaymentsList.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSupplierPaymentFilter("NEW")}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "9999px",
+                        fontSize: "0.76rem",
+                        fontWeight: supplierPaymentFilter === "NEW" ? 700 : 500,
+                        background: supplierPaymentFilter === "NEW" ? "#EFF6FF" : "#F3F4F6",
+                        color: supplierPaymentFilter === "NEW" ? "#1D4ED8" : "#4B5563",
+                        border: supplierPaymentFilter === "NEW" ? "1px solid #BFDBFE" : "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Nouveaux ({supplierPaymentsList.filter((r) => r.status === "NEW").length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSupplierPaymentFilter("IN_REVIEW")}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "9999px",
+                        fontSize: "0.76rem",
+                        fontWeight: supplierPaymentFilter === "IN_REVIEW" ? 700 : 500,
+                        background: supplierPaymentFilter === "IN_REVIEW" ? "#FFFBEB" : "#F3F4F6",
+                        color: supplierPaymentFilter === "IN_REVIEW" ? "#B45309" : "#4B5563",
+                        border: supplierPaymentFilter === "IN_REVIEW" ? "1px solid #FDE68A" : "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      En cours ({supplierPaymentsList.filter((r) => r.status === "IN_REVIEW" || r.status === "QUOTE_SENT").length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSupplierPaymentFilter("PAID")}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "9999px",
+                        fontSize: "0.76rem",
+                        fontWeight: supplierPaymentFilter === "PAID" ? 700 : 500,
+                        background: supplierPaymentFilter === "PAID" ? "#ECFDF5" : "#F3F4F6",
+                        color: supplierPaymentFilter === "PAID" ? "#047857" : "#4B5563",
+                        border: supplierPaymentFilter === "PAID" ? "1px solid #A7F3D0" : "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Payés en Chine ({supplierPaymentsList.filter((r) => r.status === "CONVERTED").length})
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ overflowX: "auto" }}>
+                  <table className="table-clean">
+                    <thead>
+                      <tr>
+                        <th style={{ borderTopLeftRadius: "10px" }}>Dossier</th>
+                        <th>Client &amp; Destination</th>
+                        <th>Montant Proforma</th>
+                        <th>Fournisseur Usine</th>
+                        <th>Lien Boutique / Proforma</th>
+                        <th>Marchandise</th>
+                        <th>Statut Virement</th>
+                        <th className="col-right" style={{ borderTopRightRadius: "10px" }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredPayments.map((r) => {
+                        const rmbAmountVal =
+                          r.rmb_amount ||
+                          r.description?.match(/Montant:\s*([0-9\s.,]+)\s*¥/)?.[1]?.trim() ||
+                          r.description?.match(/([0-9\s.,]+)\s*RMB/i)?.[1]?.trim() ||
+                          "5 800";
+
+                        const supplierVal =
+                          r.supplier_contact ||
+                          r.description?.match(/Usine:\s*([^|]+)/)?.[1]?.trim() ||
+                          r.supplier_name ||
+                          "WeChat: contact_usine";
+
+                        const productLinkVal =
+                          r.product_url ||
+                          r.items?.[0]?.product_url ||
+                          r.description?.match(/Réf:\s*(https?:\/\/[^\s|]+)/)?.[1] ||
+                          "";
+
+                        const goodsVal =
+                          r.items?.[0]?.description ||
+                          r.description?.match(/Marchandise:\s*([^|]+)/)?.[1]?.trim() ||
+                          r.description ||
+                          "Marchandises générales";
+
+                        const parsedRmbNum = parseFloat(rmbAmountVal.replace(/\s/g, "").replace(",", ".")) || 0;
+                        const cfaEquivalent = Math.round(parsedRmbNum * 88);
+
+                        return (
+                          <tr key={r.id} className="table-row-clean">
+                            {/* Réf Dossier */}
+                            <td>
+                              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenRequestDetail(r)}
+                                  className="tabular-nums"
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    color: "#CC4E16",
+                                    fontWeight: 800,
+                                    fontSize: "0.82rem",
+                                    cursor: "pointer",
+                                    padding: 0,
+                                    textAlign: "left",
+                                    fontFamily: "monospace",
+                                  }}
+                                  title="Consulter le dossier complet"
+                                >
+                                  {r.reference}
+                                </button>
+                                <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                                  {r.created_at?.substring(0, 10) || "Aujourd'hui"}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Client & Destination */}
+                            <td>
+                              <div style={{ fontWeight: 700, color: "var(--text-main)", fontSize: "0.82rem" }}>
+                                {r.client_name}
+                              </div>
+                              <div style={{ fontSize: "0.71rem", color: "var(--text-muted)" }}>
+                                <a
+                                  href={`https://wa.me/${(r.client_phone || "").replace(/[^0-9]/g, "")}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ color: "#15803D", textDecoration: "none", fontWeight: 600 }}
+                                >
+                                  {r.client_phone}
+                                </a>
+                              </div>
+                              <div style={{ fontSize: "0.70rem", color: "#6B7280", marginTop: "2px" }}>
+                                ➔ {r.destination_country || "Afrique"}
+                              </div>
+                            </td>
+
+                            {/* Montant Yuans RMB */}
+                            <td>
+                              <div
+                                style={{
+                                  display: "inline-block",
+                                  background: "#FFF7ED",
+                                  border: "1px solid #FFEDD5",
+                                  padding: "4px 10px",
+                                  borderRadius: "8px",
+                                }}
+                              >
+                                <div style={{ fontSize: "0.98rem", fontWeight: 800, color: "#9A3412", fontFamily: "var(--c-font-display)" }}>
+                                  ¥ {rmbAmountVal}
+                                </div>
+                                <div style={{ fontSize: "0.70rem", color: "#C2410C", fontWeight: 600 }}>
+                                  ~ {cfaEquivalent.toLocaleString("fr-FR")} FCFA
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Contact Fournisseur WeChat */}
+                            <td>
+                              <div style={{ fontSize: "0.80rem", fontWeight: 600, color: "var(--text-main)" }}>
+                                {supplierVal}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (typeof navigator !== "undefined") {
+                                    navigator.clipboard.writeText(supplierVal);
+                                  }
+                                }}
+                                style={{
+                                  background: "transparent",
+                                  border: "none",
+                                  color: "#CC4E16",
+                                  fontSize: "0.69rem",
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  padding: 0,
+                                  marginTop: "2px",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
+                              >
+                                <Copy size={11} />
+                                <span>Copier contact usine</span>
+                              </button>
+                            </td>
+
+                            {/* Lien Produit / Facture */}
+                            <td>
+                              {productLinkVal ? (
+                                <a
+                                  href={productLinkVal}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn btn-secondary"
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                    padding: "5px 10px",
+                                    fontSize: "0.72rem",
+                                    borderRadius: "8px",
+                                    textDecoration: "none",
+                                  }}
+                                  title={productLinkVal}
+                                >
+                                  <span>Ouvrir proforma</span>
+                                  <ExternalLink size={12} />
+                                </a>
+                              ) : (
+                                <span style={{ fontSize: "0.74rem", color: "#9CA3AF" }}>Non fourni</span>
+                              )}
+                            </td>
+
+                            {/* Marchandise */}
+                            <td style={{ maxWidth: "200px" }}>
+                              <div
+                                style={{
+                                  fontSize: "0.76rem",
+                                  color: "var(--text-main)",
+                                  lineHeight: 1.35,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                                title={goodsVal}
+                              >
+                                {goodsVal}
+                              </div>
+                            </td>
+
+                            {/* Statut Virement */}
+                            <td>
+                              <select
+                                value={r.status}
+                                onChange={(e) => handleUpdateRequestStatus(r.id, e.target.value)}
+                                className="status-select-pill"
+                                style={{
+                                  fontSize: "0.74rem",
+                                  padding: "4px 8px",
+                                  borderRadius: "9999px",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                <option value="NEW">NOUVEAU</option>
+                                <option value="IN_REVIEW">ANALYSE PROFORMA</option>
+                                <option value="QUOTE_SENT">EN ATTENTE MOBILE MONEY</option>
+                                <option value="CONVERTED">VIREMENT RMB EFFECTUÉ</option>
+                                <option value="CLOSED">MARCHANDISE REÇUE MAGASIN</option>
+                                <option value="CANCELLED">ANNULÉ</option>
+                              </select>
+                            </td>
+
+                            {/* Actions */}
+                            <td className="col-right">
+                              <div style={{ display: "inline-flex", gap: "6px", alignItems: "center", justifyContent: "flex-end" }}>
+                                <a
+                                  href={`https://wa.me/${(r.client_phone || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                                    `Bonjour ${r.client_name}, concernant votre dossier de règlement usine N° ${r.reference} (${rmbAmountVal} RMB ¥), nous avons bien reçu votre demande.`
+                                  )}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn btn-secondary"
+                                  style={{ padding: "5px 10px", fontSize: "0.72rem", color: "#15803D" }}
+                                  title="Contacter le client sur WhatsApp"
+                                >
+                                  WhatsApp
+                                </a>
+                                {r.status !== "CONVERTED" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateRequestStatus(r.id, "CONVERTED")}
+                                    className="btn btn-primary"
+                                    style={{ padding: "5px 10px", fontSize: "0.72rem" }}
+                                    title="Confirmer que le virement a été fait en Chine"
+                                  >
+                                    Valider Virement
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                      {filteredPayments.length === 0 && (
+                        <tr>
+                          <td colSpan={8} style={{ textAlign: "center", padding: "36px 20px", color: "var(--text-dim)" }}>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                              <Coins size={32} color="#D1D5DB" />
+                              <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--text-main)" }}>
+                                Aucun dossier de paiement fournisseur en attente
+                              </div>
+                              <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0, maxWidth: "420px" }}>
+                                Dès qu&apos;un client sélectionne l&apos;Option 2 &quot;Avec Fournisseur&quot; sur le site, son montant en Yuans et ses coordonnées usine apparaîtront instantanément ici.
+                              </p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 3. EXPÉDITIONS & COLIS */}
         {activeTab === "shipments" && (

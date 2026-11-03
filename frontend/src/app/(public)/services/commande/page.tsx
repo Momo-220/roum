@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { CircularFlag } from "@/components/CircularFlag";
 import { saveClientRequest, getLiveCompanySettings } from "@/shared";
+import { AFRICAN_COUNTRIES, ALL_WORLD_COUNTRIES } from "@/data/countries";
 
 function CommandeFormContent() {
   const searchParams = useSearchParams();
@@ -44,7 +45,7 @@ function CommandeFormContent() {
   // Form states communs
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
-  const [destinationCity, setDestinationCity] = useState("Abidjan, Côte d'Ivoire");
+  const [destinationCity, setDestinationCity] = useState("Côte d'Ivoire (Abidjan)");
 
   // Option 1 : Sans fournisseur (Alibaba / 1688)
   const [productQuery, setProductQuery] = useState("");
@@ -125,10 +126,18 @@ function CommandeFormContent() {
       // Enregistrement unifié : Base de données D1 + Synchronisation temps réel Admin
       const res = await saveClientRequest({
         service_type: serviceType,
+        option_type:
+          option === "avec_fournisseur"
+            ? "AVEC_FOURNISSEUR"
+            : option === "sans_fournisseur"
+            ? "SANS_FOURNISSEUR"
+            : "FORWARDING",
+        rmb_amount: option === "avec_fournisseur" ? rmbAmount.trim() : undefined,
+        supplier_contact: option === "avec_fournisseur" ? supplierContact.trim() : undefined,
         client_name: clientName.trim(),
         client_phone: clientPhone.trim(),
         origin_country: originCountry,
-        destination_country: destinationCity.trim() || "Côte d'Ivoire",
+        destination_country: destinationCity.trim() || "Côte d'Ivoire (Abidjan)",
         product_url: option === "forwarding" ? "" : productLink.trim(),
         product_quantity: option === "sans_fournisseur" ? targetQuantity.trim() || "1" : "1",
         product_specs:
@@ -467,14 +476,36 @@ function CommandeFormContent() {
                 </div>
 
                 <div className="input-group full-width">
-                  <label htmlFor="destinationCity">Ville &amp; Destination finale</label>
-                  <input
+                  <label htmlFor="destinationCity">
+                    Pays &amp; Ville de Destination Finale <span style={{ color: "#DC2626" }}>*</span>
+                  </label>
+                  <select
                     id="destinationCity"
-                    type="text"
-                    placeholder="Ex : Abidjan, Ouagadougou, Dakar, Bamako..."
+                    className="styled-select"
+                    required
                     value={destinationCity}
                     onChange={(e) => setDestinationCity(e.target.value)}
-                  />
+                  >
+                    <optgroup label="Destinations Principales (Afrique)">
+                      {AFRICAN_COUNTRIES.map((c) => (
+                        <option key={c.code} value={`${c.name} (${c.hubCity || "Capitale"})`}>
+                          {c.name} — {c.hubCity || "Capitale"}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Tous les autres pays du monde">
+                      {ALL_WORLD_COUNTRIES.filter(
+                        (c) => !AFRICAN_COUNTRIES.some((af) => af.code === c.code)
+                      ).map((c) => (
+                        <option key={c.code} value={`${c.name} (${c.hubCity || "Principal"})`}>
+                          {c.name} {c.hubCity ? `— ${c.hubCity}` : ""}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+                  <span style={{ fontSize: "0.76rem", color: "#6B7280", marginTop: "3px" }}>
+                    Dédouanement 100% inclus et livraison jusqu&apos;à votre magasin de destination.
+                  </span>
                 </div>
               </div>
 
