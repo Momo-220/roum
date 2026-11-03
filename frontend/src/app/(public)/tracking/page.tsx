@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Search, MessageCircle } from "lucide-react";
+import { Search } from "lucide-react";
 import { normalizeTrackingNumber } from "@/shared";
 import { ScrollReveal } from "@/components/ScrollReveal";
 
@@ -424,26 +424,7 @@ export default function TrackingPage() {
             </div>
           </div>
 
-          {/* Lien d'assistance sobre */}
-          <div style={{ textAlign: "center", marginTop: "16px" }}>
-            <a
-              href="https://wa.me/2250153638569?text=Bonjour%20Roum%20Transit,%20je%20souhaite%20une%20assistance%20sur%20mon%20suivi%20de%20colis."
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                fontSize: "0.84rem",
-                color: "var(--c-text-muted)",
-                fontWeight: 600,
-                textDecoration: "none",
-              }}
-            >
-              <MessageCircle size={15} color="var(--c-accent-red)" />
-              <span>Besoin d&apos;aide sur votre expédition ? Assistance directe en agence</span>
-            </a>
-          </div>
+
         </ScrollReveal>
       </div>
 

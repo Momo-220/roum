@@ -24,6 +24,27 @@ interface ServiceItem {
 
 const SERVICES_DATA: ServiceItem[] = [
   {
+    id: "achats",
+    badge: "Alibaba & 1688 · Paiement RMB",
+    title: "Centrale d'Achat",
+    subtitle: "Paiement fournisseurs & contrôle qualité",
+    description:
+      "Achetez sur Alibaba, 1688 et Taobao sans blocage bancaire international. Vous réglez en FCFA à Abidjan à taux négocié, notre bureau en Chine paie votre usine en Yuans (RMB) et vérifie vos cartons.",
+    image: "/images/services/achats.jpg",
+    href: "/services?tab=alibaba",
+    ctaText: "Lancer un achat assisté",
+    features: [
+      "Paiement direct de vos fournisseurs en Yuans (RMB)",
+      "Zéro carte bancaire internationale requise",
+      "Vérification & inspection des colis en entrepôt",
+      "Transit automatique vers l'Afrique dès validation",
+    ],
+    metrics: [
+      { label: "Devise réglée", value: "Yuans RMB en Chine" },
+      { label: "Règlement client", value: "FCFA à Abidjan" },
+    ],
+  },
+  {
     id: "maritime",
     badge: "Bateau · Groupage & Conteneurs",
     title: "Voie Maritime",
@@ -63,27 +84,6 @@ const SERVICES_DATA: ServiceItem[] = [
     metrics: [
       { label: "Délai express", value: "3 à 5 jours" },
       { label: "Retrait", value: "Bingerville Carrefour Safari" },
-    ],
-  },
-  {
-    id: "achats",
-    badge: "Alibaba & 1688 · Paiement RMB",
-    title: "Centrale d'Achat",
-    subtitle: "Paiement fournisseurs & contrôle qualité",
-    description:
-      "Achetez sur Alibaba, 1688 et Taobao sans blocage bancaire international. Vous réglez en FCFA à Abidjan à taux négocié, notre bureau en Chine paie votre usine en Yuans (RMB) et vérifie vos cartons.",
-    image: "/images/services/achats.jpg",
-    href: "/services?tab=alibaba",
-    ctaText: "Lancer un achat assisté",
-    features: [
-      "Paiement direct de vos fournisseurs en Yuans (RMB)",
-      "Zéro carte bancaire internationale requise",
-      "Vérification & inspection des colis en entrepôt",
-      "Transit automatique vers l'Afrique dès validation",
-    ],
-    metrics: [
-      { label: "Devise réglée", value: "Yuans RMB en Chine" },
-      { label: "Règlement client", value: "FCFA à Abidjan" },
     ],
   },
 ];
