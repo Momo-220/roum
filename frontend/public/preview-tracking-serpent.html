@@ -15,7 +15,7 @@
       --c-text-light: #8C7D75;     /* Métadonnées */
       --c-accent-red: #C2410C;     /* Terracotta signature */
       --c-accent-brown: #8C6D58;   /* Marron clair signature */
-      --c-border-brown: #A88A72;   /* Bordure marron clair */
+      --c-border-brown: #C8B89E;   /* Bordure marron clair */
       --c-btn-primary-bg: #140D09; /* Obsidian sombre */
     }
 
@@ -28,13 +28,13 @@
       padding-bottom: 90px;
     }
 
-    /* Le cercle du chiffre (TRANSPARENT AVEC COULEUR MARRON CLAIR, ZÉRO CADRAN) */
+    /* Le cercle du chiffre (OPAQUE COULEUR DU FOND : MASQUE ENTIÈREMENT LA LIGNE EN ARRIÈRE-PLAN) */
     .num-circle {
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      background-color: rgba(200, 184, 158, 0.12);
-      border: 1.8px solid rgba(168, 138, 114, 0.45);
+      background-color: #FAF5F0;
+      border: 1.8px solid #C8B89E;
       color: #8C6D58;
       display: flex;
       align-items: center;
@@ -44,8 +44,8 @@
       letter-spacing: -0.02em;
       position: relative;
       z-index: 10;
-      opacity: 0.35;
-      transform: scale(0.76);
+      opacity: 0.7;
+      transform: scale(0.85);
       transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
       box-shadow: 0 2px 8px rgba(140, 109, 88, 0.08);
     }
@@ -53,10 +53,10 @@
     .num-circle.active {
       opacity: 1;
       transform: scale(1.08);
-      background-color: rgba(200, 184, 158, 0.32);
+      background-color: #F3ECE2;
       border-color: #8C6D58;
       color: #4A3323;
-      box-shadow: 0 6px 20px -2px rgba(140, 109, 88, 0.3);
+      box-shadow: 0 6px 20px -2px rgba(140, 109, 88, 0.25);
     }
 
     /* Onde pulsante marron clair (AUCUN VERT) */
@@ -68,6 +68,7 @@
       opacity: 0;
       transform: scale(0.8);
       pointer-events: none;
+      z-index: -1;
     }
     .num-circle.active .pulse-ring {
       animation: ripple 0.8s ease-out forwards;
@@ -218,25 +219,14 @@
       </button>
     </div>
 
-    <!-- TITRE DE SECTION SANS AUCUN CADRAN AVEC BOUTON REJOUER -->
-    <div class="flex items-center justify-between mb-4 px-2">
-      <span class="text-xs font-bold tracking-wider uppercase text-[#8C7D75]">
-        Le parcours officiel en 9 étapes synchronisées
-      </span>
-      <button onclick="buildCamberedSnakePath(); startSynchronizedAnimation();" class="inline-flex items-center gap-1.5 text-xs text-[#C2410C] font-semibold hover:opacity-80 transition-opacity bg-transparent border-none cursor-pointer">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-        <span>Rejouer le serpent</span>
-      </button>
-    </div>
-
     <!-- ========================================================
          LE SERPENT HORIZONTAL DES 9 ÉTAPES
-         - Cercles transparents avec couleur marron clair
+         - Cercles opaques couleur fond (la ligne est complètement masquée derrière)
          - Arches bien cambrées (100% harmonieux)
          - Ligne continue synchronisée au milliseconde près
          - Aucun vert à la fin, zéro cadran rectangulaire
     ======================================================== -->
-    <div class="relative w-full overflow-x-auto no-scrollbar py-12 px-6" id="hSnakeViewport">
+    <div class="relative w-full overflow-x-auto no-scrollbar py-8 px-6" id="hSnakeViewport">
       <div class="relative min-w-[1100px] h-[300px]" id="hSnakeContainer">
 
         <!-- Ligne SVG en Serpent Horizontal Cambré (Obsidian -> Terracotta -> Marron Clair, aucun vert) -->
@@ -248,7 +238,7 @@
               <stop offset="100%" stop-color="#8C6D58" stop-opacity="1" />
             </linearGradient>
           </defs>
-          <path id="hSvgPath" fill="none" stroke="url(#hSnakeGrad)" stroke-width="2.8" stroke-linecap="round" />
+          <path id="hSvgPath" fill="none" stroke="url(#hSnakeGrad)" stroke-width="2.8" stroke-linecap="round" style="opacity: 0; transition: opacity 0.25s ease;" />
         </svg>
 
         <!-- Les 9 Étapes disposées avec cambrure accentuée -->
@@ -350,7 +340,7 @@
             </div>
           </div>
 
-          <!-- 09 : Colis livré (Position finale, cercle marron clair transparent, AUCUN VERT) -->
+          <!-- 09 : Colis livré (Position finale, cercle marron clair, AUCUN VERT) -->
           <div class="flex flex-col items-center text-center w-[114px]" style="margin-top: 60px;" data-step="9">
             <div class="num-circle" id="hCircle-9">
               09
@@ -373,7 +363,7 @@
 
   </div>
 
-  <!-- BARRE DE NAVIGATION FLOTTANTE MOBILE RESPONSIVE (POUR VÉRIFICATION DIRECTE MOBILE) -->
+  <!-- BARRE DE NAVIGATION FLOTTANTE MOBILE RESPONSIVE -->
   <div class="floating-nav-wrapper">
     <nav class="floating-nav-pill-box" aria-label="Navigation mobile">
       <a href="#" class="nav-pill-item">
@@ -409,7 +399,6 @@
     let nodeDistances = [];
     let totalPathLength = 0;
 
-    // 1. Calcul du tracé avec cambrure sinusoïdale accentuée (véritable serpent)
     function buildCamberedSnakePath() {
       const container = document.getElementById('hSnakeContainer');
       const containerRect = container.getBoundingClientRect();
@@ -428,14 +417,12 @@
 
       if (points.length < 2) return;
 
-      // Construction de la cambrure prononcée :
       let d = `M ${points[0].x} ${points[0].y}`;
       for (let i = 0; i < points.length - 1; i++) {
         const p1 = points[i];
         const p2 = points[i + 1];
         const dx = (p2.x - p1.x);
 
-        // Arches bien cambrées avec contrôle horizontal étendu
         const cp1x = p1.x + dx * 0.52;
         const cp1y = p1.y;
         const cp2x = p2.x - dx * 0.52;
@@ -450,8 +437,8 @@
       totalPathLength = path.getTotalLength();
       path.style.strokeDasharray = totalPathLength;
       path.style.strokeDashoffset = totalPathLength;
+      path.style.opacity = '1';
 
-      // Calcul des distances cumulées exactes pour chaque cercle
       nodeDistances = [0];
       const samplesCount = 1000;
       for (let i = 1; i < points.length; i++) {
@@ -472,7 +459,6 @@
       }
     }
 
-    // 2. Animation synchronisée au milliseconde près par requestAnimationFrame
     function startSynchronizedAnimation() {
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
@@ -480,7 +466,6 @@
 
       const path = document.getElementById('hSvgPath');
 
-      // Réinitialiser l'état visuel de tous les cercles et textes
       for (let i = 1; i <= 9; i++) {
         const c = document.getElementById('hCircle-' + i);
         const m = document.getElementById('hMeta-' + i);
@@ -488,11 +473,10 @@
         m.classList.remove('active');
       }
 
-      // Étape 1 est active dès le départ
       document.getElementById('hCircle-1').classList.add('active');
       document.getElementById('hMeta-1').classList.add('active');
 
-      const duration = 11000; // 11 secondes complètes
+      const duration = 11000;
       const startTime = performance.now();
 
       function frame(now) {
@@ -506,7 +490,6 @@
         const currentDrawnLength = easedProgress * totalPathLength;
         path.style.strokeDashoffset = totalPathLength - currentDrawnLength;
 
-        // Synchronisation mathématique instantanée
         for (let i = 1; i < nodeDistances.length; i++) {
           const targetDist = nodeDistances[i];
           const circleEl = document.getElementById('hCircle-' + (i + 1));

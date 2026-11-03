@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Search, RotateCcw, MessageCircle } from "lucide-react";
+import { Search, MessageCircle } from "lucide-react";
 import { normalizeTrackingNumber } from "@/shared";
 import { ScrollReveal } from "@/components/ScrollReveal";
 
@@ -81,6 +81,7 @@ export default function TrackingPage() {
     totalLengthRef.current = totalLength;
     pathRef.current.style.strokeDasharray = `${totalLength}`;
     pathRef.current.style.strokeDashoffset = `${totalLength}`;
+    pathRef.current.style.opacity = "1";
 
     // Calcul des distances cumulées exactes pour chaque cercle
     const distances: number[] = [0];
@@ -290,38 +291,9 @@ export default function TrackingPage() {
             </div>
           )}
 
-          {/* Contrôle discret pour rejouer l'animation */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", padding: "0 8px" }}>
-            <span style={{ fontSize: "0.78rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--c-text-light)", fontFamily: "var(--c-font-mono)" }}>
-              Parcours en 9 étapes synchronisées
-            </span>
-
-            <button
-              type="button"
-              onClick={() => {
-                buildCamberedSnakePath();
-                runSynchronizedAnimation();
-              }}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "5px",
-                backgroundColor: "transparent",
-                border: "none",
-                fontSize: "0.76rem",
-                fontWeight: 600,
-                color: "var(--c-text-muted)",
-                cursor: "pointer",
-              }}
-            >
-              <RotateCcw size={12} color="var(--c-accent-red)" />
-              <span>Rejouer l&apos;animation</span>
-            </button>
-          </div>
-
           {/* ========================================================
               LE SERPENT HORIZONTAL DES 9 ÉTAPES
-              (CERCLES TRANSPARENTS MARRON CLAIR, SANS VERT, ZÉRO CADRAN)
+              (CERCLES MARRON CLAIR OPAQUES QUI MASQUENT LA LIGNE EN ARRIÈRE-PLAN)
              ======================================================== */}
           <div
             className="snake-horizontal-viewport"
@@ -329,7 +301,7 @@ export default function TrackingPage() {
               position: "relative",
               width: "100%",
               overflowX: "auto",
-              padding: "40px 10px 48px 10px",
+              padding: "30px 10px 48px 10px",
               boxSizing: "border-box",
             }}
           >
@@ -350,7 +322,7 @@ export default function TrackingPage() {
                   width: "100%",
                   height: "100%",
                   pointerEvents: "none",
-                  zIndex: 0,
+                  zIndex: 1,
                 }}
               >
                 <defs>
@@ -366,6 +338,7 @@ export default function TrackingPage() {
                   stroke="url(#hSnakeGradOfficial)"
                   strokeWidth="2.8"
                   strokeLinecap="round"
+                  style={{ opacity: 0, transition: "opacity 0.25s ease" }}
                 />
               </svg>
 
@@ -410,7 +383,7 @@ export default function TrackingPage() {
                         </div>
                       )}
 
-                      {/* Le cercle du chiffre transparent marron clair */}
+                      {/* Le cercle du chiffre marron clair (masque opaque qui cache la ligne en arrière-plan) */}
                       <div
                         id={`step-circle-${stepNum}`}
                         className="step-circle-node"
@@ -452,7 +425,7 @@ export default function TrackingPage() {
           </div>
 
           {/* Lien d'assistance sobre */}
-          <div style={{ textAlign: "center", marginTop: "20px" }}>
+          <div style={{ textAlign: "center", marginTop: "16px" }}>
             <a
               href="https://wa.me/2250153638569?text=Bonjour%20Roum%20Transit,%20je%20souhaite%20une%20assistance%20sur%20mon%20suivi%20de%20colis."
               target="_blank"
@@ -487,8 +460,8 @@ export default function TrackingPage() {
           width: 44px;
           height: 44px;
           border-radius: 50%;
-          background-color: rgba(200, 184, 158, 0.12);
-          border: 1.8px solid rgba(168, 138, 114, 0.45);
+          background-color: #FAF5F0;
+          border: 1.8px solid #C8B89E;
           color: #8C6D58;
           display: flex;
           align-items: center;
@@ -498,8 +471,8 @@ export default function TrackingPage() {
           letter-spacing: -0.02em;
           position: relative;
           z-index: 10;
-          opacity: 0.35;
-          transform: scale(0.76);
+          opacity: 0.7;
+          transform: scale(0.85);
           transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
           box-shadow: 0 2px 8px rgba(140, 109, 88, 0.08);
         }
@@ -507,10 +480,10 @@ export default function TrackingPage() {
         :global(.step-circle-node.active) {
           opacity: 1 !important;
           transform: scale(1.08) !important;
-          background-color: rgba(200, 184, 158, 0.32) !important;
+          background-color: #F3ECE2 !important;
           border-color: #8C6D58 !important;
           color: #4A3323 !important;
-          box-shadow: 0 6px 20px -2px rgba(140, 109, 88, 0.3) !important;
+          box-shadow: 0 6px 20px -2px rgba(140, 109, 88, 0.25) !important;
         }
 
         :global(.pulse-ripple) {
@@ -521,6 +494,7 @@ export default function TrackingPage() {
           opacity: 0;
           transform: scale(0.8);
           pointer-events: none;
+          z-index: -1;
         }
 
         :global(.step-circle-node.active .pulse-ripple) {
