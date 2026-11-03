@@ -14,11 +14,11 @@ export function FloatingBottomNav() {
   const pathname = usePathname();
 
   const navItems = [
-    { id: "home", label: "Accueil", shortLabel: "Accueil", icon: Home, href: "/", isActive: pathname === "/" },
-    { id: "services", label: "Services", shortLabel: "Services", icon: Layers, href: "/services", isActive: pathname.startsWith("/services") },
-    { id: "tracking", label: "Suivi", shortLabel: "Suivi", icon: Search, href: "/tracking", isActive: pathname.startsWith("/tracking") },
-    { id: "tariffs", label: "Tarifs", shortLabel: "Tarifs", icon: Calculator, href: "/tariffs", isActive: pathname.startsWith("/tariffs") },
-    { id: "warehouses", label: "Entrepôts", shortLabel: "Dépôts", icon: MapPin, href: "/warehouses", isActive: pathname.startsWith("/warehouses") },
+    { id: "home", label: "Accueil", icon: Home, href: "/", isActive: pathname === "/" },
+    { id: "services", label: "Services", icon: Layers, href: "/services", isActive: pathname.startsWith("/services") },
+    { id: "tracking", label: "Suivi", icon: Search, href: "/tracking", isActive: pathname.startsWith("/tracking") },
+    { id: "tariffs", label: "Tarifs", icon: Calculator, href: "/tariffs", isActive: pathname.startsWith("/tariffs") },
+    { id: "warehouses", label: "Dépôts", icon: MapPin, href: "/warehouses", isActive: pathname.startsWith("/warehouses") },
   ];
 
   return (
@@ -29,8 +29,8 @@ export function FloatingBottomNav() {
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 9999,
-        width: "calc(100vw - 20px)",
-        maxWidth: "460px",
+        width: "max-content",
+        maxWidth: "calc(100vw - 16px)",
         pointerEvents: "auto",
         boxSizing: "border-box",
         display: "flex",
@@ -42,8 +42,7 @@ export function FloatingBottomNav() {
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          width: "100%",
+          justifyContent: "center",
           gap: "2px",
           padding: "3px",
           height: "42px",
@@ -66,92 +65,65 @@ export function FloatingBottomNav() {
               href={item.href}
               className={`roum-nav-pill ${item.isActive ? "active" : ""}`}
               style={{
-                flex: "1 1 0px",
-                minWidth: 0,
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "5px",
                 height: "36px",
-                padding: "0 4px",
+                padding: "0 clamp(7px, 1.8vw, 13px)",
                 borderRadius: "9999px",
                 fontSize: "0.72rem",
                 fontWeight: item.isActive ? 700 : 500,
-                letterSpacing: "0.01em",
+                letterSpacing: "-0.01em",
                 textDecoration: "none",
-                color: item.isActive ? "#140D09" : "rgba(255, 255, 255, 0.85)",
+                color: item.isActive ? "#140D09" : "rgba(255, 255, 255, 0.82)",
                 backgroundColor: item.isActive ? "#FFFFFF" : "transparent",
+                boxShadow: item.isActive ? "0 2px 8px rgba(0, 0, 0, 0.2)" : "none",
                 whiteSpace: "nowrap",
+                flexShrink: 0,
                 boxSizing: "border-box",
-                transition: "background-color 0.15s ease, color 0.15s ease",
+                transition: "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
               }}
               title={item.label}
             >
               <Icon
                 size={14}
                 strokeWidth={item.isActive ? 2.5 : 1.9}
-                color={item.isActive ? "#140D09" : "rgba(255, 255, 255, 0.88)"}
-                className="roum-nav-icon"
+                color={item.isActive ? "#140D09" : "rgba(255, 255, 255, 0.85)"}
                 style={{ flexShrink: 0 }}
               />
-              <span className="roum-nav-label-full">{item.label}</span>
-              <span className="roum-nav-label-short">{item.shortLabel}</span>
+              <span style={{ lineHeight: 1, whiteSpace: "nowrap" }}>{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
       <style jsx>{`
-        .roum-nav-label-short {
-          display: none;
-        }
-        .roum-nav-label-full {
-          display: inline;
-          white-space: nowrap;
-          line-height: 1;
-        }
-
-        @media (max-width: 520px) {
+        @media (max-width: 440px) {
           nav {
             height: 38px !important;
             padding: 2.5px !important;
-            gap: 2px !important;
+            gap: 1.5px !important;
           }
-          .roum-nav-label-full {
-            display: none;
-          }
-          .roum-nav-label-short {
-            display: inline;
-            white-space: nowrap;
-            line-height: 1;
-          }
-          .roum-nav-pill {
+          :global(.roum-nav-pill) {
             height: 33px !important;
-            padding: 0 2px !important;
+            padding: 0 7px !important;
             font-size: 0.67rem !important;
             gap: 3.5px !important;
           }
-          :global(.roum-nav-icon) {
-            width: 13px !important;
-            height: 13px !important;
-          }
         }
 
-        @media (max-width: 380px) {
+        @media (max-width: 370px) {
           nav {
             height: 36px !important;
             padding: 2px !important;
-            gap: 1.5px !important;
+            gap: 1px !important;
           }
-          .roum-nav-pill {
+          :global(.roum-nav-pill) {
             height: 32px !important;
-            padding: 0 1px !important;
+            padding: 0 5.5px !important;
             font-size: 0.62rem !important;
             gap: 2.5px !important;
-          }
-          :global(.roum-nav-icon) {
-            width: 12px !important;
-            height: 12px !important;
           }
         }
       `}</style>

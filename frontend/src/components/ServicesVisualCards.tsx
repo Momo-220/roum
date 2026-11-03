@@ -103,9 +103,22 @@ export function ServicesVisualCards() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
-  const handleCardClick = (id: string, e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.closest(".service-cta-button") || target.closest(".service-close-button") || target.closest(".service-action-badge")) {
+  const handleDirectNavigation = (e: React.MouseEvent | React.TouchEvent, href: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.location.assign(href);
+  };
+
+  const handleCardClick = (id: string, e: React.MouseEvent | React.TouchEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (
+      !target ||
+      target.closest(".service-cta-button") ||
+      target.closest(".service-close-button") ||
+      target.closest(".service-action-badge") ||
+      target.closest("button") ||
+      target.closest("a")
+    ) {
       return;
     }
     setActiveId((prev) => (prev === id ? null : id));
@@ -233,15 +246,15 @@ export function ServicesVisualCards() {
                         <p className="service-subtitle-stacked">{service.subtitle}</p>
                       </div>
                       {/* LA FLÈCHE REDIRIGE DIRECTEMENT VERS LA PAGE */}
-                      <Link
+                      <a
                         href={service.href}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => handleDirectNavigation(e, service.href)}
                         className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}
                         title={`Accéder à ${service.title}`}
                         aria-label={`Accéder à ${service.title}`}
                       >
                         <ArrowDownRight size={16} strokeWidth={2.4} />
-                      </Link>
+                      </a>
                     </div>
                   ) : !isExpanded ? (
                     /* Vue au repos : STRICTEMENT EN BAS. LA FLÈCHE REDIRIGE VERS LA PAGE */
@@ -251,15 +264,15 @@ export function ServicesVisualCards() {
                         <p className="service-subtitle-default">{service.subtitle}</p>
                       </div>
                       {/* LA FLÈCHE REDIRIGE DIRECTEMENT */}
-                      <Link
+                      <a
                         href={service.href}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => handleDirectNavigation(e, service.href)}
                         className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}
                         title={`Accéder à ${service.title}`}
                         aria-label={`Accéder à ${service.title}`}
                       >
                         <ArrowDownRight size={18} strokeWidth={2.4} />
-                      </Link>
+                      </a>
                     </div>
                   ) : (
                     /* Vue étendue : ÉPURÉE, PEU DE TEXTE, CONCIS */
@@ -303,10 +316,14 @@ export function ServicesVisualCards() {
 
                       {/* Bouton de Redirection Sans Contour */}
                       <div style={{ paddingTop: "6px" }}>
-                        <Link href={service.href} className="service-cta-button">
+                        <a
+                          href={service.href}
+                          onClick={(e) => handleDirectNavigation(e, service.href)}
+                          className="service-cta-button"
+                        >
                           <span>{service.ctaText}</span>
                           <ArrowRight size={16} />
-                        </Link>
+                        </a>
                       </div>
                     </div>
                   )}
@@ -353,15 +370,15 @@ export function ServicesVisualCards() {
                       <p className="service-subtitle-default">{service.subtitle}</p>
                     </div>
                     {/* LA FLÈCHE REDIRIGE SUR MOBILE */}
-                    <Link
+                    <a
                       href={service.href}
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => handleDirectNavigation(e, service.href)}
                       className="service-action-badge"
                       title={`Accéder à ${service.title}`}
                       aria-label={`Accéder à ${service.title}`}
                     >
                       <ArrowDownRight size={18} strokeWidth={2.4} />
-                    </Link>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -444,10 +461,14 @@ export function ServicesVisualCards() {
 
                       {/* Bouton de redirection déployé sans contour */}
                       <div style={{ paddingTop: "8px" }}>
-                        <Link href={activeService.href} className="service-cta-button">
+                        <a
+                          href={activeService.href}
+                          onClick={(e) => handleDirectNavigation(e, activeService.href)}
+                          className="service-cta-button"
+                        >
                           <span>{activeService.ctaText}</span>
                           <ArrowRight size={16} />
-                        </Link>
+                        </a>
                       </div>
                     </div>
                   </div>
@@ -490,16 +511,16 @@ export function ServicesVisualCards() {
                           {service.subtitle}
                         </p>
                       </div>
-                      <Link
+                      <a
                         href={service.href}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => handleDirectNavigation(e, service.href)}
                         className="service-action-badge"
                         style={{ width: "32px", height: "32px" }}
                         title={`Accéder à ${service.title}`}
                         aria-label={`Accéder à ${service.title}`}
                       >
                         <ArrowDownRight size={15} strokeWidth={2.4} />
-                      </Link>
+                      </a>
                     </div>
                   </div>
                 </div>
