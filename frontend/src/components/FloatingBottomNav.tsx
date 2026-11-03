@@ -25,14 +25,16 @@ export function FloatingBottomNav() {
     <div
       style={{
         position: "fixed",
-        bottom: "max(14px, env(safe-area-inset-bottom, 14px))",
+        bottom: "max(12px, env(safe-area-inset-bottom, 12px))",
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 9999,
-        width: "max-content",
-        maxWidth: "calc(100vw - 16px)",
+        width: "calc(100vw - 20px)",
+        maxWidth: "460px",
         pointerEvents: "auto",
         boxSizing: "border-box",
+        display: "flex",
+        justifyContent: "center",
       }}
     >
       <nav
@@ -40,19 +42,20 @@ export function FloatingBottomNav() {
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
-          gap: "4px",
-          padding: "4px 5px",
-          height: "44px",
-          backgroundColor: "rgba(20, 13, 9, 0.94)",
-          backdropFilter: "blur(18px)",
-          WebkitBackdropFilter: "blur(18px)",
+          justifyContent: "space-between",
+          width: "100%",
+          gap: "2px",
+          padding: "3px",
+          height: "42px",
+          backgroundColor: "#140D09",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
           borderRadius: "9999px",
           border: "1px solid rgba(255, 255, 255, 0.15)",
-          boxShadow: "0 14px 34px -4px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.2)",
+          boxShadow: "0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3)",
           boxSizing: "border-box",
           whiteSpace: "nowrap",
-          maxWidth: "100%",
+          overflow: "hidden",
         }}
       >
         {navItems.map((item) => {
@@ -63,33 +66,31 @@ export function FloatingBottomNav() {
               href={item.href}
               className={`roum-nav-pill ${item.isActive ? "active" : ""}`}
               style={{
+                flex: "1 1 0px",
+                minWidth: 0,
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                flexDirection: "row",
                 gap: "5px",
-                height: "34px",
-                padding: "0 11px",
+                height: "36px",
+                padding: "0 4px",
                 borderRadius: "9999px",
                 fontSize: "0.72rem",
                 fontWeight: item.isActive ? 700 : 500,
                 letterSpacing: "0.01em",
                 textDecoration: "none",
-                color: item.isActive ? "#140D09" : "rgba(255, 255, 255, 0.82)",
+                color: item.isActive ? "#140D09" : "rgba(255, 255, 255, 0.85)",
                 backgroundColor: item.isActive ? "#FFFFFF" : "transparent",
                 whiteSpace: "nowrap",
-                flexShrink: 0,
-                touchAction: "manipulation",
-                userSelect: "none",
                 boxSizing: "border-box",
-                transition: "background-color 0.16s ease, color 0.16s ease, transform 0.12s ease",
+                transition: "background-color 0.15s ease, color 0.15s ease",
               }}
               title={item.label}
             >
               <Icon
                 size={14}
                 strokeWidth={item.isActive ? 2.5 : 1.9}
-                color={item.isActive ? "#140D09" : "rgba(255, 255, 255, 0.85)"}
+                color={item.isActive ? "#140D09" : "rgba(255, 255, 255, 0.88)"}
                 className="roum-nav-icon"
                 style={{ flexShrink: 0 }}
               />
@@ -110,11 +111,11 @@ export function FloatingBottomNav() {
           line-height: 1;
         }
 
-        @media (max-width: 540px) {
+        @media (max-width: 520px) {
           nav {
-            height: 40px !important;
-            padding: 3px 4px !important;
-            gap: 3px !important;
+            height: 38px !important;
+            padding: 2.5px !important;
+            gap: 2px !important;
           }
           .roum-nav-label-full {
             display: none;
@@ -125,24 +126,10 @@ export function FloatingBottomNav() {
             line-height: 1;
           }
           .roum-nav-pill {
-            height: 32px !important;
-            padding: 0 8.5px !important;
-            font-size: 0.69rem !important;
-            gap: 4px !important;
-          }
-        }
-
-        @media (max-width: 400px) {
-          nav {
-            height: 38px !important;
-            padding: 3px !important;
-            gap: 2.5px !important;
-          }
-          .roum-nav-pill {
-            height: 30px !important;
-            padding: 0 7px !important;
-            font-size: 0.65rem !important;
-            gap: 3px !important;
+            height: 33px !important;
+            padding: 0 2px !important;
+            font-size: 0.67rem !important;
+            gap: 3.5px !important;
           }
           :global(.roum-nav-icon) {
             width: 13px !important;
@@ -150,16 +137,16 @@ export function FloatingBottomNav() {
           }
         }
 
-        @media (max-width: 360px) {
+        @media (max-width: 380px) {
           nav {
             height: 36px !important;
-            padding: 2.5px !important;
-            gap: 2px !important;
+            padding: 2px !important;
+            gap: 1.5px !important;
           }
           .roum-nav-pill {
-            height: 29px !important;
-            padding: 0 5.5px !important;
-            font-size: 0.61rem !important;
+            height: 32px !important;
+            padding: 0 1px !important;
+            font-size: 0.62rem !important;
             gap: 2.5px !important;
           }
           :global(.roum-nav-icon) {

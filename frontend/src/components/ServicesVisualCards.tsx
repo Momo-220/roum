@@ -26,79 +26,75 @@ interface ServiceItem {
 const SERVICES_DATA: ServiceItem[] = [
   {
     id: "achats",
-    badge: "Alibaba, 1688 & Taobao · Paiement Yuans RMB",
+    badge: "ALIBABA, 1688 & TAOBAO",
     title: "Centrale d'Achat",
-    subtitle: "Règlement Mobile Money & négociation Chine",
+    subtitle: "Paiement en Yuans (RMB) par Mobile Money",
     description:
-      "Achetez directement sur Alibaba, 1688 et Taobao sans blocage bancaire international. Vous réglez en FCFA par Mobile Money (Wave, Orange Money, MTN, Moov) à taux négocié. Notre équipe en Chine paie votre fournisseur en Yuans (RMB), réceptionne vos cartons dans nos entrepôts de Guangzhou et Yiwu, puis assure l'expédition sécurisée avec dédouanement inclus.",
+      "Commandez sur Alibaba et 1688 en réglant en FCFA par Mobile Money. Nous payons votre usine en Yuans sous 24h avec contrôle colis inclus.",
     image: "/images/services/achats.jpg",
     href: "/services?tab=alibaba",
-    ctaText: "Lancer une commande Alibaba",
+    ctaText: "Accéder à la Centrale d'Achat",
     options: [
       {
         tag: "Option 1 · Sans fournisseur",
-        desc: "Vous n'avez pas de fournisseur ? Nous cherchons le produit, vérifions la fiabilité de l'usine chinoise et négocions le tarif direct usine.",
+        desc: "Sourcing produit & négociation directe en usine.",
       },
       {
         tag: "Option 2 · Avec fournisseur",
-        desc: "Vous avez déjà votre fournisseur ? Transmettez-nous son contact ou sa facture proforma, nous payons immédiatement en Yuans (RMB).",
+        desc: "Règlement de votre proforma en Yuans sous 24h.",
       },
     ],
     features: [
-      "Paiement en FCFA par Mobile Money (Wave, Orange, MTN, Moov)",
+      "Paiement Mobile Money (Wave, Orange, MTN, Moov)",
       "Zéro carte bancaire internationale requise",
-      "Option 1 : Sourcing & négociation directe en usine",
-      "Option 2 : Règlement Yuans RMB sous 24h pour votre fournisseur",
-      "Réception, photos & pesée vidéo en entrepôt à Guangzhou/Yiwu",
-      "Transit automatique vers l'Afrique avec dédouanement inclus",
+      "Pesée vidéo & contrôle des cartons à Guangzhou",
+      "Dédouanement complet inclus jusqu'à Bingerville",
     ],
     metrics: [
       { label: "Paiement client", value: "Mobile Money (FCFA)" },
-      { label: "Règlement usine", value: "Yuans (RMB) en Chine" },
+      { label: "Règlement usine", value: "Yuans (RMB)" },
     ],
   },
   {
     id: "maritime",
-    badge: "Bateau · Dès 300 000 FCFA / m³",
+    badge: "BATEAU · DÈS 300 000 FCFA / M³",
     title: "Voie Maritime",
     subtitle: "Groupage CBM & Conteneurs FCL",
     description:
-      "Acheminement maritime par conteneurs sécurisés ou groupage au mètre cube (CBM) depuis Ningbo, Yiwu et Guangzhou. La solution la plus économique pour machines, équipements et gros volumes commerciaux, avec dédouanement 100% compris jusqu'à notre agence de Bingerville Carrefour Safari.",
+      "Acheminement maritime économique au m³ depuis la Chine. Dédouanement 100% compris avec retrait direct à Bingerville.",
     image: "/images/services/maritime.jpg",
     href: "/tariffs?mode=SEA",
-    ctaText: "Estimer mon fret maritime",
+    ctaText: "Voir les tarifs maritimes",
     features: [
-      "Groupage au mètre cube (CBM) sans minimum lourd",
-      "Dédouanement et taxes de port intégralement compris",
-      "Scellés de sécurité numérotés et suivi de conteneur en direct",
-      "Départs maritimes hebdomadaires depuis Guangzhou et Yiwu",
-      "Retrait direct en agence à Bingerville ou livraison",
+      "Groupage au m³ sans minimum lourd",
+      "Dédouanement & taxes portuaires inclus",
+      "Départs réguliers chaque semaine",
+      "Scellés de sécurité & suivi en temps réel",
     ],
     metrics: [
       { label: "Délai moyen", value: "35 à 45 jours" },
-      { label: "Tarif groupage", value: "Dès 300 000 FCFA / m³" },
+      { label: "Tarif groupage", value: "Dès 300 000 F / m³" },
     ],
   },
   {
     id: "aerien",
-    badge: "Avion · Express 4 à 5 Jours Chrono",
+    badge: "AVION · EXPRESS 4 À 5 JOURS",
     title: "Voie Aérienne",
-    subtitle: "Chine, Dubaï, Paris & Casablanca",
+    subtitle: "Chine, Dubaï, France & Maroc direct",
     description:
-      "Vols réguliers chaque semaine pour vos colis urgents, échantillons, téléphones, cosmétiques et compléments. Deux formules adaptées : Voie Express (4 à 5 jours chrono) ou Voie Normale économique (12 à 14 jours). Dédouanement complet inclus au kilo avec pesée vidéo certifiée dès réception en magasin.",
+      "Vols hebdomadaires pour colis urgents, téléphones et électronique. Pesée vidéo et dédouanement complet inclus au kilo.",
     image: "/images/services/aerien.jpg",
     href: "/tariffs?mode=AIR",
-    ctaText: "Calculer mon tarif aérien",
+    ctaText: "Voir les tarifs aériens",
     features: [
-      "Voie Express (4 à 5 j) & Voie Normale économique (12 à 14 j)",
-      "Liaisons régulières Chine (CAN), Dubaï (DXB), Paris & Maroc",
-      "Dédouanement intégral compris dans le prix au kilo",
-      "Enregistrement vidéo de la pesée dès arrivée en entrepôt",
-      "Retrait immédiat à Bingerville Carrefour Safari",
+      "Vols réguliers Chine, Dubaï, France & Maroc",
+      "Formule Express (4 à 5 j) ou Normale (10 à 12 j)",
+      "Dédouanement intégral compris au kilo",
+      "Pesée vidéo certifiée dès réception",
     ],
     metrics: [
-      { label: "Délai express", value: "4 à 5 jours ouvrés" },
-      { label: "Tarif indicatif", value: "Dès 10 000 FCFA / kg" },
+      { label: "Délai express", value: "4 à 5 jours" },
+      { label: "Tarif indicatif", value: "Dès 10 000 F / kg" },
     ],
   },
 ];
@@ -109,7 +105,7 @@ export function ServicesVisualCards() {
 
   const handleCardClick = (id: string, e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest(".service-cta-button") || target.closest(".service-close-button")) {
+    if (target.closest(".service-cta-button") || target.closest(".service-close-button") || target.closest(".service-action-badge")) {
       return;
     }
     setActiveId((prev) => (prev === id ? null : id));
@@ -143,7 +139,7 @@ export function ServicesVisualCards() {
 
   return (
     <section className="services-section-wrapper">
-      {/* En-tête de section éditorial */}
+      {/* En-tête de section éditorial épuré */}
       <div className="services-header">
         <div className="services-eyebrow">
           01 / NOS VOIES DE TRANSPORT OFFICIELLES
@@ -178,17 +174,17 @@ export function ServicesVisualCards() {
                 }`}
                 style={placementStyle}
               >
-                {/* 1. Photographie de fond */}
+                {/* Photographie de fond */}
                 <img
                   src={service.image}
                   alt={service.title}
                   className="service-card-bg-image"
                   style={{
-                    transform: isExpanded ? "scale(1.05)" : isHovered ? "scale(1.03)" : "scale(1.0)",
+                    transform: isExpanded ? "scale(1.04)" : isHovered ? "scale(1.03)" : "scale(1.0)",
                   }}
                 />
 
-                {/* 2. Scrim Gradient Cinématographique */}
+                {/* Scrim Gradient Cinématographique */}
                 <div
                   className="service-card-scrim"
                   style={{
@@ -200,7 +196,7 @@ export function ServicesVisualCards() {
                   }}
                 />
 
-                {/* BOUTON FERMER STRICTEMENT À L'EXTRÉMITÉ SUPÉRIEURE DROITE */}
+                {/* BOUTON CROIX STRICTEMENT À L'EXTRÉMITÉ SUPÉRIEURE DROITE */}
                 {isExpanded && (
                   <button
                     type="button"
@@ -209,20 +205,20 @@ export function ServicesVisualCards() {
                       setActiveId(null);
                     }}
                     className="service-close-button"
-                    title="Replier ce volet"
+                    title="Fermer"
                     aria-label="Fermer"
                   >
                     <X size={16} />
                   </button>
                 )}
 
-                {/* 3. Contenu de la carte (Plein cadre absolu : 100% hauteur garantie) */}
+                {/* Contenu plein cadre absolu */}
                 <div
                   className={`service-card-content ${
                     isExpanded ? "content-expanded" : isStackedSquare ? "content-stacked" : "content-default"
                   }`}
                 >
-                  {/* Haut : Titre Badge pur (SANS CONTOUR, SANS FOND, SANS POINT VERT) */}
+                  {/* Titre Badge : AUCUN CONTOUR, AUCUN FOND */}
                   <div className="service-card-top-bar">
                     <div className="service-micro-badge">
                       <span>{service.badge}</span>
@@ -236,32 +232,44 @@ export function ServicesVisualCards() {
                         <h3 className="service-title-stacked">{service.title}</h3>
                         <p className="service-subtitle-stacked">{service.subtitle}</p>
                       </div>
-                      {/* Flèche d'ouverture de la carte */}
-                      <div className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}>
+                      {/* LA FLÈCHE REDIRIGE DIRECTEMENT VERS LA PAGE */}
+                      <Link
+                        href={service.href}
+                        onClick={(e) => e.stopPropagation()}
+                        className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}
+                        title={`Accéder à ${service.title}`}
+                        aria-label={`Accéder à ${service.title}`}
+                      >
                         <ArrowDownRight size={16} strokeWidth={2.4} />
-                      </div>
+                      </Link>
                     </div>
                   ) : !isExpanded ? (
-                    /* Vue au repos : Flèche d'origine qui ouvre la carte au clic */
+                    /* Vue au repos : STRICTEMENT EN BAS. LA FLÈCHE REDIRIGE VERS LA PAGE */
                     <div className="service-default-bottom">
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <h3 className="service-title-default">{service.title}</h3>
                         <p className="service-subtitle-default">{service.subtitle}</p>
                       </div>
-                      {/* Flèche d'origine rétablie */}
-                      <div className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}>
+                      {/* LA FLÈCHE REDIRIGE DIRECTEMENT */}
+                      <Link
+                        href={service.href}
+                        onClick={(e) => e.stopPropagation()}
+                        className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}
+                        title={`Accéder à ${service.title}`}
+                        aria-label={`Accéder à ${service.title}`}
+                      >
                         <ArrowDownRight size={18} strokeWidth={2.4} />
-                      </div>
+                      </Link>
                     </div>
                   ) : (
-                    /* Vue étendue complète : ZÉRO CADRE, POINTS ÉLÉGANTS, BOUTON REDIRECTION PROÉMINENT */
+                    /* Vue étendue : ÉPURÉE, PEU DE TEXTE, CONCIS */
                     <div className="service-expanded-body">
                       <div>
                         <h3 className="service-title-expanded">{service.title}</h3>
                         <p className="service-desc-expanded">{service.description}</p>
                       </div>
 
-                      {/* Les 2 Options Spécifiques (Alibaba) : ZÉRO CADRE, TYPOGRAPHIE PURE */}
+                      {/* Les 2 Options (Alibaba) : ZÉRO CADRE, PUR TEXTE CONCIS */}
                       {service.options && (
                         <div className="service-options-container">
                           {service.options.map((opt, oIdx) => (
@@ -273,7 +281,7 @@ export function ServicesVisualCards() {
                         </div>
                       )}
 
-                      {/* Métriques : ÉPURÉES EN LIGNE SANS CADRE NI BOÎTE */}
+                      {/* Métriques : EN LIGNE ZÉRO BOÎTE */}
                       <div className="service-metrics-row">
                         {service.metrics.map((m, idx) => (
                           <div key={idx} className="service-metric-item">
@@ -283,7 +291,7 @@ export function ServicesVisualCards() {
                         ))}
                       </div>
 
-                      {/* Points / Caractéristiques : AVEC DE VRAIS POINTS (AUCUN CHECK VERT) */}
+                      {/* 4 Points Clés : VRAIS POINTS (AUCUN CHECK VERT) */}
                       <div className="service-features-grid">
                         {service.features.map((feat, idx) => (
                           <div key={idx} className="service-feature-row">
@@ -293,8 +301,8 @@ export function ServicesVisualCards() {
                         ))}
                       </div>
 
-                      {/* Bouton de Redirection Sans Contour (Uniquement quand ça déplie) */}
-                      <div style={{ paddingTop: "10px" }}>
+                      {/* Bouton de Redirection Sans Contour */}
+                      <div style={{ paddingTop: "6px" }}>
                         <Link href={service.href} className="service-cta-button">
                           <span>{service.ctaText}</span>
                           <ArrowRight size={16} />
@@ -344,10 +352,16 @@ export function ServicesVisualCards() {
                       <h3 className="service-title-default">{service.title}</h3>
                       <p className="service-subtitle-default">{service.subtitle}</p>
                     </div>
-                    {/* Flèche d'origine mobile qui ouvre la carte */}
-                    <div className="service-action-badge">
+                    {/* LA FLÈCHE REDIRIGE SUR MOBILE */}
+                    <Link
+                      href={service.href}
+                      onClick={(e) => e.stopPropagation()}
+                      className="service-action-badge"
+                      title={`Accéder à ${service.title}`}
+                      aria-label={`Accéder à ${service.title}`}
+                    >
                       <ArrowDownRight size={18} strokeWidth={2.4} />
-                    </div>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -396,7 +410,7 @@ export function ServicesVisualCards() {
                         <p className="service-desc-expanded">{activeService.description}</p>
                       </div>
 
-                      {/* Les 2 Options Spécifiques (Alibaba) : ZÉRO CADRE */}
+                      {/* Les 2 Options (Alibaba) */}
                       {activeService.options && (
                         <div className="service-options-container">
                           {activeService.options.map((opt, oIdx) => (
@@ -429,7 +443,7 @@ export function ServicesVisualCards() {
                       </div>
 
                       {/* Bouton de redirection déployé sans contour */}
-                      <div style={{ paddingTop: "10px" }}>
+                      <div style={{ paddingTop: "8px" }}>
                         <Link href={activeService.href} className="service-cta-button">
                           <span>{activeService.ctaText}</span>
                           <ArrowRight size={16} />
@@ -476,9 +490,16 @@ export function ServicesVisualCards() {
                           {service.subtitle}
                         </p>
                       </div>
-                      <div className="service-action-badge" style={{ width: "32px", height: "32px" }}>
+                      <Link
+                        href={service.href}
+                        onClick={(e) => e.stopPropagation()}
+                        className="service-action-badge"
+                        style={{ width: "32px", height: "32px" }}
+                        title={`Accéder à ${service.title}`}
+                        aria-label={`Accéder à ${service.title}`}
+                      >
                         <ArrowDownRight size={15} strokeWidth={2.4} />
-                      </div>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -557,7 +578,7 @@ export function ServicesVisualCards() {
         .desktop-grid.has-active {
           grid-template-columns: 2.2fr 1fr;
           grid-template-rows: 1fr 1fr;
-          height: 560px;
+          height: 520px;
         }
 
         .service-card-item {
@@ -605,7 +626,7 @@ export function ServicesVisualCards() {
           pointer-events: none;
         }
 
-        /* Conteneur plein cadre avec position absolue : zéro décalage */
+        /* Conteneur plein cadre avec position absolue */
         .service-card-content {
           position: absolute;
           inset: 0;
@@ -627,7 +648,7 @@ export function ServicesVisualCards() {
         }
 
         .content-expanded {
-          padding: 26px 28px;
+          padding: 24px 26px;
         }
 
         .service-card-top-bar {
@@ -658,8 +679,8 @@ export function ServicesVisualCards() {
         /* BOUTON FERMER : STRICTEMENT À L'EXTRÉMITÉ SUPÉRIEURE DROITE */
         .service-close-button {
           position: absolute;
-          top: 22px;
-          right: 22px;
+          top: 20px;
+          right: 20px;
           width: 34px;
           height: 34px;
           border-radius: 50%;
@@ -740,7 +761,7 @@ export function ServicesVisualCards() {
           text-overflow: ellipsis;
         }
 
-        /* Action Badge Flèche D'ORIGINE : OUVERTURE DE CARTE AU CLIC */
+        /* Action Badge Flèche : REDIRIGE DIRECTEMENT VERS LA PAGE */
         .service-action-badge {
           width: 40px;
           height: 40px;
@@ -756,9 +777,11 @@ export function ServicesVisualCards() {
           flex-shrink: 0;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
           transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          text-decoration: none;
+          cursor: pointer;
         }
 
-        .service-card-item:hover .service-action-badge,
+        .service-action-badge:hover,
         .service-action-badge.is-hovered {
           background-color: #FFFFFF;
           color: #140D09;
@@ -769,34 +792,34 @@ export function ServicesVisualCards() {
         .service-expanded-body {
           display: flex;
           flex-direction: column;
-          gap: 14px;
+          gap: 12px;
           width: 100%;
           animation: cardSmoothReveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         .service-title-expanded {
           font-family: var(--c-font-display);
-          font-size: clamp(1.5rem, 2.3vw, 1.95rem);
+          font-size: clamp(1.4rem, 2.2vw, 1.85rem);
           font-weight: 700;
           line-height: 1.1;
           letter-spacing: -0.035em;
           color: #FFFFFF;
-          margin: 0 0 6px 0;
+          margin: 0 0 4px 0;
         }
 
         .service-desc-expanded {
-          font-size: 0.86rem;
-          line-height: 1.46;
+          font-size: 0.84rem;
+          line-height: 1.44;
           color: rgba(255, 255, 255, 0.92);
           max-width: 620px;
           margin: 0;
         }
 
-        /* Options 1 et 2 pour Alibaba : ZÉRO CADRE, TYPOGRAPHIE PURE */
+        /* Options 1 et 2 pour Alibaba : ZÉRO CADRE, PUR TEXTE CONCIS */
         .service-options-container {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-          gap: 10px 16px;
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: 8px 14px;
         }
 
         .service-option-item {
@@ -807,7 +830,7 @@ export function ServicesVisualCards() {
 
         .service-option-tag {
           display: block;
-          font-size: 0.74rem;
+          font-size: 0.72rem;
           font-family: var(--c-font-mono);
           font-weight: 700;
           color: #FFA066;
@@ -817,9 +840,9 @@ export function ServicesVisualCards() {
         }
 
         .service-option-desc {
-          font-size: 0.8rem;
-          color: rgba(255, 255, 255, 0.9);
-          line-height: 1.38;
+          font-size: 0.78rem;
+          color: rgba(255, 255, 255, 0.88);
+          line-height: 1.35;
           margin: 0;
         }
 
@@ -827,7 +850,7 @@ export function ServicesVisualCards() {
         .service-metrics-row {
           display: flex;
           flex-wrap: wrap;
-          gap: 18px;
+          gap: 16px;
         }
 
         .service-metric-item {
@@ -837,11 +860,11 @@ export function ServicesVisualCards() {
           padding: 0 !important;
           display: inline-flex;
           align-items: baseline;
-          gap: 6px;
+          gap: 5px;
         }
 
         .service-metric-label {
-          font-size: 0.68rem;
+          font-size: 0.66rem;
           color: rgba(255, 255, 255, 0.72);
           text-transform: uppercase;
           font-family: var(--c-font-mono);
@@ -850,7 +873,7 @@ export function ServicesVisualCards() {
 
         .service-metric-value {
           font-family: 'Bricolage Grotesque', var(--font-display), sans-serif;
-          font-size: 0.9rem;
+          font-size: 0.88rem;
           font-weight: 800;
           color: #FFFFFF;
           font-variant-numeric: tabular-nums;
@@ -859,15 +882,15 @@ export function ServicesVisualCards() {
         /* Caractéristiques : LISTE AVEC POINTS (ZÉRO CHECK VERT) */
         .service-features-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 7px 16px;
+          grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+          gap: 6px 14px;
         }
 
         .service-feature-row {
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-size: 0.8rem;
+          gap: 7px;
+          font-size: 0.78rem;
           color: rgba(255, 255, 255, 0.9);
         }
 
@@ -880,17 +903,17 @@ export function ServicesVisualCards() {
           flex-shrink: 0;
         }
 
-        /* Bouton de Redirection Sans Contour (Uniquement quand ça déplie) */
+        /* Bouton de Redirection Sans Contour */
         .service-cta-button {
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          padding: 11px 24px;
+          padding: 10px 22px;
           border-radius: 9999px;
           background-color: #FFFFFF;
           color: #140D09;
           border: none !important;
-          font-size: 0.84rem;
+          font-size: 0.82rem;
           font-weight: 700;
           text-decoration: none;
           box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
@@ -926,8 +949,8 @@ export function ServicesVisualCards() {
           }
 
           .service-close-button {
-            top: 16px !important;
-            right: 16px !important;
+            top: 14px !important;
+            right: 14px !important;
             width: 32px !important;
             height: 32px !important;
           }
@@ -975,7 +998,7 @@ export function ServicesVisualCards() {
             background-color: #1B1411;
             border: none !important;
             box-shadow: 0 14px 34px -8px rgba(20, 13, 9, 0.32);
-            min-height: 480px;
+            min-height: 440px;
             animation: cardSmoothReveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
           }
 
