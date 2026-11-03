@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roum Transit — Serpent Horizontal Parfaitement Cambré & Synchronisé</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    /* Code Couleur Officiel ROUM TRANSIT (globals.css) */
+    :root {
+      --c-bg: #FAF5F0;             /* Fond crème lin chaud officiel */
+      --c-surface: #FFFFFF;        /* Blanc pur */
+      --c-text-main: #1B1411;      /* Noir d'encre chaud */
+      --c-text-muted: #5C4F48;     /* Gris chaud Linea */
+      --c-text-light: #8C7D75;     /* Métadonnées */
+      --c-accent-red: #C2410C;     /* Terracotta signature */
+      --c-accent-green: #16A34A;   /* Vert succès */
+      --c-btn-primary-bg: #140D09; /* Obsidian sombre */
+    }
+
+    body {
+      background-color: var(--c-bg);
+      color: var(--c-text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Le cercle du chiffre (Seul élément géométrique, aucun cadran) */
+    .num-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background-color: var(--c-btn-primary-bg);
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.88rem;
+      letter-spacing: -0.02em;
+      position: relative;
+      z-index: 10;
+      opacity: 0.22;
+      transform: scale(0.72);
+      transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, background-color 0.3s ease;
+      box-shadow: 0 4px 12px rgba(20, 13, 9, 0.15);
+    }
+
+    .num-circle.active {
+      opacity: 1;
+      transform: scale(1.08);
+      box-shadow: 0 8px 24px -2px rgba(20, 13, 9, 0.35);
+    }
+
+    .num-circle.done {
+      background-color: var(--c-accent-green) !important;
+      box-shadow: 0 8px 24px -2px rgba(22, 163, 74, 0.45) !important;
+    }
+
+    /* Onde pulsante au moment où la ligne touche le cercle */
+    .pulse-ring {
+      position: absolute;
+      inset: -6px;
+      border-radius: 50%;
+      border: 2px solid var(--c-accent-green);
+      opacity: 0;
+      transform: scale(0.8);
+      pointer-events: none;
+    }
+    .num-circle.active .pulse-ring {
+      animation: ripple 0.8s ease-out forwards;
+    }
+
+    @keyframes ripple {
+      0% { opacity: 0.9; transform: scale(0.85); }
+      100% { opacity: 0; transform: scale(1.6); }
+    }
+
+    /* Texte de l'étape : posé directement sur le fond lin, zéro cadran */
+    .step-meta {
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+    .step-meta.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Barre de recherche pill épurée sans bordure */
+    .search-pill {
+      background-color: #FFFFFF;
+      border-radius: 9999px;
+      box-shadow: 0 6px 24px -2px rgba(27, 20, 17, 0.07);
+      border: none;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-6 md:p-8 flex flex-col items-center justify-start min-h-screen">
+
+  <!-- Contrôles de démonstration -->
+  <div class="mb-5 flex items-center gap-3">
+    <button onclick="startSynchronizedAnimation()" class="px-5 py-2.5 rounded-full bg-[#140D09] hover:bg-[#2A201A] text-white text-xs font-bold flex items-center gap-2 shadow-md active:scale-95 transition-all">
+      <svg class="w-3.5 h-3.5 text-[#16A34A]" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+      <span>Rejouer l'animation (Cambrure Prononcée & Synchronisation Parfaite)</span>
+    </button>
+  </div>
+
+  <div class="w-full max-w-[1140px] flex flex-col">
+
+    <!-- En-tête épuré SANS CADRAN (Code couleur officiel) -->
+    <header class="text-center pt-2 pb-6">
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#140D09]/[0.05] text-[11px] font-semibold tracking-wider uppercase text-[#8C7D75] mb-2.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-[#C2410C]"></span>
+        Traçabilité & Progression en Direct
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-[#1B1411] mb-1.5">
+        Suivre mon Colis en Temps Réel
+      </h1>
+      <p class="text-xs sm:text-sm text-[#5C4F48] max-w-[440px] mx-auto leading-relaxed">
+        Visualisez le cheminement de votre expédition, étape par étape, sans frais caché.
+      </p>
+    </header>
+
+    <!-- MODULE DE RECHERCHE PILL (ZÉRO BORDURE) -->
+    <div class="w-full max-w-[500px] mx-auto search-pill p-1.5 pl-5 flex items-center justify-between mb-12">
+      <div class="flex items-center gap-3 flex-1 min-w-0">
+        <svg class="w-4 h-4 text-[#8C7D75] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Numéro de bordereau..." value="RM-AIR-2610-K8P9Q2" class="w-full bg-transparent text-xs sm:text-sm font-mono font-semibold text-[#1B1411] outline-none" />
+      </div>
+      <button class="px-5 py-2.5 rounded-full bg-[#140D09] text-white text-xs font-bold hover:bg-[#2A201A] transition-all flex-shrink-0">
+        Vérifier
+      </button>
+    </div>
+
+    <!-- TITRE DE SECTION SANS AUCUN CADRAN -->
+    <div class="flex items-center justify-between mb-4 px-2">
+      <span class="text-xs font-bold tracking-wider uppercase text-[#8C7D75]">
+        Le parcours officiel en 9 étapes
+      </span>
+      <span class="text-xs text-[#8C7D75] hidden sm:inline">
+        Glissez horizontalement ➔
+      </span>
+    </div>
+
+    <!-- ========================================================
+         LE SERPENT HORIZONTAL DES 9 ÉTAPES
+         - Arches bien cambrées (cambrure accentuée de 100px d'amplitude)
+         - Ligne fine SVG continue synchronisée au milliseconde près
+         - Seuls les chiffres en cercle, zéro cadran, typographie Linea
+    ======================================================== -->
+    <div class="relative w-full overflow-x-auto no-scrollbar py-12 px-6" id="hSnakeViewport">
+      <!-- Hauteur augmentée à 300px pour loger les grandes cambrures -->
+      <div class="relative min-w-[1100px] h-[300px]" id="hSnakeContainer">
+
+        <!-- Ligne SVG en Serpent Horizontal Cambré -->
+        <svg id="hSnakeSvg" class="absolute top-0 left-0 w-full h-full pointer-events-none z-0" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="hSnakeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <!-- Code couleur Roum Transit : Obsidian #140D09 -> Terracotta #C2410C -> Vert #16A34A -->
+              <stop offset="0%" stop-color="#140D09" stop-opacity="0.9" />
+              <stop offset="50%" stop-color="#C2410C" stop-opacity="0.95" />
+              <stop offset="100%" stop-color="#16A34A" stop-opacity="1" />
+            </linearGradient>
+          </defs>
+          <path id="hSvgPath" fill="none" stroke="url(#hSnakeGrad)" stroke-width="2.8" stroke-linecap="round" />
+        </svg>
+
+        <!-- Les 9 Étapes disposées avec cambrure accentuée (alternance haut/bas de 110px) -->
+        <div class="relative z-10 flex justify-between items-center h-full w-full px-6" id="hStepsRow">
+
+          <!-- 01 : Demande reçue (Centre bas) -->
+          <div class="flex flex-col items-center text-center w-[114px]" style="margin-top: 60px;" data-step="1">
+            <div class="num-circle" id="hCircle-1">
+              01
+              <div class="pulse-ring"></div>
+            </div>
+            <div class="step-meta mt-3" id="hMeta-1">
+              <div class="text-xs font-bold text-[#1B1411]">Demande reçue</div>
+              <div class="text-[10px] text-[#5C4F48] mt-0.5">Enregistrée</div>
+            </div>
+          </div>
+
+          <!-- 02 : Devis envoyé (Cambré HAUT) -->
+          <div class="flex flex-col items-center text-center w-[114px]" style="margin-top: -65px;" data-step="2">
+            <div class="step-meta mb-3" id="hMeta-2">
+              <div class="text-xs font-bold text-[#1B1411]">Devis envoyé</div>
+              <div class="text-[10px] text-[#5C4F48] mt-0.5">Douane incluse</div>
+            </div>
+            <div class="num-circle" id="hCircle-2">
+              02
+              <div class="pulse-ring"></div>
+            </div>
+          </div>
+
+          <!-- 03 : Paiement confirmé (Cambré BAS) -->
+          <div class="flex flex-col items-center text-center w-[114px]" style="margin-top: 60px;" data-step="3">
+            <div class="num-circle" id="hCircle-3">
+              03
+              <div class="pulse-ring"></div>
+            </div>
+            <div class="step-meta mt-3" id="hMeta-3">
+              <div class="text-xs font-bold text-[#1B1411]">Paiement validé</div>
+              <div class="text-[10px] text-[#5C4F48] mt-0.5">Dossier actif</div>
+            </div>
+          </div>
+
+          <!-- 04 : Commande effectuée (Cambré HAUT) -->
+          <div class="flex flex-col items-center text-center w-[114px]" style="margin-top: -65px;" data-step="4">
+            <div class="step-meta mb-3" id="hMeta-4">
+              <div class="text-xs font-bold text-[#1B1411]">Commande usine</div>
+              <div class="text-[10px] text-[#5C4F48] mt-0.5">Fournisseur réglé</div>
+            </div>
+            <div class="num-circle" id="hCircle-4">
+              04
+              <div class="pulse-ring"></div>
+            </div>
+          </div>
+
+          <!-- 05 : Reçu en Chine (Cambré BAS) -->
+          <div class="flex flex-col items-center text-center w-[114px]" style="margin-top: 60px;" data-step="5">
+            <div class="num-circle" id="hCircle-5">
+              05
+              <div class="pulse-ring"></div>
+            </div>
+            <div class="step-meta mt-3" id="hMeta-5">
+              <div class="text-xs font-bold text-[#1B1411]">Reçu en entrepôt</div>
+              <div class="text-[10px] text-[#5C4F48] mt-0.5">Photos & pesée</div>
+            </div>
+          </div>
+
+          <!-- 06 : Colis expédié (Cambré HAUT) -->
+          <div class="flex flex-col items-center text-center w-[114px]" style="margin-top: -65px;" data-step="6">
+            <div class="step-meta mb-3" id="hMeta-6">
+              <div class="text-xs font-bold text-[#1B1411]">Colis expédié</div>
+              <div class="text-[10px] text-[#5C4F48] mt-0.5">Vol / Bateau</div>
+            </div>
+            <div class="num-circle" id="hCircle-6">
+              06
+              <div class="pulse-ring"></div>
+            </div>
+          </div>
+
+          <!-- 07 : Arrivé à destination (Cambré BAS) -->
+          <div class="flex flex-col items-center text-center w-[114px]" style="margin-top: 60px;" data-step="7">
+            <div class="num-circle" id="hCircle-7">
+              07
+              <div class="pulse-ring"></div>
+            </div>
+            <div class="step-meta mt-3" id="hMeta-7">
+              <div class="text-xs font-bold text-[#1B1411]">Arrivé au pays</div>
+              <div class="text-[10px] text-[#5C4F48] mt-0.5">Dédouanement</div>
+            </div>
+          </div>
+
+          <!-- 08 : Disponible pour retrait (Cambré HAUT) -->
+          <div class="flex flex-col items-center text-center w-[114px]" style="margin-top: -65px;" data-step="8">
+            <div class="step-meta mb-3" id="hMeta-8">
+              <div class="text-xs font-bold text-[#1B1411]">Prêt en magasin</div>
+              <div class="text-[10px] text-[#5C4F48] mt-0.5">Bingerville Safari</div>
+            </div>
+            <div class="num-circle" id="hCircle-8">
+              08
+              <div class="pulse-ring"></div>
+            </div>
+          </div>
+
+          <!-- 09 : Colis livré (Position finale, cercle vert officiel) -->
+          <div class="flex flex-col items-center text-center w-[114px]" style="margin-top: 60px;" data-step="9">
+            <div class="num-circle done" id="hCircle-9">
+              09
+              <div class="pulse-ring"></div>
+            </div>
+            <div class="step-meta mt-3" id="hMeta-9">
+              <div class="text-xs font-bold text-[#16A34A]">Colis livré</div>
+              <div class="text-[10px] text-[#16A34A] mt-0.5">Remis au client</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Indicateur d'état en direct -->
+    <div class="text-center py-6 text-xs text-[#8C7D75]">
+      ROUM TRANSIT INTERNATIONAL · DÉDOUANEMENT 100% INCLUS · AUCUN FRAIS SURPRISE
+    </div>
+
+  </div>
+
+  <script>
+    let animationFrameId = null;
+    let nodeDistances = [];
+    let totalPathLength = 0;
+
+    // 1. Calcul du tracé avec cambrure sinusoïdale accentuée (véritable serpent)
+    function buildCamberedSnakePath() {
+      const container = document.getElementById('hSnakeContainer');
+      const containerRect = container.getBoundingClientRect();
+      const points = [];
+
+      for (let i = 1; i <= 9; i++) {
+        const circle = document.getElementById('hCircle-' + i);
+        if (circle) {
+          const r = circle.getBoundingClientRect();
+          points.push({
+            x: r.left - containerRect.left + r.width / 2,
+            y: r.top - containerRect.top + r.height / 2
+          });
+        }
+      }
+
+      if (points.length < 2) return;
+
+      // Construction de la cambrure prononcée :
+      // On utilise des points de contrôle de Bézier avec tangentes amples pour marquer la cambrure
+      let d = `M ${points[0].x} ${points[0].y}`;
+      for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const dx = (p2.x - p1.x);
+
+        // Arches bien cambrées avec contrôle horizontal étendu (dx * 0.52)
+        const cp1x = p1.x + dx * 0.52;
+        const cp1y = p1.y;
+        const cp2x = p2.x - dx * 0.52;
+        const cp2y = p2.y;
+
+        d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+      }
+
+      const path = document.getElementById('hSvgPath');
+      path.setAttribute('d', d);
+
+      totalPathLength = path.getTotalLength();
+      path.style.strokeDasharray = totalPathLength;
+      path.style.strokeDashoffset = totalPathLength;
+
+      // Calcul des distances cumulées exactes pour chaque cercle
+      // Pour une synchronisation mathématique absolue à 100%
+      nodeDistances = [0]; // Étape 1 commence à 0
+
+      // Échantillonnage de la courbe pour trouver l'abscisse curviligne exacte de chaque point
+      const samplesCount = 1000;
+      for (let i = 1; i < points.length; i++) {
+        const targetPoint = points[i];
+        let bestDist = Infinity;
+        let bestLen = 0;
+
+        for (let s = 0; s <= samplesCount; s++) {
+          const len = (s / samplesCount) * totalPathLength;
+          const pt = path.getPointAtLength(len);
+          const distSq = (pt.x - targetPoint.x) ** 2 + (pt.y - targetPoint.y) ** 2;
+          if (distSq < bestDist) {
+            bestDist = distSq;
+            bestLen = len;
+          }
+        }
+        nodeDistances.push(bestLen);
+      }
+    }
+
+    // 2. Animation synchronisée au milliseconde près par requestAnimationFrame
+    function startSynchronizedAnimation() {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+
+      const path = document.getElementById('hSvgPath');
+
+      // Réinitialiser l'état visuel de tous les cercles et textes
+      for (let i = 1; i <= 9; i++) {
+        const c = document.getElementById('hCircle-' + i);
+        const m = document.getElementById('hMeta-' + i);
+        c.classList.remove('active');
+        m.classList.remove('active');
+      }
+
+      // Étape 1 est active dès le départ
+      document.getElementById('hCircle-1').classList.add('active');
+      document.getElementById('hMeta-1').classList.add('active');
+
+      const duration = 11000; // 11 secondes complètes (tracé majestueux et posé)
+      const startTime = performance.now();
+
+      function frame(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / duration);
+
+        // Fonction d'accélération/décélération très douce (smooth step)
+        const easedProgress = progress < 0.5 
+          ? 2 * progress * progress 
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+        const currentDrawnLength = easedProgress * totalPathLength;
+        path.style.strokeDashoffset = totalPathLength - currentDrawnLength;
+
+        // SYNCHRONISATION ABSOLUE :
+        // Dès que la pointe de la ligne atteint ou dépasse exactement la distance du cercle i,
+        // le cercle s'active instantanément (ni avant, ni après) !
+        for (let i = 1; i < nodeDistances.length; i++) {
+          const targetDist = nodeDistances[i];
+          const circleEl = document.getElementById('hCircle-' + (i + 1));
+          const metaEl = document.getElementById('hMeta-' + (i + 1));
+
+          if (currentDrawnLength >= targetDist - 2) {
+            if (!circleEl.classList.contains('active')) {
+              circleEl.classList.add('active');
+              metaEl.classList.add('active');
+            }
+          }
+        }
+
+        if (progress < 1) {
+          animationFrameId = requestAnimationFrame(frame);
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(frame);
+    }
+
+    function init() {
+      buildCamberedSnakePath();
+      startSynchronizedAnimation();
+    }
+
+    window.addEventListener('load', () => {
+      setTimeout(init, 150);
+    });
+
+    window.addEventListener('resize', () => {
+      buildCamberedSnakePath();
+    });
+  </script>
+</body>
+</html>

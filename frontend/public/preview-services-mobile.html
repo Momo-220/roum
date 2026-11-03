@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roum Transit — Opérations Directes 100% Verticales</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --bg-page: #FAF9F6;
+      --text-main: #140D09;
+      --text-muted: #6B635B;
+      --card-bg: #FFFFFF;
+      --accent-green: #16A34A;
+    }
+    body {
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .shadow-app-card {
+      box-shadow: 0 10px 30px -4px rgba(20, 13, 9, 0.05), 0 2px 8px -2px rgba(20, 13, 9, 0.03);
+    }
+    .shadow-touch-btn {
+      box-shadow: 0 6px 18px -2px rgba(20, 13, 9, 0.2);
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-6 md:p-10 flex flex-col items-center justify-start min-h-screen">
+
+  <!-- Contrôleur de Largeur (Mobile ou Écran large) -->
+  <div class="mb-6 flex items-center gap-2 bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-sm border-0">
+    <button id="btnMobile" onclick="setView('mobile')" class="px-4 py-1.5 text-xs font-semibold rounded-full bg-[#140D09] text-white transition-all">
+      Vue Smartphone (390px)
+    </button>
+    <button id="btnFull" onclick="setView('full')" class="px-4 py-1.5 text-xs font-semibold rounded-full text-[#6B635B] hover:text-[#140D09] transition-all">
+      Vue Ordinateur (Pleine largeur verticale)
+    </button>
+  </div>
+
+  <!-- Conteneur Principal : TOUJOURS 1 SEULE COLONNE VERTICALE (ZÉRO HORIZONTAL) -->
+  <div id="viewContainer" class="w-full max-w-[430px] transition-all duration-300 flex flex-col gap-5">
+
+    <!-- En-tête de page -->
+    <header class="text-center pt-2 pb-2">
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/[0.04] text-[11px] font-semibold tracking-wider uppercase text-[#8C7D75] mb-2 border-0">
+        <span class="w-1.5 h-1.5 rounded-full bg-[#16A34A]"></span>
+        Espace Opérations Clients
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-[#140D09] mb-1.5">
+        Services & Expéditions
+      </h1>
+      <p class="text-xs sm:text-sm text-[#6B635B] max-w-[340px] mx-auto leading-relaxed">
+        Effectuez vos commandes et vos déclarations directement sur la plateforme.
+      </p>
+    </header>
+
+    <!-- ========================================================
+         CARTE 1 : OPÉRATION ACHAT ALIBABA & 1688 (PLEINE LARGEUR)
+    ======================================================== -->
+    <article class="w-full bg-white rounded-3xl p-5 sm:p-6 shadow-app-card border-0 flex flex-col">
+      <!-- En-tête de la carte -->
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-11 h-11 rounded-2xl bg-[#140D09] text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+          <!-- SVG ShoppingBag -->
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+          </svg>
+        </div>
+        <span class="text-[11px] font-bold text-[#16A34A] bg-[#DCFCE7] px-3 py-1 rounded-full border-0">
+          Opération Directe
+        </span>
+      </div>
+
+      <h2 class="text-lg font-bold text-[#140D09] mb-1">
+        Centrale d'Achat Alibaba, Taobao & 1688
+      </h2>
+      <p class="text-xs text-[#6B635B] mb-4 leading-relaxed">
+        Réglez en FCFA à Abidjan : nous payons vos usines en Yuans (RMB) et sécurisons vos cartons.
+      </p>
+
+      <!-- 3 Puces Verticales avec SVGs sémantiques -->
+      <div class="flex flex-col gap-2.5 mb-5 bg-[#FAF9F6] p-3.5 rounded-2xl border-0">
+        <div class="flex items-center gap-3 text-xs text-[#2A231E]">
+          <div class="w-7 h-7 rounded-xl bg-white flex items-center justify-center flex-shrink-0 text-[#140D09] shadow-sm">
+            <!-- SVG Banknote -->
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect width="20" height="12" x="2" y="6" rx="2" />
+              <circle cx="12" cy="12" r="2" />
+              <path d="M6 12h.01M18 12h.01" />
+            </svg>
+          </div>
+          <span class="font-medium">Paiement direct fournisseurs en Chine en Yuans RMB</span>
+        </div>
+
+        <div class="flex items-center gap-3 text-xs text-[#2A231E]">
+          <div class="w-7 h-7 rounded-xl bg-white flex items-center justify-center flex-shrink-0 text-[#140D09] shadow-sm">
+            <!-- SVG Camera -->
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+          </div>
+          <span class="font-medium">Contrôle conformité, photos et pesée en entrepôt</span>
+        </div>
+
+        <div class="flex items-center gap-3 text-xs text-[#2A231E]">
+          <div class="w-7 h-7 rounded-xl bg-white flex items-center justify-center flex-shrink-0 text-[#16A34A] shadow-sm">
+            <!-- SVG ShieldCheck -->
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4" />
+            </svg>
+          </div>
+          <span class="font-medium">Dédouanement 100% compris jusqu'à Abidjan</span>
+        </div>
+      </div>
+
+      <!-- Bouton qui ouvre l'opération directement SUR LE SITE -->
+      <button id="btnOpenAlibaba" onclick="toggleForm('formAlibaba')" class="w-full py-3.5 px-4 rounded-2xl bg-[#140D09] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-touch-btn active:scale-[0.98] transition-all">
+        <!-- SVG PlusCircle / Formulaire direct -->
+        <svg class="w-4 h-4 text-[#16A34A]" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="16" />
+          <line x1="8" y1="12" x2="16" y2="12" />
+        </svg>
+        <span id="labelAlibaba">Passer commande sur le site</span>
+      </button>
+
+      <!-- PANNEAU D'OPÉRATION DIRECTE SUR LE SITE (Pas de renvoi externe) -->
+      <div id="formAlibaba" class="hidden mt-4 pt-4 border-t border-black/[0.06] flex flex-col gap-3">
+        <div id="alibabaSuccess" class="hidden bg-[#F0FDF4] p-4 rounded-2xl text-center">
+          <div class="w-10 h-10 rounded-full bg-[#16A34A] text-white flex items-center justify-center mx-auto mb-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <h3 class="text-sm font-bold text-[#166534] mb-1">Commande Enregistrée sur le Site !</h3>
+          <p class="text-xs text-[#15803D] mb-2">Référence officielle : <strong id="aliRefCode" class="font-mono text-[#140D09]">RM-ALI-9842</strong></p>
+          <p class="text-[11px] text-[#4A7C59]">Votre dossier a été transmis à l'équipe en Chine. Vous pouvez le suivre en direct avec votre référence.</p>
+        </div>
+
+        <form id="realAlibabaForm" onsubmit="submitAlibaba(event)" class="flex flex-col gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-[#140D09] mb-1">Lien de l'article (Alibaba / 1688 / Taobao)</label>
+            <input type="url" required placeholder="https://detail.1688.com/offer/..." class="w-full h-11 px-3.5 rounded-xl bg-[#FAF9F6] text-xs text-[#140D09] outline-none focus:ring-2 focus:ring-[#140D09] border-0" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-bold text-[#140D09] mb-1">Quantité voulue</label>
+              <input type="text" required placeholder="Ex : 50 pièces" class="w-full h-11 px-3.5 rounded-xl bg-[#FAF9F6] text-xs text-[#140D09] outline-none focus:ring-2 focus:ring-[#140D09] border-0" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-[#140D09] mb-1">Ville de livraison</label>
+              <select class="w-full h-11 px-3 rounded-xl bg-[#FAF9F6] text-xs text-[#140D09] outline-none focus:ring-2 focus:ring-[#140D09] border-0 font-medium">
+                <option>Abidjan (Côte d'Ivoire)</option>
+                <option>Dakar (Sénégal)</option>
+                <option>Bamako (Mali)</option>
+                <option>Ouagadougou (Burkina)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-bold text-[#140D09] mb-1">Votre Nom Complet</label>
+              <input type="text" required placeholder="Nom & Prénom" class="w-full h-11 px-3.5 rounded-xl bg-[#FAF9F6] text-xs text-[#140D09] outline-none focus:ring-2 focus:ring-[#140D09] border-0" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-[#140D09] mb-1">Votre Numéro de Contact</label>
+              <input type="tel" required placeholder="+225 07..." class="w-full h-11 px-3.5 rounded-xl bg-[#FAF9F6] text-xs text-[#140D09] outline-none focus:ring-2 focus:ring-[#140D09] border-0" />
+            </div>
+          </div>
+
+          <button type="submit" class="w-full h-11 rounded-xl bg-[#16A34A] text-white text-xs font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+            <span>Valider ma commande sur la plateforme</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </button>
+        </form>
+      </div>
+    </article>
+
+    <!-- ========================================================
+         CARTE 2 : OPÉRATION DÉCLARATION FRET CHINE (PLEINE LARGEUR)
+    ======================================================== -->
+    <article class="w-full bg-white rounded-3xl p-5 sm:p-6 shadow-app-card border-0 flex flex-col">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-11 h-11 rounded-2xl bg-[#140D09] text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+          <!-- SVG Plane & Ship -->
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3.5c-.5-.5-2.5 0-4 1.5L13.5 8.5 5.3 6.7c-.5-.1-.9.1-1.2.4L3 8.3c-.3.3-.3.8 0 1.1l5.5 4.5-2.5 2.5-3-1c-.4-.1-.8 0-1.1.3l-.9.9c-.3.3-.3.8 0 1.1l3.5 3.5c.3.3.8.3 1.1 0l.9-.9c.3-.3.4-.7.3-1.1l-1-3 2.5-2.5 4.5 5.5c.3.3.8.3 1.1 0l1.2-1.2c.3-.2.5-.6.4-1.1z" />
+          </svg>
+        </div>
+        <span class="text-[11px] font-bold text-[#140D09] bg-[#F3F0EB] px-3 py-1 rounded-full border-0">
+          Chine ➔ Afrique
+        </span>
+      </div>
+
+      <h2 class="text-lg font-bold text-[#140D09] mb-1">
+        Fret Chine (Guangzhou & Yiwu)
+      </h2>
+      <p class="text-xs text-[#6B635B] mb-4 leading-relaxed">
+        Déclarez votre marchandise pour générer instantanément votre adresse entrepôt et votre Shipping Mark.
+      </p>
+
+      <div class="flex flex-col gap-2.5 mb-5 bg-[#FAF9F6] p-3.5 rounded-2xl border-0">
+        <div class="flex items-center justify-between text-xs text-[#2A231E]">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-lg bg-white flex items-center justify-center flex-shrink-0 text-[#EAB308] shadow-sm">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
+            </div>
+            <span class="font-medium">Voie Express Avion (4-5 jours)</span>
+          </div>
+          <span class="font-bold text-[#140D09]">12 000 F / kg</span>
+        </div>
+
+        <div class="flex items-center justify-between text-xs text-[#2A231E]">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-lg bg-white flex items-center justify-center flex-shrink-0 text-[#0284C7] shadow-sm">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1 .6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.38 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.9.94 5.34 2.81 7.76" /><path stroke-linecap="round" stroke-linejoin="round" d="M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6" /></svg>
+            </div>
+            <span class="font-medium">Par Bateau conteneur (35-45 jours)</span>
+          </div>
+          <span class="font-bold text-[#140D09]">300 000 F / m³</span>
+        </div>
+      </div>
+
+      <!-- Bouton d'action directe pour générer l'adresse et le code de suivi -->
+      <button id="btnOpenChina" onclick="toggleForm('formChina')" class="w-full py-3.5 px-4 rounded-2xl bg-[#140D09] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-touch-btn active:scale-[0.98] transition-all">
+        <!-- SVG MapPin -->
+        <svg class="w-4 h-4 text-[#EAB308]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+          <circle cx="12" cy="10" r="3" />
+        </svg>
+        <span id="labelChina">Générer mon adresse et code d'envoi Chine</span>
+      </button>
+
+      <!-- PANNEAU GÉNÉRATION EN DIRECT DU SHIPPING MARK SUR LE SITE -->
+      <div id="formChina" class="hidden mt-4 pt-4 border-t border-black/[0.06] flex flex-col gap-3">
+        <div id="chinaSuccess" class="hidden bg-[#FAF9F6] p-4 rounded-2xl">
+          <div class="text-xs font-bold text-[#140D09] mb-1">Votre Shipping Mark Officiel à coller sur vos cartons :</div>
+          <div class="bg-white p-2.5 rounded-xl font-mono text-xs font-bold text-[#140D09] flex items-center justify-between mb-2">
+            <span id="markCode">ROUM / RM-FWD-4921 / KOFFI</span>
+            <button onclick="navigator.clipboard.writeText('ROUM / RM-FWD-4921 / KOFFI'); alert('Shipping Mark copié !')" class="text-[10px] bg-[#140D09] text-white px-2 py-1 rounded-md">Copier</button>
+          </div>
+          <div class="text-[11px] text-[#6B635B]">
+            Adresse magasin Chine : <strong>Guangzhou Baiyun Logistics Center, District Baiyun, Guangzhou, China</strong>
+          </div>
+        </div>
+
+        <form id="realChinaForm" onsubmit="submitChina(event)" class="flex flex-col gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-[#140D09] mb-1">Votre Nom Complet (Code Client)</label>
+            <input type="text" required placeholder="Ex : KOFFI JEAN" class="w-full h-11 px-3.5 rounded-xl bg-[#FAF9F6] text-xs text-[#140D09] outline-none focus:ring-2 focus:ring-[#140D09] border-0" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-bold text-[#140D09] mb-1">Mode de transport</label>
+              <select class="w-full h-11 px-3 rounded-xl bg-[#FAF9F6] text-xs text-[#140D09] outline-none focus:ring-2 focus:ring-[#140D09] border-0 font-medium">
+                <option>Avion Express (4-5 jours)</option>
+                <option>Avion Normal (12-14 jours)</option>
+                <option>Bateau au m³ (35-45 jours)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-[#140D09] mb-1">Numéro WhatsApp</label>
+              <input type="tel" required placeholder="+225 07..." class="w-full h-11 px-3.5 rounded-xl bg-[#FAF9F6] text-xs text-[#140D09] outline-none focus:ring-2 focus:ring-[#140D09] border-0" />
+            </div>
+          </div>
+
+          <button type="submit" class="w-full h-11 rounded-xl bg-[#140D09] text-white text-xs font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+            <span>Obtenir mes instructions d'expédition</span>
+          </button>
+        </form>
+      </div>
+    </article>
+
+    <!-- ========================================================
+         CARTE 3 : OPÉRATION TRANSIT DUBAÏ (PLEINE LARGEUR)
+    ======================================================== -->
+    <article class="w-full bg-white rounded-3xl p-5 sm:p-6 shadow-app-card border-0 flex flex-col">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-11 h-11 rounded-2xl bg-[#140D09] text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v3m6.364 1.636l-2.121 2.121M21 12h-3m1.636 6.364l-2.121-2.121M12 21v-3m-6.364 1.636l2.121-2.121M3 12h3m-1.636-6.364l2.121 2.121" /></svg>
+        </div>
+        <span class="text-[11px] font-bold text-[#9333EA] bg-[#F3E8FF] px-3 py-1 rounded-full border-0">
+          Dubaï (DXB)
+        </span>
+      </div>
+
+      <h2 class="text-lg font-bold text-[#140D09] mb-1">
+        Transit Dubaï (Émirats)
+      </h2>
+      <p class="text-xs text-[#6B635B] mb-4 leading-relaxed">
+        Parfums, cosmétiques, téléphones et électronique depuis Deira jusqu'à Abidjan.
+      </p>
+
+      <div class="flex flex-col gap-2.5 mb-5 bg-[#FAF9F6] p-3.5 rounded-2xl border-0">
+        <div class="flex items-center justify-between text-xs text-[#2A231E]">
+          <span class="font-medium">Voie Express Aérienne (4 à 5 jours)</span>
+          <span class="font-bold text-[#140D09]">12 000 F / kg</span>
+        </div>
+        <div class="flex items-center justify-between text-xs text-[#2A231E]">
+          <span class="font-medium">Parfums & Cosmétiques spéciaux</span>
+          <span class="font-bold text-[#140D09]">14 000 F / kg</span>
+        </div>
+      </div>
+
+      <button onclick="toggleForm('formDubai')" class="w-full py-3.5 px-4 rounded-2xl bg-[#140D09] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-touch-btn active:scale-[0.98] transition-all">
+        <svg class="w-4 h-4 text-[#9333EA]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span>Déclarer un colis depuis Dubaï sur le site</span>
+      </button>
+
+      <div id="formDubai" class="hidden mt-4 pt-4 border-t border-black/[0.06] flex flex-col gap-3">
+        <div id="dubaiSuccess" class="hidden bg-[#F0FDF4] p-4 rounded-2xl text-center">
+          <h3 class="text-sm font-bold text-[#166534] mb-1">Expédition Dubaï Enregistrée !</h3>
+          <p class="text-xs text-[#15803D]">Adresse hub Deira : <strong>Al Sabkha Road, Deira, Dubai, UAE</strong></p>
+        </div>
+        <form onsubmit="event.preventDefault(); document.getElementById('dubaiSuccess').classList.remove('hidden');" class="flex flex-col gap-3">
+          <input type="text" required placeholder="Votre Nom Complet" class="w-full h-11 px-3.5 rounded-xl bg-[#FAF9F6] text-xs text-[#140D09] outline-none border-0" />
+          <input type="tel" required placeholder="Votre Téléphone" class="w-full h-11 px-3.5 rounded-xl bg-[#FAF9F6] text-xs text-[#140D09] outline-none border-0" />
+          <button type="submit" class="w-full h-11 rounded-xl bg-[#16A34A] text-white text-xs font-bold">Enregistrer mon envoi Dubaï</button>
+        </form>
+      </div>
+    </article>
+
+    <!-- ========================================================
+         CARTE 4 : GROUPAGE MAROC & FRANCE (PLEINE LARGEUR)
+    ======================================================== -->
+    <article class="w-full bg-white rounded-3xl p-5 sm:p-6 shadow-app-card border-0 flex flex-col">
+      <div class="flex items-center justify-between mb-3">
+        <div class="w-11 h-11 rounded-2xl bg-[#140D09] text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <span class="text-[11px] font-bold text-[#D97706] bg-[#FEF3C7] px-3 py-1 rounded-full border-0">
+          5 Jours Chrono
+        </span>
+      </div>
+
+      <h2 class="text-lg font-bold text-[#140D09] mb-1">
+        Groupage Maroc (Casablanca) & France (Paris)
+      </h2>
+      <p class="text-xs text-[#6B635B] mb-4 leading-relaxed">
+        Départs hebdomadaires express avec dédouanement total compris à l'arrivée.
+      </p>
+
+      <div class="flex flex-col gap-2.5 mb-5 bg-[#FAF9F6] p-3.5 rounded-2xl border-0">
+        <div class="flex items-center justify-between text-xs text-[#2A231E]">
+          <span class="font-medium">Casablanca ➔ Abidjan (5j chrono)</span>
+          <span class="font-bold text-[#140D09]">6 500 F / kg</span>
+        </div>
+        <div class="flex items-center justify-between text-xs text-[#2A231E]">
+          <span class="font-medium">Paris ➔ Abidjan (Colis divers)</span>
+          <span class="font-bold text-[#140D09]">8 500 F (12 €) / kg</span>
+        </div>
+        <div class="flex items-center justify-between text-xs text-[#2A231E]">
+          <span class="font-medium">Documents & Plis urgents</span>
+          <span class="font-bold text-[#140D09]">13 000 F (20 €)</span>
+        </div>
+      </div>
+
+      <button onclick="toggleForm('formMaroc')" class="w-full py-3.5 px-4 rounded-2xl bg-[#140D09] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-touch-btn active:scale-[0.98] transition-all">
+        <svg class="w-4 h-4 text-[#D97706]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Enregistrer une expédition Maroc / France</span>
+      </button>
+
+      <div id="formMaroc" class="hidden mt-4 pt-4 border-t border-black/[0.06] flex flex-col gap-3">
+        <div id="marocSuccess" class="hidden bg-[#F0FDF4] p-4 rounded-2xl text-center">
+          <h3 class="text-sm font-bold text-[#166534] mb-1">Dossier Validé sur la Plateforme !</h3>
+          <p class="text-xs text-[#15803D]">Votre colis est attendu au magasin de Casablanca ou de Paris.</p>
+        </div>
+        <form onsubmit="event.preventDefault(); document.getElementById('marocSuccess').classList.remove('hidden');" class="flex flex-col gap-3">
+          <input type="text" required placeholder="Votre Nom Complet" class="w-full h-11 px-3.5 rounded-xl bg-[#FAF9F6] text-xs text-[#140D09] outline-none border-0" />
+          <input type="tel" required placeholder="Votre Numéro WhatsApp" class="w-full h-11 px-3.5 rounded-xl bg-[#FAF9F6] text-xs text-[#140D09] outline-none border-0" />
+          <button type="submit" class="w-full h-11 rounded-xl bg-[#16A34A] text-white text-xs font-bold">Confirmer mon enregistrement</button>
+        </form>
+      </div>
+    </article>
+
+    <footer class="py-6 text-center text-xs text-[#8C7D75]">
+      ROUM TRANSIT INTERNATIONAL · PORTAIL D'OPÉRATIONS DIRECTES
+    </footer>
+
+  </div>
+
+  <script>
+    function setView(mode) {
+      const container = document.getElementById('viewContainer');
+      const btnMobile = document.getElementById('btnMobile');
+      const btnFull = document.getElementById('btnFull');
+
+      if (mode === 'mobile') {
+        container.classList.remove('max-w-[800px]');
+        container.classList.add('max-w-[430px]');
+        btnMobile.className = 'px-4 py-1.5 text-xs font-semibold rounded-full bg-[#140D09] text-white transition-all';
+        btnFull.className = 'px-4 py-1.5 text-xs font-semibold rounded-full text-[#6B635B] hover:text-[#140D09] transition-all';
+      } else {
+        container.classList.remove('max-w-[430px]');
+        container.classList.add('max-w-[800px]');
+        btnFull.className = 'px-4 py-1.5 text-xs font-semibold rounded-full bg-[#140D09] text-white transition-all';
+        btnMobile.className = 'px-4 py-1.5 text-xs font-semibold rounded-full text-[#6B635B] hover:text-[#140D09] transition-all';
+      }
+    }
+
+    function toggleForm(formId) {
+      const form = document.getElementById(formId);
+      form.classList.toggle('hidden');
+    }
+
+    function submitAlibaba(e) {
+      e.preventDefault();
+      document.getElementById('realAlibabaForm').classList.add('hidden');
+      document.getElementById('alibabaSuccess').classList.remove('hidden');
+    }
+
+    function submitChina(e) {
+      e.preventDefault();
+      document.getElementById('realChinaForm').classList.add('hidden');
+      document.getElementById('chinaSuccess').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
