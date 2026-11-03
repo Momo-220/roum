@@ -103,12 +103,14 @@ export function ServicesVisualCards() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
+  // Redirection immédiate et inconditionnelle vers la page dédiée
   const handleDirectNavigation = (e: React.MouseEvent | React.TouchEvent, href: string) => {
     e.preventDefault();
     e.stopPropagation();
     window.location.assign(href);
   };
 
+  // Clic sur la carte pour déplier / replier (accordéon)
   const handleCardClick = (id: string, e: React.MouseEvent | React.TouchEvent) => {
     const target = e.target as HTMLElement | null;
     if (
@@ -124,7 +126,7 @@ export function ServicesVisualCards() {
     setActiveId((prev) => (prev === id ? null : id));
   };
 
-  // Placement CSS Grid pour Desktop
+  // Placement CSS Grid pour Desktop (> 860px)
   const getDesktopGridPlacement = (serviceId: string): React.CSSProperties => {
     if (activeId === null) {
       const idx = SERVICES_DATA.findIndex((s) => s.id === serviceId);
@@ -152,7 +154,7 @@ export function ServicesVisualCards() {
 
   return (
     <section className="services-section-wrapper">
-      {/* En-tête de section éditorial épuré */}
+      {/* En-tête de section éditorial */}
       <div className="services-header">
         <div className="services-eyebrow">
           01 / NOS VOIES DE TRANSPORT OFFICIELLES
@@ -166,7 +168,7 @@ export function ServicesVisualCards() {
       </div>
 
       {/* ========================================================
-          DISPOSITION DESKTOP (> 860px)
+          DISPOSITION DESKTOP (> 860px) : GRILLE DYNAMIQUE ASYMÉTRIQUE
          ======================================================== */}
       <div className="desktop-cards-container">
         <div className={`desktop-grid ${activeId !== null ? "has-active" : "is-default"}`}>
@@ -187,7 +189,6 @@ export function ServicesVisualCards() {
                 }`}
                 style={placementStyle}
               >
-                {/* Photographie de fond */}
                 <img
                   src={service.image}
                   alt={service.title}
@@ -197,7 +198,6 @@ export function ServicesVisualCards() {
                   }}
                 />
 
-                {/* Scrim Gradient Cinématographique */}
                 <div
                   className="service-card-scrim"
                   style={{
@@ -225,27 +225,23 @@ export function ServicesVisualCards() {
                   </button>
                 )}
 
-                {/* Contenu plein cadre absolu */}
                 <div
                   className={`service-card-content ${
                     isExpanded ? "content-expanded" : isStackedSquare ? "content-stacked" : "content-default"
                   }`}
                 >
-                  {/* Titre Badge : AUCUN CONTOUR, AUCUN FOND */}
                   <div className="service-card-top-bar">
                     <div className="service-micro-badge">
                       <span>{service.badge}</span>
                     </div>
                   </div>
 
-                  {/* Bas : Corps selon état */}
                   {isStackedSquare ? (
                     <div className="service-stacked-bottom">
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <h3 className="service-title-stacked">{service.title}</h3>
                         <p className="service-subtitle-stacked">{service.subtitle}</p>
                       </div>
-                      {/* LA FLÈCHE REDIRIGE DIRECTEMENT VERS LA PAGE */}
                       <a
                         href={service.href}
                         onClick={(e) => handleDirectNavigation(e, service.href)}
@@ -257,13 +253,11 @@ export function ServicesVisualCards() {
                       </a>
                     </div>
                   ) : !isExpanded ? (
-                    /* Vue au repos : STRICTEMENT EN BAS. LA FLÈCHE REDIRIGE VERS LA PAGE */
                     <div className="service-default-bottom">
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <h3 className="service-title-default">{service.title}</h3>
                         <p className="service-subtitle-default">{service.subtitle}</p>
                       </div>
-                      {/* LA FLÈCHE REDIRIGE DIRECTEMENT */}
                       <a
                         href={service.href}
                         onClick={(e) => handleDirectNavigation(e, service.href)}
@@ -275,14 +269,12 @@ export function ServicesVisualCards() {
                       </a>
                     </div>
                   ) : (
-                    /* Vue étendue : ÉPURÉE, PEU DE TEXTE, CONCIS */
                     <div className="service-expanded-body">
                       <div>
                         <h3 className="service-title-expanded">{service.title}</h3>
                         <p className="service-desc-expanded">{service.description}</p>
                       </div>
 
-                      {/* Les 2 Options (Alibaba) : ZÉRO CADRE, PUR TEXTE CONCIS */}
                       {service.options && (
                         <div className="service-options-container">
                           {service.options.map((opt, oIdx) => (
@@ -294,7 +286,6 @@ export function ServicesVisualCards() {
                         </div>
                       )}
 
-                      {/* Métriques : EN LIGNE ZÉRO BOÎTE */}
                       <div className="service-metrics-row">
                         {service.metrics.map((m, idx) => (
                           <div key={idx} className="service-metric-item">
@@ -304,7 +295,6 @@ export function ServicesVisualCards() {
                         ))}
                       </div>
 
-                      {/* 4 Points Clés : VRAIS POINTS (AUCUN CHECK VERT) */}
                       <div className="service-features-grid">
                         {service.features.map((feat, idx) => (
                           <div key={idx} className="service-feature-row">
@@ -314,7 +304,6 @@ export function ServicesVisualCards() {
                         ))}
                       </div>
 
-                      {/* Bouton de Redirection Sans Contour */}
                       <div style={{ paddingTop: "6px" }}>
                         <a
                           href={service.href}
@@ -335,102 +324,93 @@ export function ServicesVisualCards() {
       </div>
 
       {/* ========================================================
-          DISPOSITION MOBILE (< 860px)
+          DISPOSITION MOBILE (< 860px) : 100% VERTICALE (ZÉRO HORIZONTAL)
+          Chaque service s'affiche pleine largeur dans un flux vertical naturel.
          ======================================================== */}
       <div className="mobile-cards-container">
-        {activeId === null ? (
-          <div className="mobile-horizontal-scroll">
-            {SERVICES_DATA.map((service) => (
+        <div className="mobile-vertical-stack">
+          {SERVICES_DATA.map((service) => {
+            const isExpanded = activeId === service.id;
+
+            return (
               <div
                 key={service.id}
                 onClick={(e) => handleCardClick(service.id, e)}
-                className="mobile-card-slide"
+                className={`mobile-service-card ${isExpanded ? "is-expanded" : "is-collapsed"}`}
               >
                 <img
                   src={service.image}
                   alt={service.title}
                   className="service-card-bg-image"
                 />
+
                 <div
                   className="service-card-scrim"
                   style={{
-                    background:
-                      "linear-gradient(to top, rgba(20, 13, 9, 0.95) 0%, rgba(20, 13, 9, 0.58) 45%, rgba(20, 13, 9, 0.08) 72%, rgba(0, 0, 0, 0.2) 100%)",
+                    background: isExpanded
+                      ? "linear-gradient(to bottom, rgba(20, 13, 9, 0.97) 0%, rgba(20, 13, 9, 0.92) 100%)"
+                      : "linear-gradient(to top, rgba(20, 13, 9, 0.95) 0%, rgba(20, 13, 9, 0.58) 45%, rgba(20, 13, 9, 0.08) 72%, rgba(0, 0, 0, 0.2) 100%)",
                   }}
                 />
-                <div className="service-card-content content-default">
-                  <div className="service-card-top-bar">
-                    <div className="service-micro-badge">
-                      <span>{service.badge}</span>
-                    </div>
-                  </div>
-                  <div className="service-default-bottom">
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 className="service-title-default">{service.title}</h3>
-                      <p className="service-subtitle-default">{service.subtitle}</p>
-                    </div>
-                    {/* LA FLÈCHE REDIRIGE SUR MOBILE */}
-                    <a
-                      href={service.href}
-                      onClick={(e) => handleDirectNavigation(e, service.href)}
-                      className="service-action-badge"
-                      title={`Accéder à ${service.title}`}
-                      aria-label={`Accéder à ${service.title}`}
-                    >
-                      <ArrowDownRight size={18} strokeWidth={2.4} />
-                    </a>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="mobile-active-layout">
-            {(() => {
-              const activeService = SERVICES_DATA.find((s) => s.id === activeId)!;
-              return (
-                <div className="mobile-active-card">
-                  <img
-                    src={activeService.image}
-                    alt={activeService.title}
-                    className="service-card-bg-image"
-                  />
-                  <div
-                    className="service-card-scrim"
-                    style={{
-                      background:
-                        "linear-gradient(to bottom, rgba(20, 13, 9, 0.96) 0%, rgba(20, 13, 9, 0.90) 100%)",
-                    }}
-                  />
 
-                  {/* Bouton croix strictement à l'extrémité sur mobile */}
+                {/* BOUTON FERMER : STRICTEMENT À L'EXTRÉMITÉ SUPÉRIEURE DROITE */}
+                {isExpanded && (
                   <button
                     type="button"
-                    onClick={() => setActiveId(null)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveId(null);
+                    }}
                     className="service-close-button"
                     title="Fermer"
                     aria-label="Fermer"
                   >
                     <X size={16} />
                   </button>
+                )}
 
-                  <div className="service-card-content content-expanded">
-                    <div className="service-card-top-bar">
-                      <div className="service-micro-badge">
-                        <span>{activeService.badge}</span>
-                      </div>
+                <div
+                  className={`service-card-content ${
+                    isExpanded ? "content-expanded" : "content-default"
+                  }`}
+                >
+                  {/* Badge en haut */}
+                  <div className="service-card-top-bar">
+                    <div className="service-micro-badge">
+                      <span>{service.badge}</span>
                     </div>
+                  </div>
 
+                  {!isExpanded ? (
+                    /* Vue au repos mobile : compacte, titre + flèche de redirection */
+                    <div className="service-default-bottom">
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h3 className="service-title-default">{service.title}</h3>
+                        <p className="service-subtitle-default">{service.subtitle}</p>
+                      </div>
+                      {/* LA FLÈCHE REDIRIGE DIRECTEMENT VERS LA PAGE CORRESPONDANTE */}
+                      <a
+                        href={service.href}
+                        onClick={(e) => handleDirectNavigation(e, service.href)}
+                        className="service-action-badge"
+                        title={`Accéder à ${service.title}`}
+                        aria-label={`Accéder à ${service.title}`}
+                      >
+                        <ArrowDownRight size={18} strokeWidth={2.4} />
+                      </a>
+                    </div>
+                  ) : (
+                    /* Vue dépliée mobile : détails épurés, options Alibaba, CTA */
                     <div className="service-expanded-body">
                       <div>
-                        <h3 className="service-title-expanded">{activeService.title}</h3>
-                        <p className="service-desc-expanded">{activeService.description}</p>
+                        <h3 className="service-title-expanded">{service.title}</h3>
+                        <p className="service-desc-expanded">{service.description}</p>
                       </div>
 
-                      {/* Les 2 Options (Alibaba) */}
-                      {activeService.options && (
+                      {/* Les 2 options Alibaba sans fioriture */}
+                      {service.options && (
                         <div className="service-options-container">
-                          {activeService.options.map((opt, oIdx) => (
+                          {service.options.map((opt, oIdx) => (
                             <div key={oIdx} className="service-option-item">
                               <span className="service-option-tag">{opt.tag}</span>
                               <p className="service-option-desc">{opt.desc}</p>
@@ -439,9 +419,9 @@ export function ServicesVisualCards() {
                         </div>
                       )}
 
-                      {/* Métriques épurées sans boîte */}
+                      {/* Métriques */}
                       <div className="service-metrics-row">
-                        {activeService.metrics.map((m, idx) => (
+                        {service.metrics.map((m, idx) => (
                           <div key={idx} className="service-metric-item">
                             <span className="service-metric-label">{m.label} :</span>
                             <span className="service-metric-value">{m.value}</span>
@@ -449,9 +429,9 @@ export function ServicesVisualCards() {
                         ))}
                       </div>
 
-                      {/* Points au lieu de checks */}
+                      {/* Points clés */}
                       <div className="service-features-grid">
-                        {activeService.features.map((feat, idx) => (
+                        {service.features.map((feat, idx) => (
                           <div key={idx} className="service-feature-row">
                             <span className="service-feature-dot" />
                             <span>{feat}</span>
@@ -459,75 +439,24 @@ export function ServicesVisualCards() {
                         ))}
                       </div>
 
-                      {/* Bouton de redirection déployé sans contour */}
-                      <div style={{ paddingTop: "8px" }}>
+                      {/* Bouton de redirection vers la page dédiée */}
+                      <div style={{ paddingTop: "6px" }}>
                         <a
-                          href={activeService.href}
-                          onClick={(e) => handleDirectNavigation(e, activeService.href)}
+                          href={service.href}
+                          onClick={(e) => handleDirectNavigation(e, service.href)}
                           className="service-cta-button"
                         >
-                          <span>{activeService.ctaText}</span>
+                          <span>{service.ctaText}</span>
                           <ArrowRight size={16} />
                         </a>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
-              );
-            })()}
-
-            {/* Deux autres cartes en carrés en-dessous */}
-            <div className="mobile-secondary-squares-row">
-              {SERVICES_DATA.filter((s) => s.id !== activeId).map((service) => (
-                <div
-                  key={service.id}
-                  onClick={(e) => handleCardClick(service.id, e)}
-                  className="mobile-square-card"
-                >
-                  <img
-                    src={service.image}
-                    alt={service.title}
-                    className="service-card-bg-image"
-                  />
-                  <div
-                    className="service-card-scrim"
-                    style={{
-                      background:
-                        "linear-gradient(to top, rgba(20, 13, 9, 0.95) 0%, rgba(20, 13, 9, 0.55) 50%, rgba(20, 13, 9, 0.15) 100%)",
-                    }}
-                  />
-                  <div className="service-card-content content-stacked">
-                    <div className="service-card-top-bar">
-                      <div className="service-micro-badge">
-                        <span>{service.badge.split(" · ")[0]}</span>
-                      </div>
-                    </div>
-                    <div className="service-stacked-bottom">
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <h3 className="service-title-stacked" style={{ fontSize: "1.02rem" }}>
-                          {service.title}
-                        </h3>
-                        <p className="service-subtitle-stacked" style={{ fontSize: "0.7rem" }}>
-                          {service.subtitle}
-                        </p>
-                      </div>
-                      <a
-                        href={service.href}
-                        onClick={(e) => handleDirectNavigation(e, service.href)}
-                        className="service-action-badge"
-                        style={{ width: "32px", height: "32px" }}
-                        title={`Accéder à ${service.title}`}
-                        aria-label={`Accéder à ${service.title}`}
-                      >
-                        <ArrowDownRight size={15} strokeWidth={2.4} />
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* ========================================================
@@ -647,7 +576,6 @@ export function ServicesVisualCards() {
           pointer-events: none;
         }
 
-        /* Conteneur plein cadre avec position absolue */
         .service-card-content {
           position: absolute;
           inset: 0;
@@ -656,7 +584,7 @@ export function ServicesVisualCards() {
           height: 100%;
           display: flex;
           flex-direction: column;
-          justifyContent: space-between;
+          justify-content: space-between;
           box-sizing: border-box;
         }
 
@@ -674,12 +602,11 @@ export function ServicesVisualCards() {
 
         .service-card-top-bar {
           display: flex;
-          justifyContent: space-between;
+          justify-content: space-between;
           align-items: center;
           width: 100%;
         }
 
-        /* Titre haut de carte : AUCUN CONTOUR, AUCUN FOND, JUSTE LE TITRE TEXTE */
         .service-micro-badge {
           display: inline-block;
           background: transparent !important;
@@ -705,7 +632,7 @@ export function ServicesVisualCards() {
           width: 34px;
           height: 34px;
           border-radius: 50%;
-          background-color: rgba(255, 255, 255, 0.2);
+          background-color: rgba(255, 255, 255, 0.22);
           border: none !important;
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
@@ -723,7 +650,6 @@ export function ServicesVisualCards() {
           transform: scale(1.08);
         }
 
-        /* Bas de carte par défaut : STRICTEMENT EN BAS AVEC MARGIN-TOP AUTO */
         .service-default-bottom {
           margin-top: auto;
           display: flex;
@@ -900,7 +826,7 @@ export function ServicesVisualCards() {
           font-variant-numeric: tabular-nums;
         }
 
-        /* Caractéristiques : LISTE AVEC POINTS (ZÉRO CHECK VERT) */
+        /* Caractéristiques */
         .service-features-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -958,7 +884,7 @@ export function ServicesVisualCards() {
         }
 
         /* ========================================================
-            RESPONSIVE MOBILE (< 860px)
+            RESPONSIVE MOBILE (< 860px) : 100% VERTICAL (ZÉRO HORIZONTAL)
            ======================================================== */
         @media (max-width: 860px) {
           .desktop-cards-container {
@@ -967,81 +893,57 @@ export function ServicesVisualCards() {
 
           .mobile-cards-container {
             display: block !important;
+            width: 100% !important;
           }
 
-          .service-close-button {
-            top: 14px !important;
-            right: 14px !important;
-            width: 32px !important;
-            height: 32px !important;
+          .mobile-vertical-stack {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 14px !important;
+            width: 100% !important;
           }
 
-          .mobile-horizontal-scroll {
-            display: flex;
-            gap: 14px;
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
-            scrollbar-width: none;
-            -webkit-overflow-scrolling: touch;
-            padding: 4px 16px 14px 16px;
-            margin: 0 -16px;
-          }
-
-          .mobile-horizontal-scroll::-webkit-scrollbar {
-            display: none;
-          }
-
-          .mobile-card-slide {
-            flex: 0 0 84%;
-            max-width: 310px;
-            height: 380px;
-            scroll-snap-align: center;
+          .mobile-service-card {
             position: relative;
-            border-radius: 24px;
+            width: 100% !important;
+            border-radius: 22px;
             overflow: hidden;
             background-color: #1B1411;
             border: none !important;
             box-shadow: 0 10px 28px -6px rgba(27, 20, 17, 0.16);
             cursor: pointer;
             box-sizing: border-box;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
           }
 
-          .mobile-active-layout {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+          .mobile-service-card.is-collapsed {
+            height: 220px !important;
           }
 
-          .mobile-active-card {
-            position: relative;
-            border-radius: 24px;
-            overflow: hidden;
-            background-color: #1B1411;
-            border: none !important;
-            box-shadow: 0 14px 34px -8px rgba(20, 13, 9, 0.32);
-            min-height: 440px;
-            animation: cardSmoothReveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          .mobile-service-card.is-expanded {
+            min-height: 440px !important;
+            box-shadow: 0 14px 34px -8px rgba(20, 13, 9, 0.35);
           }
 
-          .mobile-active-card .service-features-grid {
+          .mobile-service-card .service-close-button {
+            top: 16px !important;
+            right: 16px !important;
+            width: 32px !important;
+            height: 32px !important;
+          }
+
+          .mobile-service-card .service-features-grid {
             grid-template-columns: 1fr !important;
           }
 
-          .mobile-secondary-squares-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+          .mobile-service-card .service-options-container {
+            grid-template-columns: 1fr !important;
           }
 
-          .mobile-square-card {
-            position: relative;
-            height: 145px;
-            border-radius: 18px;
-            overflow: hidden;
-            background-color: #1B1411;
-            border: none !important;
-            box-shadow: 0 6px 18px -4px rgba(27, 20, 17, 0.12);
-            cursor: pointer;
+          .mobile-service-card .service-cta-button {
+            width: 100% !important;
+            justify-content: center !important;
+            text-align: center !important;
           }
         }
       `}</style>

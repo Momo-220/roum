@@ -1568,43 +1568,113 @@ function ServicesContent() {
           box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4);
         }
 
-        /* RESPONSIVE MOBILE */
+        /* RESPONSIVE MOBILE : 100% VERTICAL (ZÉRO HORIZONTAL, ZÉRO DÉBORDEMENT) */
         @media (max-width: 900px) {
+          .services-page-root {
+            padding: 20px 12px 100px 12px !important;
+            overflow-x: hidden !important;
+          }
+
+          .services-header {
+            margin-bottom: 24px !important;
+          }
+
+          .services-title {
+            font-size: 1.65rem !important;
+          }
+
+          .bento-grid {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 14px !important;
+            width: 100% !important;
+          }
+
+          .bento-card {
+            width: 100% !important;
+            border-radius: 20px !important;
+          }
+
           .card-alibaba,
           .card-aerien,
           .card-dubai,
           .card-maritime,
           .card-paris,
           .card-maroc {
-            grid-column: span 12 !important;
-            min-height: 320px;
+            grid-column: auto !important;
+            width: 100% !important;
+            min-height: 290px !important;
           }
 
-          .bento-grid {
-            gap: 14px;
+          .bento-content {
+            padding: 20px 18px !important;
+          }
+
+          .bento-card-title {
+            font-size: 1.4rem !important;
           }
 
           .options-duo {
-            grid-template-columns: 1fr;
-            gap: 8px;
-          }
-
-          .pass-body-grid {
-            grid-template-columns: 1fr;
-            gap: 18px;
-          }
-
-          .shipping-pass-block {
-            padding: 20px 18px;
-          }
-
-          .modal-input-grid {
-            grid-template-columns: 1fr;
-            gap: 10px;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 8px !important;
           }
 
           .bento-bottom-row {
-            flex-wrap: wrap;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+          }
+
+          .bento-cta-pill {
+            width: 100% !important;
+            justify-content: center !important;
+            text-align: center !important;
+            padding: 11px 18px !important;
+          }
+
+          .arrow-btn {
+            align-self: flex-end !important;
+          }
+
+          .pass-body-grid {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 16px !important;
+          }
+
+          .pass-tabs-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+          }
+
+          .pass-warehouse-capsules {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            width: 100% !important;
+            gap: 6px !important;
+          }
+
+          .pass-capsule-btn {
+            text-align: center !important;
+            justify-content: center !important;
+          }
+
+          .shipping-pass-block {
+            padding: 20px 16px !important;
+            border-radius: 18px !important;
+          }
+
+          .modal-input-grid {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+          }
+
+          .modal-card {
+            padding: 24px 18px !important;
+            border-radius: 20px !important;
           }
         }
       `}</style>

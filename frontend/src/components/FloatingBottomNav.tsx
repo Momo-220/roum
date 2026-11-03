@@ -25,12 +25,12 @@ export function FloatingBottomNav() {
     <div
       style={{
         position: "fixed",
-        bottom: "max(12px, env(safe-area-inset-bottom, 12px))",
+        bottom: "max(14px, env(safe-area-inset-bottom, 14px))",
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 9999,
         width: "max-content",
-        maxWidth: "calc(100vw - 16px)",
+        maxWidth: "calc(100vw - 20px)",
         pointerEvents: "auto",
         boxSizing: "border-box",
         display: "flex",
@@ -43,18 +43,17 @@ export function FloatingBottomNav() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          gap: "2px",
-          padding: "3px",
-          height: "42px",
+          gap: "3px",
+          padding: "4px 6px",
+          height: "44px",
           backgroundColor: "#140D09",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
           borderRadius: "9999px",
-          border: "1px solid rgba(255, 255, 255, 0.15)",
+          border: "1px solid rgba(255, 255, 255, 0.14)",
           boxShadow: "0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3)",
           boxSizing: "border-box",
           whiteSpace: "nowrap",
-          overflow: "hidden",
         }}
       >
         {navItems.map((item) => {
@@ -64,66 +63,91 @@ export function FloatingBottomNav() {
               key={item.id}
               href={item.href}
               className={`roum-nav-pill ${item.isActive ? "active" : ""}`}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "5px",
-                height: "36px",
-                padding: "0 clamp(7px, 1.8vw, 13px)",
-                borderRadius: "9999px",
-                fontSize: "0.72rem",
-                fontWeight: item.isActive ? 700 : 500,
-                letterSpacing: "-0.01em",
-                textDecoration: "none",
-                color: item.isActive ? "#140D09" : "rgba(255, 255, 255, 0.82)",
-                backgroundColor: item.isActive ? "#FFFFFF" : "transparent",
-                boxShadow: item.isActive ? "0 2px 8px rgba(0, 0, 0, 0.2)" : "none",
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-                boxSizing: "border-box",
-                transition: "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
-              }}
               title={item.label}
+              aria-label={item.label}
             >
               <Icon
-                size={14}
+                size={15}
                 strokeWidth={item.isActive ? 2.5 : 1.9}
-                color={item.isActive ? "#140D09" : "rgba(255, 255, 255, 0.85)"}
                 style={{ flexShrink: 0 }}
               />
-              <span style={{ lineHeight: 1, whiteSpace: "nowrap" }}>{item.label}</span>
+              <span className="roum-nav-label">{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
       <style jsx>{`
-        @media (max-width: 440px) {
-          nav {
-            height: 38px !important;
-            padding: 2.5px !important;
-            gap: 1.5px !important;
-          }
-          :global(.roum-nav-pill) {
-            height: 33px !important;
-            padding: 0 7px !important;
-            font-size: 0.67rem !important;
-            gap: 3.5px !important;
-          }
+        :global(.roum-nav-pill) {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          height: 36px;
+          padding: 0 13px;
+          border-radius: 9999px;
+          font-size: 0.74rem;
+          font-weight: 500;
+          letter-spacing: -0.01em;
+          text-decoration: none;
+          color: rgba(255, 255, 255, 0.78);
+          background-color: transparent;
+          box-shadow: none;
+          white-space: nowrap;
+          flex-shrink: 0;
+          box-sizing: border-box;
+          transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                      color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                      padding 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                      transform 0.15s ease;
         }
 
-        @media (max-width: 370px) {
+        :global(.roum-nav-pill:hover) {
+          color: #FFFFFF;
+        }
+
+        :global(.roum-nav-pill.active) {
+          background-color: #FFFFFF !important;
+          color: #140D09 !important;
+          font-weight: 700;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+        }
+
+        :global(.roum-nav-label) {
+          line-height: 1;
+          white-space: nowrap;
+        }
+
+        /* MOBILE (< 640px) : ULTRA-ÉPURÉ, ZÉRO DÉBORDEMENT, SÉLECTEUR AJUSTÉ */
+        @media (max-width: 640px) {
           nav {
-            height: 36px !important;
-            padding: 2px !important;
-            gap: 1px !important;
-          }
-          :global(.roum-nav-pill) {
-            height: 32px !important;
-            padding: 0 5.5px !important;
-            font-size: 0.62rem !important;
+            height: 42px !important;
+            padding: 3.5px 5px !important;
             gap: 2.5px !important;
+          }
+
+          /* Inactif : icône seule, carré arrondi compact */
+          :global(.roum-nav-pill) {
+            height: 35px !important;
+            width: 36px !important;
+            padding: 0 !important;
+            gap: 0 !important;
+          }
+
+          :global(.roum-nav-pill .roum-nav-label) {
+            display: none !important;
+          }
+
+          /* Actif : pilule blanche complète icône + texte parfaitement contenue */
+          :global(.roum-nav-pill.active) {
+            width: auto !important;
+            padding: 0 12px !important;
+            gap: 5px !important;
+            font-size: 0.71rem !important;
+          }
+
+          :global(.roum-nav-pill.active .roum-nav-label) {
+            display: inline !important;
           }
         }
       `}</style>
