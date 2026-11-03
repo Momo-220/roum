@@ -478,10 +478,6 @@ function CommandeFormContent() {
 
         {/* En-tête */}
         <div className="page-header">
-          <div className="badge-eyebrow">
-            <span className="dot" />
-            <span>CENTRALE D&apos;ACHAT CHINE &amp; RÈGLEMENT FOURNISSEURS</span>
-          </div>
           <h1 className="page-title">
             Passer une Commande en Chine
           </h1>

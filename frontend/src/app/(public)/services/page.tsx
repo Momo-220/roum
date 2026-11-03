@@ -130,19 +130,12 @@ function ServicesContent() {
             {/* CARTE 1 (60% LARGEUR) : CENTRALE D'ACHAT ALIBABA & 1688 */}
             <article className="bento-card card-alibaba">
               <img
-                src="/images/services/sourcing_new.jpg"
+                src="/images/services/achats.jpg"
                 alt="Centrale d'Achat Alibaba & Sourcing"
                 className="bento-card-bg"
               />
               <div className="bento-scrim" />
               <div className="bento-content">
-                <div>
-                  <div className="bento-tag">
-                    <span className="green-dot" />
-                    <span>ALIBABA, 1688 &amp; TAOBAO · PAIEMENT RMB</span>
-                  </div>
-                </div>
-
                 <div>
                   <h2 className="bento-card-title">Centrale d&apos;Achat</h2>
                   <p className="bento-card-subtitle">
@@ -170,7 +163,7 @@ function ServicesContent() {
                       className="bento-cta-pill"
                     >
                       <span>Lancer une commande</span>
-                      <ArrowRight size={14} />
+                      <ArrowRight size={15} />
                     </Link>
                   </div>
                 </div>
@@ -217,11 +210,11 @@ function ServicesContent() {
                     </span>
                     <Link
                       href="/tariffs?mode=AIR"
-                      className="arrow-btn"
+                      className="bento-cta-pill"
                       title="Voir les tarifs aériens"
-                      aria-label="Voir les tarifs aériens"
                     >
-                      <ArrowRight size={17} strokeWidth={2.4} />
+                      <span>Voir les tarifs</span>
+                      <ArrowRight size={15} />
                     </Link>
                   </div>
                 </div>
@@ -707,22 +700,36 @@ function ServicesContent() {
         .bento-cta-pill {
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          padding: 9px 18px;
+          justify-content: center;
+          gap: 12px;
+          padding: 11px 22px;
           border-radius: 9999px;
           background: #FFFFFF;
           color: #140D09;
-          font-size: 0.78rem;
+          font-size: 0.82rem;
           font-weight: 700;
           text-decoration: none;
           border: none;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
           cursor: pointer;
-          transition: transform 0.15s ease;
+          white-space: nowrap;
+          flex-shrink: 0;
+          transition: all 0.16s ease;
         }
 
         .bento-cta-pill:hover {
-          transform: scale(1.03);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+        }
+
+        .bento-cta-pill svg {
+          margin-left: 2px;
+          flex-shrink: 0;
+          transition: transform 0.16s ease;
+        }
+
+        .bento-cta-pill:hover svg {
+          transform: translateX(4px);
         }
 
         /* SPANS ASYMÉTRIQUES */
@@ -1289,8 +1296,8 @@ function ServicesContent() {
             display: flex !important;
             align-items: center !important;
             justify-content: space-between !important;
-            gap: 12px !important;
-            margin-top: 14px !important;
+            gap: 16px !important;
+            margin-top: 18px !important;
             flex-wrap: wrap !important;
           }
 
@@ -1299,23 +1306,29 @@ function ServicesContent() {
           }
 
           .bento-cta-pill {
-            padding: 10px 18px !important;
-            font-size: 0.78rem !important;
-            gap: 6px !important;
+            padding: 11px 22px !important;
+            font-size: 0.82rem !important;
+            gap: 12px !important;
             border-radius: 9999px !important;
             font-weight: 700 !important;
+            white-space: nowrap !important;
+          }
+
+          .bento-cta-pill svg {
+            margin-left: 3px !important;
+            flex-shrink: 0 !important;
           }
 
           .arrow-btn {
-            width: 38px !important;
-            height: 38px !important;
+            width: 42px !important;
+            height: 42px !important;
             border-radius: 50% !important;
             flex-shrink: 0 !important;
           }
 
           .arrow-btn svg {
-            width: 17px !important;
-            height: 17px !important;
+            width: 18px !important;
+            height: 18px !important;
           }
 
           /* SECTION BORDEREAU / SHIPPING PASS BIEN ESPACÉE */
@@ -1351,15 +1364,15 @@ function ServicesContent() {
         @media (max-width: 640px) {
           .options-duo {
             grid-template-columns: 1fr !important;
-            gap: 8px !important;
+            gap: 10px !important;
           }
 
           .bento-content {
-            padding: 22px 16px !important;
+            padding: 24px 18px !important;
           }
 
           .bento-card-title {
-            font-size: 1.35rem !important;
+            font-size: 1.4rem !important;
           }
 
           .bento-stat-highlight {
@@ -1369,14 +1382,22 @@ function ServicesContent() {
           .bento-bottom-row {
             flex-direction: column !important;
             align-items: stretch !important;
-            gap: 10px !important;
+            gap: 14px !important;
+            margin-top: 18px !important;
           }
 
           .bento-cta-pill {
             width: 100% !important;
             justify-content: center !important;
-            padding: 11px 18px !important;
+            padding: 13px 22px !important;
+            font-size: 0.84rem !important;
+            gap: 12px !important;
             box-sizing: border-box !important;
+          }
+
+          .bento-cta-pill svg {
+            margin-left: 4px !important;
+            flex-shrink: 0 !important;
           }
         }
       `}</style>
