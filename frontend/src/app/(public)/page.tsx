@@ -92,36 +92,6 @@ export default function HomePage() {
       </ScrollReveal>
 
       {/* ========================================================
-          GARANTIES OFFICIELLES ROUM TRANSIT (LIGNE FINALE SOBRE)
-         ======================================================== */}
-      <ScrollReveal>
-        <section className="guarantees-section">
-          <div className="guarantees-grid">
-            <div className="guarantee-item">
-              <div className="guarantee-title">Douane 100% Comprise</div>
-              <p className="guarantee-desc">
-                Zéro mauvaise surprise à l&apos;arrivée. Dédouanement intégral inclus.
-              </p>
-            </div>
-
-            <div className="guarantee-item">
-              <div className="guarantee-title">Pesée Vidéo Certifiée</div>
-              <p className="guarantee-desc">
-                Colis pesés et filmés en entrepôt dès réception pour votre sérénité.
-              </p>
-            </div>
-
-            <div className="guarantee-item">
-              <div className="guarantee-title">Agence à Abidjan</div>
-              <p className="guarantee-desc">
-                Retrait direct à Bingerville Carrefour Safari ou livraison à domicile.
-              </p>
-            </div>
-          </div>
-        </section>
-      </ScrollReveal>
-
-      {/* ========================================================
           STYLES ADAPTATIFS DESKTOP & MOBILE
          ======================================================== */}
       <style jsx>{`
@@ -247,37 +217,6 @@ export default function HomePage() {
           transform: translateY(-1px);
         }
 
-        .guarantees-section {
-          margin-top: 16px;
-          padding: 22px 18px;
-          background-color: #FFFFFF;
-          border: 1px solid rgba(28, 25, 23, 0.08);
-          border-radius: 20px;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-        }
-
-        .guarantees-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 18px;
-          text-align: center;
-        }
-
-        .guarantee-title {
-          font-family: var(--c-font-display);
-          font-weight: 700;
-          fontSize: 1rem;
-          color: #140D09;
-          margin-bottom: 3px;
-        }
-
-        .guarantee-desc {
-          font-size: 0.8rem;
-          color: #57534E;
-          margin: 0;
-          line-height: 1.4;
-        }
-
         /* Desktop Spacing */
         @media (min-width: 860px) {
           .home-main-wrapper {
@@ -310,18 +249,6 @@ export default function HomePage() {
           .hero-search-submit {
             padding: 10px 22px;
             font-size: 0.86rem;
-          }
-
-          .guarantees-section {
-            padding: 26px 24px;
-          }
-
-          .guarantee-title {
-            font-size: 1.05rem;
-          }
-
-          .guarantee-desc {
-            font-size: 0.82rem;
           }
         }
       `}</style>

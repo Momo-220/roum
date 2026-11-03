@@ -447,9 +447,11 @@ export default function TrackingPage() {
           display: flex;
           align-items: center;
           justify-content: center;
+          font-family: 'Bricolage Grotesque', var(--font-display), sans-serif;
           font-weight: 800;
-          font-size: 0.88rem;
-          letter-spacing: -0.02em;
+          font-size: 0.95rem;
+          font-variant-numeric: tabular-nums;
+          letter-spacing: -0.03em;
           position: relative;
           z-index: 10;
           opacity: 0.7;

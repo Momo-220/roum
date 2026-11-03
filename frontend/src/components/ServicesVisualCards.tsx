@@ -411,7 +411,7 @@ export function ServicesVisualCards() {
                   />
                   <div className="service-card-content content-stacked">
                     <div className="service-card-top-bar">
-                      <div className="service-micro-badge" style={{ padding: "4px 9px", fontSize: "0.64rem" }}>
+                      <div className="service-micro-badge">
                         <span>{service.badge.split(" · ")[0]}</span>
                       </div>
                     </div>
@@ -585,23 +585,22 @@ export function ServicesVisualCards() {
           width: 100%;
         }
 
-        /* Micro Badge : SANS CONTOUR, SANS POINT VERT */
+        /* Titre haut de carte : AUCUN CONTOUR, AUCUN FOND, JUSTE LE TITRE TEXTE */
         .service-micro-badge {
-          display: inline-flex;
-          align-items: center;
-          padding: 6px 14px;
-          border-radius: 9999px;
-          background-color: rgba(255, 255, 255, 0.16);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border: none;
-          color: #FFFFFF;
-          font-size: 0.71rem;
+          display: inline-block;
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+          padding: 0 !important;
+          color: rgba(255, 255, 255, 0.95);
+          font-size: 0.73rem;
           font-weight: 700;
-          letter-spacing: 0.06em;
+          letter-spacing: 0.08em;
           text-transform: uppercase;
           font-family: var(--c-font-mono);
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16);
+          text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.6);
         }
 
         .service-close-button {
@@ -760,9 +759,11 @@ export function ServicesVisualCards() {
         }
 
         .service-metric-value {
-          font-size: 0.82rem;
-          font-weight: 700;
+          font-family: 'Bricolage Grotesque', var(--font-display), sans-serif;
+          font-size: 0.85rem;
+          font-weight: 800;
           color: #FFFFFF;
+          font-variant-numeric: tabular-nums;
         }
 
         .service-features-grid {
