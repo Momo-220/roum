@@ -1557,7 +1557,7 @@ export default function AdminPage() {
 
   // Formulaire de connexion
   const [email, setEmail] = useState("admin@roumtransit.com");
-  const [password, setPassword] = useState("AdminRoum2026!");
+  const [password, setPassword] = useState("admin123");
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -2588,9 +2588,11 @@ export default function AdminPage() {
 
   useEffect(() => {
     // Persistance durant toute la session ouverte : actualiser la page (F5) ne redemande PAS l'identification.
-    // L'identification n'est demandée qu'à l'ouverture d'une nouvelle session (session fermée) ou après Déconnexion.
+    // Vérification combinée sessionStorage et localStorage pour maintenir la session active
     const activeSessionToken =
-      typeof window !== "undefined" ? sessionStorage.getItem("roum_admin_token") : null;
+      typeof window !== "undefined"
+        ? sessionStorage.getItem("roum_admin_token") || localStorage.getItem("roum_admin_token")
+        : null;
     if (activeSessionToken) {
       setToken(activeSessionToken);
       fetchSession(activeSessionToken);
@@ -4213,11 +4215,17 @@ export default function AdminPage() {
                 <span>Connexion en cours...</span>
               ) : (
                 <>
-                  <span>Se Connecter</span>
+                  <span>Accéder à l&apos;Espace de Gestion</span>
                   <ArrowRight size={16} strokeWidth={2.4} />
                 </>
               )}
             </button>
+
+            <div style={{ textAlign: "center", marginTop: "12px" }}>
+              <span style={{ fontSize: "0.74rem", color: "#6B7280" }}>
+                Identifiants officiels pré-remplis : <strong>admin@roumtransit.com</strong> · <strong>admin123</strong>
+              </span>
+            </div>
           </form>
         </div>
 

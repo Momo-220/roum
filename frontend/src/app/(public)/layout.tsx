@@ -104,6 +104,9 @@ export default function PublicLayout({
               <Link href="/tracking" style={{ textDecoration: "none", color: "inherit" }}>
                 Suivi Colis
               </Link>
+              <Link href="/admin" style={{ textDecoration: "none", color: "#A8A29E", fontSize: "0.78rem" }}>
+                Espace Admin
+              </Link>
             </div>
           </div>
 

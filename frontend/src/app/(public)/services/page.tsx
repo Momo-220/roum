@@ -19,6 +19,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { ScrollReveal } from "@/components/ScrollReveal";
+import { CircularFlag } from "@/components/CircularFlag";
 import {
   getLiveTariffs,
   findTariff,
@@ -34,20 +35,17 @@ function ServicesContent() {
   // Tarifs en direct synchronisés avec le Dashboard Admin
   const [tariffs, setTariffs] = useState<OfficialTariff[]>(() => getLiveTariffs());
 
-  // Modale de demande express d'expédition
-  const [activeModal, setActiveModal] = useState<"forwarding" | null>(null);
-
   // Entrepôt actif dans la section Shipping Mark
   const [activeWarehouse, setActiveWarehouse] = useState<"guangzhou" | "yiwu" | "dubai" | "paris">("guangzhou");
   const [copiedAddr, setCopiedAddr] = useState(false);
   const [copiedMark, setCopiedMark] = useState(false);
 
-  // Synchronisation des paramètres d'URL (?tab=alibaba ou ?tab=forwarding)
+  // Synchronisation des paramètres d'URL (?tab=alibaba ou ?tab=forwarding) vers la sous-page dédiée
   useEffect(() => {
     if (tabParam === "alibaba") {
       router.push("/services/commande");
-    } else if (tabParam === "forwarding" || tabParam === "chine" || tabParam === "dubai") {
-      setActiveModal("forwarding");
+    } else if (tabParam === "forwarding" || tabParam === "chine" || tabParam === "dubai" || tabParam === "france" || tabParam === "maroc") {
+      router.push("/services/commande?mode=forwarding");
     }
   }, [tabParam, router]);
 
@@ -59,87 +57,6 @@ function ServicesContent() {
     window.addEventListener("storage", handleSync);
     return () => window.removeEventListener("storage", handleSync);
   }, []);
-
-  // --- FORMULAIRE ALIBABA ---
-  const [aliProductUrl, setAliProductUrl] = useState("");
-  const [aliQuantity, setAliQuantity] = useState("");
-  const [aliSpecs, setAliSpecs] = useState("");
-  const [aliDestination, setAliDestination] = useState("Côte d'Ivoire");
-  const [aliName, setAliName] = useState("");
-  const [aliPhone, setAliPhone] = useState("");
-  const [aliSubmitting, setAliSubmitting] = useState(false);
-  const [aliSuccess, setAliSuccess] = useState<{ ref: string; waUrl: string } | null>(null);
-  const [aliError, setAliError] = useState("");
-
-  const handleAlibabaSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAliError("");
-    if (!aliName.trim() || !aliPhone.trim()) {
-      setAliError("Veuillez renseigner votre Nom et numéro WhatsApp.");
-      return;
-    }
-    setAliSubmitting(true);
-    try {
-      const res = await saveClientRequest({
-        service_type: "ALIBABA",
-        client_name: aliName.trim(),
-        client_phone: aliPhone.trim(),
-        origin_country: "Chine",
-        destination_country: aliDestination,
-        product_url: aliProductUrl.trim(),
-        product_quantity: aliQuantity.trim() || "1",
-        product_specs: aliSpecs.trim(),
-        cargo_type: `Achat Alibaba : ${aliProductUrl.trim() || "Articles divers"}`,
-      });
-      setAliSuccess({ ref: res.reference, waUrl: res.whatsappUrl });
-    } catch (err: any) {
-      setAliError(err.message || "Erreur de connexion. Veuillez réessayer.");
-    } finally {
-      setAliSubmitting(false);
-    }
-  };
-
-  // --- FORMULAIRE FORWARDING / TRANSIT DIRECT ---
-  const [fwdOrigin, setFwdOrigin] = useState("Chine");
-  const [fwdDestination, setFwdDestination] = useState("Côte d'Ivoire");
-  const [fwdMode, setFwdMode] = useState<"AIR" | "SEA">("AIR");
-  const [fwdDescription, setFwdDescription] = useState("");
-  const [fwdName, setFwdName] = useState("");
-  const [fwdPhone, setFwdPhone] = useState("");
-  const [fwdSubmitting, setFwdSubmitting] = useState(false);
-  const [fwdSuccess, setFwdSuccess] = useState<{ ref: string; waUrl: string } | null>(null);
-  const [fwdError, setFwdError] = useState("");
-
-  const handleForwardingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFwdError("");
-    if (!fwdName.trim() || !fwdPhone.trim()) {
-      setFwdError("Veuillez renseigner votre Nom et numéro WhatsApp.");
-      return;
-    }
-    setFwdSubmitting(true);
-    try {
-      let sType: "FORWARDING" | "DUBAI" | "MAROC" | "FRANCE" = "FORWARDING";
-      if (fwdOrigin.includes("Dubaï")) sType = "DUBAI";
-      else if (fwdOrigin.includes("Maroc")) sType = "MAROC";
-      else if (fwdOrigin.includes("France")) sType = "FRANCE";
-
-      const res = await saveClientRequest({
-        service_type: sType,
-        client_name: fwdName.trim(),
-        client_phone: fwdPhone.trim(),
-        origin_country: fwdOrigin,
-        destination_country: fwdDestination,
-        shipping_mode_type: fwdMode,
-        cargo_type: fwdDescription.trim() || "Colis et marchandises ordinaires",
-      });
-      setFwdSuccess({ ref: res.reference, waUrl: res.whatsappUrl });
-    } catch (err: any) {
-      setFwdError(err.message || "Erreur lors de l'enregistrement. Veuillez réessayer.");
-    } finally {
-      setFwdSubmitting(false);
-    }
-  };
 
   // Copie dans le presse-papier
   const copyToClipboard = (text: string, isAddr: boolean) => {
@@ -361,7 +278,7 @@ function ServicesContent() {
             {/* CARTE 4 (40% LARGEUR) : COMPTOIRS INTERNATIONAUX REGROUPÉS (DUBAÏ, FRANCE, MAROC) */}
             <article className="bento-card card-international">
               <img
-                src="/images/services/international_hubs.jpg"
+                src="/images/services/international_points.jpg"
                 alt="Comptoirs Internationaux Roum Transit"
                 className="bento-card-bg"
               />
@@ -369,7 +286,16 @@ function ServicesContent() {
               <div className="bento-content">
                 <div>
                   <div className="bento-tag">
-                    <span>🇦🇪 DUBAÏ · 🇫🇷 FRANCE · 🇲🇦 MAROC</span>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                      <CircularFlag code="ae" size={13} />
+                      <span>DUBAÏ</span>
+                      <span>·</span>
+                      <CircularFlag code="fr" size={13} />
+                      <span>FRANCE</span>
+                      <span>·</span>
+                      <CircularFlag code="ma" size={13} />
+                      <span>MAROC</span>
+                    </div>
                   </div>
                 </div>
 
@@ -385,30 +311,35 @@ function ServicesContent() {
                   <div className="bento-bullets">
                     <div className="bento-bullet">
                       <span className="bento-bullet-dot" />
-                      <span><strong>🇦🇪 Dubaï :</strong> Deira Wholesale · Téléphones &amp; High-Tech</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <CircularFlag code="ae" size={14} />
+                        <strong>Dubaï :</strong> Deira Wholesale · Téléphones &amp; High-Tech
+                      </span>
                     </div>
                     <div className="bento-bullet">
                       <span className="bento-bullet-dot" />
-                      <span><strong>🇫🇷 France :</strong> Paris &amp; Île-de-France · Dès 8 500 FCFA/kg</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <CircularFlag code="fr" size={14} />
+                        <strong>France :</strong> Paris &amp; Île-de-France · Dès 8 500 FCFA/kg
+                      </span>
                     </div>
                     <div className="bento-bullet">
                       <span className="bento-bullet-dot" />
-                      <span><strong>🇲🇦 Maroc :</strong> Casablanca direct vers 5 capitales africaines</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <CircularFlag code="ma" size={14} />
+                        <strong>Maroc :</strong> Casablanca direct vers 5 capitales africaines
+                      </span>
                     </div>
                   </div>
 
                   <div className="bento-bottom-row">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFwdOrigin("Dubaï (Émirats Arabes Unis)");
-                        setActiveModal("forwarding");
-                      }}
+                    <Link
+                      href="/services/commande?mode=forwarding"
                       className="bento-cta-pill"
                     >
                       <span>Lancer une expédition</span>
                       <ArrowRight size={14} />
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -433,14 +364,29 @@ function ServicesContent() {
                     type="button"
                     onClick={() => setActiveWarehouse(key)}
                     className={`pass-capsule-btn ${activeWarehouse === key ? "active" : ""}`}
+                    style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                   >
-                    {key === "guangzhou"
-                      ? "🇨🇳 Guangzhou"
-                      : key === "yiwu"
-                      ? "🇨🇳 Yiwu"
-                      : key === "dubai"
-                      ? "🇦🇪 Dubaï"
-                      : "🇫🇷 Paris"}
+                    {key === "guangzhou" ? (
+                      <>
+                        <CircularFlag code="cn" size={14} />
+                        <span>Guangzhou</span>
+                      </>
+                    ) : key === "yiwu" ? (
+                      <>
+                        <CircularFlag code="cn" size={14} />
+                        <span>Yiwu</span>
+                      </>
+                    ) : key === "dubai" ? (
+                      <>
+                        <CircularFlag code="ae" size={14} />
+                        <span>Dubaï</span>
+                      </>
+                    ) : (
+                      <>
+                        <CircularFlag code="fr" size={14} />
+                        <span>Paris</span>
+                      </>
+                    )}
                   </button>
                 ))}
               </div>
@@ -525,125 +471,7 @@ function ServicesContent() {
 
 
 
-      {/* ========================================================
-          MODALE EXPRESS TRANSIT & EXPÉDITION
-         ======================================================== */}
-      {activeModal === "forwarding" && (
-        <div className="modal-backdrop" onClick={() => setActiveModal(null)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              className="modal-close-btn"
-              onClick={() => setActiveModal(null)}
-              aria-label="Fermer"
-            >
-              <X size={18} />
-            </button>
 
-            <div className="modal-badge">
-              <span>EXPÉDITION &amp; TRANSIT CARGO</span>
-            </div>
-
-            <h3 className="modal-title">Expédier un colis ({fwdOrigin})</h3>
-            <p className="modal-desc">
-              Réception en entrepôt, pesée vidéo certifiée et dédouanement 100% compris jusqu&apos;à destination.
-            </p>
-
-            {fwdSuccess ? (
-              <div className="modal-success-box">
-                <CheckCircle2 size={38} color="#16A34A" style={{ margin: "0 auto 8px auto" }} />
-                <div className="modal-success-title">
-                  Dossier créé : {fwdSuccess.ref}
-                </div>
-                <p className="modal-success-desc">
-                  Votre demande d&apos;expédition a été enregistrée. Validez votre étiquette avec notre conseiller sur WhatsApp.
-                </p>
-                <a
-                  href={fwdSuccess.waUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="modal-wa-btn"
-                >
-                  <MessageCircle size={16} />
-                  <span>Obtenir mon étiquette sur WhatsApp</span>
-                </a>
-              </div>
-            ) : (
-              <form onSubmit={handleForwardingSubmit} className="modal-form">
-                <div className="modal-input-grid">
-                  <div>
-                    <label className="modal-label">Pays de départ *</label>
-                    <select
-                      value={fwdOrigin}
-                      onChange={(e) => setFwdOrigin(e.target.value)}
-                      className="modal-input"
-                    >
-                      <option value="Chine">Chine (Guangzhou / Yiwu)</option>
-                      <option value="Dubaï (Émirats Arabes Unis)">Dubaï (Deira Market)</option>
-                      <option value="France (Paris)">France (Paris Île-de-France)</option>
-                      <option value="Maroc (Casablanca)">Maroc (Casablanca)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="modal-label">Mode d&apos;envoi</label>
-                    <select
-                      value={fwdMode}
-                      onChange={(e) => setFwdMode(e.target.value as "AIR" | "SEA")}
-                      className="modal-input"
-                    >
-                      <option value="AIR">Avion Express (4 à 5 jours)</option>
-                      <option value="SEA">Bateau Groupage CBM (35 à 45 jours)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="modal-label">Description des marchandises</label>
-                  <input
-                    type="text"
-                    value={fwdDescription}
-                    onChange={(e) => setFwdDescription(e.target.value)}
-                    placeholder="Ex : Vêtements, pièces électroniques, cosmétiques"
-                    className="modal-input"
-                  />
-                </div>
-
-                <div className="modal-input-grid">
-                  <div>
-                    <label className="modal-label">Votre Nom Complet *</label>
-                    <input
-                      type="text"
-                      required
-                      value={fwdName}
-                      onChange={(e) => setFwdName(e.target.value)}
-                      placeholder="Nom &amp; Prénom"
-                      className="modal-input"
-                    />
-                  </div>
-                  <div>
-                    <label className="modal-label">Numéro WhatsApp *</label>
-                    <input
-                      type="tel"
-                      required
-                      value={fwdPhone}
-                      onChange={(e) => setFwdPhone(e.target.value)}
-                      placeholder="+225 07 00 00 00 00"
-                      className="modal-input"
-                    />
-                  </div>
-                </div>
-
-                {fwdError && <div className="modal-error">{fwdError}</div>}
-
-                <button type="submit" disabled={fwdSubmitting} className="modal-submit-btn">
-                  <span>{fwdSubmitting ? "Enregistrement..." : "Valider ma demande d'expédition"}</span>
-                  <ArrowRight size={15} />
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* ========================================================
           STYLES CSS INLINE RESPONSIVE & ÉDITORIAL
@@ -1334,7 +1162,7 @@ function ServicesContent() {
         }
 
         /* RESPONSIVE MOBILE : LUXUEUX, AÉRÉ, BIEN ESPACÉ ET SANS COMPRESSION */
-        @media (max-width: 900px) {
+        @media (max-width: 1024px) {
           .services-page-root {
             padding: 28px 16px 120px 16px !important;
             overflow-x: hidden !important;
@@ -1518,10 +1346,37 @@ function ServicesContent() {
             gap: 8px !important;
             -webkit-overflow-scrolling: touch !important;
           }
+        }
 
-          .modal-input-grid {
+        @media (max-width: 640px) {
+          .options-duo {
             grid-template-columns: 1fr !important;
-            gap: 12px !important;
+            gap: 8px !important;
+          }
+
+          .bento-content {
+            padding: 22px 16px !important;
+          }
+
+          .bento-card-title {
+            font-size: 1.35rem !important;
+          }
+
+          .bento-stat-highlight {
+            font-size: 1.35rem !important;
+          }
+
+          .bento-bottom-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 10px !important;
+          }
+
+          .bento-cta-pill {
+            width: 100% !important;
+            justify-content: center !important;
+            padding: 11px 18px !important;
+            box-sizing: border-box !important;
           }
         }
       `}</style>

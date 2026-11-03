@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { getCountryCodeFromName } from "@/data/countries";
 
 interface CircularFlagProps {
+  code?: string;
   countryCode?: string;
   countryName?: string;
   size?: number;
@@ -18,6 +19,7 @@ interface CircularFlagProps {
  * Tous les drapeaux du monde au format SVG circulaire 1:1 haute fidélité
  */
 export const CircularFlag: React.FC<CircularFlagProps> = ({
+  code: propCode,
   countryCode,
   countryName,
   size = 20,
@@ -28,7 +30,7 @@ export const CircularFlag: React.FC<CircularFlagProps> = ({
   const [hasError, setHasError] = useState(false);
 
   // Normalisation du code ISO 2 lettres
-  let rawCode = (countryCode || (countryName ? getCountryCodeFromName(countryName) : "ci")).trim().toLowerCase();
+  let rawCode = (propCode || countryCode || (countryName ? getCountryCodeFromName(countryName) : "ci")).trim().toLowerCase();
 
   // Mappings et alias fréquents
   if (rawCode === "uk") rawCode = "gb";
