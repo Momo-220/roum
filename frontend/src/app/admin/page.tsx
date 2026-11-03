@@ -76,6 +76,7 @@ import { BillsIcon } from "@/components/icons/BillsIcon";
 import {
   WaveLogo,
   OrangeMoneyLogo,
+  MtnMomoLogo,
   BankBaciLogo,
   IbanLogo,
   AlipayLogo,
@@ -1395,6 +1396,11 @@ const DEFAULT_COMPANY_SETTINGS: Record<string, string> = {
   payment_wave_merchant: "wave.me/roumtransit",
   payment_orange_money_ci: "#144*389278# / +225 07 48 29 11 00",
   payment_orange_name: "ROUM TRANSIT INTERNATIONAL",
+  payment_mtn_momo_ci: "MOMO-749201 / +225 05 94 32 10 05",
+  payment_mtn_name: "ROUM LOGISTICS",
+  payment_bank_name: "Banque Atlantique Côte d'Ivoire (BACI)",
+  payment_bank_account_holder: "ROUM TRANSIT INTERNATIONAL SARL",
+  payment_bank_rib: "CI092 01001 012345678901 24",
   payment_morocco_bank: "CIH Bank / Attijariwafa Bank Casablanca",
   payment_morocco_holder: "ROUM TRANSIT MAROC",
   payment_morocco_rib: "230 780 0001234567890123 45",
@@ -6506,26 +6512,43 @@ export default function AdminPage() {
                     .map((r) => (
                       <tr key={r.id} className="table-row-clean">
                         <td>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenRequestDetail(r)}
-                            className="tabular-nums"
-                            style={{
-                              background: "none",
-                              border: "none",
-                              color: "var(--brown-dark)",
-                              fontWeight: "800",
-                              fontSize: "0.79rem",
-                              cursor: "pointer",
-                              padding: 0,
-                              fontFamily: "inherit",
-                              textAlign: "left",
-                              whiteSpace: "nowrap",
-                            }}
-                            title="Voir les détails et articles"
-                          >
-                            {r.reference}
-                          </button>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            {r.product_image && (
+                              <img
+                                src={r.product_image}
+                                alt="Produit"
+                                style={{ width: "26px", height: "26px", borderRadius: "5px", objectFit: "cover", flexShrink: 0, border: "1px solid var(--border-light)" }}
+                              />
+                            )}
+                            <div>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenRequestDetail(r)}
+                                className="tabular-nums"
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: "var(--brown-dark)",
+                                  fontWeight: "800",
+                                  fontSize: "0.79rem",
+                                  cursor: "pointer",
+                                  padding: 0,
+                                  fontFamily: "inherit",
+                                  textAlign: "left",
+                                  whiteSpace: "nowrap",
+                                  display: "block",
+                                }}
+                                title="Voir les détails et articles"
+                              >
+                                {r.reference}
+                              </button>
+                              {r.payment_receipt_url && (
+                                <span style={{ fontSize: "0.67rem", color: "#16A34A", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "2px" }}>
+                                  ✓ Reçu joint
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </td>
                         <td>
                           <span className="badge-clean badge-draft">
@@ -9641,7 +9664,185 @@ export default function AdminPage() {
                   );
                 })()}
 
-                {/* 3. Compte & Coordonnées Bancaires Maroc (Casablanca) */}
+                {/* 3. MTN MoMo */}
+                {(() => {
+                  const isEditing = editingPaymentCard === "mtn";
+                  return (
+                    <div
+                      style={{
+                        padding: isEditing ? "18px" : "12px 6px 20px 6px",
+                        background: isEditing ? "#FFFFFF" : "transparent",
+                        borderRadius: isEditing ? "16px" : "0",
+                        border: isEditing ? "1.5px solid var(--brown-dark)" : "none",
+                        borderBottom: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
+                        boxShadow: isEditing ? "0 8px 24px rgba(28, 25, 23, 0.08)" : "none",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <MtnMomoLogo size={34} />
+                          <div>
+                            <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
+                              MTN Mobile Money
+                            </div>
+                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: "600" }}>
+                              Code Marchand &amp; Dépôt
+                            </span>
+                          </div>
+                        </div>
+                        {isEditing ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <button
+                              type="button"
+                              onClick={handleCancelEditPaymentCard}
+                              className="btn btn-secondary"
+                              style={{ padding: "5px 10px", fontSize: "0.74rem", fontWeight: "600", borderRadius: "8px" }}
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEditPaymentCard("mtn", "MTN MoMo")}
+                              className="btn btn-primary"
+                              style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "5px 12px", fontSize: "0.74rem", fontWeight: "700", borderRadius: "8px" }}
+                            >
+                              <Check size={13} />
+                              Enregistrer
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditPaymentCard("mtn")}
+                            className="btn btn-secondary"
+                            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", padding: 0, borderRadius: "8px" }}
+                            title="Modifier ce compte MTN"
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ display: "grid", gap: "10px" }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Numéro Compte / Code Marchand MTN</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_mtn_momo_ci || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_mtn_momo_ci: e.target.value })}
+                            className="input-clean"
+                            placeholder="MOMO-749201 / +225 05 94 32 10 05"
+                            style={{ background: "#FFFFFF", cursor: isEditing ? "text" : "default" }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Nom Enregistré MTN</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_mtn_name || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_mtn_name: e.target.value })}
+                            className="input-clean"
+                            placeholder="ROUM LOGISTICS"
+                            style={{ background: "#FFFFFF", cursor: isEditing ? "text" : "default" }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* 4. Banque Atlantique / BACI */}
+                {(() => {
+                  const isEditing = editingPaymentCard === "baci";
+                  return (
+                    <div
+                      style={{
+                        padding: isEditing ? "18px" : "12px 6px 20px 6px",
+                        background: isEditing ? "#FFFFFF" : "transparent",
+                        borderRadius: isEditing ? "16px" : "0",
+                        border: isEditing ? "1.5px solid var(--brown-dark)" : "none",
+                        borderBottom: isEditing ? "1.5px solid var(--brown-dark)" : "1px solid var(--border-light)",
+                        boxShadow: isEditing ? "0 8px 24px rgba(28, 25, 23, 0.08)" : "none",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <BankBaciLogo size={34} />
+                          <div>
+                            <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "var(--brown-dark)" }}>
+                              Banque Atlantique (BACI)
+                            </div>
+                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: "600" }}>
+                              Virement Bancaire UEMOA
+                            </span>
+                          </div>
+                        </div>
+                        {isEditing ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <button
+                              type="button"
+                              onClick={handleCancelEditPaymentCard}
+                              className="btn btn-secondary"
+                              style={{ padding: "5px 10px", fontSize: "0.74rem", fontWeight: "600", borderRadius: "8px" }}
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEditPaymentCard("baci", "Banque BACI")}
+                              className="btn btn-primary"
+                              style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "5px 12px", fontSize: "0.74rem", fontWeight: "700", borderRadius: "8px" }}
+                            >
+                              <Check size={13} />
+                              Enregistrer
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleStartEditPaymentCard("baci")}
+                            className="btn btn-secondary"
+                            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", padding: 0, borderRadius: "8px" }}
+                            title="Modifier ce compte bancaire"
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ display: "grid", gap: "10px" }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>Établissement &amp; Agence</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_bank_name || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_bank_name: e.target.value })}
+                            className="input-clean"
+                            placeholder="Banque Atlantique Côte d'Ivoire (BACI)"
+                            style={{ background: "#FFFFFF", cursor: isEditing ? "text" : "default" }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>RIB / IBAN du Compte</label>
+                          <input
+                            type="text"
+                            readOnly={!isEditing}
+                            value={companySettings.payment_bank_rib || ""}
+                            onChange={(e) => setCompanySettings({ ...companySettings, payment_bank_rib: e.target.value })}
+                            className="input-clean"
+                            placeholder="CI092 01001 012345678901 24"
+                            style={{ background: "#FFFFFF", cursor: isEditing ? "text" : "default" }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* 5. Compte & Coordonnées Bancaires Maroc (Casablanca) */}
                 {(() => {
                   const isEditing = editingPaymentCard === "morocco";
                   return (
@@ -10529,6 +10730,68 @@ export default function AdminPage() {
                   <div>
                     <span style={{ color: "var(--text-muted)", display: "block" }}>Code client sur colis (Shipping Mark) :</span>
                     <strong style={{ color: "var(--brown-dark)", fontFamily: "monospace" }}>{showRequestDetailModal.shipping_mark}</strong>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Fiche visuelle produit Alibaba détecté */}
+            {showRequestDetailModal.product_image && (
+              <div style={{ display: "flex", gap: "14px", alignItems: "center", background: "#FAF8F5", padding: "12px 14px", borderRadius: "12px", marginBottom: "16px", border: "1px solid var(--border-light)" }}>
+                <img
+                  src={showRequestDetailModal.product_image}
+                  alt={showRequestDetailModal.product_name || "Produit"}
+                  style={{ width: "64px", height: "64px", objectFit: "cover", borderRadius: "8px", border: "1px solid var(--border-light)" }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: "0.9rem", color: "var(--brown-dark)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {showRequestDetailModal.product_name || "Article commandé"}
+                  </div>
+                  {showRequestDetailModal.total_amount_fcfa && (
+                    <div style={{ fontSize: "0.82rem", color: "#CC4E16", fontWeight: 700, marginTop: "2px" }}>
+                      Montant calculé : {showRequestDetailModal.total_amount_fcfa.toLocaleString("fr-FR")} FCFA
+                    </div>
+                  )}
+                  {showRequestDetailModal.product_url && (
+                    <a
+                      href={showRequestDetailModal.product_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: "0.74rem", color: "#2563EB", textDecoration: "underline", display: "inline-block", marginTop: "2px" }}
+                    >
+                      Voir l&apos;article sur la plateforme fournisseur ↗
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Preuve de paiement client téléversée */}
+            {showRequestDetailModal.payment_receipt_url && (
+              <div style={{ background: "#F0FDF4", border: "1.5px solid #86EFAC", padding: "14px", borderRadius: "12px", marginBottom: "16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <span style={{ fontSize: "0.82rem", fontWeight: "800", color: "#166534", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    <CheckCircle2 size={16} /> Preuve de Paiement Client ({showRequestDetailModal.payment_method_selected?.toUpperCase() || "MOBILE MONEY"})
+                  </span>
+                  <a
+                    href={showRequestDetailModal.payment_receipt_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-secondary"
+                    style={{ padding: "4px 10px", fontSize: "0.74rem", background: "#FFFFFF" }}
+                  >
+                    Ouvrir le reçu ↗
+                  </a>
+                </div>
+                {showRequestDetailModal.payment_receipt_url.startsWith("data:image") ? (
+                  <img
+                    src={showRequestDetailModal.payment_receipt_url}
+                    alt="Reçu de paiement"
+                    style={{ maxHeight: "200px", borderRadius: "8px", border: "1px solid #BBF7D0", display: "block" }}
+                  />
+                ) : (
+                  <div style={{ fontSize: "0.8rem", color: "#15803D" }}>
+                    Fichier joint : {showRequestDetailModal.payment_receipt_name || "recu_paiement.pdf"}
                   </div>
                 )}
               </div>
