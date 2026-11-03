@@ -92,12 +92,15 @@ export default function HomePage() {
       </ScrollReveal>
 
       {/* ========================================================
-          GARANTIES OFFICIELLES ROUM TRANSIT (LIGNE FINALE SOBRE)
+          ENGAGEMENTS & FIABILITÉ ROUM TRANSIT (SANS CADRAN, PUR & AÉRÉ)
          ======================================================== */}
       <ScrollReveal>
-        <section className="guarantees-section">
+        <section className="guarantees-section-frameless">
           <div className="guarantees-grid">
             <div className="guarantee-item">
+              <div className="guarantee-icon-wrapper">
+                <ShieldCheck size={20} color="#140D09" strokeWidth={2.2} />
+              </div>
               <div className="guarantee-title">Douane 100% Comprise</div>
               <p className="guarantee-desc">
                 Zéro mauvaise surprise à l&apos;arrivée. Dédouanement intégral inclus.
@@ -105,6 +108,9 @@ export default function HomePage() {
             </div>
 
             <div className="guarantee-item">
+              <div className="guarantee-icon-wrapper">
+                <Scale size={20} color="#140D09" strokeWidth={2.2} />
+              </div>
               <div className="guarantee-title">Pesée Vidéo Certifiée</div>
               <p className="guarantee-desc">
                 Colis pesés et filmés en entrepôt dès réception pour votre sérénité.
@@ -112,6 +118,9 @@ export default function HomePage() {
             </div>
 
             <div className="guarantee-item">
+              <div className="guarantee-icon-wrapper">
+                <MapPin size={20} color="#140D09" strokeWidth={2.2} />
+              </div>
               <div className="guarantee-title">Agence à Abidjan</div>
               <p className="guarantee-desc">
                 Retrait direct à Bingerville Carrefour Safari ou livraison à domicile.
@@ -247,35 +256,79 @@ export default function HomePage() {
           transform: translateY(-1px);
         }
 
-        .guarantees-section {
-          margin-top: 16px;
-          padding: 22px 18px;
-          background-color: #FFFFFF;
-          border: 1px solid rgba(28, 25, 23, 0.08);
-          border-radius: 20px;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+        .guarantees-section-frameless {
+          margin-top: 28px;
+          padding-top: 32px;
+          border-top: 1px solid rgba(28, 25, 23, 0.08);
+          background: transparent;
         }
 
         .guarantees-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 18px;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 24px;
           text-align: center;
+        }
+
+        .guarantee-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .guarantee-icon-wrapper {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          background-color: rgba(20, 13, 9, 0.05);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 12px;
         }
 
         .guarantee-title {
           font-family: var(--c-font-display);
           font-weight: 700;
-          fontSize: 1rem;
+          font-size: 1.05rem;
           color: #140D09;
-          margin-bottom: 3px;
+          margin-bottom: 6px;
+          letter-spacing: -0.02em;
         }
 
         .guarantee-desc {
-          font-size: 0.8rem;
+          font-size: 0.84rem;
           color: #57534E;
           margin: 0;
-          line-height: 1.4;
+          line-height: 1.48;
+          max-width: 290px;
+        }
+
+        @media (max-width: 860px) {
+          .guarantees-section-frameless {
+            margin-top: 20px;
+            padding-top: 24px;
+          }
+
+          .guarantees-grid {
+            grid-template-columns: 1fr !important;
+            gap: 20px !important;
+          }
+
+          .guarantee-icon-wrapper {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 10px;
+          }
+
+          .guarantee-title {
+            font-size: 1rem;
+          }
+
+          .guarantee-desc {
+            font-size: 0.82rem;
+            max-width: 320px;
+          }
         }
 
         /* Desktop Spacing */
@@ -310,18 +363,6 @@ export default function HomePage() {
           .hero-search-submit {
             padding: 10px 22px;
             font-size: 0.86rem;
-          }
-
-          .guarantees-section {
-            padding: 26px 24px;
-          }
-
-          .guarantee-title {
-            font-size: 1.05rem;
-          }
-
-          .guarantee-desc {
-            font-size: 0.82rem;
           }
         }
       `}</style>
