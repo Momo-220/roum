@@ -2,920 +2,304 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import {
-  ArrowDownRight,
-  ArrowRight,
-  Check,
-  X,
-} from "lucide-react";
+import { ArrowDownRight } from "lucide-react";
 
-interface ServiceItem {
+interface ServiceCardItem {
   id: string;
   badge: string;
   title: string;
   subtitle: string;
-  description: string;
   image: string;
   href: string;
-  ctaText: string;
-  features: string[];
-  metrics: { label: string; value: string }[];
+  features?: string[];
 }
 
-const SERVICES_DATA: ServiceItem[] = [
+const SERVICES_DATA: ServiceCardItem[] = [
   {
     id: "achats",
     badge: "Alibaba & 1688 · Paiement RMB",
     title: "Centrale d'Achat",
-    subtitle: "Paiement fournisseurs & contrôle qualité",
-    description:
-      "Achetez sur Alibaba, 1688 et Taobao sans blocage bancaire international. Vous réglez en FCFA à Abidjan à taux négocié, notre bureau en Chine paie votre usine en Yuans (RMB) et vérifie vos cartons.",
+    subtitle: "Paiement fournisseurs & contrôle qualité.",
     image: "/images/services/achats.jpg",
     href: "/services?tab=alibaba",
-    ctaText: "Lancer un achat assisté",
-    features: [
-      "Paiement direct de vos fournisseurs en Yuans (RMB)",
-      "Zéro carte bancaire internationale requise",
-      "Vérification & inspection des colis en entrepôt",
-      "Transit automatique vers l'Afrique dès validation",
-    ],
-    metrics: [
-      { label: "Devise réglée", value: "Yuans RMB en Chine" },
-      { label: "Règlement client", value: "FCFA à Abidjan" },
-    ],
   },
   {
     id: "maritime",
-    badge: "Bateau · Groupage & Conteneurs",
+    badge: "Bateau · Dès 350 000 F / CBM",
     title: "Voie Maritime",
-    subtitle: "Chine vers Abidjan, Bamako & Dakar",
-    description:
-      "Acheminement par conteneurs sécurisés (FCL) ou groupage au mètre cube (LCL / CBM). La solution idéale pour machines lourdes et gros volumes avec dédouanement complet inclus au port.",
+    subtitle: "Chine vers Abidjan, Bamako & Dakar.",
     image: "/images/services/maritime.jpg",
     href: "/tariffs?mode=SEA",
-    ctaText: "Estimer mon fret maritime",
-    features: [
-      "Groupage au mètre cube (CBM) sans minimum lourd",
-      "Dédouanement 100% inclus jusqu'à Bingerville",
-      "Scellés de sécurité & traçabilité par conteneur",
-      "Départs réguliers chaque semaine de Ningbo & Yiwu",
-    ],
-    metrics: [
-      { label: "Délai moyen", value: "30 - 45 jours" },
-      { label: "Tarif indicatif", value: "Dès 350 000 F / CBM" },
-    ],
   },
   {
     id: "aerien",
-    badge: "Avion · Express 3 à 5 Jours",
+    badge: "Avion · 3 à 5 Jours Chrono",
     title: "Voie Aérienne",
-    subtitle: "Chine, Dubaï, France & Maroc direct",
-    description:
-      "Vols cargos réguliers chaque semaine pour vos colis urgents, échantillons, téléphones et cosmétiques. Pesée certifiée et retrait immédiat en agence sans formalités douanières complexes.",
+    subtitle: "Chine, Dubaï, France & Maroc direct.",
     image: "/images/services/aerien.jpg",
     href: "/tariffs?mode=AIR",
-    ctaText: "Calculer mon tarif aérien",
-    features: [
-      "Vols directs chaque semaine vers l'Afrique",
-      "Délai express garanti de 3 à 5 jours ouvrés",
-      "Liaisons Paris, Casablanca, Dubaï & Guangzhou",
-      "Dédouanement intégral compris dans le prix au kilo",
-    ],
-    metrics: [
-      { label: "Délai express", value: "3 à 5 jours" },
-      { label: "Retrait", value: "Bingerville Carrefour Safari" },
-    ],
   },
 ];
 
 export function ServicesVisualCards() {
-  const [activeId, setActiveId] = useState<string | null>(null);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
-  const handleCardClick = (id: string, e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.closest(".service-cta-button") || target.closest(".service-close-button")) {
-      return;
-    }
-    setActiveId((prev) => (prev === id ? null : id));
-  };
-
-  // Placement CSS Grid pour Desktop
-  const getDesktopGridPlacement = (serviceId: string): React.CSSProperties => {
-    if (activeId === null) {
-      const idx = SERVICES_DATA.findIndex((s) => s.id === serviceId);
-      return {
-        gridColumn: `${idx + 1} / ${idx + 2}`,
-        gridRow: "1 / 2",
-      };
-    }
-
-    if (activeId === serviceId) {
-      return {
-        gridColumn: "1 / 2",
-        gridRow: "1 / 3",
-      };
-    }
-
-    const inactiveCards = SERVICES_DATA.filter((s) => s.id !== activeId);
-    const inactiveIndex = inactiveCards.findIndex((s) => s.id === serviceId);
-
-    return {
-      gridColumn: "2 / 3",
-      gridRow: inactiveIndex === 0 ? "1 / 2" : "2 / 3",
-    };
-  };
-
   return (
-    <section className="services-section-wrapper">
-      {/* En-tête de section équilibré */}
-      <div className="services-header">
-        <div className="services-eyebrow">
+    <section style={{ marginBottom: "56px" }}>
+      {/* En-tête de section éditorial style Roum Transit */}
+      <div style={{ textAlign: "center", marginBottom: "32px" }}>
+        <div
+          style={{
+            display: "inline-block",
+            fontSize: "0.75rem",
+            fontFamily: "var(--c-font-mono)",
+            fontWeight: 700,
+            color: "var(--c-text-light)",
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            marginBottom: "10px",
+          }}
+        >
           01 / NOS VOIES DE TRANSPORT OFFICIELLES
         </div>
-        <h2 className="services-heading">
+        <h2
+          style={{
+            fontFamily: "var(--c-font-display)",
+            fontSize: "clamp(1.6rem, 3.8vw, 2.6rem)",
+            fontWeight: 700,
+            lineHeight: 1.15,
+            letterSpacing: "-0.035em",
+            color: "var(--c-text-main)",
+            margin: "0 auto 12px auto",
+            maxWidth: "760px",
+          }}
+        >
           Choisissez votre mode d&apos;acheminement direct vers l&apos;Afrique.
         </h2>
-        <p className="services-subtext">
-          Touchez un service pour dérouler ses détails, délais et garanties.
+        <p
+          style={{
+            fontSize: "0.98rem",
+            color: "var(--c-text-muted)",
+            maxWidth: "620px",
+            margin: "0 auto",
+            lineHeight: 1.5,
+          }}
+        >
+          Tarifs négociés, transit sous scellés et <strong>dédouanement entièrement inclus</strong> jusqu&apos;à notre agence de Bingerville.
         </p>
       </div>
 
-      {/* ========================================================
-          DISPOSITION DESKTOP (> 860px) :
-          - Par défaut : 3 cartes cinématographiques côte-à-côte bien espacées
-          - Au clic : 1 grand rectangle à gauche + 2 carrés superposés à droite
-         ======================================================== */}
-      <div className="desktop-cards-container">
-        <div
-          className={`desktop-grid ${activeId !== null ? "has-active" : "is-default"}`}
-        >
-          {SERVICES_DATA.map((service) => {
-            const isExpanded = activeId === service.id;
-            const isStackedSquare = activeId !== null && !isExpanded;
-            const isHovered = hoveredCard === service.id;
-            const placementStyle = getDesktopGridPlacement(service.id);
+      {/* Grille Desktop / Scroll Horizontal Mobile (Zero débordement, Snap-scroll fluide) */}
+      <div className="services-cards-grid">
+        {SERVICES_DATA.map((service) => {
+          const isHovered = hoveredCard === service.id;
 
-            return (
+          return (
+            <Link
+              key={service.id}
+              href={service.href}
+              onMouseEnter={() => setHoveredCard(service.id)}
+              onMouseLeave={() => setHoveredCard(null)}
+              className="service-visual-card"
+              style={{
+                position: "relative",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                height: "410px",
+                borderRadius: "26px",
+                overflow: "hidden",
+                textDecoration: "none",
+                border: "1px solid rgba(28, 25, 23, 0.09)",
+                boxShadow: isHovered
+                  ? "0 22px 44px -10px rgba(27, 20, 17, 0.22), 0 4px 12px -2px rgba(27, 20, 17, 0.08)"
+                  : "0 10px 30px -8px rgba(27, 20, 17, 0.12), 0 2px 8px -2px rgba(27, 20, 17, 0.04)",
+                transform: isHovered ? "translateY(-4px)" : "translateY(0)",
+                transition: "transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease",
+                backgroundColor: "#1B1411",
+                boxSizing: "border-box",
+              }}
+            >
+              {/* Image d'arrière-plan en plein cadre avec zoom cinématique doux */}
+              <img
+                src={service.image}
+                alt={service.title}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  transition: "transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
+                  transform: isHovered ? "scale(1.05)" : "scale(1.0)",
+                  zIndex: 1,
+                }}
+              />
+
+              {/* Scrim Gradient Cinématographique (Assombri en bas pour lisibilité absolue du titre) */}
               <div
-                key={service.id}
-                onClick={(e) => handleCardClick(service.id, e)}
-                onMouseEnter={() => setHoveredCard(service.id)}
-                onMouseLeave={() => setHoveredCard(null)}
-                className={`service-card-item ${
-                  isExpanded ? "is-expanded" : isStackedSquare ? "is-stacked-square" : "is-default-card"
-                }`}
-                style={placementStyle}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background:
+                    "linear-gradient(to top, rgba(20, 13, 9, 0.95) 0%, rgba(20, 13, 9, 0.58) 45%, rgba(20, 13, 9, 0.08) 72%, rgba(0, 0, 0, 0.25) 100%)",
+                  zIndex: 2,
+                  pointerEvents: "none",
+                }}
+              />
+
+              {/* HAUT : Micro Badge Pilule Dépoli STRICTEMENT EN HAUT */}
+              <div
+                style={{
+                  position: "relative",
+                  zIndex: 3,
+                  padding: "20px 22px",
+                  display: "flex",
+                  justifyContent: "flex-start",
+                }}
               >
-                {/* 1. Photographie de fond */}
-                <img
-                  src={service.image}
-                  alt={service.title}
-                  className="service-card-bg-image"
-                  style={{
-                    transform: isExpanded
-                      ? "scale(1.06)"
-                      : isHovered
-                      ? "scale(1.04)"
-                      : "scale(1.0)",
-                  }}
-                />
-
-                {/* 2. Scrim Gradient de Contraste Doux */}
                 <div
-                  className="service-card-scrim"
                   style={{
-                    background: isExpanded
-                      ? "linear-gradient(to right, rgba(20, 13, 9, 0.96) 0%, rgba(20, 13, 9, 0.90) 45%, rgba(20, 13, 9, 0.82) 100%)"
-                      : isStackedSquare
-                      ? "linear-gradient(to top, rgba(20, 13, 9, 0.94) 0%, rgba(20, 13, 9, 0.55) 50%, rgba(20, 13, 9, 0.15) 100%)"
-                      : "linear-gradient(to top, rgba(20, 13, 9, 0.94) 0%, rgba(20, 13, 9, 0.55) 45%, rgba(20, 13, 9, 0.12) 75%, rgba(0, 0, 0, 0.2) 100%)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    padding: "6px 14px",
+                    borderRadius: "9999px",
+                    backgroundColor: "rgba(255, 255, 255, 0.18)",
+                    backdropFilter: "blur(12px)",
+                    WebkitBackdropFilter: "blur(12px)",
+                    border: "1px solid rgba(255, 255, 255, 0.32)",
+                    color: "#FFFFFF",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    fontFamily: "var(--c-font-mono)",
+                    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.15)",
                   }}
-                />
-
-                {/* 3. Contenu de la carte */}
-                <div
-                  className={`service-card-content ${
-                    isExpanded ? "content-expanded" : isStackedSquare ? "content-stacked" : "content-default"
-                  }`}
                 >
-                  {/* Top Bar */}
-                  <div className="service-card-top-bar">
-                    <div className="service-micro-badge">
-                      <span className="service-badge-dot" />
-                      <span>{service.badge}</span>
-                    </div>
-
-                    {isExpanded && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveId(null);
-                        }}
-                        className="service-close-button"
-                        title="Replier ce volet"
-                        aria-label="Fermer"
-                      >
-                        <X size={15} />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Body */}
-                  {isStackedSquare ? (
-                    <div className="service-stacked-bottom">
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <h3 className="service-title-stacked">{service.title}</h3>
-                        <p className="service-subtitle-stacked">{service.subtitle}</p>
-                      </div>
-                      <div className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}>
-                        <ArrowDownRight size={16} strokeWidth={2.4} />
-                      </div>
-                    </div>
-                  ) : !isExpanded ? (
-                    <div className="service-default-bottom">
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <h3 className="service-title-default">{service.title}</h3>
-                        <p className="service-subtitle-default">{service.subtitle}</p>
-                      </div>
-                      <div className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}>
-                        <ArrowDownRight size={18} strokeWidth={2.4} />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="service-expanded-body">
-                      <div>
-                        <h3 className="service-title-expanded">{service.title}</h3>
-                        <p className="service-desc-expanded">{service.description}</p>
-                      </div>
-                      <div className="service-metrics-row">
-                        {service.metrics.map((m, idx) => (
-                          <div key={idx} className="service-metric-item">
-                            <span className="service-metric-label">{m.label}</span>
-                            <span className="service-metric-value">{m.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="service-features-grid">
-                        {service.features.map((feat, idx) => (
-                          <div key={idx} className="service-feature-row">
-                            <div className="service-feature-check">
-                              <Check size={10} color="#FFFFFF" strokeWidth={3} />
-                            </div>
-                            <span>{feat}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ paddingTop: "4px" }}>
-                        <Link href={service.href} className="service-cta-button">
-                          <span>{service.ctaText}</span>
-                          <ArrowRight size={15} />
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ========================================================
-          DISPOSITION MOBILE (< 860px) :
-          Même esprit fluide et aéré que sur ordinateur :
-          - Au repos : Carousel horizontal fluide avec snap (cartes à proportions élégantes)
-          - Au toucher : La carte sélectionnée s'ouvre avec ses détails complets,
-            et les deux autres s'affichent en deux carrés juste en-dessous !
-         ======================================================== */}
-      <div className="mobile-cards-container">
-        {activeId === null ? (
-          /* Mode Repos Mobile : 3 cartes horizontales bien espacées avec peek fluide */
-          <div className="mobile-horizontal-scroll">
-            {SERVICES_DATA.map((service) => (
-              <div
-                key={service.id}
-                onClick={(e) => handleCardClick(service.id, e)}
-                className="mobile-card-slide"
-              >
-                <img
-                  src={service.image}
-                  alt={service.title}
-                  className="service-card-bg-image"
-                />
-                <div
-                  className="service-card-scrim"
-                  style={{
-                    background:
-                      "linear-gradient(to top, rgba(20, 13, 9, 0.94) 0%, rgba(20, 13, 9, 0.55) 45%, rgba(20, 13, 9, 0.12) 75%, rgba(0, 0, 0, 0.2) 100%)",
-                  }}
-                />
-                <div className="service-card-content content-default">
-                  <div className="service-card-top-bar">
-                    <div className="service-micro-badge">
-                      <span className="service-badge-dot" />
-                      <span>{service.badge}</span>
-                    </div>
-                  </div>
-
-                  <div className="service-default-bottom">
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 className="service-title-default">{service.title}</h3>
-                      <p className="service-subtitle-default">{service.subtitle}</p>
-                    </div>
-                    <div className="service-action-badge">
-                      <ArrowDownRight size={18} strokeWidth={2.4} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          /* Mode Actif Mobile : Carte active dépliée + Les 2 autres en carrés côte-à-côte en-dessous */
-          <div className="mobile-active-layout">
-            {/* 1. Carte Active Dépliée */}
-            {(() => {
-              const activeService = SERVICES_DATA.find((s) => s.id === activeId)!;
-              return (
-                <div className="mobile-active-card">
-                  <img
-                    src={activeService.image}
-                    alt={activeService.title}
-                    className="service-card-bg-image"
-                  />
-                  <div
-                    className="service-card-scrim"
+                  <span
                     style={{
-                      background:
-                        "linear-gradient(to bottom, rgba(20, 13, 9, 0.92) 0%, rgba(20, 13, 9, 0.96) 100%)",
+                      width: "6px",
+                      height: "6px",
+                      borderRadius: "50%",
+                      backgroundColor: "#22C55E",
+                      display: "inline-block",
                     }}
                   />
-                  <div className="service-card-content content-expanded">
-                    <div className="service-card-top-bar">
-                      <div className="service-micro-badge">
-                        <span className="service-badge-dot" />
-                        <span>{activeService.badge}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveId(null);
-                        }}
-                        className="service-close-button"
-                        aria-label="Fermer"
-                      >
-                        <X size={15} />
-                      </button>
-                    </div>
-
-                    <div className="service-expanded-body">
-                      <div>
-                        <h3 className="service-title-expanded">{activeService.title}</h3>
-                        <p className="service-desc-expanded">{activeService.description}</p>
-                      </div>
-
-                      <div className="service-metrics-row">
-                        {activeService.metrics.map((m, idx) => (
-                          <div key={idx} className="service-metric-item">
-                            <span className="service-metric-label">{m.label}</span>
-                            <span className="service-metric-value">{m.value}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="service-features-grid">
-                        {activeService.features.map((feat, idx) => (
-                          <div key={idx} className="service-feature-row">
-                            <div className="service-feature-check">
-                              <Check size={10} color="#FFFFFF" strokeWidth={3} />
-                            </div>
-                            <span>{feat}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div style={{ paddingTop: "6px" }}>
-                        <Link href={activeService.href} className="service-cta-button">
-                          <span>{activeService.ctaText}</span>
-                          <ArrowRight size={15} />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
+                  <span>{service.badge}</span>
                 </div>
-              );
-            })()}
+              </div>
 
-            {/* 2. Les deux autres services en carrés côte-à-côte en-dessous */}
-            <div className="mobile-secondary-squares-row">
-              {SERVICES_DATA.filter((s) => s.id !== activeId).map((service) => (
-                <div
-                  key={service.id}
-                  onClick={(e) => handleCardClick(service.id, e)}
-                  className="mobile-square-card"
-                >
-                  <img
-                    src={service.image}
-                    alt={service.title}
-                    className="service-card-bg-image"
-                  />
-                  <div
-                    className="service-card-scrim"
+              {/* BAS : Titre + Sous-titre + Bouton Cercle Dépoli avec Flèche STRICTEMENT EN BAS */}
+              <div
+                style={{
+                  position: "relative",
+                  zIndex: 3,
+                  padding: "24px 22px",
+                  display: "flex",
+                  alignItems: "flex-end",
+                  justifyContent: "space-between",
+                  gap: "16px",
+                  marginTop: "auto",
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3
                     style={{
-                      background:
-                        "linear-gradient(to top, rgba(20, 13, 9, 0.95) 0%, rgba(20, 13, 9, 0.55) 50%, rgba(20, 13, 9, 0.15) 100%)",
+                      fontFamily: "var(--c-font-display)",
+                      fontSize: "clamp(1.4rem, 2vw, 1.75rem)",
+                      fontWeight: 700,
+                      lineHeight: 1.15,
+                      letterSpacing: "-0.03em",
+                      color: "#FFFFFF",
+                      margin: "0 0 6px 0",
+                      textShadow: "0 2px 4px rgba(0, 0, 0, 0.4)",
+                    }}
+                  >
+                    {service.title}
+                  </h3>
+
+                  <p
+                    style={{
+                      fontSize: "0.85rem",
+                      color: "rgba(255, 255, 255, 0.88)",
+                      lineHeight: 1.45,
+                      margin: 0,
+                      textShadow: "0 1px 3px rgba(0, 0, 0, 0.4)",
+                    }}
+                  >
+                    {service.subtitle}
+                  </p>
+                </div>
+
+                {/* Bouton Circulaire Glassmorphism */}
+                <div
+                  style={{
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "50%",
+                    backgroundColor: isHovered ? "#FFFFFF" : "rgba(255, 255, 255, 0.18)",
+                    backdropFilter: "blur(12px)",
+                    WebkitBackdropFilter: "blur(12px)",
+                    border: isHovered
+                      ? "1px solid #FFFFFF"
+                      : "1px solid rgba(255, 255, 255, 0.38)",
+                    color: isHovered ? "#140D09" : "#FFFFFF",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    boxShadow: isHovered
+                      ? "0 6px 20px rgba(255, 255, 255, 0.35)"
+                      : "0 4px 12px rgba(0, 0, 0, 0.25)",
+                    transform: isHovered ? "scale(1.08)" : "scale(1.0)",
+                    transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+                  }}
+                >
+                  <ArrowDownRight
+                    size={20}
+                    strokeWidth={2.4}
+                    style={{
+                      transform: isHovered ? "translate(1px, 1px)" : "translate(0, 0)",
+                      transition: "transform 0.2s ease",
                     }}
                   />
-                  <div className="service-card-content content-stacked">
-                    <div className="service-card-top-bar">
-                      <div className="service-micro-badge" style={{ padding: "3px 8px", fontSize: "0.62rem" }}>
-                        <span>{service.badge.split(" · ")[0]}</span>
-                      </div>
-                    </div>
-                    <div className="service-stacked-bottom">
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <h3 className="service-title-stacked" style={{ fontSize: "1.05rem" }}>
-                          {service.title}
-                        </h3>
-                        <p className="service-subtitle-stacked" style={{ fontSize: "0.7rem" }}>
-                          {service.subtitle}
-                        </p>
-                      </div>
-                      <div className="service-action-badge" style={{ width: "32px", height: "32px" }}>
-                        <ArrowDownRight size={15} strokeWidth={2.4} />
-                      </div>
-                    </div>
-                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+              </div>
+            </Link>
+          );
+        })}
       </div>
 
-      {/* ========================================================
-          STYLES CSS RESPONSIFS ET ANIMATIONS FLUIDES
-         ======================================================== */}
+      {/* Style CSS Responsive : Grille Desktop 3 colonnes, Scroll snap fluide Mobile */}
       <style jsx>{`
-        .services-section-wrapper {
-          margin-bottom: 48px;
-        }
-
-        .services-header {
-          text-align: center;
-          margin-bottom: 24px;
-        }
-
-        .services-eyebrow {
-          display: inline-block;
-          font-size: 0.72rem;
-          font-family: var(--c-font-mono);
-          font-weight: 700;
-          color: var(--c-text-light);
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          margin-bottom: 6px;
-        }
-
-        .services-heading {
-          font-family: var(--c-font-display);
-          font-size: clamp(1.28rem, 3.2vw, 2.2rem);
-          font-weight: 700;
-          line-height: 1.15;
-          letter-spacing: -0.035em;
-          color: var(--c-text-main);
-          margin: 0 auto 8px auto;
-          max-width: 680px;
-        }
-
-        .services-subtext {
-          font-size: clamp(0.82rem, 1.4vw, 0.92rem);
-          color: var(--c-text-muted);
-          max-width: 560px;
-          margin: 0 auto;
-          line-height: 1.45;
-        }
-
-        /* Desktop Layout */
-        .desktop-cards-container {
-          display: block;
-        }
-
-        .mobile-cards-container {
-          display: none;
-        }
-
-        .desktop-grid {
+        .services-cards-grid {
           display: grid;
-          width: 100%;
-          gap: 16px;
-          height: 460px;
-          transition: grid-template-columns 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-                      grid-template-rows 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .desktop-grid.is-default {
           grid-template-columns: repeat(3, 1fr);
-          grid-template-rows: 1fr;
-        }
-
-        .desktop-grid.has-active {
-          grid-template-columns: 2.15fr 1fr;
-          grid-template-rows: 1fr 1fr;
-        }
-
-        .service-card-item {
+          gap: 20px;
           position: relative;
-          border-radius: 24px;
-          overflow: hidden;
-          cursor: pointer;
-          background-color: #1B1411;
-          border: 1px solid rgba(28, 25, 23, 0.1);
-          box-shadow: 0 8px 24px -4px rgba(27, 20, 17, 0.1);
-          transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-                      box-shadow 0.25s ease,
-                      border-color 0.2s ease,
-                      border-radius 0.25s ease;
-          width: 100%;
-          height: 100%;
         }
 
-        .service-card-item:hover {
-          border-color: rgba(255, 255, 255, 0.35);
-          box-shadow: 0 14px 32px -6px rgba(27, 20, 17, 0.2);
-        }
-
-        .service-card-item.is-expanded {
-          border: 1px solid rgba(255, 255, 255, 0.45);
-          box-shadow: 0 20px 44px -8px rgba(20, 13, 9, 0.28);
-        }
-
-        .service-card-item.is-stacked-square {
-          border-radius: 20px;
-        }
-
-        .service-card-bg-image {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-          z-index: 1;
-        }
-
-        .service-card-scrim {
-          position: absolute;
-          inset: 0;
-          z-index: 2;
-          transition: background 0.4s ease;
-          pointer-events: none;
-        }
-
-        .service-card-content {
-          position: relative;
-          z-index: 3;
-          width: 100%;
-          height: 100%;
-          display: flex;
-          flex-direction: column;
-          justifyContent: space-between;
-          box-sizing: border-box;
-        }
-
-        .content-default {
-          padding: 20px;
-        }
-
-        .content-stacked {
-          padding: 14px 16px;
-        }
-
-        .content-expanded {
-          padding: 22px;
-        }
-
-        .service-card-top-bar {
-          display: flex;
-          justifyContent: space-between;
-          align-items: center;
-          width: 100%;
-        }
-
-        .service-micro-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          padding: 4px 11px;
-          border-radius: 9999px;
-          background-color: rgba(255, 255, 255, 0.18);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          color: #FFFFFF;
-          font-size: 0.68rem;
-          font-weight: 700;
-          letter-spacing: 0.05em;
-          text-transform: uppercase;
-          font-family: var(--c-font-mono);
-        }
-
-        .service-badge-dot {
-          width: 5px;
-          height: 5px;
-          border-radius: 50%;
-          background-color: #22C55E;
-          display: inline-block;
-        }
-
-        .service-close-button {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background-color: rgba(255, 255, 255, 0.2);
-          border: 1px solid rgba(255, 255, 255, 0.35);
-          backdrop-filter: blur(10px);
-          color: #FFFFFF;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .service-close-button:hover {
-          background-color: rgba(255, 255, 255, 0.38);
-          transform: scale(1.08);
-        }
-
-        .service-stacked-bottom,
-        .service-default-bottom {
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
-          gap: 10px;
-          width: 100%;
-        }
-
-        .service-title-stacked {
-          font-family: var(--c-font-display);
-          font-size: 1.15rem;
-          font-weight: 700;
-          line-height: 1.15;
-          letter-spacing: -0.03em;
-          color: #FFFFFF;
-          margin: 0 0 3px 0;
-          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
-        }
-
-        .service-subtitle-stacked {
-          font-size: 0.74rem;
-          color: rgba(255, 255, 255, 0.82);
-          line-height: 1.3;
-          margin: 0;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .service-title-default {
-          font-family: var(--c-font-display);
-          font-size: clamp(1.22rem, 1.6vw, 1.55rem);
-          font-weight: 700;
-          line-height: 1.12;
-          letter-spacing: -0.03em;
-          color: #FFFFFF;
-          margin: 0 0 4px 0;
-          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
-        }
-
-        .service-subtitle-default {
-          font-size: 0.8rem;
-          color: rgba(255, 255, 255, 0.85);
-          line-height: 1.35;
-          margin: 0;
-        }
-
-        .service-action-badge {
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          background-color: rgba(255, 255, 255, 0.18);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.35);
-          color: #FFFFFF;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .service-action-badge.is-hovered {
-          background-color: #FFFFFF;
-          color: #140D09;
-          border-color: #FFFFFF;
-          transform: scale(1.08);
-        }
-
-        .service-expanded-body {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          width: 100%;
-          animation: cardSmoothReveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        .service-title-expanded {
-          font-family: var(--c-font-display);
-          font-size: clamp(1.35rem, 2.2vw, 1.85rem);
-          font-weight: 700;
-          line-height: 1.1;
-          letter-spacing: -0.035em;
-          color: #FFFFFF;
-          margin: 0 0 6px 0;
-        }
-
-        .service-desc-expanded {
-          font-size: 0.86rem;
-          line-height: 1.45;
-          color: rgba(255, 255, 255, 0.9);
-          max-width: 640px;
-          margin: 0;
-        }
-
-        .service-metrics-row {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .service-metric-item {
-          background-color: rgba(255, 255, 255, 0.12);
-          backdrop-filter: blur(8px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          border-radius: 8px;
-          padding: 5px 10px;
-          display: flex;
-          flex-direction: column;
-          gap: 1px;
-        }
-
-        .service-metric-label {
-          font-size: 0.64rem;
-          color: rgba(255, 255, 255, 0.7);
-          text-transform: uppercase;
-          font-family: var(--c-font-mono);
-          letter-spacing: 0.05em;
-        }
-
-        .service-metric-value {
-          font-size: 0.82rem;
-          font-weight: 700;
-          color: #FFFFFF;
-        }
-
-        .service-features-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 6px 12px;
-        }
-
-        .service-feature-row {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 0.78rem;
-          color: rgba(255, 255, 255, 0.88);
-        }
-
-        .service-feature-check {
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          background-color: #22C55E;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-
-        .service-cta-button {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 10px 20px;
-          border-radius: 9999px;
-          background-color: #FFFFFF;
-          color: #140D09;
-          font-size: 0.82rem;
-          font-weight: 700;
-          text-decoration: none;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
-          transition: transform 0.18s ease, background-color 0.18s ease;
-        }
-
-        .service-cta-button:hover {
-          transform: translateX(3px);
-          background-color: #FAF5F0;
-        }
-
-        @keyframes cardSmoothReveal {
-          from {
-            opacity: 0;
-            transform: translateY(6px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        /* ========================================================
-            RESPONSIVE MOBILE (< 860px) : Même fluidité et espacement
-           ======================================================== */
         @media (max-width: 860px) {
-          .desktop-cards-container {
+          .services-cards-grid {
+            display: flex !important;
+            overflow-x: auto !important;
+            scroll-snap-type: x mandatory !important;
+            -webkit-overflow-scrolling: touch !important;
+            padding: 4px 16px 18px 16px !important;
+            margin: 0 -16px !important;
+            gap: 14px !important;
+            scrollbar-width: none !important;
+          }
+          .services-cards-grid::-webkit-scrollbar {
             display: none !important;
           }
-
-          .mobile-cards-container {
-            display: block !important;
-          }
-
-          /* Carousel horizontal fluide avec snap */
-          .mobile-horizontal-scroll {
-            display: flex;
-            gap: 14px;
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
-            scrollbar-width: none;
-            -webkit-overflow-scrolling: touch;
-            padding: 4px 16px 12px 16px;
-            margin: 0 -16px;
-          }
-
-          .mobile-horizontal-scroll::-webkit-scrollbar {
-            display: none;
-          }
-
-          .mobile-card-slide {
-            flex: 0 0 82%;
-            max-width: 300px;
-            height: 360px;
-            scroll-snap-align: center;
-            position: relative;
-            border-radius: 24px;
-            overflow: hidden;
-            background-color: #1B1411;
-            border: 1px solid rgba(28, 25, 23, 0.1);
-            box-shadow: 0 10px 28px -6px rgba(27, 20, 17, 0.15);
-            cursor: pointer;
-            box-sizing: border-box;
-          }
-
-          /* Mode Actif Mobile */
-          .mobile-active-layout {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-          }
-
-          .mobile-active-card {
-            position: relative;
-            border-radius: 24px;
-            overflow: hidden;
-            background-color: #1B1411;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            box-shadow: 0 14px 34px -8px rgba(20, 13, 9, 0.3);
-            animation: cardSmoothReveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          }
-
-          .mobile-active-card .service-features-grid {
-            grid-template-columns: 1fr !important;
-          }
-
-          /* Les deux autres carrés côte-à-côte */
-          .mobile-secondary-squares-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-          }
-
-          .mobile-square-card {
-            position: relative;
-            height: 145px;
-            border-radius: 18px;
-            overflow: hidden;
-            background-color: #1B1411;
-            border: 1px solid rgba(28, 25, 23, 0.1);
-            box-shadow: 0 6px 18px -4px rgba(27, 20, 17, 0.12);
-            cursor: pointer;
+          :global(.service-visual-card) {
+            flex: 0 0 84% !important;
+            max-width: 310px !important;
+            height: 370px !important;
+            scroll-snap-align: center !important;
           }
         }
       `}</style>
