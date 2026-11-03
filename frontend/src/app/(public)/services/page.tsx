@@ -210,11 +210,10 @@ function ServicesContent() {
                     </span>
                     <Link
                       href="/tariffs?mode=AIR"
-                      className="arrow-btn"
-                      title="Voir les tarifs aériens"
-                      aria-label="Voir les tarifs aériens"
+                      className="bento-cta-pill"
                     >
-                      <ArrowRight size={17} strokeWidth={2.4} />
+                      <span>Voir les tarifs</span>
+                      <ArrowRight size={14} />
                     </Link>
                   </div>
                 </div>
@@ -701,35 +700,32 @@ function ServicesContent() {
         .bento-cta-pill {
           display: inline-flex;
           align-items: center;
-          gap: 12px;
-          padding: 10px 20px;
-          border-radius: 9999px;
-          background: #FFFFFF;
-          color: #140D09;
-          font-size: 0.80rem;
+          gap: 10px;
+          background: transparent;
+          color: #FFFFFF;
+          font-size: 0.84rem;
           font-weight: 700;
           text-decoration: none;
           border: none;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+          padding: 4px 0;
           cursor: pointer;
           white-space: nowrap !important;
           flex-shrink: 0;
-          transition: all 0.16s ease;
+          transition: color 0.18s ease;
         }
 
         .bento-cta-pill:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+          color: #FFA066;
         }
 
         .bento-cta-pill svg {
-          margin-left: 2px;
+          margin-left: 6px;
           flex-shrink: 0;
-          transition: transform 0.16s ease;
+          transition: transform 0.18s ease;
         }
 
         .bento-cta-pill:hover svg {
-          transform: translateX(4px);
+          transform: translateX(5px);
         }
 
         /* SPANS ASYMÉTRIQUES */
@@ -1306,17 +1302,20 @@ function ServicesContent() {
           }
 
           .bento-cta-pill {
-            padding: 10px 20px !important;
-            font-size: 0.79rem !important;
-            gap: 12px !important;
-            border-radius: 9999px !important;
+            background: transparent !important;
+            color: #FFFFFF !important;
+            padding: 4px 0 !important;
+            font-size: 0.82rem !important;
+            gap: 10px !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
             font-weight: 700 !important;
             white-space: nowrap !important;
             flex-shrink: 0 !important;
           }
 
           .bento-cta-pill svg {
-            margin-left: 2px !important;
+            margin-left: 6px !important;
             flex-shrink: 0 !important;
           }
 
@@ -1382,22 +1381,26 @@ function ServicesContent() {
 
           .bento-bottom-row {
             flex-direction: column !important;
-            align-items: stretch !important;
-            gap: 12px !important;
+            align-items: flex-start !important;
+            gap: 10px !important;
           }
 
           .bento-cta-pill {
-            width: 100% !important;
-            justify-content: center !important;
-            padding: 12px 20px !important;
-            font-size: 0.82rem !important;
-            gap: 12px !important;
+            width: auto !important;
+            background: transparent !important;
+            color: #FFFFFF !important;
+            justify-content: flex-start !important;
+            padding: 4px 0 !important;
+            font-size: 0.84rem !important;
+            gap: 10px !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
             white-space: nowrap !important;
             box-sizing: border-box !important;
           }
 
           .bento-cta-pill svg {
-            margin-left: 4px !important;
+            margin-left: 6px !important;
             flex-shrink: 0 !important;
           }
         }
