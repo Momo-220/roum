@@ -1568,147 +1568,126 @@ function ServicesContent() {
           box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4);
         }
 
-        /* RESPONSIVE MOBILE : GRILLE BENTO ASYMÉTRIQUE EXACTE (IDENTIQUE AU DESKTOP) */
+        /* RESPONSIVE MOBILE : LUXUEUX, AÉRÉ, BIEN ESPACÉ ET SANS COMPRESSION */
         @media (max-width: 900px) {
           .services-page-root {
-            padding: 20px 12px 110px 12px !important;
+            padding: 28px 16px 120px 16px !important;
             overflow-x: hidden !important;
           }
 
           .services-header {
-            margin-bottom: 22px !important;
+            margin-bottom: 32px !important;
           }
 
           .services-title {
-            font-size: clamp(1.45rem, 5.2vw, 1.85rem) !important;
-            margin-bottom: 8px !important;
+            font-size: clamp(1.65rem, 5.5vw, 2.1rem) !important;
+            margin-bottom: 12px !important;
+            line-height: 1.18 !important;
           }
 
           .services-desc {
-            font-size: 0.82rem !important;
-            line-height: 1.4 !important;
+            font-size: 0.90rem !important;
+            line-height: 1.5 !important;
           }
 
-          /* LA GRILLE BENTO RESTE EN 12 COLONNES MÊME SUR MOBILE */
+          /* FLUX VERTICAL ULTRA-AÉRÉ : UNE CARTE PAR LIGNE, ZÉRO COMPRESSION */
           .bento-grid {
-            display: grid !important;
-            grid-template-columns: repeat(12, 1fr) !important;
-            gap: 10px !important;
-            margin-bottom: 24px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 22px !important;
+            margin-bottom: 48px !important;
             width: 100% !important;
-            overflow: visible !important;
           }
 
-          /* ROW 1 : ALIBABA (7 COLS) + AÉRIEN (5 COLS) */
-          .card-alibaba {
-            grid-column: span 7 !important;
-            min-height: 335px !important;
-          }
-
-          .card-aerien {
-            grid-column: span 5 !important;
-            min-height: 335px !important;
-          }
-
-          /* ROW 2 : DUBAÏ (5 COLS) + MARITIME (7 COLS) */
-          .card-dubai {
-            grid-column: span 5 !important;
-            min-height: 315px !important;
-          }
-
-          .card-maritime {
-            grid-column: span 7 !important;
-            min-height: 315px !important;
-          }
-
-          /* ROW 3 : PARIS (6 COLS) + MAROC (6 COLS) */
-          .card-paris {
-            grid-column: span 6 !important;
-            min-height: 295px !important;
-          }
-
+          .card-alibaba,
+          .card-aerien,
+          .card-dubai,
+          .card-maritime,
+          .card-paris,
           .card-maroc {
-            grid-column: span 6 !important;
-            min-height: 295px !important;
+            width: 100% !important;
+            min-height: 310px !important;
+            grid-column: auto !important;
           }
 
           .bento-card {
-            border-radius: 18px !important;
-            box-shadow: 0 8px 24px -4px rgba(20, 13, 9, 0.22) !important;
+            border-radius: 24px !important;
+            box-shadow: 0 12px 36px -8px rgba(20, 13, 9, 0.28) !important;
           }
 
           .bento-content {
-            padding: 13px 10px !important;
+            padding: 26px 20px !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: space-between !important;
-            height: 100% !important;
+            min-height: 310px !important;
+            box-sizing: border-box !important;
           }
 
           .bento-tag {
-            font-size: 0.54rem !important;
-            padding: 3px 6px !important;
-            gap: 4px !important;
-            letter-spacing: 0.02em !important;
-            max-width: 100% !important;
-            white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
+            font-size: 0.68rem !important;
+            padding: 5px 12px !important;
+            gap: 6px !important;
+            letter-spacing: 0.06em !important;
+            margin-bottom: 14px !important;
           }
 
           .bento-card-title {
-            font-size: clamp(0.96rem, 3.2vw, 1.25rem) !important;
-            line-height: 1.15 !important;
-            margin-bottom: 3px !important;
+            font-size: 1.45rem !important;
+            font-weight: 800 !important;
+            line-height: 1.2 !important;
+            margin-bottom: 6px !important;
           }
 
           .bento-card-subtitle {
-            font-size: 0.67rem !important;
-            line-height: 1.3 !important;
-            margin-bottom: 6px !important;
-            display: -webkit-box !important;
-            -webkit-line-clamp: 2 !important;
-            -webkit-box-orient: vertical !important;
-            overflow: hidden !important;
+            font-size: 0.84rem !important;
+            line-height: 1.45 !important;
+            margin-bottom: 14px !important;
+            color: rgba(255, 255, 255, 0.88) !important;
+            display: block !important;
           }
 
           .bento-stat-highlight {
-            font-size: clamp(1.0rem, 3.6vw, 1.4rem) !important;
-            margin: 3px 0 5px 0 !important;
+            font-size: 1.55rem !important;
+            font-weight: 800 !important;
+            margin: 6px 0 10px 0 !important;
             line-height: 1 !important;
+            color: #FFA066 !important;
           }
 
           .options-duo {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 4px !important;
-            margin: 4px 0 6px 0 !important;
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 10px !important;
+            margin: 12px 0 16px 0 !important;
           }
 
           .option-box {
-            padding: 4px 6px !important;
-            border-radius: 6px !important;
+            padding: 8px 10px !important;
+            border-radius: 10px !important;
           }
 
           .option-tag {
-            font-size: 0.55rem !important;
+            font-size: 0.66rem !important;
             font-weight: 700 !important;
           }
 
           .option-desc {
-            font-size: 0.59rem !important;
-            line-height: 1.25 !important;
+            font-size: 0.72rem !important;
+            line-height: 1.3 !important;
           }
 
-          /* Masquer les puces détaillées sur les cartes compactes pour un équilibre parfait */
-          .card-aerien .bento-bullets,
-          .card-dubai .bento-bullets {
-            display: none !important;
+          .bento-bullets {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 8px !important;
+            margin: 10px 0 14px 0 !important;
           }
 
           .bento-bullet {
-            font-size: 0.63rem !important;
-            gap: 5px !important;
+            font-size: 0.76rem !important;
+            gap: 8px !important;
+            line-height: 1.35 !important;
           }
 
           .bento-bullet strong {
@@ -1719,80 +1698,67 @@ function ServicesContent() {
             display: flex !important;
             align-items: center !important;
             justify-content: space-between !important;
-            gap: 6px !important;
-            margin-top: 6px !important;
+            gap: 12px !important;
+            margin-top: 14px !important;
+            flex-wrap: wrap !important;
           }
 
           .bento-bottom-row span {
-            font-size: 0.64rem !important;
+            font-size: 0.74rem !important;
           }
 
           .bento-cta-pill {
-            padding: 6px 10px !important;
-            font-size: 0.66rem !important;
-            gap: 4px !important;
-            white-space: nowrap !important;
+            padding: 10px 18px !important;
+            font-size: 0.78rem !important;
+            gap: 6px !important;
+            border-radius: 9999px !important;
+            font-weight: 700 !important;
           }
 
           .arrow-btn {
-            width: 30px !important;
-            height: 30px !important;
+            width: 38px !important;
+            height: 38px !important;
+            border-radius: 50% !important;
             flex-shrink: 0 !important;
           }
 
           .arrow-btn svg {
-            width: 14px !important;
-            height: 14px !important;
+            width: 17px !important;
+            height: 17px !important;
           }
 
-          /* ÉTIQUETTE / SHIPPING MARK */
+          /* SECTION BORDEREAU / SHIPPING PASS BIEN ESPACÉE */
           .shipping-pass-block {
-            padding: 18px 14px !important;
-            border-radius: 20px !important;
+            padding: 26px 20px !important;
+            border-radius: 24px !important;
+            margin-top: 48px !important;
           }
 
           .pass-body-grid {
             display: flex !important;
             flex-direction: column !important;
-            gap: 16px !important;
+            gap: 22px !important;
           }
 
           .pass-tabs-header {
             flex-direction: column !important;
             align-items: flex-start !important;
-            gap: 12px !important;
+            gap: 16px !important;
+            margin-bottom: 22px !important;
           }
 
           .pass-warehouse-capsules {
             overflow-x: auto !important;
             flex-wrap: nowrap !important;
-            padding-bottom: 4px !important;
+            padding-bottom: 6px !important;
             width: 100% !important;
+            gap: 8px !important;
             -webkit-overflow-scrolling: touch !important;
           }
 
           .modal-input-grid {
             grid-template-columns: 1fr !important;
-            gap: 10px !important;
-          }
-        }
-
-        @media (max-width: 360px) {
-          .bento-grid {
-            gap: 8px !important;
-          }
-          .bento-content {
-            padding: 11px 7px !important;
-          }
-          .bento-card-title {
-            font-size: 0.90rem !important;
-          }
-          .bento-stat-highlight {
-            font-size: 0.95rem !important;
-          }
-          .bento-cta-pill {
-            padding: 5px 8px !important;
-            font-size: 0.60rem !important;
+            gap: 12px !important;
           }
         }
       `}</style>

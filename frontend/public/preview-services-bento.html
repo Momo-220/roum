@@ -401,74 +401,58 @@
       background-color: #2C1E17;
     }
 
-    /* Responsive Mobile : Grille Bento Asymétrique exacte identique au Desktop */
+    /* Responsive Mobile : Luxueux, Aéré, Bien Espacé, Zéro Compression */
     @media (max-width: 900px) {
       body {
-        padding: 20px 12px 110px 12px;
+        padding: 28px 16px 120px 16px;
       }
       .bento-grid {
-        display: grid !important;
-        grid-template-columns: repeat(12, 1fr) !important;
-        gap: 10px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 22px !important;
         width: 100% !important;
       }
-      .card-alibaba {
-        grid-column: span 7 !important;
-        min-height: 335px !important;
-      }
-      .card-aerien {
-        grid-column: span 5 !important;
-        min-height: 335px !important;
-      }
-      .card-dubai {
-        grid-column: span 5 !important;
-        min-height: 315px !important;
-      }
-      .card-maritime {
-        grid-column: span 7 !important;
-        min-height: 315px !important;
-      }
-      .card-paris {
-        grid-column: span 6 !important;
-        min-height: 295px !important;
-      }
+      .card-alibaba,
+      .card-aerien,
+      .card-dubai,
+      .card-maritime,
+      .card-paris,
       .card-maroc {
-        grid-column: span 6 !important;
-        min-height: 295px !important;
+        width: 100% !important;
+        min-height: 310px !important;
       }
       .bento-card {
-        border-radius: 18px !important;
+        border-radius: 24px !important;
+        box-shadow: 0 12px 36px -8px rgba(20, 13, 9, 0.28) !important;
       }
       .bento-content {
-        padding: 13px 10px !important;
+        padding: 26px 20px !important;
       }
       .bento-tag {
-        font-size: 0.54rem !important;
-        padding: 3px 6px !important;
+        font-size: 0.68rem !important;
+        padding: 5px 12px !important;
       }
       .bento-title {
-        font-size: clamp(0.96rem, 3.2vw, 1.25rem) !important;
+        font-size: 1.45rem !important;
       }
       .bento-subtitle {
-        font-size: 0.67rem !important;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
+        font-size: 0.84rem !important;
+        line-height: 1.45 !important;
       }
       .bento-stat-highlight {
-        font-size: clamp(1.0rem, 3.6vw, 1.4rem) !important;
-      }
-      .card-aerien .bento-bullets,
-      .card-dubai .bento-bullets {
-        display: none !important;
+        font-size: 1.55rem !important;
       }
       .options-duo {
-        grid-template-columns: 1fr;
-        gap: 4px;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
       }
       .option-box {
-        padding: 4px 6px !important;
+        padding: 8px 10px !important;
+      }
+      .shipping-pass {
+        padding: 26px 20px !important;
+        margin-top: 48px !important;
       }
     }
   </style>
