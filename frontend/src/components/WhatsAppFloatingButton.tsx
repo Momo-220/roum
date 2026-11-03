@@ -9,26 +9,41 @@ export function WhatsAppFloatingButton() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Contacter Roum Transit sur WhatsApp"
-      style={{
-        position: "fixed",
-        bottom: "22px",
-        right: "20px",
-        zIndex: 90,
-        width: "48px",
-        height: "48px",
-        borderRadius: "9999px",
-        backgroundColor: "#25D366",
-        color: "#FFFFFF",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        boxShadow: "0 4px 14px rgba(37, 211, 102, 0.35)",
-        textDecoration: "none",
-        transition: "transform 0.15s ease",
-      }}
+      className="whatsapp-floating-btn"
     >
-      <MessageCircle size={26} />
+      <MessageCircle size={25} />
+      <style jsx>{`
+        .whatsapp-floating-btn {
+          position: fixed;
+          bottom: max(74px, calc(env(safe-area-inset-bottom, 14px) + 60px));
+          right: 18px;
+          z-index: 900;
+          width: 46px;
+          height: 46px;
+          border-radius: 9999px;
+          background-color: #25D366;
+          color: #FFFFFF;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 16px rgba(37, 211, 102, 0.4);
+          text-decoration: none;
+          transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .whatsapp-floating-btn:hover {
+          transform: scale(1.06);
+          box-shadow: 0 6px 20px rgba(37, 211, 102, 0.5);
+        }
+
+        @media (max-width: 480px) {
+          .whatsapp-floating-btn {
+            width: 44px;
+            height: 44px;
+            right: 14px;
+          }
+        }
+      `}</style>
     </a>
   );
 }
-

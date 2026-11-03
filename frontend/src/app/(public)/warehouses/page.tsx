@@ -61,13 +61,13 @@ export default function WarehousesPage() {
         backgroundColor: "transparent",
         color: "var(--c-text-main)",
         minHeight: "calc(100vh - 110px)",
-        padding: "36px 20px 80px 20px",
+        padding: "24px 16px 110px 16px",
         boxSizing: "border-box",
       }}
     >
       <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
         <ScrollReveal>
-          <div style={{ textAlign: "center", marginBottom: "40px" }}>
+          <div style={{ textAlign: "center", marginBottom: "36px" }}>
             <div className="client-eyebrow" style={{ justifyContent: "center", marginBottom: "12px" }}>
               <span style={{ color: "var(--c-accent-red)" }}>●</span>
               <span>ENTREPÔTS MONDIAUX & GROUPAGE SÉCURISÉ</span>
@@ -76,9 +76,9 @@ export default function WarehousesPage() {
             <h1
               style={{
                 fontFamily: "var(--c-font-display)",
-                fontSize: "clamp(2.2rem, 4.6vw, 3.4rem)",
+                fontSize: "clamp(1.4rem, 4.4vw, 2.8rem)",
                 fontWeight: 700,
-                letterSpacing: "-0.04em",
+                letterSpacing: "-0.035em",
                 color: "var(--c-text-main)",
                 margin: "0 0 12px 0",
               }}

@@ -50,7 +50,7 @@ const SERVICES_DATA: ServiceItem[] = [
     title: "Voie Aérienne",
     subtitle: "Chine, Dubaï, France & Maroc direct",
     description:
-      "Vols cargos réguliers chaque semaine pour vos colis urgents, échantillons, téléphones et cosmétiques. Pesée certifiée et retrait immédiat en agence sans tracasseries.",
+      "Vols cargos réguliers chaque semaine pour vos colis urgents, échantillons, téléphones et cosmétiques. Pesée certifiée et retrait immédiat en agence sans formalités douanières complexes.",
     image: "/images/services/aerien.jpg",
     href: "/tariffs?mode=AIR",
     ctaText: "Calculer mon tarif aérien",
@@ -71,7 +71,7 @@ const SERVICES_DATA: ServiceItem[] = [
     title: "Centrale d'Achat",
     subtitle: "Paiement fournisseurs & contrôle qualité",
     description:
-      "Achetez sur Alibaba, 1688 et Taobao sans blocage bancaire international. Vous réglez en FCFA à Abidjan, notre bureau en Chine paie votre usine en Yuans (RMB) et inspecte vos cartons.",
+      "Achetez sur Alibaba, 1688 et Taobao sans blocage bancaire international. Vous réglez en FCFA à Abidjan à taux négocié, notre bureau en Chine paie votre usine en Yuans (RMB) et vérifie vos cartons.",
     image: "/images/services/achats.jpg",
     href: "/services?tab=alibaba",
     ctaText: "Lancer un achat assisté",
@@ -100,8 +100,8 @@ export function ServicesVisualCards() {
     setActiveId((prev) => (prev === id ? null : id));
   };
 
-  // Placement CSS Grid pour le mode Desktop
-  const getGridPlacement = (serviceId: string): React.CSSProperties => {
+  // Placement CSS Grid pour Desktop
+  const getDesktopGridPlacement = (serviceId: string): React.CSSProperties => {
     if (activeId === null) {
       const idx = SERVICES_DATA.findIndex((s) => s.id === serviceId);
       return {
@@ -128,7 +128,7 @@ export function ServicesVisualCards() {
 
   return (
     <section className="services-section-wrapper">
-      {/* En-tête de section équilibré (Tailles normales et élégantes) */}
+      {/* En-tête de section équilibré */}
       <div className="services-header">
         <div className="services-eyebrow">
           01 / NOS VOIES DE TRANSPORT OFFICIELLES
@@ -142,185 +142,318 @@ export function ServicesVisualCards() {
       </div>
 
       {/* ========================================================
-          GRILLE FLUIDE DES SERVICES :
-          - Desktop : Carte active étendue à gauche + 2 carrés superposés à droite
-          - Mobile : Cartes compactes flexibles avec déroulement accordéon fluide
+          DISPOSITION DESKTOP (> 860px) :
+          - Par défaut : 3 cartes cinématographiques côte-à-côte bien espacées
+          - Au clic : 1 grand rectangle à gauche + 2 carrés superposés à droite
          ======================================================== */}
-      <div
-        className={`services-grid-container ${activeId !== null ? "has-active" : "is-default"}`}
-      >
-        {SERVICES_DATA.map((service) => {
-          const isExpanded = activeId === service.id;
-          const isStackedSquare = activeId !== null && !isExpanded;
-          const isHovered = hoveredCard === service.id;
-          const placementStyle = getGridPlacement(service.id);
+      <div className="desktop-cards-container">
+        <div
+          className={`desktop-grid ${activeId !== null ? "has-active" : "is-default"}`}
+        >
+          {SERVICES_DATA.map((service) => {
+            const isExpanded = activeId === service.id;
+            const isStackedSquare = activeId !== null && !isExpanded;
+            const isHovered = hoveredCard === service.id;
+            const placementStyle = getDesktopGridPlacement(service.id);
 
-          return (
-            <div
-              key={service.id}
-              onClick={(e) => handleCardClick(service.id, e)}
-              onMouseEnter={() => setHoveredCard(service.id)}
-              onMouseLeave={() => setHoveredCard(null)}
-              className={`service-card-item ${
-                isExpanded ? "is-expanded" : isStackedSquare ? "is-stacked-square" : "is-default-card"
-              }`}
-              style={placementStyle}
-            >
-              {/* 1. Photographie de fond (Zoom progressif doux) */}
-              <img
-                src={service.image}
-                alt={service.title}
-                className="service-card-bg-image"
-                style={{
-                  transform: isExpanded
-                    ? "scale(1.06)"
-                    : isHovered
-                    ? "scale(1.04)"
-                    : "scale(1.0)",
-                }}
-              />
-
-              {/* 2. Scrim Gradient de Contraste Doux (Signature Roum) */}
+            return (
               <div
-                className="service-card-scrim"
-                style={{
-                  background: isExpanded
-                    ? "linear-gradient(to right, rgba(20, 13, 9, 0.96) 0%, rgba(20, 13, 9, 0.90) 45%, rgba(20, 13, 9, 0.82) 100%)"
-                    : isStackedSquare
-                    ? "linear-gradient(to top, rgba(20, 13, 9, 0.94) 0%, rgba(20, 13, 9, 0.55) 50%, rgba(20, 13, 9, 0.15) 100%)"
-                    : "linear-gradient(to top, rgba(20, 13, 9, 0.94) 0%, rgba(20, 13, 9, 0.55) 45%, rgba(20, 13, 9, 0.12) 75%, rgba(0, 0, 0, 0.2) 100%)",
-                }}
-              />
-
-              {/* 3. Contenu de la carte */}
-              <div
-                className={`service-card-content ${
-                  isExpanded ? "content-expanded" : isStackedSquare ? "content-stacked" : "content-default"
+                key={service.id}
+                onClick={(e) => handleCardClick(service.id, e)}
+                onMouseEnter={() => setHoveredCard(service.id)}
+                onMouseLeave={() => setHoveredCard(null)}
+                className={`service-card-item ${
+                  isExpanded ? "is-expanded" : isStackedSquare ? "is-stacked-square" : "is-default-card"
                 }`}
+                style={placementStyle}
               >
-                {/* Ligne Supérieure : Micro-tag ou Bouton de fermeture */}
-                <div className="service-card-top-bar">
-                  <div className="service-micro-badge">
-                    <span className="service-badge-dot" />
-                    <span>{service.badge}</span>
+                {/* 1. Photographie de fond */}
+                <img
+                  src={service.image}
+                  alt={service.title}
+                  className="service-card-bg-image"
+                  style={{
+                    transform: isExpanded
+                      ? "scale(1.06)"
+                      : isHovered
+                      ? "scale(1.04)"
+                      : "scale(1.0)",
+                  }}
+                />
+
+                {/* 2. Scrim Gradient de Contraste Doux */}
+                <div
+                  className="service-card-scrim"
+                  style={{
+                    background: isExpanded
+                      ? "linear-gradient(to right, rgba(20, 13, 9, 0.96) 0%, rgba(20, 13, 9, 0.90) 45%, rgba(20, 13, 9, 0.82) 100%)"
+                      : isStackedSquare
+                      ? "linear-gradient(to top, rgba(20, 13, 9, 0.94) 0%, rgba(20, 13, 9, 0.55) 50%, rgba(20, 13, 9, 0.15) 100%)"
+                      : "linear-gradient(to top, rgba(20, 13, 9, 0.94) 0%, rgba(20, 13, 9, 0.55) 45%, rgba(20, 13, 9, 0.12) 75%, rgba(0, 0, 0, 0.2) 100%)",
+                  }}
+                />
+
+                {/* 3. Contenu de la carte */}
+                <div
+                  className={`service-card-content ${
+                    isExpanded ? "content-expanded" : isStackedSquare ? "content-stacked" : "content-default"
+                  }`}
+                >
+                  {/* Top Bar */}
+                  <div className="service-card-top-bar">
+                    <div className="service-micro-badge">
+                      <span className="service-badge-dot" />
+                      <span>{service.badge}</span>
+                    </div>
+
+                    {isExpanded && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveId(null);
+                        }}
+                        className="service-close-button"
+                        title="Replier ce volet"
+                        aria-label="Fermer"
+                      >
+                        <X size={15} />
+                      </button>
+                    )}
                   </div>
 
-                  {/* Bouton pour replier quand la carte est dépliée */}
-                  {isExpanded && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveId(null);
-                      }}
-                      className="service-close-button"
-                      title="Replier ce volet"
-                      aria-label="Fermer"
-                    >
-                      <X size={15} />
-                    </button>
+                  {/* Body */}
+                  {isStackedSquare ? (
+                    <div className="service-stacked-bottom">
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h3 className="service-title-stacked">{service.title}</h3>
+                        <p className="service-subtitle-stacked">{service.subtitle}</p>
+                      </div>
+                      <div className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}>
+                        <ArrowDownRight size={16} strokeWidth={2.4} />
+                      </div>
+                    </div>
+                  ) : !isExpanded ? (
+                    <div className="service-default-bottom">
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h3 className="service-title-default">{service.title}</h3>
+                        <p className="service-subtitle-default">{service.subtitle}</p>
+                      </div>
+                      <div className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}>
+                        <ArrowDownRight size={18} strokeWidth={2.4} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="service-expanded-body">
+                      <div>
+                        <h3 className="service-title-expanded">{service.title}</h3>
+                        <p className="service-desc-expanded">{service.description}</p>
+                      </div>
+                      <div className="service-metrics-row">
+                        {service.metrics.map((m, idx) => (
+                          <div key={idx} className="service-metric-item">
+                            <span className="service-metric-label">{m.label}</span>
+                            <span className="service-metric-value">{m.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="service-features-grid">
+                        {service.features.map((feat, idx) => (
+                          <div key={idx} className="service-feature-row">
+                            <div className="service-feature-check">
+                              <Check size={10} color="#FFFFFF" strokeWidth={3} />
+                            </div>
+                            <span>{feat}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ paddingTop: "4px" }}>
+                        <Link href={service.href} className="service-cta-button">
+                          <span>{service.ctaText}</span>
+                          <ArrowRight size={15} />
+                        </Link>
+                      </div>
+                    </div>
                   )}
                 </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
-                {/* ========================================================
-                    CORPS DE LA CARTE :
-                    1. isStackedSquare : Format carré compact superposé
-                    2. isExpanded : Grand rectangle détaillé avec métriques & CTA
-                    3. isDefaultCard : Format compact au repos
-                   ======================================================== */}
-                {isStackedSquare ? (
-                  /* Format Carré Compact Superposé */
-                  <div className="service-stacked-bottom">
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 className="service-title-stacked">
-                        {service.title}
-                      </h3>
-                      <p className="service-subtitle-stacked">
-                        {service.subtitle}
-                      </p>
-                    </div>
-
-                    <div className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}>
-                      <ArrowDownRight
-                        size={16}
-                        strokeWidth={2.4}
-                        style={{
-                          transform: isHovered ? "translate(1px, 1px)" : "translate(0, 0)",
-                          transition: "transform 0.2s ease",
-                        }}
-                      />
+      {/* ========================================================
+          DISPOSITION MOBILE (< 860px) :
+          Même esprit fluide et aéré que sur ordinateur :
+          - Au repos : Carousel horizontal fluide avec snap (cartes à proportions élégantes)
+          - Au toucher : La carte sélectionnée s'ouvre avec ses détails complets,
+            et les deux autres s'affichent en deux carrés juste en-dessous !
+         ======================================================== */}
+      <div className="mobile-cards-container">
+        {activeId === null ? (
+          /* Mode Repos Mobile : 3 cartes horizontales bien espacées avec peek fluide */
+          <div className="mobile-horizontal-scroll">
+            {SERVICES_DATA.map((service) => (
+              <div
+                key={service.id}
+                onClick={(e) => handleCardClick(service.id, e)}
+                className="mobile-card-slide"
+              >
+                <img
+                  src={service.image}
+                  alt={service.title}
+                  className="service-card-bg-image"
+                />
+                <div
+                  className="service-card-scrim"
+                  style={{
+                    background:
+                      "linear-gradient(to top, rgba(20, 13, 9, 0.94) 0%, rgba(20, 13, 9, 0.55) 45%, rgba(20, 13, 9, 0.12) 75%, rgba(0, 0, 0, 0.2) 100%)",
+                  }}
+                />
+                <div className="service-card-content content-default">
+                  <div className="service-card-top-bar">
+                    <div className="service-micro-badge">
+                      <span className="service-badge-dot" />
+                      <span>{service.badge}</span>
                     </div>
                   </div>
-                ) : !isExpanded ? (
-                  /* Format par Défaut (3 colonnes Desktop / 3 cartes mobiles) */
+
                   <div className="service-default-bottom">
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <h3 className="service-title-default">
-                        {service.title}
-                      </h3>
-                      <p className="service-subtitle-default">
-                        {service.subtitle}
-                      </p>
+                      <h3 className="service-title-default">{service.title}</h3>
+                      <p className="service-subtitle-default">{service.subtitle}</p>
                     </div>
-
-                    <div className={`service-action-badge ${isHovered ? "is-hovered" : ""}`}>
-                      <ArrowDownRight
-                        size={18}
-                        strokeWidth={2.4}
-                        style={{
-                          transform: isHovered ? "translate(1px, 1px)" : "translate(0, 0)",
-                          transition: "transform 0.2s ease",
-                        }}
-                      />
+                    <div className="service-action-badge">
+                      <ArrowDownRight size={18} strokeWidth={2.4} />
                     </div>
                   </div>
-                ) : (
-                  /* Format Grand Rectangle Déroulé avec détails */
-                  <div className="service-expanded-body">
-                    <div>
-                      <h3 className="service-title-expanded">
-                        {service.title}
-                      </h3>
-                      <p className="service-desc-expanded">
-                        {service.description}
-                      </p>
-                    </div>
-
-                    {/* Métriques Clés */}
-                    <div className="service-metrics-row">
-                      {service.metrics.map((m, idx) => (
-                        <div key={idx} className="service-metric-item">
-                          <span className="service-metric-label">{m.label}</span>
-                          <span className="service-metric-value">{m.value}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Garanties */}
-                    <div className="service-features-grid">
-                      {service.features.map((feat, idx) => (
-                        <div key={idx} className="service-feature-row">
-                          <div className="service-feature-check">
-                            <Check size={10} color="#FFFFFF" strokeWidth={3} />
-                          </div>
-                          <span>{feat}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Bouton CTA */}
-                    <div style={{ paddingTop: "4px" }}>
-                      <Link href={service.href} className="service-cta-button">
-                        <span>{service.ctaText}</span>
-                        <ArrowRight size={15} />
-                      </Link>
-                    </div>
-                  </div>
-                )}
+                </div>
               </div>
+            ))}
+          </div>
+        ) : (
+          /* Mode Actif Mobile : Carte active dépliée + Les 2 autres en carrés côte-à-côte en-dessous */
+          <div className="mobile-active-layout">
+            {/* 1. Carte Active Dépliée */}
+            {(() => {
+              const activeService = SERVICES_DATA.find((s) => s.id === activeId)!;
+              return (
+                <div className="mobile-active-card">
+                  <img
+                    src={activeService.image}
+                    alt={activeService.title}
+                    className="service-card-bg-image"
+                  />
+                  <div
+                    className="service-card-scrim"
+                    style={{
+                      background:
+                        "linear-gradient(to bottom, rgba(20, 13, 9, 0.92) 0%, rgba(20, 13, 9, 0.96) 100%)",
+                    }}
+                  />
+                  <div className="service-card-content content-expanded">
+                    <div className="service-card-top-bar">
+                      <div className="service-micro-badge">
+                        <span className="service-badge-dot" />
+                        <span>{activeService.badge}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveId(null);
+                        }}
+                        className="service-close-button"
+                        aria-label="Fermer"
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+
+                    <div className="service-expanded-body">
+                      <div>
+                        <h3 className="service-title-expanded">{activeService.title}</h3>
+                        <p className="service-desc-expanded">{activeService.description}</p>
+                      </div>
+
+                      <div className="service-metrics-row">
+                        {activeService.metrics.map((m, idx) => (
+                          <div key={idx} className="service-metric-item">
+                            <span className="service-metric-label">{m.label}</span>
+                            <span className="service-metric-value">{m.value}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="service-features-grid">
+                        {activeService.features.map((feat, idx) => (
+                          <div key={idx} className="service-feature-row">
+                            <div className="service-feature-check">
+                              <Check size={10} color="#FFFFFF" strokeWidth={3} />
+                            </div>
+                            <span>{feat}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div style={{ paddingTop: "6px" }}>
+                        <Link href={activeService.href} className="service-cta-button">
+                          <span>{activeService.ctaText}</span>
+                          <ArrowRight size={15} />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 2. Les deux autres services en carrés côte-à-côte en-dessous */}
+            <div className="mobile-secondary-squares-row">
+              {SERVICES_DATA.filter((s) => s.id !== activeId).map((service) => (
+                <div
+                  key={service.id}
+                  onClick={(e) => handleCardClick(service.id, e)}
+                  className="mobile-square-card"
+                >
+                  <img
+                    src={service.image}
+                    alt={service.title}
+                    className="service-card-bg-image"
+                  />
+                  <div
+                    className="service-card-scrim"
+                    style={{
+                      background:
+                        "linear-gradient(to top, rgba(20, 13, 9, 0.95) 0%, rgba(20, 13, 9, 0.55) 50%, rgba(20, 13, 9, 0.15) 100%)",
+                    }}
+                  />
+                  <div className="service-card-content content-stacked">
+                    <div className="service-card-top-bar">
+                      <div className="service-micro-badge" style={{ padding: "3px 8px", fontSize: "0.62rem" }}>
+                        <span>{service.badge.split(" · ")[0]}</span>
+                      </div>
+                    </div>
+                    <div className="service-stacked-bottom">
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h3 className="service-title-stacked" style={{ fontSize: "1.05rem" }}>
+                          {service.title}
+                        </h3>
+                        <p className="service-subtitle-stacked" style={{ fontSize: "0.7rem" }}>
+                          {service.subtitle}
+                        </p>
+                      </div>
+                      <div className="service-action-badge" style={{ width: "32px", height: "32px" }}>
+                        <ArrowDownRight size={15} strokeWidth={2.4} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          );
-        })}
+          </div>
+        )}
       </div>
 
       {/* ========================================================
@@ -366,8 +499,16 @@ export function ServicesVisualCards() {
           line-height: 1.45;
         }
 
-        /* Desktop Grid */
-        .services-grid-container {
+        /* Desktop Layout */
+        .desktop-cards-container {
+          display: block;
+        }
+
+        .mobile-cards-container {
+          display: none;
+        }
+
+        .desktop-grid {
           display: grid;
           width: 100%;
           gap: 16px;
@@ -376,12 +517,12 @@ export function ServicesVisualCards() {
                       grid-template-rows 0.45s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .services-grid-container.is-default {
+        .desktop-grid.is-default {
           grid-template-columns: repeat(3, 1fr);
           grid-template-rows: 1fr;
         }
 
-        .services-grid-container.has-active {
+        .desktop-grid.has-active {
           grid-template-columns: 2.15fr 1fr;
           grid-template-rows: 1fr 1fr;
         }
@@ -454,7 +595,7 @@ export function ServicesVisualCards() {
         }
 
         .content-expanded {
-          padding: 24px;
+          padding: 22px;
         }
 
         .service-card-top-bar {
@@ -510,7 +651,6 @@ export function ServicesVisualCards() {
           transform: scale(1.08);
         }
 
-        /* Bottom rows */
         .service-stacked-bottom,
         .service-default-bottom {
           display: flex;
@@ -583,18 +723,17 @@ export function ServicesVisualCards() {
           transform: scale(1.08);
         }
 
-        /* Expanded Body */
         .service-expanded-body {
           display: flex;
           flex-direction: column;
-          gap: 14px;
+          gap: 12px;
           width: 100%;
           animation: cardSmoothReveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         .service-title-expanded {
           font-family: var(--c-font-display);
-          font-size: clamp(1.4rem, 2.2vw, 1.85rem);
+          font-size: clamp(1.35rem, 2.2vw, 1.85rem);
           font-weight: 700;
           line-height: 1.1;
           letter-spacing: -0.035em;
@@ -603,8 +742,8 @@ export function ServicesVisualCards() {
         }
 
         .service-desc-expanded {
-          font-size: 0.88rem;
-          line-height: 1.48;
+          font-size: 0.86rem;
+          line-height: 1.45;
           color: rgba(255, 255, 255, 0.9);
           max-width: 640px;
           margin: 0;
@@ -698,55 +837,85 @@ export function ServicesVisualCards() {
         }
 
         /* ========================================================
-            RESPONSIVE MOBILE : Cartes flexibles et adaptatives
+            RESPONSIVE MOBILE (< 860px) : Même fluidité et espacement
            ======================================================== */
         @media (max-width: 860px) {
-          .services-section-wrapper {
-            margin-bottom: 36px;
+          .desktop-cards-container {
+            display: none !important;
           }
 
-          .services-grid-container {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 12px !important;
-            height: auto !important;
+          .mobile-cards-container {
+            display: block !important;
           }
 
-          .service-card-item {
-            grid-column: auto !important;
-            grid-row: auto !important;
-            width: 100% !important;
-            border-radius: 20px !important;
-            transition: min-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease !important;
+          /* Carousel horizontal fluide avec snap */
+          .mobile-horizontal-scroll {
+            display: flex;
+            gap: 14px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            padding: 4px 16px 12px 16px;
+            margin: 0 -16px;
           }
 
-          .service-card-item.is-default-card {
-            height: 175px !important;
+          .mobile-horizontal-scroll::-webkit-scrollbar {
+            display: none;
           }
 
-          .service-card-item.is-stacked-square {
-            height: 130px !important;
+          .mobile-card-slide {
+            flex: 0 0 82%;
+            max-width: 300px;
+            height: 360px;
+            scroll-snap-align: center;
+            position: relative;
+            border-radius: 24px;
+            overflow: hidden;
+            background-color: #1B1411;
+            border: 1px solid rgba(28, 25, 23, 0.1);
+            box-shadow: 0 10px 28px -6px rgba(27, 20, 17, 0.15);
+            cursor: pointer;
+            box-sizing: border-box;
           }
 
-          .service-card-item.is-expanded {
-            height: auto !important;
-            min-height: 420px !important;
+          /* Mode Actif Mobile */
+          .mobile-active-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
           }
 
-          .content-default {
-            padding: 16px !important;
+          .mobile-active-card {
+            position: relative;
+            border-radius: 24px;
+            overflow: hidden;
+            background-color: #1B1411;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 14px 34px -8px rgba(20, 13, 9, 0.3);
+            animation: cardSmoothReveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
           }
 
-          .content-stacked {
-            padding: 12px 14px !important;
-          }
-
-          .content-expanded {
-            padding: 18px !important;
-          }
-
-          .service-features-grid {
+          .mobile-active-card .service-features-grid {
             grid-template-columns: 1fr !important;
+          }
+
+          /* Les deux autres carrés côte-à-côte */
+          .mobile-secondary-squares-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+          }
+
+          .mobile-square-card {
+            position: relative;
+            height: 145px;
+            border-radius: 18px;
+            overflow: hidden;
+            background-color: #1B1411;
+            border: 1px solid rgba(28, 25, 23, 0.1);
+            box-shadow: 0 6px 18px -4px rgba(27, 20, 17, 0.12);
+            cursor: pointer;
           }
         }
       `}</style>

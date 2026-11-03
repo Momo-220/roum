@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HeaderNav } from "@/components/HeaderNav";
+import { FloatingBottomNav } from "@/components/FloatingBottomNav";
 import { WhatsAppFloatingButton } from "@/components/WhatsAppFloatingButton";
 
 export default function PublicLayout({
@@ -9,13 +9,56 @@ export default function PublicLayout({
 }) {
   return (
     <div className="client-portal" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* Header avec Navigation Intégrée au Sommet (Logo + Liens Desktop + Menu Mobile) */}
-      <HeaderNav />
+      {/* ========================================================
+          HEADER ROUM TRANSIT : LOGO SOBRE ET PRESTIGIEUX
+          (Fond lin naturel, zéro fioriture, le logo respire en toute pureté)
+         ======================================================== */}
+      <header
+        style={{
+          backgroundColor: "transparent",
+          padding: "18px 24px 10px 24px",
+          position: "relative",
+          zIndex: 50,
+        }}
+      >
+        <div
+          style={{
+            maxWidth: "1160px",
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          <Link
+            href="/"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              textDecoration: "none",
+            }}
+            title="ROUM TRANSIT INTERNATIONAL"
+          >
+            <img
+              src="/images/roum-logo-transparent.png"
+              alt="Roum Transit"
+              style={{
+                height: "44px",
+                width: "auto",
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
+          </Link>
+        </div>
+      </header>
 
-      {/* Contenu principal */}
-      <main style={{ flex: 1, paddingBottom: "40px" }}>{children}</main>
+      {/* Contenu principal : Marge basse de 110px pour que rien ne soit jamais masqué par la barre flottante */}
+      <main style={{ flex: 1, paddingBottom: "110px" }}>{children}</main>
 
-      {/* Vrai bouton WhatsApp flottant en bas à droite (widget chatbot) */}
+      {/* Navigation Flottante en Bas pour mobile et desktop */}
+      <FloatingBottomNav />
+
+      {/* Vrai bouton WhatsApp flottant en bas à droite (au-dessus de la nav) */}
       <WhatsAppFloatingButton />
 
       {/* Pied de page sobre */}

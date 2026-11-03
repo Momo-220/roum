@@ -218,7 +218,7 @@ function ServicesContent() {
         backgroundColor: "transparent",
         color: "var(--c-text-main)",
         minHeight: "calc(100vh - 110px)",
-        padding: "36px 20px 80px 20px",
+        padding: "24px 16px 110px 16px",
         boxSizing: "border-box",
       }}
     >
@@ -247,10 +247,10 @@ function ServicesContent() {
             <h1
               style={{
                 fontFamily: "var(--c-font-display)",
-                fontSize: "clamp(2.2rem, 5vw, 3.6rem)",
+                fontSize: "clamp(1.4rem, 4.4vw, 2.8rem)",
                 fontWeight: 700,
-                letterSpacing: "-0.04em",
-                lineHeight: 1.05,
+                letterSpacing: "-0.035em",
+                lineHeight: 1.15,
                 color: "var(--c-text-main)",
                 margin: "0 0 16px 0",
               }}

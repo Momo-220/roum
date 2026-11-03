@@ -6,7 +6,8 @@ import Link from "next/link";
 import {
   Search,
   ArrowRight,
-  Calculator,
+  ShieldCheck,
+  Scale,
   MapPin,
 } from "lucide-react";
 import { normalizeTrackingNumber } from "@/shared";
@@ -35,19 +36,20 @@ export default function HomePage() {
   return (
     <div className="home-main-wrapper">
       {/* ========================================================
-          HERO : TITRE SUR UNE SEULE LIGNE + CARTE MONDIALE EN FOND
-          (Format sobre, proportion normale, zéro sensation de zoom excessif)
+          HERO : TITRE STRICTEMENT SUR DEUX LIGNES HARMONIEUSES
+          (Épuré, proportions naturelles, zéro sensation de zoom excessif)
          ======================================================== */}
       <ScrollReveal>
         <section className="hero-section">
-          {/* Titre Majeur Garanti sur UNE SEULE LIGNE */}
+          {/* Titre Majeur Garanti sur 2 Lignes Équilibrées */}
           <div className="hero-title-container">
-            <h1 className="hero-title-single-line">
-              Transport maritime &amp; aérien direct vers l&apos;Afrique.
+            <h1 className="hero-headline-two-lines">
+              <span className="hero-line">Transport maritime &amp; aérien</span>
+              <span className="hero-line">direct vers l&apos;Afrique.</span>
             </h1>
           </div>
 
-          {/* Carte Mondiale d'Arrière-Plan (Compacte et proportionnée sur mobile) */}
+          {/* Carte Mondiale d'Arrière-Plan (Compacte et proportionnée) */}
           <div className="hero-map-wrapper">
             <WorldMap lineColor="#0EA5E9" />
           </div>
@@ -82,8 +84,8 @@ export default function HomePage() {
 
       {/* ========================================================
           CATALOGUE VISUEL DES SERVICES : CARTES CINÉMATOGRAPHIQUES
-          - Desktop : Carte active étendue + 2 cartes carrées superposées
-          - Mobile : Cartes compactes flexibles avec déroulement fluide
+          - Desktop : Carte active étendue à gauche + 2 carrés superposés à droite
+          - Mobile : Même logique fluide, aérée et bien espacée
          ======================================================== */}
       <ScrollReveal>
         <ServicesVisualCards />
@@ -93,71 +95,25 @@ export default function HomePage() {
           GARANTIES OFFICIELLES ROUM TRANSIT (LIGNE FINALE SOBRE)
          ======================================================== */}
       <ScrollReveal>
-        <section
-          style={{
-            marginTop: "20px",
-            padding: "24px 20px",
-            backgroundColor: "#FFFFFF",
-            border: "1px solid rgba(28, 25, 23, 0.08)",
-            borderRadius: "20px",
-            boxShadow: "0 2px 10px rgba(0, 0, 0, 0.02)",
-          }}
-        >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "20px",
-              textAlign: "center",
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  fontFamily: "var(--c-font-display)",
-                  fontWeight: 700,
-                  fontSize: "1.05rem",
-                  color: "#140D09",
-                  marginBottom: "4px",
-                }}
-              >
-                Douane 100% Comprise
-              </div>
-              <p style={{ fontSize: "0.82rem", color: "#57534E", margin: 0, lineHeight: 1.4 }}>
+        <section className="guarantees-section">
+          <div className="guarantees-grid">
+            <div className="guarantee-item">
+              <div className="guarantee-title">Douane 100% Comprise</div>
+              <p className="guarantee-desc">
                 Zéro mauvaise surprise à l&apos;arrivée. Dédouanement intégral inclus.
               </p>
             </div>
 
-            <div>
-              <div
-                style={{
-                  fontFamily: "var(--c-font-display)",
-                  fontWeight: 700,
-                  fontSize: "1.05rem",
-                  color: "#140D09",
-                  marginBottom: "4px",
-                }}
-              >
-                Pesée Vidéo Certifiée
-              </div>
-              <p style={{ fontSize: "0.82rem", color: "#57534E", margin: 0, lineHeight: 1.4 }}>
+            <div className="guarantee-item">
+              <div className="guarantee-title">Pesée Vidéo Certifiée</div>
+              <p className="guarantee-desc">
                 Colis pesés et filmés en entrepôt dès réception pour votre sérénité.
               </p>
             </div>
 
-            <div>
-              <div
-                style={{
-                  fontFamily: "var(--c-font-display)",
-                  fontWeight: 700,
-                  fontSize: "1.05rem",
-                  color: "#140D09",
-                  marginBottom: "4px",
-                }}
-              >
-                Agence à Abidjan
-              </div>
-              <p style={{ fontSize: "0.82rem", color: "#57534E", margin: 0, lineHeight: 1.4 }}>
+            <div className="guarantee-item">
+              <div className="guarantee-title">Agence à Abidjan</div>
+              <p className="guarantee-desc">
                 Retrait direct à Bingerville Carrefour Safari ou livraison à domicile.
               </p>
             </div>
@@ -172,40 +128,42 @@ export default function HomePage() {
         .home-main-wrapper {
           max-width: 1120px;
           margin: 0 auto;
-          padding: 24px 16px 48px 16px;
+          padding: 24px 16px 40px 16px;
           box-sizing: border-box;
         }
 
         .hero-section {
           text-align: center;
-          margin-bottom: 40px;
+          margin-bottom: 36px;
           position: relative;
         }
 
         .hero-title-container {
           position: relative;
           z-index: 1;
-          max-width: 1040px;
+          max-width: 920px;
           margin: 0 auto;
           padding: 8px 4px 0 4px;
-          overflow: hidden;
         }
 
-        /* Titre sur UNE SEULE LIGNE strictement garanti */
-        .hero-title-single-line {
+        /* Titre sur EXACTEMENT 2 Lignes Équilibrées */
+        .hero-headline-two-lines {
           font-family: var(--c-font-display);
           font-weight: 700;
-          letter-spacing: -0.04em;
+          letter-spacing: -0.035em;
           color: var(--c-text-main);
           margin: 0 auto;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          font-size: clamp(0.92rem, 4.3vw, 2.7rem);
-          line-height: 1.15;
+          font-size: clamp(1.4rem, 4.4vw, 2.8rem);
+          line-height: 1.14;
           text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .hero-line {
           display: block;
-          width: 100%;
+          white-space: nowrap;
         }
 
         .hero-map-wrapper {
@@ -219,7 +177,7 @@ export default function HomePage() {
           overflow: hidden;
           mask-image: linear-gradient(
             to bottom,
-            rgba(0, 0, 0, 0.2) 0%,
+            rgba(0, 0, 0, 0.22) 0%,
             rgba(0, 0, 0, 0.6) 20%,
             #000000 45%,
             #000000 75%,
@@ -227,7 +185,7 @@ export default function HomePage() {
           );
           -webkit-mask-image: linear-gradient(
             to bottom,
-            rgba(0, 0, 0, 0.2) 0%,
+            rgba(0, 0, 0, 0.22) 0%,
             rgba(0, 0, 0, 0.6) 20%,
             #000000 45%,
             #000000 75%,
@@ -237,7 +195,7 @@ export default function HomePage() {
 
         .hero-search-wrapper {
           max-width: 520px;
-          margin: -8px auto 0 auto;
+          margin: -10px auto 0 auto;
           position: relative;
           z-index: 10;
           padding: 0 4px;
@@ -289,14 +247,45 @@ export default function HomePage() {
           transform: translateY(-1px);
         }
 
+        .guarantees-section {
+          margin-top: 16px;
+          padding: 22px 18px;
+          background-color: #FFFFFF;
+          border: 1px solid rgba(28, 25, 23, 0.08);
+          border-radius: 20px;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+        }
+
+        .guarantees-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 18px;
+          text-align: center;
+        }
+
+        .guarantee-title {
+          font-family: var(--c-font-display);
+          font-weight: 700;
+          fontSize: 1rem;
+          color: #140D09;
+          margin-bottom: 3px;
+        }
+
+        .guarantee-desc {
+          font-size: 0.8rem;
+          color: #57534E;
+          margin: 0;
+          line-height: 1.4;
+        }
+
         /* Desktop Spacing */
         @media (min-width: 860px) {
           .home-main-wrapper {
-            padding: 36px 24px 64px 24px;
+            padding: 36px 24px 60px 24px;
           }
 
           .hero-section {
-            margin-bottom: 60px;
+            margin-bottom: 56px;
           }
 
           .hero-map-wrapper {
@@ -321,6 +310,18 @@ export default function HomePage() {
           .hero-search-submit {
             padding: 10px 22px;
             font-size: 0.86rem;
+          }
+
+          .guarantees-section {
+            padding: 26px 24px;
+          }
+
+          .guarantee-title {
+            font-size: 1.05rem;
+          }
+
+          .guarantee-desc {
+            font-size: 0.82rem;
           }
         }
       `}</style>
