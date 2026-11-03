@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aperçu Bento Services · Roum Transit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;700;800&family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #FAF6F0;
+      --espresso: #140D09;
+      --card-dark: #1A130F;
+      --text-muted: #6B635B;
+      --text-light: #948A80;
+      --terracotta: #CC4E16;
+      --font-display: 'Bricolage Grotesque', sans-serif;
+      --font-body: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--espresso);
+      font-family: var(--font-body);
+      padding: 32px 18px 100px 18px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+    }
+
+    /* En-tête de page */
+    .header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .badge-category {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-light);
+      margin-bottom: 12px;
+    }
+
+    .badge-category .dot {
+      color: var(--terracotta);
+    }
+
+    .header-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.8rem, 4vw, 2.7rem);
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      line-height: 1.12;
+      color: var(--espresso);
+      margin-bottom: 12px;
+    }
+
+    .header-desc {
+      font-size: 0.98rem;
+      color: var(--text-muted);
+      max-width: 620px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    /* Grille Bento Asymétrique */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+      margin-bottom: 32px;
+    }
+
+    /* Base des cartes visuelles */
+    .bento-card {
+      position: relative;
+      border-radius: 24px;
+      overflow: hidden;
+      background-color: var(--card-dark);
+      color: #FFFFFF;
+      min-height: 340px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 10px 30px -8px rgba(20, 13, 9, 0.12);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+      cursor: pointer;
+    }
+
+    .bento-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 18px 40px -10px rgba(20, 13, 9, 0.24);
+    }
+
+    .bento-card-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 1;
+      transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .bento-card:hover .bento-card-bg {
+      transform: scale(1.04);
+    }
+
+    .bento-scrim {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      background: linear-gradient(to top, rgba(20, 13, 9, 0.96) 0%, rgba(20, 13, 9, 0.62) 50%, rgba(20, 13, 9, 0.2) 100%);
+      pointer-events: none;
+    }
+
+    .bento-content {
+      position: relative;
+      z-index: 3;
+      padding: 24px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Micro-tag supérieur */
+    .bento-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.88);
+      padding: 5px 12px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      width: max-content;
+    }
+
+    .bento-tag .green-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background-color: #22C55E;
+    }
+
+    /* Typographie des cartes */
+    .bento-title {
+      font-family: var(--font-display);
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      color: #FFFFFF;
+      margin-bottom: 6px;
+    }
+
+    .bento-subtitle {
+      font-size: 0.84rem;
+      color: rgba(255, 255, 255, 0.84);
+      line-height: 1.4;
+      margin-bottom: 14px;
+      max-width: 480px;
+    }
+
+    /* Métrique géante */
+    .bento-stat-highlight {
+      font-family: var(--font-display);
+      font-size: 1.7rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #FFFFFF;
+      margin: 8px 0;
+      line-height: 1;
+    }
+
+    /* Puces légères (zéro cadre) */
+    .bento-bullets {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .bento-bullet {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.92);
+    }
+
+    .bento-bullet-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background-color: #FFA066;
+      flex-shrink: 0;
+    }
+
+    /* Bouton d'action flèche circulaire */
+    .bento-bottom-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .arrow-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+      border: none;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .bento-card:hover .arrow-btn {
+      background: #FFFFFF;
+      color: var(--espresso);
+      transform: scale(1.08);
+    }
+
+    /* Bouton CTA texte blanc sans contour */
+    .bento-cta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border-radius: 9999px;
+      background: #FFFFFF;
+      color: var(--espresso);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-decoration: none;
+      border: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+
+    /* Dispositions spécifiques de la grille Bento */
+    /* Rangée 1 : Alibaba 65% (8 cols) + Aérien 35% (4 cols) */
+    .card-alibaba {
+      grid-column: span 7;
+      min-height: 380px;
+    }
+
+    .card-aerien {
+      grid-column: span 5;
+      min-height: 380px;
+    }
+
+    /* Rangée 2 : Dubaï 40% (5 cols) + Maritime 60% (7 cols) */
+    .card-dubai {
+      grid-column: span 5;
+      min-height: 360px;
+    }
+
+    .card-maritime {
+      grid-column: span 7;
+      min-height: 360px;
+    }
+
+    /* Rangée 3 : Paris 50% (6 cols) + Maroc 50% (6 cols) */
+    .card-paris {
+      grid-column: span 6;
+      min-height: 280px;
+    }
+
+    .card-maroc {
+      grid-column: span 6;
+      min-height: 280px;
+    }
+
+    /* Bloc Alibaba Options intégrées */
+    .options-duo {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 12px 0;
+    }
+
+    .option-box {
+      border-left: 2px solid #FFA066;
+      padding-left: 10px;
+    }
+
+    .option-tag {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #FFA066;
+      display: block;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+    }
+
+    .option-desc {
+      font-size: 0.76rem;
+      color: rgba(255, 255, 255, 0.88);
+      line-height: 1.35;
+    }
+
+    /* Section Étiquette Logistique / Shipping Mark (Design Boarding Pass) */
+    .shipping-pass {
+      margin-top: 18px;
+      background-color: #FFFFFF;
+      border-radius: 20px;
+      padding: 24px 28px;
+      box-shadow: 0 4px 20px rgba(20, 13, 9, 0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .pass-left {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .pass-barcode {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background-color: var(--espresso);
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
+
+    .pass-title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--espresso);
+      margin-bottom: 4px;
+    }
+
+    .pass-format {
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--terracotta);
+      letter-spacing: 0.04em;
+    }
+
+    .pass-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 9999px;
+      background-color: var(--espresso);
+      color: #FAF6F0;
+      border: none;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+
+    .pass-btn:hover {
+      background-color: #2C1E17;
+    }
+
+    /* Responsive Mobile */
+    @media (max-width: 900px) {
+      .card-alibaba, .card-aerien, .card-dubai, .card-maritime, .card-paris, .card-maroc {
+        grid-column: span 12 !important;
+        min-height: 320px;
+      }
+      .options-duo {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .bento-grid {
+        gap: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- En-tête éditorial style Roum Transit -->
+    <header class="header">
+      <div class="badge-category">
+        <span class="dot">●</span>
+        <span>01 / CATALOGUE LOGISTIQUE OFFICIEL</span>
+      </div>
+      <h1 class="header-title">Nos Voies & Services d'Acheminement.</h1>
+      <p class="header-desc">
+        Règlement fournisseurs en Chine, fret maritime et aérien direct. 
+        <strong>Dédouanement 100% inclus</strong> jusqu'à votre destination finale.
+      </p>
+    </header>
+
+    <!-- Grille Bento Asymétrique (Jeu de formats 65% / 35% et alternance) -->
+    <div class="bento-grid">
+
+      <!-- CARTE 1 (60% LARGEUR) : CENTRALE D'ACHAT ALIBABA & 1688 -->
+      <article class="bento-card card-alibaba">
+        <img src="/images/services/achats.jpg" alt="Centrale d'Achat Alibaba" class="bento-card-bg">
+        <div class="bento-scrim"></div>
+        <div class="bento-content">
+          <div>
+            <div class="bento-tag">
+              <span class="green-dot"></span>
+              <span>ALIBABA, 1688 & TAOBAO · PAIEMENT RMB</span>
+            </div>
+          </div>
+          <div>
+            <h2 class="bento-title">Centrale d'Achat</h2>
+            <p class="bento-subtitle">
+              Achetez sans carte bancaire internationale. Nous payons vos fournisseurs en Yuans sous 24h et contrôlons vos cartons en magasin.
+            </p>
+
+            <div class="options-duo">
+              <div class="option-box">
+                <span class="option-tag">Option 1 · Sans fournisseur</span>
+                <p class="option-desc">Sourcing produit & négociation directe en usine.</p>
+              </div>
+              <div class="option-box">
+                <span class="option-tag">Option 2 · Avec fournisseur</span>
+                <p class="option-desc">Règlement direct de votre proforma en Yuans RMB.</p>
+              </div>
+            </div>
+
+            <div class="bento-bottom-row">
+              <div class="bento-bullet">
+                <span class="bento-bullet-dot"></span>
+                <span>Paiement client : <strong>100% Mobile Money (Wave, Orange, MTN)</strong></span>
+              </div>
+              <button class="bento-cta-pill">Lancer une commande →</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- CARTE 2 (40% LARGEUR, CARRÉE ÉLANCÉE) : VOIE AÉRIENNE EXPRESS -->
+      <article class="bento-card card-aerien">
+        <img src="/images/services/aerien.jpg" alt="Fret Aérien Express" class="bento-card-bg">
+        <div class="bento-scrim"></div>
+        <div class="bento-content">
+          <div>
+            <div class="bento-tag">
+              <span class="green-dot"></span>
+              <span>AVION EXPRESS</span>
+            </div>
+          </div>
+          <div>
+            <h2 class="bento-title">Voie Aérienne</h2>
+            <div class="bento-stat-highlight">4 À 5 JOURS</div>
+            <p class="bento-subtitle" style="margin-bottom: 8px;">
+              Chine, Dubaï, France & Maroc direct. Plis urgents, téléphones & colis réguliers.
+            </p>
+
+            <div class="bento-bullets">
+              <div class="bento-bullet">
+                <span class="bento-bullet-dot"></span>
+                <span>Pesée vidéo certifiée dès réception en entrepôt</span>
+              </div>
+              <div class="bento-bullet">
+                <span class="bento-bullet-dot"></span>
+                <span>Dédouanement complet inclus au kilo</span>
+              </div>
+            </div>
+
+            <div class="bento-bottom-row">
+              <span style="font-size: 0.76rem; color: rgba(255,255,255,0.7);">Départs hebdos</span>
+              <div class="arrow-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 7h10v10M17 7L7 17"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- CARTE 3 (40% LARGEUR COMPACTE) : DUBAÏ DEIRA -->
+      <article class="bento-card card-dubai">
+        <div class="bento-scrim" style="background: linear-gradient(135deg, rgba(35, 23, 16, 0.96) 0%, rgba(20, 13, 9, 0.98) 100%);"></div>
+        <div class="bento-content">
+          <div>
+            <div class="bento-tag">
+              <span>🇦🇪 ÉMIRATS ARABES UNIS</span>
+            </div>
+          </div>
+          <div>
+            <h2 class="bento-title">Comptoir Dubaï</h2>
+            <div class="bento-stat-highlight" style="font-size: 1.45rem; color: #FFA066;">DEIRA WHOLESALE</div>
+            <p class="bento-subtitle">
+              Téléphones neufs & reconditionnés, PC et cosmétiques. Ramassage direct dans les boutiques de Deira et expédition express.
+            </p>
+            <div class="bento-bullets">
+              <div class="bento-bullet">
+                <span class="bento-bullet-dot"></span>
+                <span>Transit express 4 à 6 jours</span>
+              </div>
+              <div class="bento-bullet">
+                <span class="bento-bullet-dot"></span>
+                <span>Groupage maritime disponible</span>
+              </div>
+            </div>
+
+            <div class="bento-bottom-row">
+              <span style="font-size: 0.76rem; color: rgba(255,255,255,0.7);">Hub Deira Creek</span>
+              <div class="arrow-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 7h10v10M17 7L7 17"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- CARTE 4 (60% LARGEUR PANORAMIQUE) : VOIE MARITIME CBM -->
+      <article class="bento-card card-maritime">
+        <img src="/images/services/maritime.jpg" alt="Fret Maritime Groupage" class="bento-card-bg">
+        <div class="bento-scrim"></div>
+        <div class="bento-content">
+          <div>
+            <div class="bento-tag">
+              <span class="green-dot"></span>
+              <span>BATEAU · GROUPAGE CBM & FCL</span>
+            </div>
+          </div>
+          <div>
+            <h2 class="bento-title">Voie Maritime</h2>
+            <div class="bento-stat-highlight">DÈS 300 000 FCFA / M³</div>
+            <p class="bento-subtitle">
+              Acheminement économique par conteneur ou groupage au m³ depuis Guangzhou, Ningbo et Yiwu. 
+              Idéal pour machines, matières premières et commerces.
+            </p>
+
+            <div class="options-duo" style="margin-bottom: 12px;">
+              <div class="bento-bullet">
+                <span class="bento-bullet-dot"></span>
+                <span>Délai moyen : 35 à 45 jours</span>
+              </div>
+              <div class="bento-bullet">
+                <span class="bento-bullet-dot"></span>
+                <span>Douane et taxes portuaires incluses</span>
+              </div>
+            </div>
+
+            <div class="bento-bottom-row">
+              <span style="font-size: 0.76rem; color: rgba(255,255,255,0.7);">Scellés numérotés & suivi</span>
+              <button class="bento-cta-pill">Voir les tarifs maritimes →</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- CARTE 5 (50% LARGEUR) : LIGNE PARIS ↔ AFRIQUE -->
+      <article class="bento-card card-paris">
+        <div class="bento-scrim" style="background: linear-gradient(135deg, rgba(28, 20, 16, 0.95) 0%, rgba(18, 12, 9, 0.98) 100%);"></div>
+        <div class="bento-content">
+          <div>
+            <div class="bento-tag">
+              <span>🇫🇷 LIGNE FRANCE ↔ AFRIQUE</span>
+            </div>
+          </div>
+          <div>
+            <h2 class="bento-title" style="font-size: 1.35rem;">Colis Paris ↔ Afrique</h2>
+            <div class="bento-stat-highlight" style="font-size: 1.3rem;">8 500 FCFA / KG (12 €)</div>
+            <p class="bento-subtitle">
+              Plis express, effets personnels, produits parapharmacie. Dépôt facile en Île-de-France ou ramassage.
+            </p>
+            <div class="bento-bottom-row">
+              <span style="font-size: 0.76rem; color: rgba(255,255,255,0.7);">Départs réguliers</span>
+              <div class="arrow-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 7h10v10M17 7L7 17"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- CARTE 6 (50% LARGEUR) : LIGNE MAROC CASABLANCA -->
+      <article class="bento-card card-maroc">
+        <div class="bento-scrim" style="background: linear-gradient(135deg, rgba(28, 20, 16, 0.95) 0%, rgba(18, 12, 9, 0.98) 100%);"></div>
+        <div class="bento-content">
+          <div>
+            <div class="bento-tag">
+              <span>🇲🇦 LIGNE MAROC · CASABLANCA</span>
+            </div>
+          </div>
+          <div>
+            <h2 class="bento-title" style="font-size: 1.35rem;">Hub Maghreb ➔ Afrique</h2>
+            <div class="bento-stat-highlight" style="font-size: 1.15rem; color: #FFA066;">5 PAYS DESSERVIS</div>
+            <p class="bento-subtitle">
+              Liaison directe depuis Casablanca vers Abidjan, Dakar, Bamako, Ouagadougou et Libreville.
+            </p>
+            <div class="bento-bottom-row">
+              <span style="font-size: 0.76rem; color: rgba(255,255,255,0.7);">Groupage régulier</span>
+              <div class="arrow-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 7h10v10M17 7L7 17"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+    </div>
+
+    <!-- ÉTIQUETTE LOGISTIQUE / SHIPPING MARK (Format Boarding Pass épuré) -->
+    <div class="shipping-pass">
+      <div class="pass-left">
+        <div class="pass-barcode">TAG</div>
+        <div>
+          <div class="pass-title">Instruction de marquage obligatoire sur vos cartons</div>
+          <div class="pass-format">ROUM / [VOTRE-NOM] / [VOTRE-VILLE] / [AIR ou BATEAU]</div>
+        </div>
+      </div>
+      <button class="pass-btn" onclick="alert('Modèle copié dans le presse-papier !')">
+        <span>Copier l'étiquette modèle</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      </button>
+    </div>
+
+  </div>
+
+</body>
+</html>

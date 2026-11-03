@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ShoppingBag,
-  PackageCheck,
   Plane,
   Ship,
   CheckCircle2,
@@ -13,61 +12,45 @@ import {
   MessageCircle,
   Copy,
   Check,
-  Zap,
-  BatteryCharging,
-  Laptop,
-  FileText,
   ShieldCheck,
   MapPin,
   Clock,
-  Sparkles,
-  Info,
+  X,
+  ExternalLink,
 } from "lucide-react";
 import { ScrollReveal } from "@/components/ScrollReveal";
-import { CircularFlag } from "@/components/CircularFlag";
 import {
   getLiveTariffs,
   findTariff,
-  formatTariffPrice,
   saveClientRequest,
   OfficialTariff,
 } from "@/shared";
-
-type ServiceTab = "all" | "transit" | "alibaba" | "colis" | "china" | "dubai" | "morocco" | "france";
 
 function ServicesContent() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
 
-  // Filtre actif parmi les 3 grandes catégories
-  const [activeTab, setActiveTab] = useState<ServiceTab>("all");
-
-  // Formulaire actuellement ouvert (accordéon)
-  const [openedForm, setOpenedForm] = useState<"alibaba" | "forwarding" | null>(null);
-
   // Tarifs en direct synchronisés avec le Dashboard Admin
   const [tariffs, setTariffs] = useState<OfficialTariff[]>(() => getLiveTariffs());
 
+  // Modale de demande express
+  const [activeModal, setActiveModal] = useState<"alibaba" | "forwarding" | null>(null);
+
+  // Entrepôt actif dans la section Shipping Mark
+  const [activeWarehouse, setActiveWarehouse] = useState<"guangzhou" | "yiwu" | "dubai" | "paris">("guangzhou");
+  const [copiedAddr, setCopiedAddr] = useState(false);
+  const [copiedMark, setCopiedMark] = useState(false);
+
+  // Synchronisation des paramètres d'URL (?tab=alibaba ou ?tab=forwarding)
   useEffect(() => {
     if (tabParam === "alibaba") {
-      setActiveTab("alibaba");
-      setOpenedForm("alibaba");
-    } else if (tabParam === "transit") {
-      setActiveTab("transit");
-    } else if (tabParam === "colis" || tabParam === "france") {
-      setActiveTab("colis");
-    } else if (tabParam === "forwarding" || tabParam === "chine" || tabParam === "china") {
-      setActiveTab("china");
-      setOpenedForm("forwarding");
-    } else if (tabParam === "dubai") {
-      setActiveTab("dubai");
-      setOpenedForm("forwarding");
-    } else if (tabParam === "morocco" || tabParam === "maroc") {
-      setActiveTab("morocco");
+      setActiveModal("alibaba");
+    } else if (tabParam === "forwarding" || tabParam === "chine" || tabParam === "dubai") {
+      setActiveModal("forwarding");
     }
   }, [tabParam]);
 
-  // Synchronisation continue en temps réel avec le Dashboard Admin (écoute les changements de tarifs)
+  // Synchronisation avec l'admin storage
   useEffect(() => {
     const handleSync = () => {
       setTariffs(getLiveTariffs());
@@ -76,7 +59,7 @@ function ServicesContent() {
     return () => window.removeEventListener("storage", handleSync);
   }, []);
 
-  // --- ÉTATS DU FORMULAIRE ALIBABA ---
+  // --- FORMULAIRE ALIBABA ---
   const [aliProductUrl, setAliProductUrl] = useState("");
   const [aliQuantity, setAliQuantity] = useState("");
   const [aliSpecs, setAliSpecs] = useState("");
@@ -87,30 +70,11 @@ function ServicesContent() {
   const [aliSuccess, setAliSuccess] = useState<{ ref: string; waUrl: string } | null>(null);
   const [aliError, setAliError] = useState("");
 
-  // --- ÉTATS DU FORMULAIRE ACHAT ET ENVOIS (CHINE, DUBAÏ, MAROC, FRANCE) ---
-  const [fwdOrigin, setFwdOrigin] = useState("Chine");
-  const [fwdDestination, setFwdDestination] = useState("Côte d'Ivoire");
-  const [fwdTransportMode, setFwdTransportMode] = useState<"AIR" | "SEA">("AIR");
-  const [fwdDescription, setFwdDescription] = useState("");
-  const [fwdName, setFwdName] = useState("");
-  const [fwdPhone, setFwdPhone] = useState("");
-  const [fwdSubmitting, setFwdSubmitting] = useState(false);
-  const [fwdSuccess, setFwdSuccess] = useState<{
-    ref: string;
-    waUrl: string;
-    shippingMark: string;
-    warehouseAddress: string;
-  } | null>(null);
-  const [fwdError, setFwdError] = useState("");
-  const [copiedMark, setCopiedMark] = useState(false);
-  const [copiedAddr, setCopiedAddr] = useState(false);
-
-  // Soumission Formulaire Alibaba
   const handleAlibabaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAliError("");
     if (!aliName.trim() || !aliPhone.trim()) {
-      setAliError("Veuillez renseigner votre Nom et votre numéro WhatsApp.");
+      setAliError("Veuillez renseigner votre Nom et numéro WhatsApp.");
       return;
     }
     setAliSubmitting(true);
@@ -126,7 +90,6 @@ function ServicesContent() {
         product_specs: aliSpecs.trim(),
         cargo_type: `Achat Alibaba : ${aliProductUrl.trim() || "Articles divers"}`,
       });
-
       setAliSuccess({ ref: res.reference, waUrl: res.whatsappUrl });
     } catch (err: any) {
       setAliError(err.message || "Erreur de connexion. Veuillez réessayer.");
@@ -135,12 +98,22 @@ function ServicesContent() {
     }
   };
 
-  // Soumission Formulaire Expédition et Transit
+  // --- FORMULAIRE FORWARDING / TRANSIT DIRECT ---
+  const [fwdOrigin, setFwdOrigin] = useState("Chine");
+  const [fwdDestination, setFwdDestination] = useState("Côte d'Ivoire");
+  const [fwdMode, setFwdMode] = useState<"AIR" | "SEA">("AIR");
+  const [fwdDescription, setFwdDescription] = useState("");
+  const [fwdName, setFwdName] = useState("");
+  const [fwdPhone, setFwdPhone] = useState("");
+  const [fwdSubmitting, setFwdSubmitting] = useState(false);
+  const [fwdSuccess, setFwdSuccess] = useState<{ ref: string; waUrl: string } | null>(null);
+  const [fwdError, setFwdError] = useState("");
+
   const handleForwardingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFwdError("");
     if (!fwdName.trim() || !fwdPhone.trim()) {
-      setFwdError("Veuillez renseigner votre Nom et votre numéro WhatsApp.");
+      setFwdError("Veuillez renseigner votre Nom et numéro WhatsApp.");
       return;
     }
     setFwdSubmitting(true);
@@ -156,16 +129,10 @@ function ServicesContent() {
         client_phone: fwdPhone.trim(),
         origin_country: fwdOrigin,
         destination_country: fwdDestination,
-        shipping_mode_type: fwdTransportMode,
+        shipping_mode_type: fwdMode,
         cargo_type: fwdDescription.trim() || "Colis et marchandises ordinaires",
       });
-
-      setFwdSuccess({
-        ref: res.reference,
-        waUrl: res.whatsappUrl,
-        shippingMark: res.shippingMark,
-        warehouseAddress: res.warehouseAddress,
-      });
+      setFwdSuccess({ ref: res.reference, waUrl: res.whatsappUrl });
     } catch (err: any) {
       setFwdError(err.message || "Erreur lors de l'enregistrement. Veuillez réessayer.");
     } finally {
@@ -173,1330 +140,1487 @@ function ServicesContent() {
     }
   };
 
-  const copyToClipboard = (text: string, isAddress: boolean = false) => {
+  // Copie dans le presse-papier
+  const copyToClipboard = (text: string, isAddr: boolean) => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(text);
-      if (isAddress) {
+      if (isAddr) {
         setCopiedAddr(true);
-        setTimeout(() => setCopiedAddr(false), 2000);
+        setTimeout(() => setCopiedAddr(false), 2200);
       } else {
         setCopiedMark(true);
-        setTimeout(() => setCopiedMark(false), 2000);
+        setTimeout(() => setCopiedMark(false), 2200);
       }
     }
   };
 
-  // --- TARIFS DYNAMIQUES EXTRAITS DE L'ADMIN EN TEMPS RÉEL ---
-  // Chine
-  const cnNormal = findTariff(tariffs, "chine", "normale");
-  const cnExpress = findTariff(tariffs, "chine", "express");
-  const cnBattery = findTariff(tariffs, "chine", "batterie");
-  const cnTech = findTariff(tariffs, "chine", "ordinateur");
-  const cnSea = findTariff(tariffs, "chine", "bateau");
-
-  // Dubaï
-  const aeExpress = findTariff(tariffs, "émirat", "express") || findTariff(tariffs, "duba", "express");
-  const aeNormal = findTariff(tariffs, "émirat", "normale") || findTariff(tariffs, "duba", "normale");
-  const aeSpecial = findTariff(tariffs, "émirat", "spécial") || findTariff(tariffs, "duba", "spécial");
-  const aeSea = findTariff(tariffs, "émirat", "bateau") || findTariff(tariffs, "duba", "bateau");
-
-  // Maroc
-  const maCi = findTariff(tariffs, "maroc", "abidjan") || findTariff(tariffs, "maroc", "côte d'ivoire");
-  const maSn = findTariff(tariffs, "maroc", "dakar") || findTariff(tariffs, "maroc", "sénégal");
-  const maMl = findTariff(tariffs, "maroc", "bamako") || findTariff(tariffs, "maroc", "mali");
-  const maBf = findTariff(tariffs, "maroc", "ouaga") || findTariff(tariffs, "maroc", "burkina");
-  const maGa = findTariff(tariffs, "maroc", "libreville") || findTariff(tariffs, "maroc", "gabon");
-
-  // France
-  const frCiDivers = findTariff(tariffs, "france", "divers");
-  const frCiCosm = findTariff(tariffs, "france", "cosmétique");
-  const frCiDoc = findTariff(tariffs, "france", "document");
+  // Données des entrepôts
+  const WAREHOUSES = {
+    guangzhou: {
+      city: "Guangzhou (Chine)",
+      name: "Magasin Central Guangzhou Baiyun",
+      chinese: "广州市白云区石井街道大冈东街42号 (ROUM TRANSIT)",
+      contact: "Contact Réception : +86 138 0000 0000 · Scellés Roum",
+      mark: "ROUM / [VOTRE-NOM] / [VOTRE-VILLE] / [AIR ou BATEAU]",
+    },
+    yiwu: {
+      city: "Yiwu (Chine)",
+      name: "Entrepôt Yiwu International Trade City",
+      chinese: "浙江省金华市义乌市稠江街道长春小区 (ROUM TRANSIT)",
+      contact: "Contact Réception : +86 139 1111 2222 · Hub Yiwu",
+      mark: "ROUM / [VOTRE-NOM] / [VOTRE-VILLE] / [AIR ou BATEAU]",
+    },
+    dubai: {
+      city: "Dubaï (Émirats Arabes Unis)",
+      name: "Comptoir Dubaï Deira Creek",
+      chinese: "Al Sabkha Road, Deira Wholesale Market, Dubai, UAE",
+      contact: "Contact Dubaï : +971 50 000 0000 · Hub Deira",
+      mark: "ROUM / [VOTRE-NOM] / [VOTRE-VILLE] / AIR-DXB",
+    },
+    paris: {
+      city: "Paris (France)",
+      name: "Point Collecte Île-de-France",
+      chinese: "Plateforme Cargo Roissy CDG / Dépôt Paris Île-de-France",
+      contact: "Permanence France : +33 7 00 00 00 00",
+      mark: "ROUM / [VOTRE-NOM] / [VOTRE-VILLE] / AIR-PARIS",
+    },
+  };
 
   return (
-    <div
-      style={{
-        backgroundColor: "transparent",
-        color: "var(--c-text-main)",
-        minHeight: "calc(100vh - 110px)",
-        padding: "24px 16px 110px 16px",
-        boxSizing: "border-box",
-      }}
-    >
-      <div style={{ maxWidth: "1120px", margin: "0 auto" }}>
+    <div className="services-page-root">
+      <div className="services-container">
         <ScrollReveal>
-          {/* En-tête éditorial style Linea */}
-          <div style={{ textAlign: "center", marginBottom: "36px" }}>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                fontSize: "0.76rem",
-                fontFamily: "var(--c-font-mono)",
-                fontWeight: 700,
-                color: "var(--c-text-light)",
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                marginBottom: "12px",
-              }}
-            >
-              <span style={{ color: "var(--c-accent-red)" }}>●</span>
-              <span>SERVICES & GRILLES CARGO OFFICIELLES</span>
+          {/* ========================================================
+              EN-TÊTE ÉDITORIAL LUXE (STYLE PAGE D'ACCUEIL)
+             ======================================================== */}
+          <header className="services-header">
+            <div className="services-badge-category">
+              <span className="dot">●</span>
+              <span>01 / CATALOGUE LOGISTIQUE OFFICIEL</span>
             </div>
-
-            <h1
-              style={{
-                fontFamily: "var(--c-font-display)",
-                fontSize: "clamp(1.4rem, 4.4vw, 2.8rem)",
-                fontWeight: 700,
-                letterSpacing: "-0.035em",
-                lineHeight: 1.15,
-                color: "var(--c-text-main)",
-                margin: "0 0 16px 0",
-              }}
-            >
-              Tous nos Services de Transit & Centrale d&apos;Achat
-            </h1>
-
-            <p style={{ fontSize: "1.06rem", color: "var(--c-text-muted)", maxWidth: "680px", margin: "0 auto", lineHeight: 1.6 }}>
-              Chine, Dubaï, Maroc et France vers la Côte d&apos;Ivoire et l&apos;Afrique.
-              <strong> Douane entièrement comprise</strong>, sans frais caché à l&apos;arrivée.
+            <h1 className="services-title">Nos Voies & Services d&apos;Acheminement.</h1>
+            <p className="services-desc">
+              Règlement de vos usines chinoises en Yuans, fret maritime et fret aérien direct.
+              <strong> Dédouanement 100% inclus</strong> jusqu&apos;à votre destination finale.
             </p>
-          </div>
+          </header>
 
-          {/* Filtres par boutons "Pills" pour naviguer facilement */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexWrap: "wrap",
-              gap: "8px",
-              marginBottom: "36px",
-            }}
-          >
-            {[
-              { id: "all", label: "Tous nos Services" },
-              { id: "alibaba", label: "Achat Assisté Alibaba & 1688" },
-              { id: "transit", label: "Transit International (Chine, Dubaï, Maroc)" },
-              { id: "colis", label: "Envoi de Colis (Paris ↔ Abidjan)" },
-            ].map((btn) => (
-              <button
-                key={btn.id}
-                type="button"
-                onClick={() => setActiveTab(btn.id as ServiceTab)}
-                style={{
-                  padding: "9px 18px",
-                  borderRadius: "9999px",
-                  fontSize: "0.84rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  border: activeTab === btn.id ? "1px solid var(--c-text-main)" : "1px solid var(--c-border)",
-                  backgroundColor: activeTab === btn.id ? "var(--c-text-main)" : "#FFFFFF",
-                  color: activeTab === btn.id ? "#FAF5F0" : "var(--c-text-muted)",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                {btn.label}
-              </button>
-            ))}
-          </div>
+          {/* ========================================================
+              GRILLE BENTO ASYMÉTRIQUE DYNAMIQUE
+             ======================================================== */}
+          <div className="bento-grid">
+            {/* CARTE 1 (60% LARGEUR) : CENTRALE D'ACHAT ALIBABA & 1688 */}
+            <article
+              className="bento-card card-alibaba"
+              onClick={() => setActiveModal("alibaba")}
+            >
+              <img
+                src="/images/services/achats.jpg"
+                alt="Centrale d'Achat Alibaba"
+                className="bento-card-bg"
+              />
+              <div className="bento-scrim" />
+              <div className="bento-content">
+                <div>
+                  <div className="bento-tag">
+                    <span className="green-dot" />
+                    <span>ALIBABA, 1688 &amp; TAOBAO · PAIEMENT RMB</span>
+                  </div>
+                </div>
 
-          {/* Bandeau d'engagement sobre intégré dans le flux sans aucun cadran lourd */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: "18px",
-              padding: "20px 0",
-              borderTop: "1px solid var(--c-border)",
-              borderBottom: "1px solid var(--c-border)",
-              marginBottom: "44px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <ShieldCheck size={20} color="#166534" />
-              <div>
-                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--c-text-main)" }}>Douane 100% comprise</div>
-                <div style={{ fontSize: "0.78rem", color: "var(--c-text-muted)" }}>Zéro mauvaise surprise à la réception</div>
+                <div>
+                  <h2 className="bento-card-title">Centrale d&apos;Achat</h2>
+                  <p className="bento-card-subtitle">
+                    Achetez sans carte bancaire internationale. Nous payons votre fournisseur chinois en Yuans sous 24h et contrôlons vos colis en entrepôt.
+                  </p>
+
+                  <div className="options-duo">
+                    <div className="option-box">
+                      <span className="option-tag">Option 1 · Sans fournisseur</span>
+                      <p className="option-desc">Sourcing produit &amp; négociation directe en usine.</p>
+                    </div>
+                    <div className="option-box">
+                      <span className="option-tag">Option 2 · Avec fournisseur</span>
+                      <p className="option-desc">Règlement direct de votre proforma en Yuans RMB.</p>
+                    </div>
+                  </div>
+
+                  <div className="bento-bottom-row">
+                    <div className="bento-bullet">
+                      <span className="bento-bullet-dot" />
+                      <span>Règlement client : <strong>100% Mobile Money (Wave, Orange, MTN)</strong></span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveModal("alibaba");
+                      }}
+                      className="bento-cta-pill"
+                    >
+                      <span>Lancer une commande</span>
+                      <ArrowRight size={14} />
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <MapPin size={20} color="var(--c-text-main)" />
-              <div>
-                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--c-text-main)" }}>Retrait ou Livraison</div>
-                <div style={{ fontSize: "0.78rem", color: "var(--c-text-muted)" }}>Agence de destination ou domicile</div>
+            </article>
+
+            {/* CARTE 2 (40% LARGEUR, CARRÉE ÉLANCÉE) : VOIE AÉRIENNE EXPRESS */}
+            <article className="bento-card card-aerien">
+              <img
+                src="/images/services/aerien.jpg"
+                alt="Fret Aérien Express"
+                className="bento-card-bg"
+              />
+              <div className="bento-scrim" />
+              <div className="bento-content">
+                <div>
+                  <div className="bento-tag">
+                    <span className="green-dot" />
+                    <span>AVION EXPRESS</span>
+                  </div>
+                </div>
+
+                <div>
+                  <h2 className="bento-card-title">Voie Aérienne</h2>
+                  <div className="bento-stat-highlight">4 À 5 JOURS</div>
+                  <p className="bento-card-subtitle" style={{ marginBottom: "8px" }}>
+                    Chine, Dubaï, France &amp; Maroc direct. Plis urgents, téléphones &amp; colis réguliers.
+                  </p>
+
+                  <div className="bento-bullets">
+                    <div className="bento-bullet">
+                      <span className="bento-bullet-dot" />
+                      <span>Pesée vidéo certifiée dès réception en magasin</span>
+                    </div>
+                    <div className="bento-bullet">
+                      <span className="bento-bullet-dot" />
+                      <span>Dédouanement complet inclus au kilo</span>
+                    </div>
+                  </div>
+
+                  <div className="bento-bottom-row">
+                    <span style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.72)" }}>
+                      Départs hebdomadaires
+                    </span>
+                    <Link
+                      href="/tariffs?mode=AIR"
+                      className="arrow-btn"
+                      title="Voir les tarifs aériens"
+                      aria-label="Voir les tarifs aériens"
+                    >
+                      <ArrowRight size={17} strokeWidth={2.4} />
+                    </Link>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <Clock size={20} color="var(--c-text-main)" />
-              <div>
-                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--c-text-main)" }}>Délais garantis</div>
-                <div style={{ fontSize: "0.78rem", color: "var(--c-text-muted)" }}>Avion 4 à 6 jours · Bateau régulier</div>
+            </article>
+
+            {/* CARTE 3 (40% LARGEUR COMPACTE) : DUBAÏ DEIRA */}
+            <article
+              className="bento-card card-dubai"
+              onClick={() => {
+                setFwdOrigin("Dubaï (Émirats Arabes Unis)");
+                setActiveModal("forwarding");
+              }}
+            >
+              <div
+                className="bento-scrim"
+                style={{
+                  background:
+                    "linear-gradient(135deg, rgba(35, 23, 16, 0.96) 0%, rgba(20, 13, 9, 0.98) 100%)",
+                }}
+              />
+              <div className="bento-content">
+                <div>
+                  <div className="bento-tag">
+                    <span>🇦🇪 ÉMIRATS ARABES UNIS</span>
+                  </div>
+                </div>
+
+                <div>
+                  <h2 className="bento-card-title">Comptoir Dubaï</h2>
+                  <div className="bento-stat-highlight" style={{ fontSize: "1.45rem", color: "#FFA066" }}>
+                    DEIRA WHOLESALE
+                  </div>
+                  <p className="bento-card-subtitle">
+                    Téléphones neufs &amp; reconditionnés, PC et cosmétiques. Ramassage direct dans les boutiques de Deira et expédition express.
+                  </p>
+
+                  <div className="bento-bullets">
+                    <div className="bento-bullet">
+                      <span className="bento-bullet-dot" />
+                      <span>Transit express 4 à 6 jours ouvrés</span>
+                    </div>
+                    <div className="bento-bullet">
+                      <span className="bento-bullet-dot" />
+                      <span>Groupage maritime disponible</span>
+                    </div>
+                  </div>
+
+                  <div className="bento-bottom-row">
+                    <span style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.72)" }}>
+                      Hub Deira Creek
+                    </span>
+                    <div className="arrow-btn">
+                      <ArrowRight size={17} strokeWidth={2.4} />
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            </article>
 
-          {/* LISTE DES 5 GRANDS SERVICES EXACTS DU DASHBOARD ADMIN */}
-          <div style={{ display: "grid", gap: "28px", marginBottom: "44px" }}>
-            {/* ========================================================
-                1. SERVICE ALIBABA : ACHAT ASSISTÉ & PAIEMENT FOURNISSEUR
-               ======================================================== */}
-            {(activeTab === "all" || activeTab === "alibaba") && (
-              <article
+            {/* CARTE 4 (60% LARGEUR PANORAMIQUE) : VOIE MARITIME CBM */}
+            <article className="bento-card card-maritime">
+              <img
+                src="/images/services/maritime.jpg"
+                alt="Fret Maritime Groupage"
+                className="bento-card-bg"
+              />
+              <div className="bento-scrim" />
+              <div className="bento-content">
+                <div>
+                  <div className="bento-tag">
+                    <span className="green-dot" />
+                    <span>BATEAU · GROUPAGE CBM &amp; FCL</span>
+                  </div>
+                </div>
+
+                <div>
+                  <h2 className="bento-card-title">Voie Maritime</h2>
+                  <div className="bento-stat-highlight">DÈS 300 000 FCFA / M³</div>
+                  <p className="bento-card-subtitle">
+                    Acheminement économique par conteneur complet ou groupage au m³ depuis Guangzhou, Ningbo et Yiwu.
+                    Idéal pour machines industrielles, matières premières et commerces.
+                  </p>
+
+                  <div className="options-duo" style={{ marginBottom: "10px" }}>
+                    <div className="bento-bullet">
+                      <span className="bento-bullet-dot" />
+                      <span>Délai moyen : 35 à 45 jours</span>
+                    </div>
+                    <div className="bento-bullet">
+                      <span className="bento-bullet-dot" />
+                      <span>Douane &amp; taxes de port incluses</span>
+                    </div>
+                  </div>
+
+                  <div className="bento-bottom-row">
+                    <span style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.72)" }}>
+                      Scellés numérotés &amp; suivi en direct
+                    </span>
+                    <Link href="/tariffs?mode=SEA" className="bento-cta-pill">
+                      <span>Voir les tarifs maritimes</span>
+                      <ArrowRight size={14} />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            {/* CARTE 5 (50% LARGEUR) : LIGNE PARIS ↔ AFRIQUE */}
+            <article
+              className="bento-card card-paris"
+              onClick={() => {
+                setFwdOrigin("France (Paris)");
+                setActiveModal("forwarding");
+              }}
+            >
+              <div
+                className="bento-scrim"
                 style={{
-                  backgroundColor: "#FFFFFF",
-                  border: openedForm === "alibaba" ? "1px solid var(--c-text-main)" : "1px solid var(--c-border)",
-                  borderRadius: "14px",
-                  padding: "32px 28px",
-                  boxShadow: "0 2px 10px rgba(27, 20, 17, 0.03)",
+                  background:
+                    "linear-gradient(135deg, rgba(28, 20, 16, 0.95) 0%, rgba(18, 12, 9, 0.98) 100%)",
                 }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "14px", marginBottom: "18px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                    <div style={{ width: "46px", height: "46px", borderRadius: "10px", backgroundColor: "var(--c-text-main)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <ShoppingBag size={22} color="#FFFFFF" />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "0.74rem", fontFamily: "var(--c-font-mono)", fontWeight: 700, textTransform: "uppercase", color: "var(--c-text-light)", letterSpacing: "0.08em" }}>
-                        Service 02 · Centrale d&apos;Achat
-                      </div>
-                      <h2 style={{ fontSize: "1.4rem", fontWeight: 700, color: "var(--c-text-main)", margin: "3px 0 0 0", fontFamily: "var(--c-font-display)", letterSpacing: "-0.03em" }}>
-                        Commander sur Alibaba (Nous payons votre fournisseur)
-                      </h2>
-                    </div>
-                  </div>
-
-                  <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--c-text-main)", backgroundColor: "var(--c-bg)", border: "1px solid var(--c-border)", padding: "5px 12px", borderRadius: "9999px" }}>
-                    Paiement en Yuans (RMB) garanti
-                  </span>
-                </div>
-
-                <p style={{ fontSize: "0.96rem", color: "var(--c-text-muted)", lineHeight: 1.6, margin: "0 0 20px 0", maxWidth: "860px" }}>
-                  Vous avez repéré un article sur <strong>Alibaba, Taobao ou 1688</strong> mais vous n&apos;avez pas de moyen de paiement en Chine ?
-                  Roum Transit paie votre fournisseur directement en Yuans chinois (RMB), réceptionne vos colis dans nos magasins de Guangzhou ou Yiwu,
-                  vérifie la conformité et vous livre en toute sécurité à Abidjan et partout en Afrique de l&apos;Ouest.
-                </p>
-
-                {/* Détails de ce qui est inclus */}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                    gap: "12px",
-                    backgroundColor: "var(--c-bg)",
-                    border: "1px solid var(--c-border)",
-                    padding: "16px",
-                    borderRadius: "10px",
-                    marginBottom: "22px",
-                  }}
-                >
-                  <div style={{ fontSize: "0.84rem", color: "var(--c-text-muted)" }}>
-                    <strong style={{ color: "var(--c-text-main)" }}>1. Négociation & Paiement :</strong> Règlement direct de l&apos;usine chinoise.
-                  </div>
-                  <div style={{ fontSize: "0.84rem", color: "var(--c-text-muted)" }}>
-                    <strong style={{ color: "var(--c-text-main)" }}>2. Contrôle Magasin :</strong> Photos et vérification à Guangzhou / Yiwu.
-                  </div>
-                  <div style={{ fontSize: "0.84rem", color: "var(--c-text-muted)" }}>
-                    <strong style={{ color: "var(--c-text-main)" }}>3. Douane Comprise :</strong> Aucun frais surprise lors du retrait.
+              />
+              <div className="bento-content">
+                <div>
+                  <div className="bento-tag">
+                    <span>🇫🇷 LIGNE FRANCE ↔ AFRIQUE</span>
                   </div>
                 </div>
 
-                {/* Bouton d'action pour ouvrir le formulaire */}
-                <button
-                  type="button"
-                  onClick={() => setOpenedForm(openedForm === "alibaba" ? null : "alibaba")}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "11px 22px",
-                    borderRadius: "9999px",
-                    backgroundColor: openedForm === "alibaba" ? "#FFFFFF" : "var(--c-text-main)",
-                    color: openedForm === "alibaba" ? "var(--c-text-main)" : "#FAF5F0",
-                    border: "1px solid var(--c-text-main)",
-                    fontSize: "0.86rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                  }}
-                >
-                  <span>{openedForm === "alibaba" ? "Masquer le formulaire" : "Lancer ma commande Alibaba"}</span>
-                  <ArrowRight size={14} />
-                </button>
-
-                {/* FORMULAIRE ALIBABA INTÉGRÉ */}
-                {openedForm === "alibaba" && (
-                  <div
-                    style={{
-                      marginTop: "24px",
-                      paddingTop: "24px",
-                      borderTop: "1px solid var(--c-border)",
-                    }}
-                  >
-                    {aliSuccess ? (
-                      <div style={{ backgroundColor: "#F0FDF4", border: "1px solid #BBF7D0", padding: "20px", borderRadius: "12px", textAlign: "center" }}>
-                        <CheckCircle2 size={36} color="#16A34A" style={{ margin: "0 auto 8px auto" }} />
-                        <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#166534", marginBottom: "4px" }}>
-                          Commande enregistrée avec succès : {aliSuccess.ref}
-                        </div>
-                        <p style={{ fontSize: "0.86rem", color: "#15803D", marginBottom: "16px" }}>
-                          Votre demande est bien visible dans le tableau de bord de nos équipes. Vous pouvez continuer sur WhatsApp pour valider la facture proforma.
-                        </p>
-                        <a
-                          href={aliSuccess.waUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            padding: "11px 22px",
-                            borderRadius: "9999px",
-                            backgroundColor: "#25D366",
-                            color: "#FFFFFF",
-                            fontSize: "0.88rem",
-                            fontWeight: 600,
-                            textDecoration: "none",
-                          }}
-                        >
-                          <MessageCircle size={15} />
-                          <span>Confirmer avec mon conseiller sur WhatsApp</span>
-                        </a>
-                      </div>
-                    ) : (
-                      <form onSubmit={handleAlibabaSubmit} style={{ display: "grid", gap: "14px", maxWidth: "720px" }}>
-                        <div style={{ fontSize: "1rem", fontWeight: 800, color: "#111827" }}>
-                          Formulaire Commande Alibaba & Chine
-                        </div>
-
-                        <div>
-                          <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
-                            Lien du produit sur Alibaba ou description *
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={aliProductUrl}
-                            onChange={(e) => setAliProductUrl(e.target.value)}
-                            placeholder="Collez le lien de l'article ou décrivez votre produit"
-                            style={{ width: "100%", height: "42px", padding: "0 12px", border: "1px solid #D1D5DB", borderRadius: "8px", boxSizing: "border-box" }}
-                          />
-                        </div>
-
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                          <div>
-                            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
-                              Quantité souhaitée
-                            </label>
-                            <input
-                              type="text"
-                              value={aliQuantity}
-                              onChange={(e) => setAliQuantity(e.target.value)}
-                              placeholder="Ex : 50 pièces"
-                              style={{ width: "100%", height: "42px", padding: "0 12px", border: "1px solid #D1D5DB", borderRadius: "8px", boxSizing: "border-box" }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
-                              Destination de livraison
-                            </label>
-                            <select
-                              value={aliDestination}
-                              onChange={(e) => setAliDestination(e.target.value)}
-                              style={{ width: "100%", height: "42px", padding: "0 12px", border: "1px solid #D1D5DB", borderRadius: "8px", backgroundColor: "#FFFFFF", boxSizing: "border-box" }}
-                            >
-                              <option value="Côte d'Ivoire">Côte d&apos;Ivoire (Abidjan)</option>
-                              <option value="Sénégal">Sénégal (Dakar)</option>
-                              <option value="Mali">Mali (Bamako)</option>
-                              <option value="Niger">Niger (Niamey)</option>
-                              <option value="Burkina Faso">Burkina Faso (Ouagadougou)</option>
-                              <option value="Gabon">Gabon (Libreville)</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
-                            Spécifications particulières (couleurs, tailles, modèles)
-                          </label>
-                          <input
-                            type="text"
-                            value={aliSpecs}
-                            onChange={(e) => setAliSpecs(e.target.value)}
-                            placeholder="Ex : Modèle noir, taille L, avec chargeur européen"
-                            style={{ width: "100%", height: "42px", padding: "0 12px", border: "1px solid #D1D5DB", borderRadius: "8px", boxSizing: "border-box" }}
-                          />
-                        </div>
-
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                          <div>
-                            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
-                              Votre Nom Complet *
-                            </label>
-                            <input
-                              type="text"
-                              required
-                              value={aliName}
-                              onChange={(e) => setAliName(e.target.value)}
-                              placeholder="Nom et Prénom"
-                              style={{ width: "100%", height: "42px", padding: "0 12px", border: "1px solid #D1D5DB", borderRadius: "8px", boxSizing: "border-box" }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
-                              Numéro WhatsApp *
-                            </label>
-                            <input
-                              type="tel"
-                              required
-                              value={aliPhone}
-                              onChange={(e) => setAliPhone(e.target.value)}
-                              placeholder="+225 07 00 00 00 00"
-                              style={{ width: "100%", height: "42px", padding: "0 12px", border: "1px solid #D1D5DB", borderRadius: "8px", boxSizing: "border-box" }}
-                            />
-                          </div>
-                        </div>
-
-                        {aliError && <div style={{ fontSize: "0.82rem", color: "#DC2626", fontWeight: 600 }}>{aliError}</div>}
-
-                        <button
-                          type="submit"
-                          disabled={aliSubmitting}
-                          style={{
-                            height: "46px",
-                            borderRadius: "9999px",
-                            backgroundColor: "var(--c-text-main)",
-                            color: "#FAF5F0",
-                            fontSize: "0.88rem",
-                            fontWeight: 600,
-                            border: "none",
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "8px",
-                            marginTop: "6px",
-                            transition: "opacity 0.15s ease",
-                          }}
-                        >
-                          <span>{aliSubmitting ? "Enregistrement en cours..." : "Transmettre ma demande d'achat"}</span>
-                          <ArrowRight size={14} />
-                        </button>
-                      </form>
-                    )}
+                <div>
+                  <h2 className="bento-card-title" style={{ fontSize: "1.35rem" }}>
+                    Colis Paris ↔ Afrique
+                  </h2>
+                  <div className="bento-stat-highlight" style={{ fontSize: "1.25rem" }}>
+                    8 500 FCFA / KG (12 €)
                   </div>
-                )}
-              </article>
-            )}
+                  <p className="bento-card-subtitle">
+                    Plis express, effets personnels, produits parapharmacie. Dépôt facile en Île-de-France ou ramassage.
+                  </p>
+                  <div className="bento-bottom-row">
+                    <span style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.72)" }}>
+                      Départs chaque semaine
+                    </span>
+                    <div className="arrow-btn">
+                      <ArrowRight size={17} strokeWidth={2.4} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
 
-            {/* ========================================================
-                2. SERVICE CHINE : TRANSIT GUANGZHOU & YIWU
-               ======================================================== */}
-            {(activeTab === "all" || activeTab === "transit" || activeTab === "china") && (
-              <article
+            {/* CARTE 6 (50% LARGEUR) : LIGNE MAROC CASABLANCA */}
+            <article
+              className="bento-card card-maroc"
+              onClick={() => {
+                setFwdOrigin("Maroc (Casablanca)");
+                setActiveModal("forwarding");
+              }}
+            >
+              <div
+                className="bento-scrim"
                 style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid var(--c-border)",
-                  borderRadius: "14px",
-                  padding: "32px 28px",
-                  boxShadow: "0 2px 10px rgba(27, 20, 17, 0.03)",
+                  background:
+                    "linear-gradient(135deg, rgba(28, 20, 16, 0.95) 0%, rgba(18, 12, 9, 0.98) 100%)",
                 }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "14px", marginBottom: "18px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                    <div style={{ width: "46px", height: "46px", borderRadius: "10px", backgroundColor: "var(--c-text-main)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <CircularFlag countryCode="CN" size={24} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "0.74rem", fontFamily: "var(--c-font-mono)", fontWeight: 700, textTransform: "uppercase", color: "var(--c-text-light)", letterSpacing: "0.08em" }}>
-                        Transit & Magasins Chine
-                      </div>
-                      <h2 style={{ fontSize: "1.4rem", fontWeight: 700, color: "var(--c-text-main)", margin: "3px 0 0 0", fontFamily: "var(--c-font-display)", letterSpacing: "-0.03em" }}>
-                        Transit Chine (Guangzhou & Yiwu)
-                      </h2>
-                    </div>
-                  </div>
-
-                  <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--c-text-main)", backgroundColor: "var(--c-bg)", border: "1px solid var(--c-border)", padding: "5px 12px", borderRadius: "9999px" }}>
-                    Magasins Baiyun & Yiwu ouverts 7j/7
-                  </span>
-                </div>
-
-                <p style={{ fontSize: "0.96rem", color: "var(--c-text-muted)", lineHeight: 1.6, margin: "0 0 20px 0", maxWidth: "860px" }}>
-                  Vous passez vous-même commande auprès de vos usines ou fournisseurs en Chine ?
-                  Donnez-leur simplement l&apos;adresse de nos magasins partenaires à <strong>Guangzhou</strong> et à <strong>Yiwu</strong> avec votre code client.
-                  Dès réception, nous pesons, consolidons vos cartons et expédions par avion ou par bateau avec dédouanement total.
-                </p>
-
-                {/* Grille des 5 Formules Réelles Synchronisées avec l'Admin */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "12px", marginBottom: "24px" }}>
-                  {/* Voie Normale */}
-                  <div style={{ border: "1px solid var(--c-border)", borderRadius: "10px", padding: "14px", backgroundColor: "var(--c-bg)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <Plane size={16} color="var(--c-text-main)" />
-                        <strong style={{ fontSize: "0.88rem", color: "var(--c-text-main)" }}>Voie Normale par Avion</strong>
-                      </div>
-                      <span style={{ fontSize: "0.72rem", backgroundColor: "#EAE6DF", color: "var(--c-text-main)", padding: "2px 8px", borderRadius: "9999px", fontWeight: 600 }}>
-                        12 à 14 jours
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", margin: "4px 0", fontFamily: "var(--c-font-display)" }}>
-                      {formatTariffPrice(cnNormal?.price_per_unit_minor || 1000000)} <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--c-text-muted)" }}>/ kg</span>
-                    </div>
-                    <p style={{ fontSize: "0.8rem", color: "var(--c-text-muted)", margin: 0 }}>
-                      Vêtements, chaussures, mèches et marchandises générales ordinaires.
-                    </p>
-                  </div>
-
-                  {/* Voie Express */}
-                  <div style={{ border: "1px solid var(--c-text-main)", borderRadius: "10px", padding: "14px", backgroundColor: "#FFFFFF" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <Zap size={16} color="#D97706" />
-                        <strong style={{ fontSize: "0.88rem", color: "var(--c-text-main)" }}>Voie Express par Avion</strong>
-                      </div>
-                      <span style={{ fontSize: "0.72rem", backgroundColor: "#FEF3C7", color: "#92400E", padding: "2px 8px", borderRadius: "9999px", fontWeight: 700 }}>
-                        4 à 5 jours chrono
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", margin: "4px 0", fontFamily: "var(--c-font-display)" }}>
-                      {formatTariffPrice(cnExpress?.price_per_unit_minor || 1200000)} <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--c-text-muted)" }}>/ kg</span>
-                    </div>
-                    <p style={{ fontSize: "0.8rem", color: "var(--c-text-muted)", margin: 0 }}>
-                      Livraison ultra-rapide par vol direct pour vos colis urgents.
-                    </p>
-                  </div>
-
-                  {/* Batteries & Compléments */}
-                  <div style={{ border: "1px solid var(--c-border)", borderRadius: "10px", padding: "14px", backgroundColor: "var(--c-bg)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <BatteryCharging size={16} color="var(--c-text-main)" />
-                        <strong style={{ fontSize: "0.88rem", color: "var(--c-text-main)" }}>Batteries & Crèmes</strong>
-                      </div>
-                      <span style={{ fontSize: "0.72rem", backgroundColor: "#EAE6DF", color: "var(--c-text-main)", padding: "2px 8px", borderRadius: "9999px", fontWeight: 600 }}>
-                        7 à 10 jours
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", margin: "4px 0", fontFamily: "var(--c-font-display)" }}>
-                      {formatTariffPrice(cnBattery?.price_per_unit_minor || 1400000)} <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--c-text-muted)" }}>/ kg</span>
-                    </div>
-                    <p style={{ fontSize: "0.8rem", color: "var(--c-text-muted)", margin: 0 }}>
-                      Compléments alimentaires, batteries et cosmétiques liquides.
-                    </p>
-                  </div>
-
-                  {/* Pièces Informatiques */}
-                  <div style={{ border: "1px solid var(--c-border)", borderRadius: "10px", padding: "14px", backgroundColor: "var(--c-bg)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <Laptop size={16} color="var(--c-text-main)" />
-                        <strong style={{ fontSize: "0.88rem", color: "var(--c-text-main)" }}>Ordinateurs & High-Tech</strong>
-                      </div>
-                      <span style={{ fontSize: "0.72rem", backgroundColor: "#EAE6DF", color: "var(--c-text-main)", padding: "2px 8px", borderRadius: "9999px", fontWeight: 600 }}>
-                        Sécurisé
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", margin: "4px 0", fontFamily: "var(--c-font-display)" }}>
-                      {formatTariffPrice(cnTech?.price_per_unit_minor || 5000000)} <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--c-text-muted)" }}>/ carton</span>
-                    </div>
-                    <p style={{ fontSize: "0.8rem", color: "var(--c-text-muted)", margin: 0 }}>
-                      Pièces détachées, écrans et appareils électroniques avec calage anti-choc.
-                    </p>
-                  </div>
-
-                  {/* Bateau CBM */}
-                  <div style={{ border: "1px solid var(--c-border)", borderRadius: "10px", padding: "14px", backgroundColor: "var(--c-bg)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <Ship size={16} color="var(--c-text-main)" />
-                        <strong style={{ fontSize: "0.88rem", color: "var(--c-text-main)" }}>Par Bateau (Au mètre cube)</strong>
-                      </div>
-                      <span style={{ fontSize: "0.72rem", backgroundColor: "#EAE6DF", color: "var(--c-text-main)", padding: "2px 8px", borderRadius: "9999px", fontWeight: 600 }}>
-                        35 à 45 jours
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", margin: "4px 0", fontFamily: "var(--c-font-display)" }}>
-                      {formatTariffPrice(cnSea?.price_per_unit_minor || 30000000)} <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--c-text-muted)" }}>/ m³</span>
-                    </div>
-                    <p style={{ fontSize: "0.8rem", color: "var(--c-text-muted)", margin: 0 }}>
-                      La solution la plus économique pour les gros cartons et palettes volumineuses.
-                    </p>
+              />
+              <div className="bento-content">
+                <div>
+                  <div className="bento-tag">
+                    <span>🇲🇦 LIGNE MAROC · CASABLANCA</span>
                   </div>
                 </div>
 
-                {/* Boutons d'action pour la Chine */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFwdOrigin("Chine");
-                      setOpenedForm(openedForm === "forwarding" && fwdOrigin === "Chine" ? null : "forwarding");
-                    }}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "11px 22px",
-                      borderRadius: "9999px",
-                      backgroundColor: "var(--c-text-main)",
-                      color: "#FAF5F0",
-                      fontSize: "0.86rem",
-                      fontWeight: 600,
-                      border: "none",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    <span>Obtenir l&apos;adresse du magasin Chine</span>
-                    <ArrowRight size={14} />
-                  </button>
-                  <Link
-                    href="/tariffs"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "11px 22px",
-                      borderRadius: "9999px",
-                      backgroundColor: "#FFFFFF",
-                      color: "var(--c-text-main)",
-                      border: "1px solid var(--c-border)",
-                      fontSize: "0.86rem",
-                      fontWeight: 600,
-                      textDecoration: "none",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    <span>Simulateur de prix précis</span>
-                  </Link>
-                </div>
-              </article>
-            )}
-
-            {/* ========================================================
-                3. SERVICE DUBAÏ : TRANSIT ÉMIRATS ARABES UNIS
-               ======================================================== */}
-            {(activeTab === "all" || activeTab === "transit" || activeTab === "dubai") && (
-              <article
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid var(--c-border)",
-                  borderRadius: "14px",
-                  padding: "32px 28px",
-                  boxShadow: "0 2px 10px rgba(27, 20, 17, 0.03)",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "14px", marginBottom: "18px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                    <div style={{ width: "46px", height: "46px", borderRadius: "10px", backgroundColor: "var(--c-text-main)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <CircularFlag countryCode="AE" size={24} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "0.74rem", fontFamily: "var(--c-font-mono)", fontWeight: 700, textTransform: "uppercase", color: "var(--c-text-light)", letterSpacing: "0.08em" }}>
-                        Transit Émirats
-                      </div>
-                      <h2 style={{ fontSize: "1.4rem", fontWeight: 700, color: "var(--c-text-main)", margin: "3px 0 0 0", fontFamily: "var(--c-font-display)", letterSpacing: "-0.03em" }}>
-                        Transit Dubaï (Émirats Arabes Unis)
-                      </h2>
+                <div>
+                  <h2 className="bento-card-title" style={{ fontSize: "1.35rem" }}>
+                    Hub Maghreb ➔ Afrique
+                  </h2>
+                  <div className="bento-stat-highlight" style={{ fontSize: "1.15rem", color: "#FFA066" }}>
+                    5 PAYS DESSERVIS
+                  </div>
+                  <p className="bento-card-subtitle">
+                    Liaison directe depuis Casablanca vers Abidjan, Dakar, Bamako, Ouagadougou et Libreville.
+                  </p>
+                  <div className="bento-bottom-row">
+                    <span style={{ fontSize: "0.76rem", color: "rgba(255,255,255,0.72)" }}>
+                      Groupage régulier direct
+                    </span>
+                    <div className="arrow-btn">
+                      <ArrowRight size={17} strokeWidth={2.4} />
                     </div>
                   </div>
-
-                  <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--c-text-main)", backgroundColor: "var(--c-bg)", border: "1px solid var(--c-border)", padding: "5px 12px", borderRadius: "9999px" }}>
-                    Départ Dubaï DXB & Port Jebel Ali
-                  </span>
                 </div>
-
-                <p style={{ fontSize: "0.96rem", color: "var(--c-text-muted)", lineHeight: 1.6, margin: "0 0 20px 0", maxWidth: "860px" }}>
-                  Pour tous vos achats effectués à <strong>Dubaï (marchés de Deira, Al Sabkha, Naif)</strong> :
-                  parfumerie fine, cosmétiques, bijoux, téléphones et prêt-à-porter.
-                  Déposez vos marchandises à notre agence de Deira ou faites livrer directement par vos fournisseurs émiratis.
-                </p>
-
-                {/* Grille des 4 Formules Dubaï Synchronisées avec l'Admin */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "12px", marginBottom: "24px" }}>
-                  <div style={{ border: "1px solid var(--c-text-main)", borderRadius: "10px", padding: "14px", backgroundColor: "#FFFFFF" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                      <strong style={{ fontSize: "0.88rem", color: "var(--c-text-main)" }}>Voie Express Dubaï</strong>
-                      <span style={{ fontSize: "0.72rem", backgroundColor: "#FEF3C7", color: "#92400E", padding: "2px 8px", borderRadius: "9999px", fontWeight: 700 }}>
-                        4 à 5 jours
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", margin: "4px 0", fontFamily: "var(--c-font-display)" }}>
-                      {formatTariffPrice(aeExpress?.price_per_unit_minor || 1200000)} <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--c-text-muted)" }}>/ kg</span>
-                    </div>
-                    <p style={{ fontSize: "0.8rem", color: "var(--c-text-muted)", margin: 0 }}>
-                      Vol direct quotidien depuis l&apos;aéroport de Dubaï vers Abidjan.
-                    </p>
-                  </div>
-
-                  <div style={{ border: "1px solid var(--c-border)", borderRadius: "10px", padding: "14px", backgroundColor: "var(--c-bg)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                      <strong style={{ fontSize: "0.88rem", color: "var(--c-text-main)" }}>Voie Normale Dubaï</strong>
-                      <span style={{ fontSize: "0.72rem", backgroundColor: "#EAE6DF", color: "var(--c-text-main)", padding: "2px 8px", borderRadius: "9999px", fontWeight: 600 }}>
-                        10 à 14 jours
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", margin: "4px 0", fontFamily: "var(--c-font-display)" }}>
-                      {formatTariffPrice(aeNormal?.price_per_unit_minor || 1000000)} <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--c-text-muted)" }}>/ kg</span>
-                    </div>
-                    <p style={{ fontSize: "0.8rem", color: "var(--c-text-muted)", margin: 0 }}>
-                      Envoi groupé hebdomadaire régulier et économique.
-                    </p>
-                  </div>
-
-                  <div style={{ border: "1px solid var(--c-border)", borderRadius: "10px", padding: "14px", backgroundColor: "var(--c-bg)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                      <strong style={{ fontSize: "0.88rem", color: "var(--c-text-main)" }}>Parfums & Cosmétiques</strong>
-                      <span style={{ fontSize: "0.72rem", backgroundColor: "#EAE6DF", color: "var(--c-text-main)", padding: "2px 8px", borderRadius: "9999px", fontWeight: 600 }}>
-                        7 à 10 jours
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", margin: "4px 0", fontFamily: "var(--c-font-display)" }}>
-                      {formatTariffPrice(aeSpecial?.price_per_unit_minor || 1400000)} <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--c-text-muted)" }}>/ kg</span>
-                    </div>
-                    <p style={{ fontSize: "0.8rem", color: "var(--c-text-muted)", margin: 0 }}>
-                      Parfumerie de luxe, huiles de parfum et cosmétiques des Émirats.
-                    </p>
-                  </div>
-
-                  <div style={{ border: "1px solid var(--c-border)", borderRadius: "10px", padding: "14px", backgroundColor: "var(--c-bg)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                      <strong style={{ fontSize: "0.88rem", color: "var(--c-text-main)" }}>Par Bateau Dubaï (m³)</strong>
-                      <span style={{ fontSize: "0.72rem", backgroundColor: "#EAE6DF", color: "var(--c-text-main)", padding: "2px 8px", borderRadius: "9999px", fontWeight: 600 }}>
-                        30 à 40 jours
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", margin: "4px 0", fontFamily: "var(--c-font-display)" }}>
-                      {formatTariffPrice(aeSea?.price_per_unit_minor || 30000000)} <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--c-text-muted)" }}>/ m³</span>
-                    </div>
-                    <p style={{ fontSize: "0.8rem", color: "var(--c-text-muted)", margin: 0 }}>
-                      Départ port Jebel Ali au mètre cube pour vos gros volumes.
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFwdOrigin("Émirats Arabes Unis (Dubaï)");
-                      setOpenedForm(openedForm === "forwarding" && fwdOrigin.includes("Dubaï") ? null : "forwarding");
-                    }}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "11px 22px",
-                      borderRadius: "9999px",
-                      backgroundColor: "var(--c-text-main)",
-                      color: "#FAF5F0",
-                      fontSize: "0.86rem",
-                      fontWeight: 600,
-                      border: "none",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    <span>Obtenir l&apos;adresse du magasin Dubaï</span>
-                    <ArrowRight size={14} />
-                  </button>
-                  <Link
-                    href="/tariffs"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "11px 22px",
-                      borderRadius: "9999px",
-                      backgroundColor: "#FFFFFF",
-                      color: "var(--c-text-main)",
-                      border: "1px solid var(--c-border)",
-                      fontSize: "0.86rem",
-                      fontWeight: 600,
-                      textDecoration: "none",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    <span>Calculer mon tarif Dubaï</span>
-                  </Link>
-                </div>
-              </article>
-            )}
-
-            {/* ========================================================
-                4. SERVICE MAROC : GROUPAGE CASABLANCA VERS 5 PAYS
-               ======================================================== */}
-            {(activeTab === "all" || activeTab === "transit" || activeTab === "morocco") && (
-              <article
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid var(--c-border)",
-                  borderRadius: "14px",
-                  padding: "32px 28px",
-                  boxShadow: "0 2px 10px rgba(27, 20, 17, 0.03)",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "14px", marginBottom: "18px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                    <div style={{ width: "46px", height: "46px", borderRadius: "10px", backgroundColor: "var(--c-text-main)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <CircularFlag countryCode="MA" size={24} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "0.74rem", fontFamily: "var(--c-font-mono)", fontWeight: 700, textTransform: "uppercase", color: "var(--c-text-light)", letterSpacing: "0.08em" }}>
-                        Groupage Aérien Express
-                      </div>
-                      <h2 style={{ fontSize: "1.4rem", fontWeight: 700, color: "var(--c-text-main)", margin: "3px 0 0 0", fontFamily: "var(--c-font-display)", letterSpacing: "-0.03em" }}>
-                        Groupage Maroc Express (Casablanca vers 5 Pays)
-                      </h2>
-                    </div>
-                  </div>
-
-                  <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#166534", backgroundColor: "#DCFCE7", padding: "5px 12px", borderRadius: "9999px" }}>
-                    5 Jours Chrono Garantis
-                  </span>
-                </div>
-
-                <p style={{ fontSize: "0.96rem", color: "var(--c-text-muted)", lineHeight: 1.6, margin: "0 0 20px 0", maxWidth: "860px" }}>
-                  Roum Transit est le <strong>leader du transport aérien groupé depuis le Maroc</strong>.
-                  Chaque semaine, nous assurons des départs d&apos;avion directs depuis notre plateforme de Casablanca (Zone Industrielle Ain Sebaa)
-                  vers 5 capitales africaines avec remise rapide et dédouanement garanti.
-                </p>
-
-                {/* Grille des 5 destinations depuis Casablanca */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px", marginBottom: "24px" }}>
-                  {[
-                    { country: "Côte d'Ivoire", city: "Abidjan", code: "CI", price: maCi?.price_per_unit_minor || 650000 },
-                    { country: "Sénégal", city: "Dakar", code: "SN", price: maSn?.price_per_unit_minor || 700000 },
-                    { country: "Mali", city: "Bamako", code: "ML", price: maMl?.price_per_unit_minor || 700000 },
-                    { country: "Burkina Faso", city: "Ouagadougou", code: "BF", price: maBf?.price_per_unit_minor || 750000 },
-                    { country: "Gabon", city: "Libreville", code: "GA", price: maGa?.price_per_unit_minor || 750000 },
-                  ].map((dst) => (
-                    <div key={dst.code} style={{ border: "1px solid var(--c-border)", borderRadius: "10px", padding: "14px 12px", backgroundColor: "var(--c-bg)", textAlign: "center" }}>
-                      <div style={{ display: "flex", justifyContent: "center", marginBottom: "6px" }}>
-                        <CircularFlag countryCode={dst.code} size={20} />
-                      </div>
-                      <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "var(--c-text-main)" }}>{dst.city}</div>
-                      <div style={{ fontSize: "0.74rem", color: "var(--c-text-muted)", marginBottom: "4px" }}>{dst.country}</div>
-                      <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--c-text-main)", fontFamily: "var(--c-font-display)" }}>
-                        {formatTariffPrice(dst.price)} <span style={{ fontSize: "0.74rem", color: "var(--c-text-muted)", fontWeight: 500 }}>/ kg</span>
-                      </div>
-                      <div style={{ fontSize: "0.72rem", color: "#166534", fontWeight: 600, marginTop: "2px" }}>
-                        5 jours chrono
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFwdOrigin("Maroc");
-                      setOpenedForm(openedForm === "forwarding" && fwdOrigin === "Maroc" ? null : "forwarding");
-                    }}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "11px 22px",
-                      borderRadius: "9999px",
-                      backgroundColor: "var(--c-text-main)",
-                      color: "#FAF5F0",
-                      fontSize: "0.86rem",
-                      fontWeight: 600,
-                      border: "none",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    <span>Déposer un colis à Casablanca</span>
-                    <ArrowRight size={14} />
-                  </button>
-                  <Link
-                    href="/tariffs"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "11px 22px",
-                      borderRadius: "9999px",
-                      backgroundColor: "#FFFFFF",
-                      color: "var(--c-text-main)",
-                      border: "1px solid var(--c-border)",
-                      fontSize: "0.86rem",
-                      fontWeight: 600,
-                      textDecoration: "none",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    <span>Simulateur Groupage Maroc</span>
-                  </Link>
-                </div>
-              </article>
-            )}
-
-            {/* ========================================================
-                5. SERVICE FRANCE : ENVOI DE COLIS PARIS ↔ ABIDJAN
-               ======================================================== */}
-            {(activeTab === "all" || activeTab === "colis" || activeTab === "france") && (
-              <article
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid var(--c-border)",
-                  borderRadius: "14px",
-                  padding: "32px 28px",
-                  boxShadow: "0 2px 10px rgba(27, 20, 17, 0.03)",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "14px", marginBottom: "18px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                    <div style={{ width: "46px", height: "46px", borderRadius: "10px", backgroundColor: "var(--c-text-main)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <CircularFlag countryCode="FR" size={24} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "0.74rem", fontFamily: "var(--c-font-mono)", fontWeight: 700, textTransform: "uppercase", color: "var(--c-text-light)", letterSpacing: "0.08em" }}>
-                        Envoi de Colis & Plis
-                      </div>
-                      <h2 style={{ fontSize: "1.4rem", fontWeight: 700, color: "var(--c-text-main)", margin: "3px 0 0 0", fontFamily: "var(--c-font-display)", letterSpacing: "-0.03em" }}>
-                        Envoi de Colis France (Paris ↔ Abidjan)
-                      </h2>
-                    </div>
-                  </div>
-
-                  <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--c-text-main)", backgroundColor: "var(--c-bg)", border: "1px solid var(--c-border)", padding: "5px 12px", borderRadius: "9999px" }}>
-                    3 à 5 Jours de Vol
-                  </span>
-                </div>
-
-                <p style={{ fontSize: "0.96rem", color: "var(--c-text-muted)", lineHeight: 1.6, margin: "0 0 20px 0", maxWidth: "860px" }}>
-                  Ligne aérienne régulière opérant <strong>dans les deux sens</strong> :
-                  de <strong>Paris vers Abidjan</strong> ou d&apos;<strong>Abidjan vers Paris</strong>.
-                  Idéal pour envoyer vos effets personnels, valises, produits de beauté ou vos documents administratifs urgents en toute sérénité.
-                </p>
-
-                {/* Les 3 formules officielles France */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "12px", marginBottom: "24px" }}>
-                  <div style={{ border: "1px solid var(--c-border)", borderRadius: "10px", padding: "14px", backgroundColor: "var(--c-bg)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                      <strong style={{ fontSize: "0.88rem", color: "var(--c-text-main)" }}>Articles Ordinaires & Vêtements</strong>
-                      <span style={{ fontSize: "0.72rem", backgroundColor: "#EAE6DF", color: "var(--c-text-main)", padding: "2px 8px", borderRadius: "9999px", fontWeight: 600 }}>
-                        3 à 5 jours
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", margin: "4px 0", fontFamily: "var(--c-font-display)" }}>
-                      {formatTariffPrice(frCiDivers?.price_per_unit_minor || 850000)} <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--c-text-muted)" }}>/ 12 € le kg</span>
-                    </div>
-                    <p style={{ fontSize: "0.8rem", color: "var(--c-text-muted)", margin: 0 }}>
-                      Colis personnels, vêtements, valises, chaussures et cadeaux.
-                    </p>
-                  </div>
-
-                  <div style={{ border: "1px solid var(--c-border)", borderRadius: "10px", padding: "14px", backgroundColor: "var(--c-bg)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                      <strong style={{ fontSize: "0.88rem", color: "var(--c-text-main)" }}>Cosmétiques, Beurres & Liquides</strong>
-                      <span style={{ fontSize: "0.72rem", backgroundColor: "#EAE6DF", color: "var(--c-text-main)", padding: "2px 8px", borderRadius: "9999px", fontWeight: 600 }}>
-                        3 à 5 jours
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", margin: "4px 0", fontFamily: "var(--c-font-display)" }}>
-                      {formatTariffPrice(frCiCosm?.price_per_unit_minor || 900000)} <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--c-text-muted)" }}>/ 14 € le kg</span>
-                    </div>
-                    <p style={{ fontSize: "0.8rem", color: "var(--c-text-muted)", margin: 0 }}>
-                      Crèmes, huiles végétales, beurre de karité et produits capillaires sécurisés.
-                    </p>
-                  </div>
-
-                  <div style={{ border: "1px solid var(--c-text-main)", borderRadius: "10px", padding: "14px", backgroundColor: "#FFFFFF" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                      <strong style={{ fontSize: "0.88rem", color: "var(--c-text-main)" }}>Document Administratif & Pli</strong>
-                      <span style={{ fontSize: "0.72rem", backgroundColor: "#FEF3C7", color: "#92400E", padding: "2px 8px", borderRadius: "9999px", fontWeight: 700 }}>
-                        2 à 3 jours chrono
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", margin: "4px 0", fontFamily: "var(--c-font-display)" }}>
-                      {formatTariffPrice(frCiDoc?.price_per_unit_minor || 1300000)} <span style={{ fontSize: "0.78rem", fontWeight: 500, color: "var(--c-text-muted)" }}>/ 20 € le pli</span>
-                    </div>
-                    <p style={{ fontSize: "0.8rem", color: "var(--c-text-muted)", margin: 0 }}>
-                      Passeports, attestations, dossiers d&apos;études et contrats remis sous pli scellé.
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFwdOrigin("France");
-                      setOpenedForm(openedForm === "forwarding" && fwdOrigin === "France" ? null : "forwarding");
-                    }}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "11px 22px",
-                      borderRadius: "9999px",
-                      backgroundColor: "var(--c-text-main)",
-                      color: "#FAF5F0",
-                      fontSize: "0.86rem",
-                      fontWeight: 600,
-                      border: "none",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    <span>Expédier depuis Paris ou Abidjan</span>
-                    <ArrowRight size={14} />
-                  </button>
-                  <Link
-                    href="/tariffs"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "11px 22px",
-                      borderRadius: "9999px",
-                      backgroundColor: "#FFFFFF",
-                      color: "var(--c-text-main)",
-                      border: "1px solid var(--c-border)",
-                      fontSize: "0.86rem",
-                      fontWeight: 600,
-                      textDecoration: "none",
-                      transition: "all 0.15s ease",
-                    }}
-                  >
-                    <span>Simuler le tarif Paris ↔ Abidjan</span>
-                  </Link>
-                </div>
-              </article>
-            )}
+              </div>
+            </article>
           </div>
 
           {/* ========================================================
-              FORMULAIRE TRANSIT DÉROULÉ (CHINE, DUBAÏ, MAROC, FRANCE)
+              SECTION ÉTIQUETTE LOGISTIQUE / SHIPPING MARK (BOARDING PASS)
              ======================================================== */}
-          {openedForm === "forwarding" && (
-            <div
-              style={{
-                backgroundColor: "#FFFFFF",
-                border: "1px solid var(--c-border)",
-                borderRadius: "14px",
-                padding: "32px 28px",
-                marginBottom: "40px",
-                maxWidth: "760px",
-                margin: "0 auto 40px auto",
-                boxShadow: "0 4px 20px -2px rgba(27, 20, 17, 0.05)",
-              }}
-            >
-              {fwdSuccess ? (
-                <div style={{ textAlign: "center", padding: "10px" }}>
-                  <CheckCircle2 size={40} color="#166534" style={{ margin: "0 auto 10px auto" }} />
-                  <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--c-text-main)", marginBottom: "6px", fontFamily: "var(--c-font-display)" }}>
-                    Dossier Prêt : {fwdSuccess.ref}
-                  </div>
-                  <p style={{ fontSize: "0.92rem", color: "var(--c-text-muted)", marginBottom: "20px" }}>
-                    Votre dossier a été transmis directement au tableau de bord de nos équipes.
-                    Voici vos instructions d&apos;expédition :
-                  </p>
+          <div className="shipping-pass-block">
+            <div className="pass-tabs-header">
+              <div className="pass-header-info">
+                <span className="pass-label">INSTRUCTIONS DE MARQUAGE CARTON OBLIGATOIRE</span>
+                <h3 className="pass-headline">Adresses d&apos;Entrepôts &amp; Étiquette Fournisseur</h3>
+              </div>
 
-                  <div style={{ backgroundColor: "var(--c-bg)", padding: "18px", borderRadius: "10px", border: "1px solid var(--c-border)", textAlign: "left", marginBottom: "22px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                      <strong style={{ fontSize: "0.85rem", color: "var(--c-text-main)" }}>Code à inscrire sur tous vos cartons :</strong>
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard(fwdSuccess.shippingMark, false)}
-                        style={{ border: "none", background: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.78rem", color: "var(--c-text-main)", fontWeight: 700 }}
-                      >
-                        {copiedMark ? <Check size={13} color="#166534" /> : <Copy size={13} />}
-                        <span>{copiedMark ? "Copié !" : "Copier le code"}</span>
-                      </button>
-                    </div>
-                    <div style={{ fontFamily: "var(--c-font-mono)", fontWeight: 700, fontSize: "1.05rem", color: "var(--c-text-main)", padding: "10px 14px", backgroundColor: "#FFFFFF", border: "1px solid var(--c-border)", borderRadius: "8px", marginBottom: "16px" }}>
-                      {fwdSuccess.shippingMark}
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                      <strong style={{ fontSize: "0.85rem", color: "var(--c-text-main)" }}>Adresse de livraison du magasin :</strong>
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard(fwdSuccess.warehouseAddress, true)}
-                        style={{ border: "none", background: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.78rem", color: "var(--c-text-main)", fontWeight: 700 }}
-                      >
-                        {copiedAddr ? <Check size={13} color="#166534" /> : <Copy size={13} />}
-                        <span>{copiedAddr ? "Copiée !" : "Copier l'adresse"}</span>
-                      </button>
-                    </div>
-                    <div style={{ fontSize: "0.88rem", color: "var(--c-text-muted)", lineHeight: 1.55, padding: "10px 14px", backgroundColor: "#FFFFFF", border: "1px solid var(--c-border)", borderRadius: "8px" }}>
-                      {fwdSuccess.warehouseAddress}
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
-                    <a
-                      href={fwdSuccess.waUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        padding: "11px 22px",
-                        borderRadius: "9999px",
-                        backgroundColor: "#25D366",
-                        color: "#FFFFFF",
-                        fontSize: "0.88rem",
-                        fontWeight: 600,
-                        textDecoration: "none",
-                        transition: "opacity 0.15s ease",
-                      }}
-                    >
-                      <MessageCircle size={15} />
-                      <span>Transmettre à mon conseiller sur WhatsApp</span>
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => setFwdSuccess(null)}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        padding: "11px 20px",
-                        borderRadius: "9999px",
-                        backgroundColor: "#FFFFFF",
-                        color: "var(--c-text-main)",
-                        border: "1px solid var(--c-border)",
-                        fontSize: "0.88rem",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                      }}
-                    >
-                      <span>Faire une autre demande</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <form onSubmit={handleForwardingSubmit} style={{ display: "grid", gap: "14px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#111827" }}>
-                      Obtenir l&apos;adresse magasin & mon code carton
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setOpenedForm(null)}
-                      style={{ background: "none", border: "none", fontSize: "0.8rem", color: "#6B7280", cursor: "pointer", textDecoration: "underline" }}
-                    >
-                      Fermer
-                    </button>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
-                        Pays de départ *
-                      </label>
-                      <select
-                        value={fwdOrigin}
-                        onChange={(e) => setFwdOrigin(e.target.value)}
-                        style={{ width: "100%", height: "42px", padding: "0 12px", border: "1px solid #D1D5DB", borderRadius: "8px", backgroundColor: "#FFFFFF", boxSizing: "border-box" }}
-                      >
-                        <option value="Chine">Chine (Guangzhou / Yiwu)</option>
-                        <option value="Émirats Arabes Unis (Dubaï)">Émirats Arabes Unis (Dubaï)</option>
-                        <option value="Maroc">Maroc (Casablanca)</option>
-                        <option value="France">France (Paris)</option>
-                        <option value="Côte d'Ivoire">Côte d&apos;Ivoire (Abidjan)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
-                        Destination *
-                      </label>
-                      <select
-                        value={fwdDestination}
-                        onChange={(e) => setFwdDestination(e.target.value)}
-                        style={{ width: "100%", height: "42px", padding: "0 12px", border: "1px solid #D1D5DB", borderRadius: "8px", backgroundColor: "#FFFFFF", boxSizing: "border-box" }}
-                      >
-                        <option value="Côte d'Ivoire">Côte d&apos;Ivoire (Abidjan)</option>
-                        <option value="Sénégal">Sénégal (Dakar)</option>
-                        <option value="Mali">Mali (Bamako)</option>
-                        <option value="Burkina Faso">Burkina Faso (Ouagadougou)</option>
-                        <option value="Gabon">Gabon (Libreville)</option>
-                        <option value="France">France (Paris)</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
-                      Mode de Transport
-                    </label>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                      <button
-                        type="button"
-                        onClick={() => setFwdTransportMode("AIR")}
-                        style={{
-                          height: "42px",
-                          borderRadius: "8px",
-                          border: fwdTransportMode === "AIR" ? "2px solid #111827" : "1px solid #D1D5DB",
-                          backgroundColor: fwdTransportMode === "AIR" ? "#111827" : "#FFFFFF",
-                          color: fwdTransportMode === "AIR" ? "#FFFFFF" : "#374151",
-                          fontSize: "0.84rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "8px",
-                        }}
-                      >
-                        <Plane size={15} />
-                        <span>Par Avion (Rapide)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFwdTransportMode("SEA")}
-                        style={{
-                          height: "42px",
-                          borderRadius: "8px",
-                          border: fwdTransportMode === "SEA" ? "2px solid #111827" : "1px solid #D1D5DB",
-                          backgroundColor: fwdTransportMode === "SEA" ? "#111827" : "#FFFFFF",
-                          color: fwdTransportMode === "SEA" ? "#FFFFFF" : "#374151",
-                          fontSize: "0.84rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "8px",
-                        }}
-                      >
-                        <Ship size={15} />
-                        <span>Par Bateau (Gros volume)</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
-                      Que souhaitez-vous transporter ? *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={fwdDescription}
-                      onChange={(e) => setFwdDescription(e.target.value)}
-                      placeholder="Ex : Vêtements, chaussures, cartons de mèches, sacs, ordinateurs..."
-                      style={{ width: "100%", height: "42px", padding: "0 12px", border: "1px solid #D1D5DB", borderRadius: "8px", boxSizing: "border-box" }}
-                    />
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
-                        Votre Nom Complet *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={fwdName}
-                        onChange={(e) => setFwdName(e.target.value)}
-                        placeholder="Ex : Koffi Kouassi"
-                        style={{ width: "100%", height: "42px", padding: "0 12px", border: "1px solid #D1D5DB", borderRadius: "8px", boxSizing: "border-box" }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, marginBottom: "4px" }}>
-                        Votre Numéro WhatsApp *
-                      </label>
-                      <input
-                        type="tel"
-                        required
-                        value={fwdPhone}
-                        onChange={(e) => setFwdPhone(e.target.value)}
-                        placeholder="+225 01 00 00 00 00"
-                        style={{ width: "100%", height: "42px", padding: "0 12px", border: "1px solid #D1D5DB", borderRadius: "8px", boxSizing: "border-box" }}
-                      />
-                    </div>
-                  </div>
-
-                  {fwdError && <div style={{ fontSize: "0.82rem", color: "#DC2626", fontWeight: 600 }}>{fwdError}</div>}
-
+              {/* Sélecteur d'entrepôt en capsule */}
+              <div className="pass-warehouse-capsules">
+                {(["guangzhou", "yiwu", "dubai", "paris"] as const).map((key) => (
                   <button
-                    type="submit"
-                    disabled={fwdSubmitting}
-                    style={{
-                      height: "46px",
-                      borderRadius: "9999px",
-                      backgroundColor: "var(--c-text-main)",
-                      color: "#FAF5F0",
-                      fontSize: "0.88rem",
-                      fontWeight: 600,
-                      border: "none",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "8px",
-                      marginTop: "6px",
-                      transition: "opacity 0.15s ease",
-                    }}
+                    key={key}
+                    type="button"
+                    onClick={() => setActiveWarehouse(key)}
+                    className={`pass-capsule-btn ${activeWarehouse === key ? "active" : ""}`}
                   >
-                    <span>{fwdSubmitting ? "Génération en cours..." : "Générer mon adresse magasin & code carton"}</span>
-                    <ArrowRight size={14} />
+                    {key === "guangzhou"
+                      ? "🇨🇳 Guangzhou"
+                      : key === "yiwu"
+                      ? "🇨🇳 Yiwu"
+                      : key === "dubai"
+                      ? "🇦🇪 Dubaï"
+                      : "🇫🇷 Paris"}
                   </button>
-                </form>
-              )}
+                ))}
+              </div>
             </div>
-          )}
 
-          {/* Bandeau de clôture vers le simulateur */}
-          <div
-            style={{
-              backgroundColor: "#FFFFFF",
-              border: "1px solid var(--c-border)",
-              borderRadius: "14px",
-              padding: "28px 24px",
-              textAlign: "center",
-              boxShadow: "0 2px 10px rgba(27, 20, 17, 0.03)",
-            }}
-          >
-            <div style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", marginBottom: "6px", fontFamily: "var(--c-font-display)" }}>
-              Vous connaissez le poids ou les dimensions de votre colis ?
+            <div className="pass-body-grid">
+              {/* Côté Gauche : Adresse pour le fournisseur */}
+              <div className="pass-details-col">
+                <div className="pass-tag-title">{WAREHOUSES[activeWarehouse].name}</div>
+                <div className="pass-chinese-address">
+                  {WAREHOUSES[activeWarehouse].chinese}
+                </div>
+                <div className="pass-contact-note">
+                  {WAREHOUSES[activeWarehouse].contact}
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    copyToClipboard(
+                      `${WAREHOUSES[activeWarehouse].chinese}\n${WAREHOUSES[activeWarehouse].contact}`,
+                      true
+                    )
+                  }
+                  className="pass-copy-btn"
+                >
+                  {copiedAddr ? <Check size={14} color="#166534" /> : <Copy size={14} />}
+                  <span>{copiedAddr ? "Adresse copiée dans le presse-papier !" : "Copier l'adresse pour mon fournisseur"}</span>
+                </button>
+              </div>
+
+              {/* Côté Droit : Modèle de Shipping Mark */}
+              <div className="pass-mark-col">
+                <div className="pass-mark-header">
+                  <span>MARQUAGE OBLIGATOIRE SUR CHAQUE CARTON</span>
+                </div>
+                <div className="pass-mark-box">
+                  <code>{WAREHOUSES[activeWarehouse].mark}</code>
+                </div>
+                <p className="pass-mark-hint">
+                  Indiquez ce marquage à votre fournisseur ou collez-le sur chaque colis pour un traçage immédiat à l&apos;arrivée.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(WAREHOUSES[activeWarehouse].mark, false)}
+                  className="pass-copy-btn-secondary"
+                >
+                  {copiedMark ? <Check size={14} color="#166534" /> : <Copy size={14} />}
+                  <span>{copiedMark ? "Modèle copié !" : "Copier le modèle de marquage"}</span>
+                </button>
+              </div>
             </div>
-            <p style={{ fontSize: "0.9rem", color: "var(--c-text-muted)", margin: "0 0 18px 0" }}>
-              Utilisez notre simulateur transparent pour calculer exactement le tarif avec dédouanement inclus.
-            </p>
-            <Link
-              href="/tariffs"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "11px 24px",
-                borderRadius: "9999px",
-                backgroundColor: "var(--c-text-main)",
-                color: "#FAF5F0",
-                fontSize: "0.88rem",
-                fontWeight: 600,
-                textDecoration: "none",
-                transition: "all 0.15s ease",
-              }}
-            >
-              <span>Accéder au simulateur de prix</span>
-              <ArrowRight size={14} />
-            </Link>
+          </div>
+
+          {/* ========================================================
+              BANDEAU DE GARANTIES ÉDITORIAL
+             ======================================================== */}
+          <div className="services-guarantees-bar">
+            <div className="guarantee-item">
+              <ShieldCheck size={22} color="#166534" />
+              <div>
+                <div className="guarantee-title">Douane 100% comprise</div>
+                <div className="guarantee-desc">Zéro frais surprise à l&apos;arrivée à destination</div>
+              </div>
+            </div>
+            <div className="guarantee-item">
+              <MapPin size={22} color="var(--c-text-main)" />
+              <div>
+                <div className="guarantee-title">Pesée Vidéo Magasin</div>
+                <div className="guarantee-desc">Colis pesés et filmés dès réception en entrepôt</div>
+              </div>
+            </div>
+            <div className="guarantee-item">
+              <Clock size={22} color="var(--c-text-main)" />
+              <div>
+                <div className="guarantee-title">Délais scellés</div>
+                <div className="guarantee-desc">Avion 4 à 5 jours chrono · Bateau hebdomadaire</div>
+              </div>
+            </div>
           </div>
         </ScrollReveal>
       </div>
+
+      {/* ========================================================
+          MODALE EXPRESS ALIBABA (DRAWER ÉLÉGANT SANS CASSER LA PAGE)
+         ======================================================== */}
+      {activeModal === "alibaba" && (
+        <div className="modal-backdrop" onClick={() => setActiveModal(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="modal-close-btn"
+              onClick={() => setActiveModal(null)}
+              aria-label="Fermer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="modal-badge">
+              <span className="green-dot" />
+              <span>CENTRALE D&apos;ACHAT ALIBABA &amp; 1688</span>
+            </div>
+
+            <h3 className="modal-title">Lancer une commande assistée</h3>
+            <p className="modal-desc">
+              Nous réglons votre fournisseur chinois en Yuans (RMB) sous 24h. Vous payez en FCFA par Mobile Money.
+            </p>
+
+            {aliSuccess ? (
+              <div className="modal-success-box">
+                <CheckCircle2 size={38} color="#16A34A" style={{ margin: "0 auto 8px auto" }} />
+                <div className="modal-success-title">
+                  Commande enregistrée : {aliSuccess.ref}
+                </div>
+                <p className="modal-success-desc">
+                  Votre demande est directement visible dans le tableau de bord de nos équipes. Continuez sur WhatsApp pour valider la facture proforma.
+                </p>
+                <a
+                  href={aliSuccess.waUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="modal-wa-btn"
+                >
+                  <MessageCircle size={16} />
+                  <span>Confirmer sur WhatsApp avec mon conseiller</span>
+                </a>
+              </div>
+            ) : (
+              <form onSubmit={handleAlibabaSubmit} className="modal-form">
+                <div>
+                  <label className="modal-label">Lien du produit sur Alibaba, 1688 ou description *</label>
+                  <input
+                    type="text"
+                    required
+                    value={aliProductUrl}
+                    onChange={(e) => setAliProductUrl(e.target.value)}
+                    placeholder="Collez le lien de l'article ou décrivez votre article"
+                    className="modal-input"
+                  />
+                </div>
+
+                <div className="modal-input-grid">
+                  <div>
+                    <label className="modal-label">Quantité souhaitée</label>
+                    <input
+                      type="text"
+                      value={aliQuantity}
+                      onChange={(e) => setAliQuantity(e.target.value)}
+                      placeholder="Ex : 50 pièces"
+                      className="modal-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="modal-label">Destination finale</label>
+                    <select
+                      value={aliDestination}
+                      onChange={(e) => setAliDestination(e.target.value)}
+                      className="modal-input"
+                    >
+                      <option value="Côte d'Ivoire">Côte d&apos;Ivoire (Abidjan)</option>
+                      <option value="Sénégal">Sénégal (Dakar)</option>
+                      <option value="Mali">Mali (Bamako)</option>
+                      <option value="Niger">Niger (Niamey)</option>
+                      <option value="Burkina Faso">Burkina Faso (Ouagadougou)</option>
+                      <option value="Gabon">Gabon (Libreville)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="modal-label">Spécifications (couleurs, tailles, modèles)</label>
+                  <input
+                    type="text"
+                    value={aliSpecs}
+                    onChange={(e) => setAliSpecs(e.target.value)}
+                    placeholder="Ex : Couleur noire, taille L, prise européenne"
+                    className="modal-input"
+                  />
+                </div>
+
+                <div className="modal-input-grid">
+                  <div>
+                    <label className="modal-label">Votre Nom Complet *</label>
+                    <input
+                      type="text"
+                      required
+                      value={aliName}
+                      onChange={(e) => setAliName(e.target.value)}
+                      placeholder="Nom &amp; Prénom"
+                      className="modal-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="modal-label">Numéro WhatsApp *</label>
+                    <input
+                      type="tel"
+                      required
+                      value={aliPhone}
+                      onChange={(e) => setAliPhone(e.target.value)}
+                      placeholder="+225 07 00 00 00 00"
+                      className="modal-input"
+                    />
+                  </div>
+                </div>
+
+                {aliError && <div className="modal-error">{aliError}</div>}
+
+                <button type="submit" disabled={aliSubmitting} className="modal-submit-btn">
+                  <span>{aliSubmitting ? "Enregistrement en cours..." : "Transmettre ma demande d'achat"}</span>
+                  <ArrowRight size={15} />
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODALE EXPRESS TRANSIT & EXPÉDITION
+         ======================================================== */}
+      {activeModal === "forwarding" && (
+        <div className="modal-backdrop" onClick={() => setActiveModal(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="modal-close-btn"
+              onClick={() => setActiveModal(null)}
+              aria-label="Fermer"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="modal-badge">
+              <span>EXPÉDITION &amp; TRANSIT CARGO</span>
+            </div>
+
+            <h3 className="modal-title">Expédier un colis ({fwdOrigin})</h3>
+            <p className="modal-desc">
+              Réception en entrepôt, pesée vidéo certifiée et dédouanement 100% compris jusqu&apos;à destination.
+            </p>
+
+            {fwdSuccess ? (
+              <div className="modal-success-box">
+                <CheckCircle2 size={38} color="#16A34A" style={{ margin: "0 auto 8px auto" }} />
+                <div className="modal-success-title">
+                  Dossier créé : {fwdSuccess.ref}
+                </div>
+                <p className="modal-success-desc">
+                  Votre demande d&apos;expédition a été enregistrée. Validez votre étiquette avec notre conseiller sur WhatsApp.
+                </p>
+                <a
+                  href={fwdSuccess.waUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="modal-wa-btn"
+                >
+                  <MessageCircle size={16} />
+                  <span>Obtenir mon étiquette sur WhatsApp</span>
+                </a>
+              </div>
+            ) : (
+              <form onSubmit={handleForwardingSubmit} className="modal-form">
+                <div className="modal-input-grid">
+                  <div>
+                    <label className="modal-label">Pays de départ *</label>
+                    <select
+                      value={fwdOrigin}
+                      onChange={(e) => setFwdOrigin(e.target.value)}
+                      className="modal-input"
+                    >
+                      <option value="Chine">Chine (Guangzhou / Yiwu)</option>
+                      <option value="Dubaï (Émirats Arabes Unis)">Dubaï (Deira Market)</option>
+                      <option value="France (Paris)">France (Paris Île-de-France)</option>
+                      <option value="Maroc (Casablanca)">Maroc (Casablanca)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="modal-label">Mode d&apos;envoi</label>
+                    <select
+                      value={fwdMode}
+                      onChange={(e) => setFwdMode(e.target.value as "AIR" | "SEA")}
+                      className="modal-input"
+                    >
+                      <option value="AIR">Avion Express (4 à 5 jours)</option>
+                      <option value="SEA">Bateau Groupage CBM (35 à 45 jours)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="modal-label">Description des marchandises</label>
+                  <input
+                    type="text"
+                    value={fwdDescription}
+                    onChange={(e) => setFwdDescription(e.target.value)}
+                    placeholder="Ex : Vêtements, pièces électroniques, cosmétiques"
+                    className="modal-input"
+                  />
+                </div>
+
+                <div className="modal-input-grid">
+                  <div>
+                    <label className="modal-label">Votre Nom Complet *</label>
+                    <input
+                      type="text"
+                      required
+                      value={fwdName}
+                      onChange={(e) => setFwdName(e.target.value)}
+                      placeholder="Nom &amp; Prénom"
+                      className="modal-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="modal-label">Numéro WhatsApp *</label>
+                    <input
+                      type="tel"
+                      required
+                      value={fwdPhone}
+                      onChange={(e) => setFwdPhone(e.target.value)}
+                      placeholder="+225 07 00 00 00 00"
+                      className="modal-input"
+                    />
+                  </div>
+                </div>
+
+                {fwdError && <div className="modal-error">{fwdError}</div>}
+
+                <button type="submit" disabled={fwdSubmitting} className="modal-submit-btn">
+                  <span>{fwdSubmitting ? "Enregistrement..." : "Valider ma demande d'expédition"}</span>
+                  <ArrowRight size={15} />
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          STYLES CSS INLINE RESPONSIVE & ÉDITORIAL
+         ======================================================== */}
+      <style jsx>{`
+        .services-page-root {
+          background-color: transparent;
+          color: var(--c-text-main);
+          min-height: calc(100vh - 110px);
+          padding: 32px 18px 120px 18px;
+          box-sizing: border-box;
+        }
+
+        .services-container {
+          max-width: 1140px;
+          margin: 0 auto;
+        }
+
+        .services-header {
+          text-align: center;
+          margin-bottom: 38px;
+        }
+
+        .services-badge-category {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-family: var(--c-font-mono);
+          font-size: 0.74rem;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: var(--c-text-light);
+          margin-bottom: 12px;
+        }
+
+        .services-badge-category .dot {
+          color: #CC4E16;
+        }
+
+        .services-title {
+          font-family: var(--c-font-display);
+          font-size: clamp(1.8rem, 4vw, 2.7rem);
+          font-weight: 800;
+          letter-spacing: -0.035em;
+          line-height: 1.12;
+          color: var(--c-text-main);
+          margin: 0 auto 12px auto;
+          max-width: 780px;
+        }
+
+        .services-desc {
+          font-size: 0.98rem;
+          color: var(--c-text-muted);
+          max-width: 620px;
+          margin: 0 auto;
+          line-height: 1.5;
+        }
+
+        /* GRILLE BENTO */
+        .bento-grid {
+          display: grid;
+          grid-template-columns: repeat(12, 1fr);
+          gap: 18px;
+          margin-bottom: 32px;
+        }
+
+        .bento-card {
+          position: relative;
+          border-radius: 24px;
+          overflow: hidden;
+          background-color: #1A130F;
+          color: #FFFFFF;
+          min-height: 340px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          box-shadow: 0 10px 30px -8px rgba(20, 13, 9, 0.14);
+          transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+          cursor: pointer;
+        }
+
+        .bento-card:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 18px 40px -10px rgba(20, 13, 9, 0.26);
+        }
+
+        .bento-card-bg {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          z-index: 1;
+          transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .bento-card:hover .bento-card-bg {
+          transform: scale(1.04);
+        }
+
+        .bento-scrim {
+          position: absolute;
+          inset: 0;
+          z-index: 2;
+          background: linear-gradient(
+            to top,
+            rgba(20, 13, 9, 0.96) 0%,
+            rgba(20, 13, 9, 0.64) 50%,
+            rgba(20, 13, 9, 0.2) 100%
+          );
+          pointer-events: none;
+        }
+
+        .bento-content {
+          position: relative;
+          z-index: 3;
+          padding: 24px;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+
+        .bento-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-family: var(--c-font-mono);
+          font-size: 0.68rem;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: rgba(255, 255, 255, 0.9);
+          padding: 5px 12px;
+          border-radius: 9999px;
+          background: rgba(255, 255, 255, 0.15);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          width: max-content;
+        }
+
+        .bento-tag .green-dot {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background-color: #22C55E;
+        }
+
+        .bento-card-title {
+          font-family: var(--c-font-display);
+          font-size: 1.55rem;
+          font-weight: 800;
+          letter-spacing: -0.03em;
+          line-height: 1.15;
+          color: #FFFFFF;
+          margin: 0 0 6px 0;
+        }
+
+        .bento-card-subtitle {
+          font-size: 0.84rem;
+          color: rgba(255, 255, 255, 0.84);
+          line-height: 1.4;
+          margin: 0 0 14px 0;
+          max-width: 480px;
+        }
+
+        .bento-stat-highlight {
+          font-family: var(--c-font-display);
+          font-size: 1.7rem;
+          font-weight: 800;
+          letter-spacing: -0.03em;
+          color: #FFFFFF;
+          margin: 8px 0;
+          line-height: 1;
+        }
+
+        .bento-bullets {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          margin-top: 10px;
+        }
+
+        .bento-bullet {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.8rem;
+          color: rgba(255, 255, 255, 0.92);
+        }
+
+        .bento-bullet-dot {
+          width: 4px;
+          height: 4px;
+          border-radius: 50%;
+          background-color: #FFA066;
+          flex-shrink: 0;
+        }
+
+        .bento-bottom-row {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 12px;
+          margin-top: 16px;
+        }
+
+        .arrow-btn {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.18);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #FFFFFF;
+          border: none;
+          flex-shrink: 0;
+          transition: all 0.2s ease;
+          text-decoration: none;
+          cursor: pointer;
+        }
+
+        .bento-card:hover .arrow-btn {
+          background: #FFFFFF;
+          color: #140D09;
+          transform: scale(1.08);
+        }
+
+        .bento-cta-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 9px 18px;
+          border-radius: 9999px;
+          background: #FFFFFF;
+          color: #140D09;
+          font-size: 0.78rem;
+          font-weight: 700;
+          text-decoration: none;
+          border: none;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+          cursor: pointer;
+          transition: transform 0.15s ease;
+        }
+
+        .bento-cta-pill:hover {
+          transform: scale(1.03);
+        }
+
+        /* SPANS ASYMÉTRIQUES */
+        .card-alibaba {
+          grid-column: span 7;
+          min-height: 380px;
+        }
+
+        .card-aerien {
+          grid-column: span 5;
+          min-height: 380px;
+        }
+
+        .card-dubai {
+          grid-column: span 5;
+          min-height: 360px;
+        }
+
+        .card-maritime {
+          grid-column: span 7;
+          min-height: 360px;
+        }
+
+        .card-paris {
+          grid-column: span 6;
+          min-height: 280px;
+        }
+
+        .card-maroc {
+          grid-column: span 6;
+          min-height: 280px;
+        }
+
+        .options-duo {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin: 12px 0;
+        }
+
+        .option-box {
+          border-left: 2px solid #FFA066;
+          padding-left: 10px;
+        }
+
+        .option-tag {
+          font-family: var(--c-font-mono);
+          font-size: 0.68rem;
+          font-weight: 700;
+          color: #FFA066;
+          display: block;
+          margin-bottom: 2px;
+          text-transform: uppercase;
+        }
+
+        .option-desc {
+          font-size: 0.76rem;
+          color: rgba(255, 255, 255, 0.88);
+          line-height: 1.35;
+          margin: 0;
+        }
+
+        /* SECTION SHIPPING PASS / BOARDING PASS */
+        .shipping-pass-block {
+          margin-top: 24px;
+          background-color: #FFFFFF;
+          border-radius: 20px;
+          padding: 26px 30px;
+          box-shadow: 0 4px 24px rgba(20, 13, 9, 0.05);
+          border: 1px solid rgba(20, 13, 9, 0.06);
+        }
+
+        .pass-tabs-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 14px;
+          padding-bottom: 18px;
+          border-bottom: 1px solid rgba(20, 13, 9, 0.08);
+          margin-bottom: 20px;
+        }
+
+        .pass-label {
+          font-family: var(--c-font-mono);
+          font-size: 0.7rem;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          color: var(--c-text-light);
+          text-transform: uppercase;
+          display: block;
+          margin-bottom: 3px;
+        }
+
+        .pass-headline {
+          font-family: var(--c-font-display);
+          font-size: 1.25rem;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          color: var(--c-text-main);
+          margin: 0;
+        }
+
+        .pass-warehouse-capsules {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+
+        .pass-capsule-btn {
+          padding: 6px 14px;
+          border-radius: 9999px;
+          font-size: 0.76rem;
+          font-weight: 600;
+          border: 1px solid rgba(20, 13, 9, 0.12);
+          background-color: transparent;
+          color: var(--c-text-muted);
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .pass-capsule-btn.active {
+          background-color: var(--c-text-main);
+          color: #FAF6F0;
+          border-color: var(--c-text-main);
+        }
+
+        .pass-body-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 24px;
+        }
+
+        .pass-tag-title {
+          font-family: var(--c-font-display);
+          font-size: 1.05rem;
+          font-weight: 700;
+          color: var(--c-text-main);
+          margin-bottom: 6px;
+        }
+
+        .pass-chinese-address {
+          font-size: 0.95rem;
+          font-weight: 600;
+          color: var(--c-text-main);
+          line-height: 1.5;
+          margin-bottom: 8px;
+          background: #FAF6F0;
+          padding: 12px 14px;
+          border-radius: 10px;
+          border-left: 3px solid #CC4E16;
+        }
+
+        .pass-contact-note {
+          font-size: 0.78rem;
+          color: var(--c-text-muted);
+          margin-bottom: 14px;
+        }
+
+        .pass-copy-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 9px 18px;
+          border-radius: 9999px;
+          background-color: var(--c-text-main);
+          color: #FAF6F0;
+          border: none;
+          font-size: 0.8rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: background-color 0.15s ease;
+        }
+
+        .pass-copy-btn:hover {
+          background-color: #2D1E16;
+        }
+
+        .pass-mark-col {
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          background: #FAF6F0;
+          padding: 18px 20px;
+          border-radius: 14px;
+        }
+
+        .pass-mark-header {
+          font-family: var(--c-font-mono);
+          font-size: 0.68rem;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          color: var(--c-text-light);
+          margin-bottom: 8px;
+        }
+
+        .pass-mark-box code {
+          font-family: var(--c-font-mono);
+          font-size: 0.86rem;
+          font-weight: 700;
+          color: #CC4E16;
+          display: block;
+          word-break: break-all;
+          margin-bottom: 10px;
+        }
+
+        .pass-mark-hint {
+          font-size: 0.76rem;
+          color: var(--c-text-muted);
+          line-height: 1.4;
+          margin-bottom: 12px;
+        }
+
+        .pass-copy-btn-secondary {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 14px;
+          border-radius: 9999px;
+          background: #FFFFFF;
+          color: var(--c-text-main);
+          border: 1px solid rgba(20, 13, 9, 0.14);
+          font-size: 0.74rem;
+          font-weight: 700;
+          cursor: pointer;
+          width: max-content;
+        }
+
+        /* BANDEAU DE GARANTIES */
+        .services-guarantees-bar {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+          gap: 20px;
+          padding: 30px 0;
+          border-top: 1px solid rgba(20, 13, 9, 0.08);
+          margin-top: 36px;
+        }
+
+        .guarantee-item {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .guarantee-title {
+          font-size: 0.88rem;
+          font-weight: 700;
+          color: var(--c-text-main);
+        }
+
+        .guarantee-desc {
+          font-size: 0.78rem;
+          color: var(--c-text-muted);
+        }
+
+        /* MODALE DRAWER */
+        .modal-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 99999;
+          background-color: rgba(20, 13, 9, 0.72);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+        }
+
+        .modal-card {
+          position: relative;
+          background-color: #FFFFFF;
+          border-radius: 24px;
+          padding: 32px 28px;
+          width: 100%;
+          max-width: 620px;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 24px 50px -10px rgba(0, 0, 0, 0.45);
+          animation: modalAppear 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes modalAppear {
+          from {
+            opacity: 0;
+            transform: scale(0.96) translateY(12px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+
+        .modal-close-btn {
+          position: absolute;
+          top: 18px;
+          right: 18px;
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          border: none;
+          background-color: #FAF6F0;
+          color: var(--c-text-main);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        .modal-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-family: var(--c-font-mono);
+          font-size: 0.68rem;
+          font-weight: 700;
+          color: #CC4E16;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          margin-bottom: 8px;
+        }
+
+        .modal-badge .green-dot {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background-color: #22C55E;
+        }
+
+        .modal-title {
+          font-family: var(--c-font-display);
+          font-size: 1.45rem;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          color: var(--c-text-main);
+          margin: 0 0 6px 0;
+        }
+
+        .modal-desc {
+          font-size: 0.84rem;
+          color: var(--c-text-muted);
+          line-height: 1.45;
+          margin: 0 0 20px 0;
+        }
+
+        .modal-form {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+
+        .modal-input-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+
+        .modal-label {
+          display: block;
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: var(--c-text-main);
+          margin-bottom: 4px;
+        }
+
+        .modal-input {
+          width: 100%;
+          height: 42px;
+          padding: 0 12px;
+          border: 1px solid rgba(20, 13, 9, 0.16);
+          border-radius: 10px;
+          font-size: 0.84rem;
+          box-sizing: border-box;
+          background-color: #FAF6F0;
+          color: var(--c-text-main);
+          outline: none;
+          transition: border-color 0.15s ease;
+        }
+
+        .modal-input:focus {
+          border-color: #140D09;
+          background-color: #FFFFFF;
+        }
+
+        .modal-error {
+          font-size: 0.8rem;
+          color: #DC2626;
+          font-weight: 600;
+        }
+
+        .modal-submit-btn {
+          height: 46px;
+          border-radius: 9999px;
+          background-color: #140D09;
+          color: #FAF6F0;
+          border: none;
+          font-size: 0.86rem;
+          font-weight: 700;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          cursor: pointer;
+          margin-top: 6px;
+          transition: background-color 0.15s ease;
+        }
+
+        .modal-submit-btn:hover {
+          background-color: #2C1E17;
+        }
+
+        .modal-success-box {
+          text-align: center;
+          padding: 24px 16px;
+          background-color: #F0FDF4;
+          border-radius: 14px;
+          border: 1px solid #BBF7D0;
+        }
+
+        .modal-success-title {
+          font-family: var(--c-font-display);
+          font-size: 1.15rem;
+          font-weight: 800;
+          color: #166534;
+          margin-bottom: 6px;
+        }
+
+        .modal-success-desc {
+          font-size: 0.84rem;
+          color: #15803D;
+          line-height: 1.45;
+          margin-bottom: 16px;
+        }
+
+        .modal-wa-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 11px 22px;
+          border-radius: 9999px;
+          background-color: #25D366;
+          color: #FFFFFF;
+          font-size: 0.84rem;
+          font-weight: 700;
+          text-decoration: none;
+          box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4);
+        }
+
+        /* RESPONSIVE MOBILE */
+        @media (max-width: 900px) {
+          .card-alibaba,
+          .card-aerien,
+          .card-dubai,
+          .card-maritime,
+          .card-paris,
+          .card-maroc {
+            grid-column: span 12 !important;
+            min-height: 320px;
+          }
+
+          .bento-grid {
+            gap: 14px;
+          }
+
+          .options-duo {
+            grid-template-columns: 1fr;
+            gap: 8px;
+          }
+
+          .pass-body-grid {
+            grid-template-columns: 1fr;
+            gap: 18px;
+          }
+
+          .shipping-pass-block {
+            padding: 20px 18px;
+          }
+
+          .modal-input-grid {
+            grid-template-columns: 1fr;
+            gap: 10px;
+          }
+
+          .bento-bottom-row {
+            flex-wrap: wrap;
+          }
+        }
+      `}</style>
     </div>
   );
 }
 
 export default function ServicesPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "50vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Chargement...</div>}>
+    <Suspense
+      fallback={
+        <div style={{ minHeight: "50vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          Chargement des services...
+        </div>
+      }
+    >
       <ServicesContent />
     </Suspense>
   );
