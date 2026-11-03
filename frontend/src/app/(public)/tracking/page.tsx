@@ -7,25 +7,23 @@ import { normalizeTrackingNumber } from "@/shared";
 import { ScrollReveal } from "@/components/ScrollReveal";
 
 const TRACKING_STEPS = [
-  { step: "01", label: "Demande reçue", desc: "Enregistrée sur le portail", isHigh: false },
-  { step: "02", label: "Devis envoyé", desc: "Douane intégrale incluse", isHigh: true },
-  { step: "03", label: "Paiement validé", desc: "Dossier officiel actif", isHigh: false },
-  { step: "04", label: "Commande usine", desc: "Fournisseur réglé en Yuans", isHigh: true },
-  { step: "05", label: "Reçu en Chine", desc: "Inspection photos & pesée", isHigh: false },
-  { step: "06", label: "Colis expédié", desc: "Vol direct / Conteneur", isHigh: true },
-  { step: "07", label: "Arrivé au pays", desc: "Dédouanement port/aéroport", isHigh: false },
-  { step: "08", label: "Prêt en agence", desc: "Bingerville Carrefour Safari", isHigh: true },
-  { step: "09", label: "Colis livré", desc: "Remis au destinataire", isHigh: false, isFinal: true },
+  { step: "01", label: "Demande reçue", desc: "Enregistrée", isHigh: false },
+  { step: "02", label: "Devis envoyé", desc: "Douane incluse", isHigh: true },
+  { step: "03", label: "Paiement validé", desc: "Dossier actif", isHigh: false },
+  { step: "04", label: "Commande usine", desc: "Fournisseur réglé", isHigh: true },
+  { step: "05", label: "Reçu en entrepôt", desc: "Photos & pesée", isHigh: false },
+  { step: "06", label: "Colis expédié", desc: "Vol / Bateau", isHigh: true },
+  { step: "07", label: "Arrivé au pays", desc: "Dédouanement", isHigh: false },
+  { step: "08", label: "Prêt en agence", desc: "Bingerville Safari", isHigh: true },
+  { step: "09", label: "Colis livré", desc: "Remis au client", isHigh: false, isFinal: true },
 ];
 
 export default function TrackingPage() {
   const router = useRouter();
   const [trackingInput, setTrackingInput] = useState("");
   const [trackingError, setTrackingError] = useState("");
-  const [activeStepIdx, setActiveStepIdx] = useState(0);
-  const [scale, setScale] = useState(1);
 
-  const outerBoxRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const nodeDistancesRef = useRef<number[]>([]);
@@ -44,31 +42,26 @@ export default function TrackingPage() {
     router.push(`/tracking/${normalized}`);
   };
 
-  // Calcul du dézoomage adaptatif : adapte le serpent aux écrans sans modifier le design
-  const updateAdaptiveScale = () => {
-    if (outerBoxRef.current) {
-      const availWidth = outerBoxRef.current.clientWidth;
-      const baseWidth = 1080;
-      const newScale = Math.min(1, availWidth / baseWidth);
-      setScale(newScale);
-    }
-  };
-
-  // 1. Calcul de la courbe de Bézier serpent cambrée dans l'espace fixe 1080px
+  // 1. Calcul de la courbe de Bézier serpent cambrée
   const buildCamberedSnakePath = () => {
-    if (!pathRef.current) return;
-
+    if (!containerRef.current || !pathRef.current) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
     const points: { x: number; y: number }[] = [];
-    const stepW = 1080 / 9;
 
     for (let i = 1; i <= TRACKING_STEPS.length; i++) {
-      const isHigh = i % 2 === 0;
-      const x = stepW * (i - 0.5);
-      const y = isHigh ? 38 : 148;
-      points.push({ x, y });
+      const circle = document.getElementById(`step-circle-${i}`);
+      if (circle) {
+        const r = circle.getBoundingClientRect();
+        points.push({
+          x: r.left - containerRect.left + r.width / 2,
+          y: r.top - containerRect.top + r.height / 2,
+        });
+      }
     }
 
-    // Tangentes amples horizontales pour une cambrure prononcée
+    if (points.length < 2) return;
+
+    // Construction de la cambrure prononcée (tangentes amples horizontales)
     let d = `M ${points[0].x} ${points[0].y}`;
     for (let i = 0; i < points.length - 1; i++) {
       const p1 = points[i];
@@ -89,7 +82,7 @@ export default function TrackingPage() {
     pathRef.current.style.strokeDasharray = `${totalLength}`;
     pathRef.current.style.strokeDashoffset = `${totalLength}`;
 
-    // Calcul des distances cumulées pour une synchronisation mathématique à 100%
+    // Calcul des distances cumulées exactes pour chaque cercle
     const distances: number[] = [0];
     const samplesCount = 1000;
     for (let i = 1; i < points.length; i++) {
@@ -124,26 +117,26 @@ export default function TrackingPage() {
 
     // Réinitialisation des classes
     for (let i = 1; i <= TRACKING_STEPS.length; i++) {
-      const circleEl = document.getElementById(`track-circle-${i}`);
-      const metaEl = document.getElementById(`track-meta-${i}`);
+      const circleEl = document.getElementById(`step-circle-${i}`);
+      const metaEl = document.getElementById(`step-meta-${i}`);
       if (circleEl) circleEl.classList.remove("active");
       if (metaEl) metaEl.classList.remove("active");
     }
 
     // Le premier cercle est actif dès le départ
-    const c1 = document.getElementById("track-circle-1");
-    const m1 = document.getElementById("track-meta-1");
+    const c1 = document.getElementById("step-circle-1");
+    const m1 = document.getElementById("step-meta-1");
     if (c1) c1.classList.add("active");
     if (m1) m1.classList.add("active");
-    setActiveStepIdx(0);
 
-    const duration = 10500; // 10.5 secondes
+    const duration = 10500; // 10.5 secondes complètes
     const startTime = performance.now();
 
     const step = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(1, elapsed / duration);
 
+      // Easing doux
       const easedProgress =
         progress < 0.5
           ? 2 * progress * progress
@@ -155,13 +148,12 @@ export default function TrackingPage() {
       // Synchronisation mathématique instantanée
       for (let i = 1; i < distances.length; i++) {
         const targetDist = distances[i];
-        const circleEl = document.getElementById(`track-circle-${i + 1}`);
-        const metaEl = document.getElementById(`track-meta-${i + 1}`);
+        const circleEl = document.getElementById(`step-circle-${i + 1}`);
+        const metaEl = document.getElementById(`step-meta-${i + 1}`);
 
         if (currentDrawnLength >= targetDist - 2) {
           if (circleEl && !circleEl.classList.contains("active")) {
             circleEl.classList.add("active");
-            setActiveStepIdx(i);
           }
           if (metaEl && !metaEl.classList.contains("active")) {
             metaEl.classList.add("active");
@@ -178,17 +170,13 @@ export default function TrackingPage() {
   };
 
   useEffect(() => {
-    updateAdaptiveScale();
-    buildCamberedSnakePath();
-
     const timer = setTimeout(() => {
-      updateAdaptiveScale();
       buildCamberedSnakePath();
       runSynchronizedAnimation();
-    }, 100);
+    }, 150);
 
     const handleResize = () => {
-      updateAdaptiveScale();
+      buildCamberedSnakePath();
     };
 
     window.addEventListener("resize", handleResize);
@@ -199,8 +187,6 @@ export default function TrackingPage() {
       window.removeEventListener("resize", handleResize);
     };
   }, []);
-
-  const activeStep = TRACKING_STEPS[activeStepIdx] || TRACKING_STEPS[0];
 
   return (
     <div
@@ -218,7 +204,7 @@ export default function TrackingPage() {
       <div style={{ maxWidth: "1120px", margin: "0 auto", width: "100%" }}>
         <ScrollReveal>
           {/* En-tête officiel épuré */}
-          <div style={{ textAlign: "center", marginBottom: "28px" }}>
+          <div style={{ textAlign: "center", marginBottom: "32px" }}>
             <div className="client-eyebrow" style={{ justifyContent: "center", marginBottom: "12px" }}>
               <span style={{ color: "var(--c-accent-red)" }}>●</span>
               <span>TRAÇABILITÉ EN DIRECT & BORDEREAU</span>
@@ -246,7 +232,7 @@ export default function TrackingPage() {
           <div
             style={{
               maxWidth: "520px",
-              margin: "0 auto 32px auto",
+              margin: "0 auto 36px auto",
               backgroundColor: "var(--c-surface)",
               borderRadius: "9999px",
               boxShadow: "0 6px 24px -2px rgba(27, 20, 17, 0.08)",
@@ -299,14 +285,14 @@ export default function TrackingPage() {
           </div>
 
           {trackingError && (
-            <div style={{ fontSize: "0.82rem", color: "#DC2626", fontWeight: 600, textAlign: "center", margin: "-18px 0 20px 0" }}>
+            <div style={{ fontSize: "0.82rem", color: "#DC2626", fontWeight: 600, textAlign: "center", margin: "-20px 0 24px 0" }}>
               {trackingError}
             </div>
           )}
 
-          {/* En-tête de section sans cadran */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", padding: "0 8px" }}>
-            <span style={{ fontSize: "0.76rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--c-text-light)", fontFamily: "var(--c-font-mono)" }}>
+          {/* Contrôle discret pour rejouer l'animation */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", padding: "0 8px" }}>
+            <span style={{ fontSize: "0.78rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--c-text-light)", fontFamily: "var(--c-font-mono)" }}>
               Parcours en 9 étapes synchronisées
             </span>
 
@@ -324,7 +310,7 @@ export default function TrackingPage() {
                 border: "none",
                 fontSize: "0.76rem",
                 fontWeight: 600,
-                color: "var(--c-accent-red)",
+                color: "var(--c-text-muted)",
                 cursor: "pointer",
               }}
             >
@@ -334,33 +320,25 @@ export default function TrackingPage() {
           </div>
 
           {/* ========================================================
-              LE SERPENT DÉZOOMÉ ADAPTATIF POUR TOUS LES ÉCRANS
-              - Même design continu qu'ordinateur
-              - Dézoomé proportionnellement pour s'adapter à 100% de la largeur mobile
-              - Zéro scroll horizontal forcé
+              LE SERPENT HORIZONTAL DES 9 ÉTAPES
+              (CAMBRURE PRONONCÉE, SYNCHRONISATION 100%, ZÉRO CADRAN)
              ======================================================== */}
           <div
-            ref={outerBoxRef}
-            className="snake-outer-scaling-box"
+            className="snake-horizontal-viewport"
             style={{
               position: "relative",
               width: "100%",
-              height: `${Math.round(280 * scale + 15)}px`,
-              display: "flex",
-              justifyContent: "center",
-              overflow: "hidden",
-              margin: "0 auto",
+              overflowX: "auto",
+              padding: "40px 10px 48px 10px",
+              boxSizing: "border-box",
             }}
           >
             <div
-              className="snake-inner-board"
+              ref={containerRef}
               style={{
                 position: "relative",
-                width: "1080px",
-                height: "280px",
-                transform: `scale(${scale})`,
-                transformOrigin: "top center",
-                flexShrink: 0,
+                minWidth: "1080px",
+                height: "290px",
               }}
             >
               {/* Ligne SVG Cambrée */}
@@ -377,7 +355,7 @@ export default function TrackingPage() {
               >
                 <defs>
                   <linearGradient id="hSnakeGradOfficial" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#140D09" stopOpacity="0.95" />
+                    <stop offset="0%" stopColor="#140D09" stopOpacity="0.9" />
                     <stop offset="50%" stopColor="#C2410C" stopOpacity="0.95" />
                     <stop offset="100%" stopColor="#16A34A" stopOpacity="1" />
                   </linearGradient>
@@ -386,7 +364,7 @@ export default function TrackingPage() {
                   ref={pathRef}
                   fill="none"
                   stroke="url(#hSnakeGradOfficial)"
-                  strokeWidth="3"
+                  strokeWidth="2.8"
                   strokeLinecap="round"
                 />
               </svg>
@@ -416,13 +394,13 @@ export default function TrackingPage() {
                         alignItems: "center",
                         textAlign: "center",
                         width: "114px",
-                        marginTop: item.isHigh ? "-65px" : "55px",
+                        marginTop: item.isHigh ? "-65px" : "60px",
                         flexShrink: 0,
                       }}
                     >
                       {/* Si l'étape est cambrée vers le haut, le texte est au-dessus du cercle */}
                       {item.isHigh && (
-                        <div id={`track-meta-${stepNum}`} className="step-meta-node" style={{ marginBottom: "12px" }}>
+                        <div id={`step-meta-${stepNum}`} className="step-meta-node" style={{ marginBottom: "12px" }}>
                           <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--c-text-main)", whiteSpace: "nowrap" }}>
                             {item.label}
                           </div>
@@ -434,7 +412,7 @@ export default function TrackingPage() {
 
                       {/* Le cercle du chiffre (SEUL ÉLÉMENT GÉOMÉTRIQUE, ZÉRO CADRAN) */}
                       <div
-                        id={`track-circle-${stepNum}`}
+                        id={`step-circle-${stepNum}`}
                         className={`step-circle-node ${item.isFinal ? "is-final" : ""}`}
                       >
                         {item.step}
@@ -443,7 +421,7 @@ export default function TrackingPage() {
 
                       {/* Si l'étape est cambrée vers le bas, le texte est en-dessous du cercle */}
                       {!item.isHigh && (
-                        <div id={`track-meta-${stepNum}`} className="step-meta-node" style={{ marginTop: "12px" }}>
+                        <div id={`step-meta-${stepNum}`} className="step-meta-node" style={{ marginTop: "12px" }}>
                           <div
                             style={{
                               fontSize: "0.82rem",
@@ -473,66 +451,8 @@ export default function TrackingPage() {
             </div>
           </div>
 
-          {/* Fiche d'étape active au bas du serpent pour une lisibilité parfaite sur mobile */}
-          <div
-            style={{
-              maxWidth: "520px",
-              margin: "12px auto 0 auto",
-              padding: "12px 18px",
-              backgroundColor: "#FFFFFF",
-              borderRadius: "16px",
-              boxShadow: "0 4px 16px -2px rgba(27, 20, 17, 0.05)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              boxSizing: "border-box",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div
-                style={{
-                  width: "28px",
-                  height: "28px",
-                  borderRadius: "50%",
-                  backgroundColor: activeStep.isFinal ? "var(--c-accent-green)" : "var(--c-text-main)",
-                  color: "#FFFFFF",
-                  fontSize: "0.75rem",
-                  fontWeight: 800,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                {activeStep.step}
-              </div>
-              <div>
-                <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "var(--c-text-main)" }}>
-                  {activeStep.label}
-                </div>
-                <div style={{ fontSize: "0.76rem", color: "var(--c-text-muted)" }}>
-                  {activeStep.desc}
-                </div>
-              </div>
-            </div>
-
-            <span
-              style={{
-                fontSize: "0.7rem",
-                fontWeight: 700,
-                color: "var(--c-badge-green-text)",
-                backgroundColor: "var(--c-badge-green-bg)",
-                padding: "3px 10px",
-                borderRadius: "9999px",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Douane 100% comprise
-            </span>
-          </div>
-
           {/* Lien d'assistance sobre */}
-          <div style={{ textAlign: "center", marginTop: "24px" }}>
+          <div style={{ textAlign: "center", marginTop: "20px" }}>
             <a
               href="https://wa.me/2250153638569?text=Bonjour%20Roum%20Transit,%20je%20souhaite%20une%20assistance%20sur%20mon%20suivi%20de%20colis."
               target="_blank"
@@ -555,6 +475,14 @@ export default function TrackingPage() {
       </div>
 
       <style jsx>{`
+        .snake-horizontal-viewport::-webkit-scrollbar {
+          height: 4px;
+        }
+        .snake-horizontal-viewport::-webkit-scrollbar-thumb {
+          background-color: rgba(20, 13, 9, 0.12);
+          border-radius: 9999px;
+        }
+
         :global(.step-circle-node) {
           width: 44px;
           height: 44px;
@@ -565,11 +493,11 @@ export default function TrackingPage() {
           align-items: center;
           justify-content: center;
           font-weight: 800;
-          font-size: 0.9rem;
+          font-size: 0.88rem;
           letter-spacing: -0.02em;
           position: relative;
           z-index: 10;
-          opacity: 0.22;
+          opacity: 0.25;
           transform: scale(0.72);
           transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, background-color 0.3s ease;
           box-shadow: 0 4px 12px rgba(20, 13, 9, 0.15);
@@ -577,7 +505,7 @@ export default function TrackingPage() {
 
         :global(.step-circle-node.active) {
           opacity: 1 !important;
-          transform: scale(1.1) !important;
+          transform: scale(1.08) !important;
           box-shadow: 0 8px 24px -2px rgba(20, 13, 9, 0.35) !important;
         }
 
