@@ -401,37 +401,74 @@
       background-color: #2C1E17;
     }
 
-    /* Responsive Mobile : Défilement horizontal fluide */
+    /* Responsive Mobile : Grille Bento Asymétrique exacte identique au Desktop */
     @media (max-width: 900px) {
       body {
-        padding: 24px 16px 110px 16px;
-        overflow-x: hidden;
+        padding: 20px 12px 110px 12px;
       }
       .bento-grid {
-        display: flex !important;
-        flex-direction: row !important;
-        overflow-x: auto !important;
-        scroll-snap-type: x mandatory !important;
-        gap: 14px !important;
-        padding: 6px 16px 26px 16px !important;
-        margin-left: -16px !important;
-        margin-right: -16px !important;
-        scrollbar-width: none !important;
+        display: grid !important;
+        grid-template-columns: repeat(12, 1fr) !important;
+        gap: 10px !important;
+        width: 100% !important;
       }
-      .bento-grid::-webkit-scrollbar {
+      .card-alibaba {
+        grid-column: span 7 !important;
+        min-height: 335px !important;
+      }
+      .card-aerien {
+        grid-column: span 5 !important;
+        min-height: 335px !important;
+      }
+      .card-dubai {
+        grid-column: span 5 !important;
+        min-height: 315px !important;
+      }
+      .card-maritime {
+        grid-column: span 7 !important;
+        min-height: 315px !important;
+      }
+      .card-paris {
+        grid-column: span 6 !important;
+        min-height: 295px !important;
+      }
+      .card-maroc {
+        grid-column: span 6 !important;
+        min-height: 295px !important;
+      }
+      .bento-card {
+        border-radius: 18px !important;
+      }
+      .bento-content {
+        padding: 13px 10px !important;
+      }
+      .bento-tag {
+        font-size: 0.54rem !important;
+        padding: 3px 6px !important;
+      }
+      .bento-title {
+        font-size: clamp(0.96rem, 3.2vw, 1.25rem) !important;
+      }
+      .bento-subtitle {
+        font-size: 0.67rem !important;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .bento-stat-highlight {
+        font-size: clamp(1.0rem, 3.6vw, 1.4rem) !important;
+      }
+      .card-aerien .bento-bullets,
+      .card-dubai .bento-bullets {
         display: none !important;
-      }
-      .card-alibaba, .card-aerien, .card-dubai, .card-maritime, .card-paris, .card-maroc {
-        flex: 0 0 86vw !important;
-        max-width: 335px !important;
-        min-height: 440px !important;
-        scroll-snap-align: center !important;
-        scroll-snap-stop: always !important;
-        border-radius: 24px !important;
       }
       .options-duo {
         grid-template-columns: 1fr;
-        gap: 8px;
+        gap: 4px;
+      }
+      .option-box {
+        padding: 4px 6px !important;
       }
     }
   </style>

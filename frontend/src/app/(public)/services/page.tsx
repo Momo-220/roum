@@ -206,14 +206,8 @@ function ServicesContent() {
           </header>
 
           {/* ========================================================
-              GRILLE BENTO ASYMÉTRIQUE DYNAMIQUE (HORIZONTAL SUR MOBILE)
+              GRILLE BENTO ASYMÉTRIQUE DYNAMIQUE
              ======================================================== */}
-          <div className="mobile-swipe-hint-wrapper">
-            <div className="mobile-swipe-hint">
-              <span>← Glissez pour parcourir les 6 modes de transport →</span>
-            </div>
-          </div>
-
           <div className="bento-grid">
             {/* CARTE 1 (60% LARGEUR) : CENTRALE D'ACHAT ALIBABA & 1688 */}
             <article
@@ -1574,116 +1568,199 @@ function ServicesContent() {
           box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4);
         }
 
-        .mobile-swipe-hint-wrapper {
-          display: none;
-        }
-
-        /* RESPONSIVE MOBILE : DÉFILEMENT HORIZONTAL FLUIDE ET NATUREL */
+        /* RESPONSIVE MOBILE : GRILLE BENTO ASYMÉTRIQUE EXACTE (IDENTIQUE AU DESKTOP) */
         @media (max-width: 900px) {
           .services-page-root {
-            padding: 24px 16px 110px 16px;
-            overflow-x: hidden;
+            padding: 20px 12px 110px 12px !important;
+            overflow-x: hidden !important;
           }
 
-          .mobile-swipe-hint-wrapper {
-            display: flex;
-            justify-content: center;
-            margin: -6px 0 16px 0;
+          .services-header {
+            margin-bottom: 22px !important;
           }
 
-          .mobile-swipe-hint {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-family: var(--c-font-mono);
-            font-size: 0.68rem;
-            font-weight: 700;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            color: #CC4E16;
-            background-color: rgba(204, 78, 22, 0.08);
-            border: 1px solid rgba(204, 78, 22, 0.22);
-            border-radius: 9999px;
-            padding: 4px 14px;
-            text-align: center;
+          .services-title {
+            font-size: clamp(1.45rem, 5.2vw, 1.85rem) !important;
+            margin-bottom: 8px !important;
           }
 
+          .services-desc {
+            font-size: 0.82rem !important;
+            line-height: 1.4 !important;
+          }
+
+          /* LA GRILLE BENTO RESTE EN 12 COLONNES MÊME SUR MOBILE */
           .bento-grid {
-            display: flex !important;
-            flex-direction: row !important;
-            overflow-x: auto !important;
-            overflow-y: hidden !important;
-            scroll-snap-type: x mandatory !important;
-            -webkit-overflow-scrolling: touch !important;
-            scroll-behavior: smooth !important;
-            gap: 14px !important;
-            padding: 6px 16px 26px 16px !important;
-            margin-left: -16px !important;
-            margin-right: -16px !important;
-            scrollbar-width: none !important;
+            display: grid !important;
+            grid-template-columns: repeat(12, 1fr) !important;
+            gap: 10px !important;
+            margin-bottom: 24px !important;
+            width: 100% !important;
+            overflow: visible !important;
           }
 
-          .bento-grid::-webkit-scrollbar {
-            display: none !important;
+          /* ROW 1 : ALIBABA (7 COLS) + AÉRIEN (5 COLS) */
+          .card-alibaba {
+            grid-column: span 7 !important;
+            min-height: 335px !important;
+          }
+
+          .card-aerien {
+            grid-column: span 5 !important;
+            min-height: 335px !important;
+          }
+
+          /* ROW 2 : DUBAÏ (5 COLS) + MARITIME (7 COLS) */
+          .card-dubai {
+            grid-column: span 5 !important;
+            min-height: 315px !important;
+          }
+
+          .card-maritime {
+            grid-column: span 7 !important;
+            min-height: 315px !important;
+          }
+
+          /* ROW 3 : PARIS (6 COLS) + MAROC (6 COLS) */
+          .card-paris {
+            grid-column: span 6 !important;
+            min-height: 295px !important;
+          }
+
+          .card-maroc {
+            grid-column: span 6 !important;
+            min-height: 295px !important;
           }
 
           .bento-card {
-            flex: 0 0 86vw !important;
-            max-width: 335px !important;
-            min-height: 440px !important;
-            scroll-snap-align: center !important;
-            scroll-snap-stop: always !important;
-            border-radius: 24px !important;
-            margin: 0 !important;
-            display: flex !important;
-            flex-direction: column !important;
+            border-radius: 18px !important;
+            box-shadow: 0 8px 24px -4px rgba(20, 13, 9, 0.22) !important;
           }
 
           .bento-content {
-            padding: 22px 18px !important;
+            padding: 13px 10px !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: space-between !important;
             height: 100% !important;
-            flex: 1 !important;
+          }
+
+          .bento-tag {
+            font-size: 0.54rem !important;
+            padding: 3px 6px !important;
+            gap: 4px !important;
+            letter-spacing: 0.02em !important;
+            max-width: 100% !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
           }
 
           .bento-card-title {
-            font-size: 1.38rem !important;
+            font-size: clamp(0.96rem, 3.2vw, 1.25rem) !important;
+            line-height: 1.15 !important;
+            margin-bottom: 3px !important;
           }
 
           .bento-card-subtitle {
-            font-size: 0.79rem !important;
-            line-height: 1.36 !important;
-            margin-bottom: 8px !important;
-          }
-
-          .options-duo {
-            grid-template-columns: 1fr !important;
-            gap: 6px !important;
-            margin: 6px 0 10px 0 !important;
-          }
-
-          .option-tag {
-            font-size: 0.64rem !important;
-          }
-
-          .option-desc {
-            font-size: 0.72rem !important;
+            font-size: 0.67rem !important;
+            line-height: 1.3 !important;
+            margin-bottom: 6px !important;
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
           }
 
           .bento-stat-highlight {
-            font-size: 1.45rem !important;
+            font-size: clamp(1.0rem, 3.6vw, 1.4rem) !important;
+            margin: 3px 0 5px 0 !important;
+            line-height: 1 !important;
+          }
+
+          .options-duo {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 4px !important;
             margin: 4px 0 6px 0 !important;
           }
 
-          .pass-body-grid {
-            grid-template-columns: 1fr !important;
-            gap: 18px !important;
+          .option-box {
+            padding: 4px 6px !important;
+            border-radius: 6px !important;
           }
 
+          .option-tag {
+            font-size: 0.55rem !important;
+            font-weight: 700 !important;
+          }
+
+          .option-desc {
+            font-size: 0.59rem !important;
+            line-height: 1.25 !important;
+          }
+
+          /* Masquer les puces détaillées sur les cartes compactes pour un équilibre parfait */
+          .card-aerien .bento-bullets,
+          .card-dubai .bento-bullets {
+            display: none !important;
+          }
+
+          .bento-bullet {
+            font-size: 0.63rem !important;
+            gap: 5px !important;
+          }
+
+          .bento-bullet strong {
+            font-weight: 700 !important;
+          }
+
+          .bento-bottom-row {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            gap: 6px !important;
+            margin-top: 6px !important;
+          }
+
+          .bento-bottom-row span {
+            font-size: 0.64rem !important;
+          }
+
+          .bento-cta-pill {
+            padding: 6px 10px !important;
+            font-size: 0.66rem !important;
+            gap: 4px !important;
+            white-space: nowrap !important;
+          }
+
+          .arrow-btn {
+            width: 30px !important;
+            height: 30px !important;
+            flex-shrink: 0 !important;
+          }
+
+          .arrow-btn svg {
+            width: 14px !important;
+            height: 14px !important;
+          }
+
+          /* ÉTIQUETTE / SHIPPING MARK */
           .shipping-pass-block {
-            padding: 20px 16px !important;
+            padding: 18px 14px !important;
+            border-radius: 20px !important;
+          }
+
+          .pass-body-grid {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 16px !important;
+          }
+
+          .pass-tabs-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
           }
 
           .pass-warehouse-capsules {
@@ -1698,10 +1775,24 @@ function ServicesContent() {
             grid-template-columns: 1fr !important;
             gap: 10px !important;
           }
+        }
 
-          .bento-bottom-row {
-            flex-wrap: wrap !important;
+        @media (max-width: 360px) {
+          .bento-grid {
             gap: 8px !important;
+          }
+          .bento-content {
+            padding: 11px 7px !important;
+          }
+          .bento-card-title {
+            font-size: 0.90rem !important;
+          }
+          .bento-stat-highlight {
+            font-size: 0.95rem !important;
+          }
+          .bento-cta-pill {
+            padding: 5px 8px !important;
+            font-size: 0.60rem !important;
           }
         }
       `}</style>
