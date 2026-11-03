@@ -41,8 +41,9 @@ export function FloatingBottomNav() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          gap: "3px",
+          gap: "4px",
           padding: "4px 5px",
+          height: "44px",
           backgroundColor: "rgba(20, 13, 9, 0.94)",
           backdropFilter: "blur(18px)",
           WebkitBackdropFilter: "blur(18px)",
@@ -64,9 +65,11 @@ export function FloatingBottomNav() {
               style={{
                 display: "inline-flex",
                 alignItems: "center",
+                justifyContent: "center",
                 flexDirection: "row",
                 gap: "5px",
-                padding: "7px 11px",
+                height: "34px",
+                padding: "0 11px",
                 borderRadius: "9999px",
                 fontSize: "0.72rem",
                 fontWeight: item.isActive ? 700 : 500,
@@ -78,6 +81,7 @@ export function FloatingBottomNav() {
                 flexShrink: 0,
                 touchAction: "manipulation",
                 userSelect: "none",
+                boxSizing: "border-box",
                 transition: "background-color 0.16s ease, color 0.16s ease, transform 0.12s ease",
               }}
               title={item.label}
@@ -107,6 +111,11 @@ export function FloatingBottomNav() {
         }
 
         @media (max-width: 540px) {
+          nav {
+            height: 40px !important;
+            padding: 3px 4px !important;
+            gap: 3px !important;
+          }
           .roum-nav-label-full {
             display: none;
           }
@@ -116,15 +125,22 @@ export function FloatingBottomNav() {
             line-height: 1;
           }
           .roum-nav-pill {
-            padding: 6px 9px !important;
+            height: 32px !important;
+            padding: 0 8.5px !important;
             font-size: 0.69rem !important;
             gap: 4px !important;
           }
         }
 
         @media (max-width: 400px) {
+          nav {
+            height: 38px !important;
+            padding: 3px !important;
+            gap: 2.5px !important;
+          }
           .roum-nav-pill {
-            padding: 5px 7px !important;
+            height: 30px !important;
+            padding: 0 7px !important;
             font-size: 0.65rem !important;
             gap: 3px !important;
           }
@@ -135,8 +151,14 @@ export function FloatingBottomNav() {
         }
 
         @media (max-width: 360px) {
+          nav {
+            height: 36px !important;
+            padding: 2.5px !important;
+            gap: 2px !important;
+          }
           .roum-nav-pill {
-            padding: 4px 5.5px !important;
+            height: 29px !important;
+            padding: 0 5.5px !important;
             font-size: 0.61rem !important;
             gap: 2.5px !important;
           }
@@ -149,5 +171,3 @@ export function FloatingBottomNav() {
     </div>
   );
 }
-
-export default FloatingBottomNav;

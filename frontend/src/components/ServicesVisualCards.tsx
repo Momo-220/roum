@@ -4,6 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowDownRight, ArrowRight, X } from "lucide-react";
 
+interface ServiceOption {
+  tag: string;
+  desc: string;
+}
+
 interface ServiceItem {
   id: string;
   badge: string;
@@ -13,6 +18,7 @@ interface ServiceItem {
   image: string;
   href: string;
   ctaText: string;
+  options?: ServiceOption[];
   features: string[];
   metrics: { label: string; value: string }[];
 }
@@ -20,65 +26,79 @@ interface ServiceItem {
 const SERVICES_DATA: ServiceItem[] = [
   {
     id: "achats",
-    badge: "Alibaba & 1688 · Paiement RMB",
+    badge: "Alibaba, 1688 & Taobao · Paiement Yuans RMB",
     title: "Centrale d'Achat",
-    subtitle: "Paiement fournisseurs & contrôle qualité",
+    subtitle: "Règlement Mobile Money & négociation Chine",
     description:
-      "Achetez sur Alibaba, 1688 et Taobao sans blocage bancaire international. Vous réglez en FCFA à Abidjan à taux négocié, notre bureau en Chine paie votre usine en Yuans (RMB) et vérifie vos cartons.",
+      "Achetez directement sur Alibaba, 1688 et Taobao sans blocage bancaire international. Vous réglez en FCFA par Mobile Money (Wave, Orange Money, MTN, Moov) à taux négocié. Notre équipe en Chine paie votre fournisseur en Yuans (RMB), réceptionne vos cartons dans nos entrepôts de Guangzhou et Yiwu, puis assure l'expédition sécurisée avec dédouanement inclus.",
     image: "/images/services/achats.jpg",
     href: "/services?tab=alibaba",
-    ctaText: "Lancer un achat assisté",
+    ctaText: "Lancer une commande Alibaba",
+    options: [
+      {
+        tag: "Option 1 · Sans fournisseur",
+        desc: "Vous n'avez pas de fournisseur ? Nous cherchons l'article, vérifions la fiabilité de l'usine chinoise et négocions le tarif direct usine.",
+      },
+      {
+        tag: "Option 2 · Avec fournisseur",
+        desc: "Vous avez déjà votre fournisseur ? Transmettez-nous son contact ou sa facture proforma, nous payons immédiatement en Yuans (RMB).",
+      },
+    ],
     features: [
-      "Paiement direct de vos fournisseurs en Yuans (RMB)",
+      "Paiement en FCFA par Mobile Money (Wave, Orange, MTN, Moov)",
       "Zéro carte bancaire internationale requise",
-      "Vérification & inspection des colis en entrepôt",
-      "Transit automatique vers l'Afrique dès validation",
+      "Option 1 : Sourcing & négociation directe en usine",
+      "Option 2 : Règlement Yuans RMB sous 24h pour votre fournisseur",
+      "Réception, photos & pesée vidéo en entrepôt à Guangzhou/Yiwu",
+      "Transit automatique vers l'Afrique avec dédouanement inclus",
     ],
     metrics: [
-      { label: "Devise réglée", value: "Yuans RMB en Chine" },
-      { label: "Règlement client", value: "FCFA à Abidjan" },
+      { label: "Paiement client", value: "Mobile Money (FCFA)" },
+      { label: "Règlement usine", value: "Yuans (RMB) en Chine" },
     ],
   },
   {
     id: "maritime",
-    badge: "Bateau · Dès 350 000 F / CBM",
+    badge: "Bateau · Dès 300 000 FCFA / m³",
     title: "Voie Maritime",
-    subtitle: "Chine vers Abidjan, Bamako & Dakar",
+    subtitle: "Groupage CBM & Conteneurs FCL",
     description:
-      "Acheminement par conteneurs sécurisés (FCL) ou groupage au mètre cube (LCL / CBM). La solution idéale pour machines lourdes et gros volumes avec dédouanement complet inclus au port.",
+      "Acheminement maritime par conteneurs sécurisés ou groupage au mètre cube (CBM) depuis Ningbo, Yiwu et Guangzhou. La solution la plus économique pour machines, équipements et gros volumes commerciaux, avec dédouanement 100% compris jusqu'à notre agence de Bingerville Carrefour Safari.",
     image: "/images/services/maritime.jpg",
     href: "/tariffs?mode=SEA",
     ctaText: "Estimer mon fret maritime",
     features: [
       "Groupage au mètre cube (CBM) sans minimum lourd",
-      "Dédouanement 100% inclus jusqu'à Bingerville",
-      "Scellés de sécurité & traçabilité par conteneur",
-      "Départs réguliers chaque semaine de Ningbo & Yiwu",
+      "Dédouanement et taxes de port intégralement compris",
+      "Scellés de sécurité numérotés et suivi de conteneur en direct",
+      "Départs maritimes hebdomadaires depuis Guangzhou et Yiwu",
+      "Retrait direct en agence à Bingerville ou livraison",
     ],
     metrics: [
-      { label: "Délai moyen", value: "30 - 45 jours" },
-      { label: "Tarif indicatif", value: "Dès 350 000 F / CBM" },
+      { label: "Délai moyen", value: "35 à 45 jours" },
+      { label: "Tarif groupage", value: "Dès 300 000 FCFA / m³" },
     ],
   },
   {
     id: "aerien",
-    badge: "Avion · 3 à 5 Jours Chrono",
+    badge: "Avion · Express 4 à 5 Jours Chrono",
     title: "Voie Aérienne",
-    subtitle: "Chine, Dubaï, France & Maroc direct",
+    subtitle: "Chine, Dubaï, Paris & Casablanca",
     description:
-      "Vols cargos réguliers chaque semaine pour vos colis urgents, échantillons, téléphones et cosmétiques. Pesée certifiée et retrait immédiat en agence sans formalités douanières complexes.",
+      "Vols réguliers chaque semaine pour vos colis urgents, échantillons, téléphones, cosmétiques et compléments. Deux formules adaptées : Voie Express (4 à 5 jours chrono) ou Voie Normale économique (12 à 14 jours). Dédouanement complet inclus au kilo avec pesée vidéo certifiée dès réception en magasin.",
     image: "/images/services/aerien.jpg",
     href: "/tariffs?mode=AIR",
     ctaText: "Calculer mon tarif aérien",
     features: [
-      "Vols directs chaque semaine vers l'Afrique",
-      "Délai express garanti de 3 à 5 jours ouvrés",
-      "Liaisons Paris, Casablanca, Dubaï & Guangzhou",
+      "Voie Express (4 à 5 j) & Voie Normale économique (12 à 14 j)",
+      "Liaisons régulières Chine (CAN), Dubaï (DXB), Paris & Maroc",
       "Dédouanement intégral compris dans le prix au kilo",
+      "Enregistrement vidéo de la pesée dès arrivée en entrepôt",
+      "Retrait immédiat à Bingerville Carrefour Safari",
     ],
     metrics: [
-      { label: "Délai express", value: "3 à 5 jours" },
-      { label: "Retrait", value: "Bingerville Carrefour Safari" },
+      { label: "Délai express", value: "4 à 5 jours ouvrés" },
+      { label: "Tarif indicatif", value: "Dès 10 000 FCFA / kg" },
     ],
   },
 ];
@@ -250,6 +270,18 @@ export function ServicesVisualCards() {
                         <p className="service-desc-expanded">{service.description}</p>
                       </div>
 
+                      {/* Les 2 Options Spécifiques (Alibaba) : ZÉRO CADRE, TYPOGRAPHIE PURE */}
+                      {service.options && (
+                        <div className="service-options-container">
+                          {service.options.map((opt, oIdx) => (
+                            <div key={oIdx} className="service-option-item">
+                              <span className="service-option-tag">{opt.tag}</span>
+                              <p className="service-option-desc">{opt.desc}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       {/* Métriques : ÉPURÉES EN LIGNE SANS CADRE NI BOÎTE */}
                       <div className="service-metrics-row">
                         {service.metrics.map((m, idx) => (
@@ -374,6 +406,18 @@ export function ServicesVisualCards() {
                         <h3 className="service-title-expanded">{activeService.title}</h3>
                         <p className="service-desc-expanded">{activeService.description}</p>
                       </div>
+
+                      {/* Les 2 Options Spécifiques (Alibaba) : ZÉRO CADRE */}
+                      {activeService.options && (
+                        <div className="service-options-container">
+                          {activeService.options.map((opt, oIdx) => (
+                            <div key={oIdx} className="service-option-item">
+                              <span className="service-option-tag">{opt.tag}</span>
+                              <p className="service-option-desc">{opt.desc}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
                       {/* Métriques épurées sans boîte */}
                       <div className="service-metrics-row">
@@ -530,7 +574,7 @@ export function ServicesVisualCards() {
         .desktop-grid.has-active {
           grid-template-columns: 2.2fr 1fr;
           grid-template-rows: 1fr 1fr;
-          height: 520px;
+          height: 560px;
         }
 
         .service-card-item {
@@ -753,10 +797,41 @@ export function ServicesVisualCards() {
         }
 
         .service-desc-expanded {
-          font-size: 0.88rem;
-          line-height: 1.48;
-          color: rgba(255, 255, 255, 0.9);
+          font-size: 0.86rem;
+          line-height: 1.46;
+          color: rgba(255, 255, 255, 0.92);
           max-width: 620px;
+          margin: 0;
+        }
+
+        /* Options 1 et 2 pour Alibaba : ZÉRO CADRE, TYPOGRAPHIE PURE */
+        .service-options-container {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+          gap: 10px 16px;
+        }
+
+        .service-option-item {
+          background: transparent !important;
+          border: none !important;
+          padding: 0 !important;
+        }
+
+        .service-option-tag {
+          display: block;
+          font-size: 0.74rem;
+          font-family: var(--c-font-mono);
+          font-weight: 700;
+          color: #FFA066;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin-bottom: 2px;
+        }
+
+        .service-option-desc {
+          font-size: 0.8rem;
+          color: rgba(255, 255, 255, 0.9);
+          line-height: 1.38;
           margin: 0;
         }
 
@@ -797,7 +872,7 @@ export function ServicesVisualCards() {
         .service-features-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-          gap: 8px 16px;
+          gap: 7px 16px;
         }
 
         .service-feature-row {
@@ -905,7 +980,7 @@ export function ServicesVisualCards() {
             background-color: #1B1411;
             border: none !important;
             box-shadow: 0 14px 34px -8px rgba(20, 13, 9, 0.32);
-            min-height: 440px;
+            min-height: 480px;
             animation: cardSmoothReveal 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
           }
 
