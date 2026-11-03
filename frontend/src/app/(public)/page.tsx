@@ -33,77 +33,29 @@ export default function HomePage() {
   };
 
   return (
-    <div style={{ maxWidth: "1120px", margin: "0 auto", padding: "40px 24px 80px 24px" }}>
+    <div className="home-main-wrapper">
       {/* ========================================================
-          HERO : TITRE EN IMMERSION ARRIÈRE-PLAN ("BIEN EN ARRIÈRE")
-          ET CARTE MONDIALE EN AVANT-PLAN AVEC DÉBUT TRANSPARENT
-          (Immersion pure, zéro coupure, animations fluides et simples)
+          HERO : TITRE SUR UNE SEULE LIGNE + CARTE MONDIALE EN FOND
+          (Format sobre, proportion normale, zéro sensation de zoom excessif)
          ======================================================== */}
       <ScrollReveal>
-        <section style={{ textAlign: "center", marginBottom: "72px", position: "relative" }}>
-          {/* Titre Pesant Host Grotesk placé bien en Arrière-Plan */}
-          <div
-            style={{
-              position: "relative",
-              zIndex: 1,
-              maxWidth: "920px",
-              margin: "0 auto",
-              padding: "16px 16px 0 16px",
-            }}
-          >
-            <h1
-              style={{
-                fontFamily: "var(--c-font-display)",
-                fontSize: "clamp(2.4rem, 5.6vw, 4.2rem)",
-                fontWeight: 700,
-                lineHeight: 1.05,
-                letterSpacing: "-0.038em",
-                color: "var(--c-text-main)",
-                margin: 0,
-              }}
-            >
-              Transport maritime & aérien direct vers l&apos;Afrique.
+        <section className="hero-section">
+          {/* Titre Majeur Garanti sur UNE SEULE LIGNE */}
+          <div className="hero-title-container">
+            <h1 className="hero-title-single-line">
+              Transport maritime &amp; aérien direct vers l&apos;Afrique.
             </h1>
           </div>
 
-          {/* Carte Mondiale au Premier Plan (Remontée en immersion, avec début semi-transparent) */}
-          <div
-            style={{
-              width: "100%",
-              maxWidth: "1000px",
-              margin: "clamp(-110px, -9.2vw, -60px) auto 0 auto",
-              position: "relative",
-              zIndex: 2,
-              pointerEvents: "none",
-              WebkitMaskImage: "linear-gradient(to bottom, rgba(0, 0, 0, 0.22) 0%, rgba(0, 0, 0, 0.55) 20%, #000000 42%, #000000 78%, transparent 100%)",
-              maskImage: "linear-gradient(to bottom, rgba(0, 0, 0, 0.22) 0%, rgba(0, 0, 0, 0.55) 20%, #000000 42%, #000000 78%, transparent 100%)",
-            }}
-          >
+          {/* Carte Mondiale d'Arrière-Plan (Compacte et proportionnée sur mobile) */}
+          <div className="hero-map-wrapper">
             <WorldMap lineColor="#0EA5E9" />
           </div>
 
-          {/* Module de Recherche Épuré Flottant Naturellement */}
-          <div
-            style={{
-              maxWidth: "560px",
-              margin: "clamp(-38px, -3.8vw, -18px) auto 0 auto",
-              position: "relative",
-              zIndex: 10,
-            }}
-          >
-            <form
-              onSubmit={handleTrackingSubmit}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                backgroundColor: "#FFFFFF",
-                border: "1px solid var(--c-border)",
-                borderRadius: "9999px",
-                padding: "6px 8px 6px 20px",
-                boxShadow: "0 4px 20px -2px rgba(27, 20, 17, 0.05)",
-              }}
-            >
-              <Search size={17} color="#8C7D75" style={{ marginRight: "12px", flexShrink: 0 }} />
+          {/* Module de Recherche de Colis (Épuré & élégant) */}
+          <div className="hero-search-wrapper">
+            <form onSubmit={handleTrackingSubmit} className="hero-search-form">
+              <Search size={16} color="#8C7D75" style={{ marginRight: "10px", flexShrink: 0 }} />
               <input
                 type="text"
                 value={trackingInput}
@@ -112,37 +64,15 @@ export default function HomePage() {
                   if (trackingError) setTrackingError("");
                 }}
                 placeholder="Numéro de bordereau (Ex : RM-AIR-2610-K8P9Q2)"
-                style={{
-                  flex: 1,
-                  border: "none",
-                  outline: "none",
-                  fontSize: "0.88rem",
-                  fontFamily: "var(--c-font-mono)",
-                  backgroundColor: "transparent",
-                  color: "var(--c-text-main)",
-                }}
+                className="hero-search-input"
               />
-              <button
-                type="submit"
-                style={{
-                  backgroundColor: "var(--c-text-main)",
-                  color: "var(--c-bg)",
-                  border: "none",
-                  borderRadius: "9999px",
-                  padding: "10px 22px",
-                  fontSize: "0.84rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  transition: "opacity 0.15s ease",
-                }}
-              >
+              <button type="submit" className="hero-search-submit">
                 Suivre
               </button>
             </form>
 
             {trackingError && (
-              <div style={{ fontSize: "0.78rem", color: "#DC2626", marginTop: "8px", fontWeight: 500 }}>
+              <div style={{ fontSize: "0.78rem", color: "#DC2626", marginTop: "6px", fontWeight: 500, textAlign: "center" }}>
                 {trackingError}
               </div>
             )}
@@ -151,95 +81,249 @@ export default function HomePage() {
       </ScrollReveal>
 
       {/* ========================================================
-          LES 3 CARTES DE TRANSPORT & FRET (FORMAT ADAPTÉ ROUM TRANSIT)
-          (Plein format photo, verre dépoli, typographie Host Grotesk,
-           support mobile avec scroll snap magnétique sans débordement)
+          CATALOGUE VISUEL DES SERVICES : CARTES CINÉMATOGRAPHIQUES
+          - Desktop : Carte active étendue + 2 cartes carrées superposées
+          - Mobile : Cartes compactes flexibles avec déroulement fluide
          ======================================================== */}
-      <ScrollReveal delay={60}>
+      <ScrollReveal>
         <ServicesVisualCards />
       </ScrollReveal>
 
       {/* ========================================================
-          OUTILS & PASSERELLES RAPIDES : SIMULATEUR & ENTREPÔTS
-          (Deux sections sobres, intégrées sans lourdeur)
+          GARANTIES OFFICIELLES ROUM TRANSIT (LIGNE FINALE SOBRE)
          ======================================================== */}
-      <ScrollReveal delay={200}>
+      <ScrollReveal>
         <section
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "24px",
+            marginTop: "20px",
+            padding: "24px 20px",
+            backgroundColor: "#FFFFFF",
+            border: "1px solid rgba(28, 25, 23, 0.08)",
+            borderRadius: "20px",
+            boxShadow: "0 2px 10px rgba(0, 0, 0, 0.02)",
           }}
         >
-          {/* Bloc Simulateur */}
           <div
             style={{
-              padding: "24px 0",
-              borderTop: "1px solid var(--c-border)",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "20px",
+              textAlign: "center",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-              <Calculator size={18} color="var(--c-text-main)" />
-              <h3 style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", margin: 0, fontFamily: "var(--c-font-display)" }}>
-                Simulateur de Prix
-              </h3>
+            <div>
+              <div
+                style={{
+                  fontFamily: "var(--c-font-display)",
+                  fontWeight: 700,
+                  fontSize: "1.05rem",
+                  color: "#140D09",
+                  marginBottom: "4px",
+                }}
+              >
+                Douane 100% Comprise
+              </div>
+              <p style={{ fontSize: "0.82rem", color: "#57534E", margin: 0, lineHeight: 1.4 }}>
+                Zéro mauvaise surprise à l&apos;arrivée. Dédouanement intégral inclus.
+              </p>
             </div>
-            <p style={{ fontSize: "0.88rem", color: "var(--c-text-muted)", lineHeight: 1.55, margin: "0 0 16px 0" }}>
-              Estimez le montant exact de votre envoi selon le poids, le mode et le pays de départ. Dédouanement 100% compris.
-            </p>
 
-            <Link
-              href="/tariffs"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                fontSize: "0.84rem",
-                fontWeight: 600,
-                color: "var(--c-text-main)",
-                textDecoration: "none",
-              }}
-            >
-              <span>Calculer mon tarif</span>
-              <ArrowRight size={14} />
-            </Link>
-          </div>
-
-          {/* Bloc Entrepôts */}
-          <div
-            style={{
-              padding: "24px 0",
-              borderTop: "1px solid var(--c-border)",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-              <MapPin size={18} color="var(--c-text-main)" />
-              <h3 style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--c-text-main)", margin: 0, fontFamily: "var(--c-font-display)" }}>
-                Adresses de Réception
-              </h3>
+            <div>
+              <div
+                style={{
+                  fontFamily: "var(--c-font-display)",
+                  fontWeight: 700,
+                  fontSize: "1.05rem",
+                  color: "#140D09",
+                  marginBottom: "4px",
+                }}
+              >
+                Pesée Vidéo Certifiée
+              </div>
+              <p style={{ fontSize: "0.82rem", color: "#57534E", margin: 0, lineHeight: 1.4 }}>
+                Colis pesés et filmés en entrepôt dès réception pour votre sérénité.
+              </p>
             </div>
-            <p style={{ fontSize: "0.88rem", color: "var(--c-text-muted)", lineHeight: 1.55, margin: "0 0 16px 0" }}>
-              Copiez les adresses de nos magasins de Guangzhou, Yiwu, Dubaï, Casablanca et Paris à donner à vos expéditeurs.
-            </p>
 
-            <Link
-              href="/warehouses"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                fontSize: "0.84rem",
-                fontWeight: 600,
-                color: "var(--c-text-main)",
-                textDecoration: "none",
-              }}
-            >
-              <span>Voir les magasins</span>
-              <ArrowRight size={14} />
-            </Link>
+            <div>
+              <div
+                style={{
+                  fontFamily: "var(--c-font-display)",
+                  fontWeight: 700,
+                  fontSize: "1.05rem",
+                  color: "#140D09",
+                  marginBottom: "4px",
+                }}
+              >
+                Agence à Abidjan
+              </div>
+              <p style={{ fontSize: "0.82rem", color: "#57534E", margin: 0, lineHeight: 1.4 }}>
+                Retrait direct à Bingerville Carrefour Safari ou livraison à domicile.
+              </p>
+            </div>
           </div>
         </section>
       </ScrollReveal>
+
+      {/* ========================================================
+          STYLES ADAPTATIFS DESKTOP & MOBILE
+         ======================================================== */}
+      <style jsx>{`
+        .home-main-wrapper {
+          max-width: 1120px;
+          margin: 0 auto;
+          padding: 24px 16px 48px 16px;
+          box-sizing: border-box;
+        }
+
+        .hero-section {
+          text-align: center;
+          margin-bottom: 40px;
+          position: relative;
+        }
+
+        .hero-title-container {
+          position: relative;
+          z-index: 1;
+          max-width: 1040px;
+          margin: 0 auto;
+          padding: 8px 4px 0 4px;
+          overflow: hidden;
+        }
+
+        /* Titre sur UNE SEULE LIGNE strictement garanti */
+        .hero-title-single-line {
+          font-family: var(--c-font-display);
+          font-weight: 700;
+          letter-spacing: -0.04em;
+          color: var(--c-text-main);
+          margin: 0 auto;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          font-size: clamp(0.92rem, 4.3vw, 2.7rem);
+          line-height: 1.15;
+          text-align: center;
+          display: block;
+          width: 100%;
+        }
+
+        .hero-map-wrapper {
+          width: 100%;
+          max-width: 960px;
+          margin: -24px auto 0 auto;
+          position: relative;
+          z-index: 2;
+          pointer-events: none;
+          max-height: 160px;
+          overflow: hidden;
+          mask-image: linear-gradient(
+            to bottom,
+            rgba(0, 0, 0, 0.2) 0%,
+            rgba(0, 0, 0, 0.6) 20%,
+            #000000 45%,
+            #000000 75%,
+            transparent 100%
+          );
+          -webkit-mask-image: linear-gradient(
+            to bottom,
+            rgba(0, 0, 0, 0.2) 0%,
+            rgba(0, 0, 0, 0.6) 20%,
+            #000000 45%,
+            #000000 75%,
+            transparent 100%
+          );
+        }
+
+        .hero-search-wrapper {
+          max-width: 520px;
+          margin: -8px auto 0 auto;
+          position: relative;
+          z-index: 10;
+          padding: 0 4px;
+        }
+
+        .hero-search-form {
+          display: flex;
+          align-items: center;
+          background-color: #ffffff;
+          border: 1px solid var(--c-border);
+          border-radius: 9999px;
+          padding: 5px 6px 5px 16px;
+          box-shadow: 0 4px 18px -2px rgba(27, 20, 17, 0.06);
+          transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .hero-search-form:focus-within {
+          border-color: rgba(20, 13, 9, 0.4);
+          box-shadow: 0 6px 22px -2px rgba(27, 20, 17, 0.12);
+        }
+
+        .hero-search-input {
+          flex: 1;
+          border: none;
+          outline: none;
+          font-size: 0.84rem;
+          font-family: var(--c-font-mono);
+          background-color: transparent;
+          color: var(--c-text-main);
+          min-width: 0;
+        }
+
+        .hero-search-submit {
+          background-color: var(--c-text-main);
+          color: var(--c-bg);
+          border: none;
+          border-radius: 9999px;
+          padding: 8px 18px;
+          font-size: 0.82rem;
+          font-weight: 600;
+          cursor: pointer;
+          white-space: nowrap;
+          transition: opacity 0.15s ease, transform 0.15s ease;
+          flex-shrink: 0;
+        }
+
+        .hero-search-submit:hover {
+          opacity: 0.92;
+          transform: translateY(-1px);
+        }
+
+        /* Desktop Spacing */
+        @media (min-width: 860px) {
+          .home-main-wrapper {
+            padding: 36px 24px 64px 24px;
+          }
+
+          .hero-section {
+            margin-bottom: 60px;
+          }
+
+          .hero-map-wrapper {
+            margin: clamp(-90px, -7vw, -45px) auto 0 auto;
+            max-height: none;
+            overflow: visible;
+          }
+
+          .hero-search-wrapper {
+            margin: clamp(-32px, -3vw, -12px) auto 0 auto;
+            padding: 0;
+          }
+
+          .hero-search-form {
+            padding: 6px 8px 6px 20px;
+          }
+
+          .hero-search-input {
+            font-size: 0.88rem;
+          }
+
+          .hero-search-submit {
+            padding: 10px 22px;
+            font-size: 0.86rem;
+          }
+        }
+      `}</style>
     </div>
   );
 }

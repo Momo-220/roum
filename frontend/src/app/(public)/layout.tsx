@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FloatingBottomNav } from "@/components/FloatingBottomNav";
+import { HeaderNav } from "@/components/HeaderNav";
 import { WhatsAppFloatingButton } from "@/components/WhatsAppFloatingButton";
 
 export default function PublicLayout({
@@ -9,55 +9,11 @@ export default function PublicLayout({
 }) {
   return (
     <div className="client-portal" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* ========================================================
-          HEADER ROUM TRANSIT : LE LOGO ET STRICTEMENT RIEN D'AUTRE
-          (Zéro bordure, fond lin naturel continu avec le body)
-         ======================================================== */}
-      <header
-        style={{
-          backgroundColor: "transparent",
-          borderBottom: "none",
-          padding: "20px 28px 10px 28px",
-          position: "relative",
-          zIndex: 50,
-        }}
-      >
-        <div
-          style={{
-            maxWidth: "1160px",
-            margin: "0 auto",
-            display: "flex",
-            alignItems: "center",
-          }}
-        >
-          <Link
-            href="/"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              textDecoration: "none",
-            }}
-            title="ROUM TRANSIT INTERNATIONAL"
-          >
-            <img
-              src="/images/roum-logo-transparent.png"
-              alt="Roum Transit"
-              style={{
-                height: "46px",
-                width: "auto",
-                objectFit: "contain",
-                display: "block",
-              }}
-            />
-          </Link>
-        </div>
-      </header>
+      {/* Header avec Navigation Intégrée au Sommet (Logo + Liens Desktop + Menu Mobile) */}
+      <HeaderNav />
 
       {/* Contenu principal */}
-      <main style={{ flex: 1, paddingBottom: "90px" }}>{children}</main>
-
-      {/* Navigation Flottante en Bas pour mobile et desktop */}
-      <FloatingBottomNav />
+      <main style={{ flex: 1, paddingBottom: "40px" }}>{children}</main>
 
       {/* Vrai bouton WhatsApp flottant en bas à droite (widget chatbot) */}
       <WhatsAppFloatingButton />

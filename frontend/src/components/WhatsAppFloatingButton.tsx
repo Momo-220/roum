@@ -11,7 +11,7 @@ export function WhatsAppFloatingButton() {
       aria-label="Contacter Roum Transit sur WhatsApp"
       style={{
         position: "fixed",
-        bottom: "84px",
+        bottom: "22px",
         right: "20px",
         zIndex: 90,
         width: "48px",
