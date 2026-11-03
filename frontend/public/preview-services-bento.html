@@ -401,49 +401,37 @@
       background-color: #2C1E17;
     }
 
-    /* Responsive Mobile : 100% Vertical (Zéro Horizontal) */
+    /* Responsive Mobile : Défilement horizontal fluide */
     @media (max-width: 900px) {
       body {
-        padding: 20px 14px 100px 14px;
+        padding: 24px 16px 110px 16px;
+        overflow-x: hidden;
       }
       .bento-grid {
         display: flex !important;
-        flex-direction: column !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        scroll-snap-type: x mandatory !important;
         gap: 14px !important;
-        width: 100% !important;
+        padding: 6px 16px 26px 16px !important;
+        margin-left: -16px !important;
+        margin-right: -16px !important;
+        scrollbar-width: none !important;
+      }
+      .bento-grid::-webkit-scrollbar {
+        display: none !important;
       }
       .card-alibaba, .card-aerien, .card-dubai, .card-maritime, .card-paris, .card-maroc {
-        width: 100% !important;
-        min-height: 290px !important;
+        flex: 0 0 86vw !important;
+        max-width: 335px !important;
+        min-height: 440px !important;
+        scroll-snap-align: center !important;
+        scroll-snap-stop: always !important;
+        border-radius: 24px !important;
       }
       .options-duo {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 8px !important;
-      }
-      .bento-bottom-row {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 12px !important;
-      }
-      .bento-cta-pill {
-        width: 100% !important;
-        justify-content: center !important;
-        text-align: center !important;
-        padding: 11px 18px !important;
-      }
-      .arrow-btn {
-        align-self: flex-end !important;
-      }
-      .shipping-pass {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        padding: 20px 16px !important;
-      }
-      .pass-left {
-        flex-direction: column !important;
-        align-items: flex-start !important;
+        grid-template-columns: 1fr;
+        gap: 8px;
       }
     }
   </style>

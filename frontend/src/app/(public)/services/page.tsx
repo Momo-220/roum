@@ -206,8 +206,14 @@ function ServicesContent() {
           </header>
 
           {/* ========================================================
-              GRILLE BENTO ASYMÉTRIQUE DYNAMIQUE
+              GRILLE BENTO ASYMÉTRIQUE DYNAMIQUE (HORIZONTAL SUR MOBILE)
              ======================================================== */}
+          <div className="mobile-swipe-hint-wrapper">
+            <div className="mobile-swipe-hint">
+              <span>← Glissez pour parcourir les 6 modes de transport →</span>
+            </div>
+          </div>
+
           <div className="bento-grid">
             {/* CARTE 1 (60% LARGEUR) : CENTRALE D'ACHAT ALIBABA & 1688 */}
             <article
@@ -1568,103 +1574,124 @@ function ServicesContent() {
           box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4);
         }
 
-        /* RESPONSIVE MOBILE : 100% VERTICAL (ZÉRO HORIZONTAL, ZÉRO DÉBORDEMENT) */
+        .mobile-swipe-hint-wrapper {
+          display: none;
+        }
+
+        /* RESPONSIVE MOBILE : DÉFILEMENT HORIZONTAL FLUIDE ET NATUREL */
         @media (max-width: 900px) {
           .services-page-root {
-            padding: 20px 12px 100px 12px !important;
-            overflow-x: hidden !important;
+            padding: 24px 16px 110px 16px;
+            overflow-x: hidden;
           }
 
-          .services-header {
-            margin-bottom: 24px !important;
+          .mobile-swipe-hint-wrapper {
+            display: flex;
+            justify-content: center;
+            margin: -6px 0 16px 0;
           }
 
-          .services-title {
-            font-size: 1.65rem !important;
+          .mobile-swipe-hint {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--c-font-mono);
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #CC4E16;
+            background-color: rgba(204, 78, 22, 0.08);
+            border: 1px solid rgba(204, 78, 22, 0.22);
+            border-radius: 9999px;
+            padding: 4px 14px;
+            text-align: center;
           }
 
           .bento-grid {
             display: flex !important;
-            flex-direction: column !important;
+            flex-direction: row !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            scroll-snap-type: x mandatory !important;
+            -webkit-overflow-scrolling: touch !important;
+            scroll-behavior: smooth !important;
             gap: 14px !important;
-            width: 100% !important;
+            padding: 6px 16px 26px 16px !important;
+            margin-left: -16px !important;
+            margin-right: -16px !important;
+            scrollbar-width: none !important;
+          }
+
+          .bento-grid::-webkit-scrollbar {
+            display: none !important;
           }
 
           .bento-card {
-            width: 100% !important;
-            border-radius: 20px !important;
-          }
-
-          .card-alibaba,
-          .card-aerien,
-          .card-dubai,
-          .card-maritime,
-          .card-paris,
-          .card-maroc {
-            grid-column: auto !important;
-            width: 100% !important;
-            min-height: 290px !important;
+            flex: 0 0 86vw !important;
+            max-width: 335px !important;
+            min-height: 440px !important;
+            scroll-snap-align: center !important;
+            scroll-snap-stop: always !important;
+            border-radius: 24px !important;
+            margin: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
           }
 
           .bento-content {
-            padding: 20px 18px !important;
+            padding: 22px 18px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            height: 100% !important;
+            flex: 1 !important;
           }
 
           .bento-card-title {
-            font-size: 1.4rem !important;
+            font-size: 1.38rem !important;
+          }
+
+          .bento-card-subtitle {
+            font-size: 0.79rem !important;
+            line-height: 1.36 !important;
+            margin-bottom: 8px !important;
           }
 
           .options-duo {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 8px !important;
+            grid-template-columns: 1fr !important;
+            gap: 6px !important;
+            margin: 6px 0 10px 0 !important;
           }
 
-          .bento-bottom-row {
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: stretch !important;
-            gap: 12px !important;
+          .option-tag {
+            font-size: 0.64rem !important;
           }
 
-          .bento-cta-pill {
-            width: 100% !important;
-            justify-content: center !important;
-            text-align: center !important;
-            padding: 11px 18px !important;
+          .option-desc {
+            font-size: 0.72rem !important;
           }
 
-          .arrow-btn {
-            align-self: flex-end !important;
+          .bento-stat-highlight {
+            font-size: 1.45rem !important;
+            margin: 4px 0 6px 0 !important;
           }
 
           .pass-body-grid {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 16px !important;
-          }
-
-          .pass-tabs-header {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-            gap: 12px !important;
-          }
-
-          .pass-warehouse-capsules {
-            display: grid !important;
-            grid-template-columns: 1fr 1fr !important;
-            width: 100% !important;
-            gap: 6px !important;
-          }
-
-          .pass-capsule-btn {
-            text-align: center !important;
-            justify-content: center !important;
+            grid-template-columns: 1fr !important;
+            gap: 18px !important;
           }
 
           .shipping-pass-block {
             padding: 20px 16px !important;
-            border-radius: 18px !important;
+          }
+
+          .pass-warehouse-capsules {
+            overflow-x: auto !important;
+            flex-wrap: nowrap !important;
+            padding-bottom: 4px !important;
+            width: 100% !important;
+            -webkit-overflow-scrolling: touch !important;
           }
 
           .modal-input-grid {
@@ -1672,9 +1699,9 @@ function ServicesContent() {
             gap: 10px !important;
           }
 
-          .modal-card {
-            padding: 24px 18px !important;
-            border-radius: 20px !important;
+          .bento-bottom-row {
+            flex-wrap: wrap !important;
+            gap: 8px !important;
           }
         }
       `}</style>

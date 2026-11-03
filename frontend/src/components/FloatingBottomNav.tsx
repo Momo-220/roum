@@ -25,12 +25,12 @@ export function FloatingBottomNav() {
     <div
       style={{
         position: "fixed",
-        bottom: "max(14px, env(safe-area-inset-bottom, 14px))",
+        bottom: "max(12px, env(safe-area-inset-bottom, 12px))",
         left: "50%",
         transform: "translateX(-50%)",
         zIndex: 9999,
         width: "max-content",
-        maxWidth: "calc(100vw - 20px)",
+        maxWidth: "calc(100vw - 16px)",
         pointerEvents: "auto",
         boxSizing: "border-box",
         display: "flex",
@@ -43,17 +43,18 @@ export function FloatingBottomNav() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          gap: "3px",
-          padding: "4px 6px",
+          gap: "2px",
+          padding: "4px 8px",
           height: "44px",
           backgroundColor: "#140D09",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
           borderRadius: "9999px",
-          border: "1px solid rgba(255, 255, 255, 0.14)",
+          border: "1px solid rgba(255, 255, 255, 0.15)",
           boxShadow: "0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3)",
           boxSizing: "border-box",
           whiteSpace: "nowrap",
+          overflow: "hidden",
         }}
       >
         {navItems.map((item) => {
@@ -63,91 +64,66 @@ export function FloatingBottomNav() {
               key={item.id}
               href={item.href}
               className={`roum-nav-pill ${item.isActive ? "active" : ""}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "4px",
+                height: "36px",
+                padding: "0 clamp(6px, 1.6vw, 12px)",
+                borderRadius: "9999px",
+                fontSize: "clamp(0.68rem, 1.8vw, 0.73rem)",
+                fontWeight: item.isActive ? 700 : 500,
+                letterSpacing: "-0.01em",
+                textDecoration: "none",
+                color: item.isActive ? "#140D09" : "rgba(255, 255, 255, 0.82)",
+                backgroundColor: item.isActive ? "#FFFFFF" : "transparent",
+                boxShadow: item.isActive ? "0 2px 8px rgba(0, 0, 0, 0.25)" : "none",
+                whiteSpace: "nowrap",
+                flexShrink: 1,
+                boxSizing: "border-box",
+                transition: "background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease",
+              }}
               title={item.label}
-              aria-label={item.label}
             >
               <Icon
-                size={15}
+                size={14}
                 strokeWidth={item.isActive ? 2.5 : 1.9}
+                color={item.isActive ? "#140D09" : "rgba(255, 255, 255, 0.85)"}
                 style={{ flexShrink: 0 }}
               />
-              <span className="roum-nav-label">{item.label}</span>
+              <span style={{ lineHeight: 1, whiteSpace: "nowrap" }}>{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
       <style jsx>{`
-        :global(.roum-nav-pill) {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-          height: 36px;
-          padding: 0 13px;
-          border-radius: 9999px;
-          font-size: 0.74rem;
-          font-weight: 500;
-          letter-spacing: -0.01em;
-          text-decoration: none;
-          color: rgba(255, 255, 255, 0.78);
-          background-color: transparent;
-          box-shadow: none;
-          white-space: nowrap;
-          flex-shrink: 0;
-          box-sizing: border-box;
-          transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-                      color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-                      padding 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-                      transform 0.15s ease;
-        }
-
-        :global(.roum-nav-pill:hover) {
-          color: #FFFFFF;
-        }
-
-        :global(.roum-nav-pill.active) {
-          background-color: #FFFFFF !important;
-          color: #140D09 !important;
-          font-weight: 700;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
-        }
-
-        :global(.roum-nav-label) {
-          line-height: 1;
-          white-space: nowrap;
-        }
-
-        /* MOBILE (< 640px) : ULTRA-ÉPURÉ, ZÉRO DÉBORDEMENT, SÉLECTEUR AJUSTÉ */
-        @media (max-width: 640px) {
+        @media (max-width: 380px) {
           nav {
-            height: 42px !important;
-            padding: 3.5px 5px !important;
-            gap: 2.5px !important;
+            height: 40px !important;
+            padding: 3px 6px !important;
+            gap: 1.5px !important;
           }
-
-          /* Inactif : icône seule, carré arrondi compact */
           :global(.roum-nav-pill) {
-            height: 35px !important;
-            width: 36px !important;
-            padding: 0 !important;
-            gap: 0 !important;
+            height: 34px !important;
+            padding: 0 5px !important;
+            font-size: 0.65rem !important;
+            gap: 3px !important;
           }
+        }
 
-          :global(.roum-nav-pill .roum-nav-label) {
-            display: none !important;
+        @media (max-width: 340px) {
+          nav {
+            height: 38px !important;
+            padding: 2.5px 4px !important;
+            gap: 1px !important;
           }
-
-          /* Actif : pilule blanche complète icône + texte parfaitement contenue */
-          :global(.roum-nav-pill.active) {
-            width: auto !important;
-            padding: 0 12px !important;
-            gap: 5px !important;
-            font-size: 0.71rem !important;
-          }
-
-          :global(.roum-nav-pill.active .roum-nav-label) {
-            display: inline !important;
+          :global(.roum-nav-pill) {
+            height: 32px !important;
+            padding: 0 4.5px !important;
+            font-size: 0.61rem !important;
+            gap: 2.5px !important;
           }
         }
       `}</style>
