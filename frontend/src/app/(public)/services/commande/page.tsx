@@ -2,11 +2,29 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, ShieldCheck, ArrowRight, MessageCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ShieldCheck,
+  ArrowRight,
+  MessageCircle,
+  Copy,
+  Check,
+  Sparkles,
+} from "lucide-react";
+import { saveClientRequest } from "@/shared";
 
 export default function CommandeAchatPage() {
   const [option, setOption] = useState<"sans_fournisseur" | "avec_fournisseur">("sans_fournisseur");
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [orderResult, setOrderResult] = useState<{
+    reference: string;
+    shippingMark: string;
+    whatsappUrl: string;
+  } | null>(null);
+  const [copiedRef, setCopiedRef] = useState(false);
+  const [copiedMark, setCopiedMark] = useState(false);
 
   // Form states
   const [clientName, setClientName] = useState("");
@@ -24,33 +42,81 @@ export default function CommandeAchatPage() {
   const [supplierContact, setSupplierContact] = useState("");
   const [goodsDescription, setGoodsDescription] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    if (!clientName.trim() || !clientPhone.trim()) return;
 
-    // Préparer message WhatsApp
-    const message =
-      option === "sans_fournisseur"
-        ? `*NOUVELLE DEMANDE DE SOURCING (SANS FOURNISSEUR)*\n` +
-          `• Client : ${clientName}\n` +
-          `• Téléphone : ${clientPhone}\n` +
-          `• Destination : ${destinationCity}\n` +
-          `• Produit : ${productQuery}\n` +
-          `• Lien référence : ${productLink || "Non fourni"}\n` +
-          `• Quantité : ${targetQuantity || "À définir"}\n` +
-          `• Budget : ${targetBudget || "À négocier"}\n` +
-          `• Règlement : 100% Mobile Money`
-        : `*PAIEMENT DE FOURNISSEUR CHINOIS (AVEC FOURNISSEUR)*\n` +
-          `• Client : ${clientName}\n` +
-          `• Téléphone : ${clientPhone}\n` +
-          `• Destination : ${destinationCity}\n` +
-          `• Montant Proforma : ${rmbAmount} RMB (¥)\n` +
-          `• Contact Usine (WeChat/WA) : ${supplierContact}\n` +
-          `• Marchandise : ${goodsDescription}\n` +
-          `• Règlement client : 100% Mobile Money`;
+    setSubmitting(true);
+    try {
+      const isOption1 = option === "sans_fournisseur";
+      const cargoDescription = isOption1
+        ? `[SOURCING SANS FOURNISSEUR] Produit: ${productQuery.trim()} | Qté: ${targetQuantity.trim() || "1"} | Budget: ${targetBudget.trim() || "À négocier"} | Réf: ${productLink.trim() || "Non fourni"}`
+        : `[PAIEMENT FOURNISSEUR RMB] Montant: ${rmbAmount.trim()} ¥ | Usine: ${supplierContact.trim()} | Marchandise: ${goodsDescription.trim()}`;
 
-    const waUrl = `https://wa.me/2250787994412?text=${encodeURIComponent(message)}`;
-    window.open(waUrl, "_blank");
+      // Enregistrement unifié : Base de données D1 + Synchronisation temps réel Admin (roum_requests_data)
+      const res = await saveClientRequest({
+        service_type: "ALIBABA",
+        client_name: clientName.trim(),
+        client_phone: clientPhone.trim(),
+        origin_country: "Chine",
+        destination_country: destinationCity.trim() || "Côte d'Ivoire",
+        product_url: isOption1 ? productLink.trim() : "",
+        product_quantity: isOption1 ? targetQuantity.trim() || "1" : "1",
+        product_specs: isOption1
+          ? `Produit: ${productQuery.trim()} | Budget: ${targetBudget.trim() || "À négocier"}`
+          : `Montant proforma: ${rmbAmount.trim()} RMB | Usine: ${supplierContact.trim()}`,
+        cargo_type: cargoDescription,
+      });
+
+      // Construction du message WhatsApp direct vers l'équipe commerciale
+      const message =
+        option === "sans_fournisseur"
+          ? `*DOSSIER SOURCING N° ${res.reference}*\n` +
+            `• Client : ${clientName}\n` +
+            `• Téléphone : ${clientPhone}\n` +
+            `• Destination : ${destinationCity}\n` +
+            `• Produit : ${productQuery}\n` +
+            `• Lien référence : ${productLink || "Non fourni"}\n` +
+            `• Quantité : ${targetQuantity || "À définir"}\n` +
+            `• Budget : ${targetBudget || "À négocier"}\n` +
+            `• Règlement : 100% Mobile Money`
+          : `*DOSSIER PAIEMENT FOURNISSEUR N° ${res.reference}*\n` +
+            `• Client : ${clientName}\n` +
+            `• Téléphone : ${clientPhone}\n` +
+            `• Destination : ${destinationCity}\n` +
+            `• Montant Proforma : ${rmbAmount} RMB (¥)\n` +
+            `• Contact Usine (WeChat/WA) : ${supplierContact}\n` +
+            `• Marchandise : ${goodsDescription}\n` +
+            `• Règlement client : 100% Mobile Money`;
+
+      const customWaUrl = `https://wa.me/2250787994412?text=${encodeURIComponent(message)}`;
+
+      setOrderResult({
+        reference: res.reference,
+        shippingMark: res.shippingMark,
+        whatsappUrl: customWaUrl,
+      });
+      setSubmitted(true);
+      window.open(customWaUrl, "_blank");
+    } catch (err) {
+      console.error("Erreur enregistrement commande:", err);
+      setSubmitted(true);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const copyText = (text: string, type: "ref" | "mark") => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      if (type === "ref") {
+        setCopiedRef(true);
+        setTimeout(() => setCopiedRef(false), 2000);
+      } else {
+        setCopiedMark(true);
+        setTimeout(() => setCopiedMark(false), 2000);
+      }
+    }
   };
 
   return (
@@ -80,13 +146,89 @@ export default function CommandeAchatPage() {
         {submitted ? (
           <div className="success-card">
             <CheckCircle2 size={46} color="#22C55E" />
-            <h2 className="success-title">Demande transmise avec succès !</h2>
+            <h2 className="success-title">Dossier Enregistré avec Succès !</h2>
             <p className="success-desc">
-              Notre centrale d&apos;achat traite votre dossier. Votre récapitulatif a été pré-rempli sur WhatsApp pour un échange direct avec notre agent logistique.
+              Votre commande est enregistrée dans notre système centralisé et instantanément transmise au tableau de bord administrateur Roum Transit.
             </p>
+
+            {orderResult && (
+              <div
+                style={{
+                  background: "#FFFFFF",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "12px",
+                  padding: "16px 20px",
+                  margin: "20px 0",
+                  textAlign: "left",
+                  display: "grid",
+                  gap: "12px",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>
+                      Numéro de Dossier Officiel
+                    </span>
+                    <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#111827", letterSpacing: "0.03em" }}>
+                      {orderResult.reference}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => copyText(orderResult.reference, "ref")}
+                    style={{
+                      background: "#F3F4F6",
+                      border: "none",
+                      borderRadius: "6px",
+                      padding: "6px 10px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontSize: "0.76rem",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {copiedRef ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
+                    <span>{copiedRef ? "Copié !" : "Copier"}</span>
+                  </button>
+                </div>
+
+                <div style={{ borderTop: "1px solid #F3F4F6", paddingTop: "10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>
+                      Marquage Carton (Shipping Mark)
+                    </span>
+                    <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#CC4E16", fontFamily: "monospace" }}>
+                      {orderResult.shippingMark}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => copyText(orderResult.shippingMark, "mark")}
+                    style={{
+                      background: "#F3F4F6",
+                      border: "none",
+                      borderRadius: "6px",
+                      padding: "6px 10px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontSize: "0.76rem",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {copiedMark ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
+                    <span>{copiedMark ? "Copié !" : "Copier"}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="success-actions">
               <a
-                href="https://wa.me/2250787994412"
+                href={orderResult?.whatsappUrl || "https://wa.me/2250787994412"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="wa-btn"
@@ -290,8 +432,8 @@ export default function CommandeAchatPage() {
 
               {/* Bouton de validation */}
               <div className="form-actions">
-                <button type="submit" className="submit-btn">
-                  <span>Envoyer ma commande</span>
+                <button type="submit" disabled={submitting} className="submit-btn">
+                  <span>{submitting ? "Enregistrement en cours..." : "Envoyer ma commande"}</span>
                   <ArrowRight size={16} />
                 </button>
               </div>
