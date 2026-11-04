@@ -10,6 +10,7 @@ import {
   formatTariffPrice,
   saveClientRequest,
   getLiveCompanySettings,
+  getAdminDestinations,
   OfficialTariff,
 } from "@/shared";
 
@@ -89,30 +90,15 @@ export default function TariffsPage() {
   const [cbm, setCbm] = useState(0.5);
   const [docCount, setDocCount] = useState(1);
 
-  // Mise à jour des destinations selon le pays de départ
+  // Extraction 100% dynamique : SEULEMENT les destinations configurées dans l'Admin
   const getDestinationsForOrigin = (orig: string) => {
-    if (orig === "Chine") {
-      return ["Côte d'Ivoire", "Sénégal", "Mali", "Niger", "Burkina Faso"];
-    }
-    if (orig.includes("Dubaï") || orig.includes("Émirats")) {
-      return ["Côte d'Ivoire", "Sénégal", "Mali", "Burkina Faso"];
-    }
-    if (orig === "Maroc") {
-      return ["Côte d'Ivoire", "Sénégal", "Mali", "Burkina Faso", "Gabon"];
-    }
-    if (orig === "France") {
-      return ["Côte d'Ivoire"];
-    }
-    if (orig === "Côte d'Ivoire") {
-      return ["France", "Maroc", "Sénégal", "Mali"];
-    }
-    return ["Côte d'Ivoire"];
+    return getAdminDestinations(tariffs, orig);
   };
 
   const handleOriginChange = (newOrigin: string) => {
     setOrigin(newOrigin);
-    const availableDests = getDestinationsForOrigin(newOrigin);
-    if (!availableDests.includes(destination)) {
+    const availableDests = getAdminDestinations(tariffs, newOrigin);
+    if (availableDests.length > 0 && !availableDests.includes(destination)) {
       setDestination(availableDests[0]);
     }
     // Réinitialise la formule par défaut selon le pays
@@ -124,6 +110,14 @@ export default function TariffsPage() {
       setFormulaKey("divers");
     }
   };
+
+  // Maintient la destination sélectionnée toujours alignée avec les destinations configurées par l'Admin
+  useEffect(() => {
+    const validDests = getAdminDestinations(tariffs, origin);
+    if (validDests.length > 0 && !validDests.includes(destination)) {
+      setDestination(validDests[0]);
+    }
+  }, [tariffs, origin, destination]);
 
   // Calcul du montant dynamique en lisant les tarifs réels de l'admin
   const calculateEstimate = () => {

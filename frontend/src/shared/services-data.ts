@@ -443,25 +443,12 @@ export function getLiveTariffs(): OfficialTariff[] {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed.map((t: any) => ({
-            id: t.tariff_id || t.id,
-            origin_country: t.origin_country || "",
-            origin_city: t.origin_city || "",
-            destination_country: t.destination_country || "",
-            destination_city: t.destination_city || "",
-            shipping_mode_name: t.mode_name || t.shipping_mode_name || t.service_name || "",
-            service_name: t.service_name || t.mode_name || t.shipping_mode_name || "",
-            shipping_mode_type: (t.mode_type || t.shipping_mode_type || "AIR") as "AIR" | "SEA",
-            category_tag: t.category_tag || "",
-            pricing_basis: t.pricing_basis || (t.shipping_mode_type === "SEA" || t.mode_type === "SEA" ? "PER_CBM" : "PER_KG"),
-            currency: t.currency || "FCFA",
+            ...t,
+            id: t.id || t.tariff_id || "",
+            shipping_mode_name: t.shipping_mode_name || t.mode_name || t.service_name || "",
+            service_name: t.service_name || t.shipping_mode_name || t.mode_name || "",
+            shipping_mode_type: (t.shipping_mode_type || t.mode_type || "AIR") as "AIR" | "SEA",
             price_per_unit_minor: Number(t.price_per_unit_minor) || 0,
-            minimum_charge_minor: t.minimum_charge_minor !== undefined ? Number(t.minimum_charge_minor) : undefined,
-            estimated_days_min: Number(t.estimated_days_min) || 3,
-            estimated_days_max: Number(t.estimated_days_max) || 7,
-            flyer_source: t.flyer_source || "",
-            secondary_display: t.secondary_display || "",
-            note: t.note || "",
-            is_active: t.is_active !== undefined ? Number(t.is_active) : 1,
           }));
         }
       }
@@ -478,32 +465,94 @@ export function getLiveTariffs(): OfficialTariff[] {
 export function findTariff(
   tariffs: OfficialTariff[],
   originKeyword: string,
-  modeOrNameKeyword: string,
-  destinationKeyword?: string
+  modeOrNameKeyword: string
 ): OfficialTariff | undefined {
   const oKey = originKeyword.toLowerCase();
   const mKey = modeOrNameKeyword.toLowerCase();
-  const dKey = destinationKeyword ? destinationKeyword.toLowerCase() : "";
 
   return tariffs.find((t) => {
     const origMatch = (t.origin_country || "").toLowerCase().includes(oKey) ||
       (t.origin_city || "").toLowerCase().includes(oKey);
-
-    const destMatch = !dKey ||
-      (t.destination_country || "").toLowerCase().includes(dKey) ||
-      (t.destination_city || "").toLowerCase().includes(dKey) ||
-      (t.id || "").toLowerCase().includes(dKey);
-
     const nameMatch = (t.shipping_mode_name || "").toLowerCase().includes(mKey) ||
       (t.service_name || "").toLowerCase().includes(mKey) ||
       (t.category_tag || "").toLowerCase().includes(mKey) ||
-      (t.note || "").toLowerCase().includes(mKey) ||
-      (t.id || "").toLowerCase().includes(mKey) ||
-      (t.destination_country || "").toLowerCase().includes(mKey) ||
-      (t.destination_city || "").toLowerCase().includes(mKey);
+      (t.id || "").toLowerCase().includes(mKey);
 
-    return origMatch && destMatch && nameMatch;
+    return origMatch && nameMatch;
   });
+}
+
+/**
+ * Retourne la liste unique des pays de destination configurés côté Admin.
+ * Se base exclusivement sur les tarifs officiels enregistrés dans le système.
+ */
+export function getAdminDestinations(tariffs: OfficialTariff[], originFilter?: string): string[] {
+  const destSet = new Set<string>();
+  const origKey = originFilter ? originFilter.toLowerCase().trim() : "";
+
+  tariffs.forEach((t) => {
+    if (!t.destination_country || !t.destination_country.trim()) return;
+    if (origKey) {
+      const tOrig = (t.origin_country || "").toLowerCase();
+      const match =
+        (origKey.includes("chine") && tOrig.includes("chine")) ||
+        (origKey.includes("duba") && (tOrig.includes("duba") || tOrig.includes("mirat"))) ||
+        (origKey.includes("maroc") && tOrig.includes("maroc")) ||
+        (origKey.includes("france") && tOrig.includes("france")) ||
+        tOrig.includes(origKey) ||
+        origKey.includes(tOrig);
+      if (!match) return;
+    }
+    destSet.add(t.destination_country.trim());
+  });
+
+  const list = Array.from(destSet);
+  if (list.length > 0) return list;
+
+  // Fallback si aucun tarif n'est encore chargé
+  return ["Côte d'Ivoire", "Sénégal", "Mali", "Burkina Faso"];
+}
+
+/**
+ * Retourne la liste détaillée des destinations (pays + ville) configurées côté Admin.
+ */
+export function getAdminDestinationsDetailed(
+  tariffs: OfficialTariff[],
+  originFilter?: string
+): { country: string; city?: string; label: string }[] {
+  const map = new Map<string, { country: string; city?: string; label: string }>();
+  const origKey = originFilter ? originFilter.toLowerCase().trim() : "";
+
+  tariffs.forEach((t) => {
+    if (!t.destination_country || !t.destination_country.trim()) return;
+    if (origKey) {
+      const tOrig = (t.origin_country || "").toLowerCase();
+      const match =
+        (origKey.includes("chine") && tOrig.includes("chine")) ||
+        (origKey.includes("duba") && (tOrig.includes("duba") || tOrig.includes("mirat"))) ||
+        (origKey.includes("maroc") && tOrig.includes("maroc")) ||
+        (origKey.includes("france") && tOrig.includes("france")) ||
+        tOrig.includes(origKey) ||
+        origKey.includes(tOrig);
+      if (!match) return;
+    }
+    const country = t.destination_country.trim();
+    const city = t.destination_city?.trim();
+    const label = city ? `${country} — ${city}` : country;
+    if (!map.has(label)) {
+      map.set(label, { country, city, label });
+    }
+  });
+
+  const list = Array.from(map.values());
+  if (list.length > 0) return list;
+
+  return [
+    { country: "Côte d'Ivoire", city: "Abidjan", label: "Côte d'Ivoire — Abidjan" },
+    { country: "Sénégal", city: "Dakar", label: "Sénégal — Dakar" },
+    { country: "Mali", city: "Bamako", label: "Mali — Bamako" },
+    { country: "Burkina Faso", city: "Ouagadougou", label: "Burkina Faso — Ouagadougou" },
+  ];
 }
 
 /**
@@ -547,6 +596,8 @@ export async function saveClientRequest(data: {
   supplier_contact?: string;
   product_image?: string;
   product_name?: string;
+  shipping_mark?: string;
+  paid_to_supplier?: string;
   unit_price?: number;
   unit_price_currency?: string;
   total_goods_fcfa?: number;
@@ -557,6 +608,7 @@ export async function saveClientRequest(data: {
   payment_receipt_name?: string;
 }): Promise<{
   reference: string;
+  trackingNumber: string;
   shippingMark: string;
   warehouseAddress: string;
   whatsappUrl: string;
@@ -571,8 +623,9 @@ export async function saveClientRequest(data: {
   else prefix = "FWD";
 
   const reference = `RM-${prefix}-${timestamp}`;
+  const trackingNumber = reference;
   const clientUpper = (data.client_name || "CLIENT").toUpperCase().trim();
-  const shippingMark = `ROUM / ${reference} / ${clientUpper}`;
+  const shippingMark = data.shipping_mark?.trim() || `ROUM / ${reference} / ${clientUpper}`;
 
   // Adresse entrepôt selon l'origine
   let warehouseAddress = "Guangzhou Baiyun Logistics Center, Guangzhou, Chine";
@@ -637,6 +690,9 @@ export async function saveClientRequest(data: {
         destination_city: data.destination_country.includes("(") ? data.destination_country.split("(")[1].replace(")", "").trim() : data.destination_country,
         shipping_mode_id: data.shipping_mode_type === "SEA" ? "SEA_LCL" : "AIR_EXPRESS",
         description,
+        shipping_mark: shippingMark,
+        tracking_number: trackingNumber,
+        paid_to_supplier: data.paid_to_supplier || null,
         estimated_weight_kg: data.estimated_weight_kg || 5.0,
         estimated_cbm: data.estimated_cbm || null,
         status: "NEW",
@@ -695,6 +751,7 @@ export async function saveClientRequest(data: {
 
   return {
     reference,
+    trackingNumber,
     shippingMark,
     warehouseAddress,
     whatsappUrl,

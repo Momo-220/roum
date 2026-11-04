@@ -49,56 +49,13 @@ function ServicesContent() {
     }
   }, [tabParam, router]);
 
-  // Synchronisation avec l'admin storage & API en direct
+  // Synchronisation avec l'admin storage
   useEffect(() => {
-    const loadApiTariffs = () => {
-      fetch("/api/v1/public/tariffs")
-        .then((r) => r.json())
-        .then((d) => {
-          if (d.tariffs && Array.isArray(d.tariffs) && d.tariffs.length > 0) {
-            const mapped: OfficialTariff[] = d.tariffs.map((t: any) => ({
-              id: t.tariff_id || t.id,
-              origin_country: t.origin_country || "",
-              origin_city: t.origin_city || "",
-              destination_country: t.destination_country || "",
-              destination_city: t.destination_city || "",
-              shipping_mode_name: t.mode_name || t.shipping_mode_name || t.service_name || "",
-              service_name: t.service_name || t.mode_name || t.shipping_mode_name || "",
-              shipping_mode_type: (t.mode_type || t.shipping_mode_type || "AIR") as "AIR" | "SEA",
-              category_tag: t.category_tag || "",
-              pricing_basis: t.pricing_basis || (t.mode_type === "SEA" || t.shipping_mode_type === "SEA" ? "PER_CBM" : "PER_KG"),
-              currency: t.currency || "FCFA",
-              price_per_unit_minor: Number(t.price_per_unit_minor) || 0,
-              minimum_charge_minor: t.minimum_charge_minor !== undefined ? Number(t.minimum_charge_minor) : undefined,
-              estimated_days_min: Number(t.estimated_days_min) || 3,
-              estimated_days_max: Number(t.estimated_days_max) || 7,
-              flyer_source: t.flyer_source || "",
-              secondary_display: t.secondary_display || "",
-              note: t.note || "",
-              is_active: t.is_active !== undefined ? Number(t.is_active) : 1,
-            }));
-            setTariffs(mapped);
-            localStorage.setItem("roum_tariffs_data", JSON.stringify(mapped));
-          }
-        })
-        .catch(() => {});
-    };
-
-    loadApiTariffs();
-
     const handleSync = () => {
       setTariffs(getLiveTariffs());
-      loadApiTariffs();
     };
-
     window.addEventListener("storage", handleSync);
-    window.addEventListener("roum_tariffs_updated", handleSync);
-    window.addEventListener("focus", handleSync);
-    return () => {
-      window.removeEventListener("storage", handleSync);
-      window.removeEventListener("roum_tariffs_updated", handleSync);
-      window.removeEventListener("focus", handleSync);
-    };
+    return () => window.removeEventListener("storage", handleSync);
   }, []);
 
   // Copie dans le presse-papier
@@ -147,12 +104,6 @@ function ServicesContent() {
     },
   };
 
-  const seaMatched = findTariff(tariffs, "chine", "bateau") || findTariff(tariffs, "chine", "sea");
-  const seaPriceDisplay = seaMatched ? `${(seaMatched.price_per_unit_minor / 100).toLocaleString("fr-FR")} FCFA / M³` : "300 000 FCFA / M³";
-
-  const frMatched = findTariff(tariffs, "france", "divers");
-  const frPriceDisplay = frMatched ? `${(frMatched.price_per_unit_minor / 100).toLocaleString("fr-FR")} FCFA/kg` : "8 500 FCFA/kg";
-
   return (
     <div className="services-page-root">
       <div className="services-container">
@@ -161,6 +112,10 @@ function ServicesContent() {
               EN-TÊTE ÉDITORIAL LUXE (STYLE PAGE D'ACCUEIL)
              ======================================================== */}
           <header className="services-header">
+            <div className="services-badge-category">
+              <span className="dot">●</span>
+              <span>01 / CATALOGUE LOGISTIQUE OFFICIEL</span>
+            </div>
             <h1 className="services-title">Nos Voies & Services d&apos;Acheminement.</h1>
             <p className="services-desc">
               Règlement de vos usines chinoises en Yuans, fret maritime et fret aérien direct.
@@ -206,9 +161,10 @@ function ServicesContent() {
                     <Link
                       href="/services/commande"
                       className="bento-cta-pill"
+                      style={{ display: "inline-flex", alignItems: "center", gap: "10px", color: "#FFFFFF", textDecoration: "none", fontWeight: 700, fontSize: "0.84rem", whiteSpace: "nowrap" }}
                     >
-                      <span>Lancer une commande</span>
-                      <ArrowRight size={16} className="bento-arrow-icon" />
+                      <span style={{ marginRight: "8px" }}>Lancer une commande</span>
+                      <ArrowRight size={15} style={{ flexShrink: 0 }} />
                     </Link>
                   </div>
                 </div>
@@ -256,9 +212,10 @@ function ServicesContent() {
                     <Link
                       href="/tariffs?mode=AIR"
                       className="bento-cta-pill"
+                      style={{ display: "inline-flex", alignItems: "center", gap: "10px", color: "#FFFFFF", textDecoration: "none", fontWeight: 700, fontSize: "0.84rem", whiteSpace: "nowrap" }}
                     >
-                      <span>Voir les tarifs</span>
-                      <ArrowRight size={16} className="bento-arrow-icon" />
+                      <span style={{ marginRight: "8px" }}>Voir les tarifs</span>
+                      <ArrowRight size={15} style={{ flexShrink: 0 }} />
                     </Link>
                   </div>
                 </div>
@@ -283,7 +240,7 @@ function ServicesContent() {
 
                 <div>
                   <h2 className="bento-card-title">Voie Maritime</h2>
-                  <div className="bento-stat-highlight">DÈS {seaPriceDisplay}</div>
+                  <div className="bento-stat-highlight">DÈS 300 000 FCFA / M³</div>
                   <p className="bento-card-subtitle">
                     Acheminement économique par conteneur complet ou groupage au m³ depuis Guangzhou, Ningbo et Yiwu.
                   </p>
@@ -306,9 +263,10 @@ function ServicesContent() {
                     <Link
                       href="/tariffs?mode=SEA"
                       className="bento-cta-pill"
+                      style={{ display: "inline-flex", alignItems: "center", gap: "10px", color: "#FFFFFF", textDecoration: "none", fontWeight: 700, fontSize: "0.84rem", whiteSpace: "nowrap" }}
                     >
-                      <span>Voir les tarifs maritimes</span>
-                      <ArrowRight size={16} className="bento-arrow-icon" />
+                      <span style={{ marginRight: "8px" }}>Voir les tarifs maritimes</span>
+                      <ArrowRight size={15} style={{ flexShrink: 0 }} />
                     </Link>
                   </div>
                 </div>
@@ -360,7 +318,7 @@ function ServicesContent() {
                       <span className="bento-bullet-dot" />
                       <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                         <CircularFlag code="fr" size={14} />
-                        <strong>France :</strong> Paris &amp; Île-de-France · Dès {frPriceDisplay}
+                        <strong>France :</strong> Paris &amp; Île-de-France · Dès 8 500 FCFA/kg
                       </span>
                     </div>
                     <div className="bento-bullet">
@@ -376,9 +334,10 @@ function ServicesContent() {
                     <Link
                       href="/tariffs"
                       className="bento-cta-pill"
+                      style={{ display: "inline-flex", alignItems: "center", gap: "10px", color: "#FFFFFF", textDecoration: "none", fontWeight: 700, fontSize: "0.84rem", whiteSpace: "nowrap" }}
                     >
-                      <span>Voir les tarifs des comptoirs</span>
-                      <ArrowRight size={16} className="bento-arrow-icon" />
+                      <span style={{ marginRight: "8px" }}>Voir les tarifs des comptoirs</span>
+                      <ArrowRight size={15} style={{ flexShrink: 0 }} />
                     </Link>
                   </div>
                 </div>
@@ -746,16 +705,16 @@ function ServicesContent() {
         }
 
         .bento-cta-pill {
-          display: inline-flex !important;
-          align-items: center !important;
-          gap: 12px !important;
-          background: transparent !important;
-          color: #FFFFFF !important;
-          font-size: 0.86rem !important;
-          font-weight: 700 !important;
-          text-decoration: none !important;
-          border: none !important;
-          padding: 6px 0 !important;
+          display: inline-flex;
+          align-items: center;
+          gap: 12px;
+          background: transparent;
+          color: #FFFFFF;
+          font-size: 0.84rem;
+          font-weight: 700;
+          text-decoration: none;
+          border: none;
+          padding: 4px 0;
           cursor: pointer;
           white-space: nowrap !important;
           flex-shrink: 0;
@@ -763,20 +722,20 @@ function ServicesContent() {
         }
 
         .bento-cta-pill:hover {
-          color: #FFA066 !important;
+          color: #FFA066;
         }
 
-        .bento-cta-pill span {
+        :global(.bento-cta-pill span) {
           margin-right: 8px !important;
         }
 
-        .bento-arrow-icon {
-          margin-left: 4px !important;
+        :global(.bento-cta-pill svg) {
+          margin-left: 6px !important;
           flex-shrink: 0 !important;
           transition: transform 0.18s ease !important;
         }
 
-        .bento-cta-pill:hover .bento-arrow-icon {
+        :global(.bento-cta-pill:hover svg) {
           transform: translateX(5px) !important;
         }
 
@@ -805,33 +764,27 @@ function ServicesContent() {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 12px;
-          margin: 14px 0 16px 0;
+          margin: 12px 0;
         }
 
         .option-box {
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.14);
-          border-left: 3px solid #FFA066;
-          border-radius: 10px;
-          padding: 10px 14px;
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
+          border-left: 2px solid #FFA066;
+          padding-left: 10px;
         }
 
         .option-tag {
           font-family: var(--c-font-mono);
-          font-size: 0.72rem;
-          font-weight: 800;
+          font-size: 0.68rem;
+          font-weight: 700;
           color: #FFA066;
           display: block;
-          margin-bottom: 4px;
+          margin-bottom: 2px;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
         }
 
         .option-desc {
-          font-size: 0.78rem;
-          color: rgba(255, 255, 255, 0.92);
+          font-size: 0.76rem;
+          color: rgba(255, 255, 255, 0.88);
           line-height: 1.35;
           margin: 0;
         }
@@ -1359,43 +1312,11 @@ function ServicesContent() {
             font-size: 0.74rem !important;
           }
 
-          .services-page-root {
-            padding-bottom: 140px !important;
-          }
-
-          .options-duo {
-            display: grid !important;
-            grid-template-columns: 1fr 1fr !important;
-            gap: 10px !important;
-            margin: 12px 0 16px 0 !important;
-          }
-
-          .option-box {
-            background: rgba(255, 255, 255, 0.08) !important;
-            border: 1px solid rgba(255, 255, 255, 0.14) !important;
-            border-left: 3px solid #FFA066 !important;
-            border-radius: 10px !important;
-            padding: 10px 12px !important;
-          }
-
-          .option-tag {
-            font-size: 0.7rem !important;
-            font-weight: 800 !important;
-            color: #FFA066 !important;
-            margin-bottom: 4px !important;
-          }
-
-          .option-desc {
-            font-size: 0.74rem !important;
-            line-height: 1.35 !important;
-            color: rgba(255, 255, 255, 0.92) !important;
-          }
-
           .bento-cta-pill {
             background: transparent !important;
             color: #FFFFFF !important;
             padding: 4px 0 !important;
-            font-size: 0.84rem !important;
+            font-size: 0.82rem !important;
             gap: 12px !important;
             box-shadow: none !important;
             border-radius: 0 !important;
@@ -1404,12 +1325,12 @@ function ServicesContent() {
             flex-shrink: 0 !important;
           }
 
-          .bento-cta-pill span {
+          :global(.bento-cta-pill span) {
             margin-right: 8px !important;
           }
 
-          .bento-arrow-icon {
-            margin-left: 4px !important;
+          :global(.bento-cta-pill svg) {
+            margin-left: 6px !important;
             flex-shrink: 0 !important;
           }
 
@@ -1456,17 +1377,9 @@ function ServicesContent() {
         }
 
         @media (max-width: 640px) {
-          .services-page-root {
-            padding-bottom: 160px !important;
-          }
-
           .options-duo {
             grid-template-columns: 1fr !important;
-            gap: 10px !important;
-          }
-
-          .option-box {
-            padding: 10px 12px !important;
+            gap: 8px !important;
           }
 
           .bento-content {
@@ -1484,7 +1397,7 @@ function ServicesContent() {
           .bento-bottom-row {
             flex-direction: column !important;
             align-items: flex-start !important;
-            gap: 12px !important;
+            gap: 10px !important;
           }
 
           .bento-cta-pill {
@@ -1499,15 +1412,14 @@ function ServicesContent() {
             border-radius: 0 !important;
             white-space: nowrap !important;
             box-sizing: border-box !important;
-            margin-top: 4px !important;
           }
 
-          .bento-cta-pill span {
+          :global(.bento-cta-pill span) {
             margin-right: 8px !important;
           }
 
-          .bento-arrow-icon {
-            margin-left: 4px !important;
+          :global(.bento-cta-pill svg) {
+            margin-left: 6px !important;
             flex-shrink: 0 !important;
           }
         }

@@ -1679,6 +1679,47 @@ export default function AdminPage() {
   const [routesList, setRoutesList] = useState<any[]>([]);
   const [modesList, setModesList] = useState<any[]>([]);
 
+  // Modes de transport garantis (jamais vides)
+  const availableModes = useMemo(() => {
+    if (modesList && modesList.length > 0) return modesList;
+    return [
+      { id: "AIR_EXPRESS", name: "Avion Express (4 à 5 jours)" },
+      { id: "AIR_STANDARD", name: "Avion Normal (10 à 14 jours)" },
+      { id: "SEA_LCL", name: "Maritime Groupage (35 à 45 jours)" },
+      { id: "SEA_FCL", name: "Maritime Conteneur Complet" },
+    ];
+  }, [modesList]);
+
+  // Liaisons corridors garanties (jamais vides, extraites en direct des tarifs configurés)
+  const availableRoutes = useMemo(() => {
+    if (routesList && routesList.length > 0) return routesList;
+    const map = new Map<string, { id: string; origin_country: string; destination_country: string }>();
+    (tariffsList || []).forEach((t: any, idx: number) => {
+      const orig = (t.origin_country || "Chine").trim();
+      const dest = (t.destination_country || "Côte d'Ivoire").trim();
+      if (!dest) return;
+      const key = `${orig} -> ${dest}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          id: t.route_id || `route-${orig.slice(0, 2).toLowerCase()}-${dest.slice(0, 2).toLowerCase()}-${idx}`,
+          origin_country: orig,
+          destination_country: dest,
+        });
+      }
+    });
+    const list = Array.from(map.values());
+    if (list.length > 0) return list;
+    return [
+      { id: "route-cn-ci", origin_country: "Chine", destination_country: "Côte d'Ivoire" },
+      { id: "route-cn-sn", origin_country: "Chine", destination_country: "Sénégal" },
+      { id: "route-cn-ml", origin_country: "Chine", destination_country: "Mali" },
+      { id: "route-cn-bf", origin_country: "Chine", destination_country: "Burkina Faso" },
+      { id: "route-ae-ci", origin_country: "Émirats Arabes Unis", destination_country: "Côte d'Ivoire" },
+      { id: "route-fr-ci", origin_country: "France", destination_country: "Côte d'Ivoire" },
+      { id: "route-ma-ci", origin_country: "Maroc", destination_country: "Côte d'Ivoire" },
+    ];
+  }, [routesList, tariffsList]);
+
   const [paymentsList, setPaymentsList] = useState<any[]>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -3176,14 +3217,34 @@ export default function AdminPage() {
   };
 
   const handleOpenConvertModal = (reqItem: any) => {
+    let matchedRouteId = availableRoutes[0]?.id || "route-cn-ci";
+    if (reqItem.destination_country) {
+      const found = availableRoutes.find(
+        (r) =>
+          (r.destination_country || "").toLowerCase().includes((reqItem.destination_country || "").toLowerCase()) ||
+          (reqItem.destination_country || "").toLowerCase().includes((r.destination_country || "").toLowerCase())
+      );
+      if (found) matchedRouteId = found.id;
+    }
+
+    let matchedModeId = availableModes[0]?.id || "AIR_STANDARD";
+    if (reqItem.shipping_mode_id || reqItem.shipping_mode_type) {
+      const found = availableModes.find(
+        (m) =>
+          m.id === reqItem.shipping_mode_id ||
+          (reqItem.shipping_mode_type === "SEA" ? m.id.includes("SEA") : m.id.includes("AIR"))
+      );
+      if (found) matchedModeId = found.id;
+    }
+
     setConvertForm({
-      shipping_mode_id: reqItem.shipping_mode_id || modesList[0]?.id || "AIR_STANDARD",
-      route_id: routesList[0]?.id || "route-cn-ml",
+      shipping_mode_id: matchedModeId,
+      route_id: matchedRouteId,
       weight_kg: reqItem.estimated_weight_kg || 5,
       volume_cbm: reqItem.estimated_cbm || 0.05,
       package_label: `Dossier ${reqItem.reference}`,
       description: reqItem.description || "Marchandises client",
-      estimated_price: 60000,
+      estimated_price: reqItem.total_amount_fcfa || reqItem.shipping_fee_fcfa || 60000,
       currency: "FCFA",
     });
     setShowConvertRequestModal(reqItem);
@@ -10570,7 +10631,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {(showRequestDetailModal.supplier_name || showRequestDetailModal.shipping_mark) && (
+            {(showRequestDetailModal.supplier_name || showRequestDetailModal.shipping_mark || showRequestDetailModal.paid_to_supplier || showRequestDetailModal.tracking_number) && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "var(--bg-app)", padding: "14px", borderRadius: "10px", marginBottom: "16px", fontSize: "0.82rem", border: "1px dashed var(--border-light)" }}>
                 {showRequestDetailModal.supplier_name && (
                   <div>
@@ -10578,10 +10639,22 @@ export default function AdminPage() {
                     <strong style={{ color: "var(--text-main)" }}>{showRequestDetailModal.supplier_name}</strong>
                   </div>
                 )}
+                {showRequestDetailModal.paid_to_supplier && (
+                  <div>
+                    <span style={{ color: "var(--text-muted)", display: "block" }}>Montant payé au fournisseur :</span>
+                    <strong style={{ color: "#16A34A" }}>{showRequestDetailModal.paid_to_supplier}</strong>
+                  </div>
+                )}
                 {showRequestDetailModal.shipping_mark && (
                   <div>
-                    <span style={{ color: "var(--text-muted)", display: "block" }}>Code client sur colis (Shipping Mark) :</span>
+                    <span style={{ color: "var(--text-muted)", display: "block" }}>Code client (Shipping Mark) :</span>
                     <strong style={{ color: "var(--brown-dark)", fontFamily: "monospace" }}>{showRequestDetailModal.shipping_mark}</strong>
+                  </div>
+                )}
+                {showRequestDetailModal.tracking_number && (
+                  <div>
+                    <span style={{ color: "var(--text-muted)", display: "block" }}>N° de Suivi attribué :</span>
+                    <strong style={{ color: "#2563EB", fontFamily: "monospace" }}>{showRequestDetailModal.tracking_number}</strong>
                   </div>
                 )}
               </div>
@@ -10758,7 +10831,7 @@ export default function AdminPage() {
                     onChange={(e) => setConvertForm({ ...convertForm, route_id: e.target.value })}
                     className="input-clean"
                   >
-                    {routesList.map((r) => (
+                    {availableRoutes.map((r) => (
                       <option key={r.id} value={r.id}>{r.origin_country} → {r.destination_country}</option>
                     ))}
                   </select>
@@ -10770,7 +10843,7 @@ export default function AdminPage() {
                     onChange={(e) => setConvertForm({ ...convertForm, shipping_mode_id: e.target.value })}
                     className="input-clean"
                   >
-                    {modesList.map((m) => (
+                    {availableModes.map((m) => (
                       <option key={m.id} value={m.id}>{m.name}</option>
                     ))}
                   </select>

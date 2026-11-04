@@ -148,18 +148,18 @@ publicRouter.get("/tariffs", async (c) => {
       t.estimated_days_max,
       t.category_tag,
       t.note,
-      sm.id as mode_id,
-      sm.name as mode_name,
-      sm.name as shipping_mode_name,
-      sm.name as service_name,
-      sm.type as mode_type,
-      sm.type as shipping_mode_type,
-      sm.pricing_basis
+      COALESCE(sm.id, t.shipping_mode_id, 'mode-standard') as mode_id,
+      COALESCE(sm.name, t.category_tag, 'Transport Standard') as mode_name,
+      COALESCE(sm.name, t.category_tag, 'Transport Standard') as shipping_mode_name,
+      COALESCE(sm.name, t.category_tag, 'Transport Standard') as service_name,
+      COALESCE(sm.type, 'AIR') as mode_type,
+      COALESCE(sm.type, 'AIR') as shipping_mode_type,
+      COALESCE(sm.pricing_basis, 'PER_KG') as pricing_basis
     FROM routes r
     JOIN tariffs t ON r.id = t.route_id
     LEFT JOIN shipping_modes sm ON t.shipping_mode_id = sm.id
     WHERE r.is_active = 1 AND t.is_active = 1
-    ORDER BY r.origin_country, r.destination_country, sm.sort_order
+    ORDER BY r.origin_country, r.destination_country, t.id
   `).all();
 
   return c.json({ tariffs: routes });

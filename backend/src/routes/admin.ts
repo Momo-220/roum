@@ -1024,8 +1024,14 @@ adminRouter.get("/tariffs", async (c) => {
     SELECT 
       t.id, t.currency, t.price_per_unit_minor, t.minimum_charge_minor,
       t.estimated_days_min, t.estimated_days_max, t.category_tag, t.note, t.is_active,
-      r.origin_country, r.origin_city, r.destination_country, r.destination_city,
-      sm.name as shipping_mode_name, sm.name as service_name, sm.type as shipping_mode_type, sm.pricing_basis
+      COALESCE(r.origin_country, 'Chine') as origin_country,
+      r.origin_city,
+      COALESCE(r.destination_country, 'Côte d''Ivoire') as destination_country,
+      r.destination_city,
+      COALESCE(sm.name, t.category_tag, 'Standard') as shipping_mode_name,
+      COALESCE(sm.name, t.category_tag, 'Standard') as service_name,
+      COALESCE(sm.type, 'AIR') as shipping_mode_type,
+      COALESCE(sm.pricing_basis, 'PER_KG') as pricing_basis
     FROM tariffs t
     LEFT JOIN routes r ON t.route_id = r.id
     LEFT JOIN shipping_modes sm ON t.shipping_mode_id = sm.id
@@ -1231,8 +1237,8 @@ adminRouter.put("/tariffs/:id", async (c) => {
     `).bind(
       tariffId,
       routeId,
-      body.shipping_mode_id || (body.transport_mode === "SEA_GROUPAGE" ? "SEA_LCL" : "AIR_EXPRESS"),
-      body.currency || "FCFA",
+      body.shipping_mode_id || "mode-air-standard",
+      body.currency || "USD",
       body.price_per_unit_minor || 0,
       body.minimum_charge_minor || 0,
       body.estimated_days_min || null,

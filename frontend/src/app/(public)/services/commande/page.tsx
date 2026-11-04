@@ -21,8 +21,14 @@ import {
   ExternalLink,
   Coins,
 } from "lucide-react";
-import { saveClientRequest, getLiveCompanySettings } from "@/shared";
-import { AFRICAN_COUNTRIES, ALL_WORLD_COUNTRIES } from "@/data/countries";
+import {
+  saveClientRequest,
+  getLiveCompanySettings,
+  getLiveTariffs,
+  getAdminDestinationsDetailed,
+  findTariff,
+  OfficialTariff,
+} from "@/shared";
 import { WaveLogo, OrangeMoneyLogo } from "@/components/PaymentLogos";
 import { CircularFlag } from "@/components/CircularFlag";
 
@@ -44,25 +50,70 @@ function CommandeFormContent() {
   const [submitting, setSubmitting] = useState(false);
   const [orderResult, setOrderResult] = useState<{
     reference: string;
+    trackingNumber: string;
     shippingMark: string;
     whatsappUrl: string;
     totalAmount?: number;
     receiptName?: string;
+    option: "sans_fournisseur" | "avec_fournisseur";
+    destination: string;
+    shippingModeDesc: string;
   } | null>(null);
 
   const [copiedRef, setCopiedRef] = useState(false);
+  const [copiedTracking, setCopiedTracking] = useState(false);
   const [copiedMark, setCopiedMark] = useState(false);
   const [copiedPay, setCopiedPay] = useState<string | null>(null);
 
-  // Paramètres et Moyens de Paiement synchronisés en direct avec l'Admin
+  // Paramètres de paiement synchronisés en direct avec l'Admin
   const [settings, setSettings] = useState<Record<string, string>>(() => getLiveCompanySettings());
+
+  // Tarifs officiels synchronisés en temps réel avec l'Admin
+  const [tariffs, setTariffs] = useState<OfficialTariff[]>(() => getLiveTariffs());
+
+  useEffect(() => {
+    const handleSync = () => {
+      setTariffs(getLiveTariffs());
+    };
+    window.addEventListener("storage", handleSync);
+    window.addEventListener("roum_tariffs_updated", handleSync);
+    return () => {
+      window.removeEventListener("storage", handleSync);
+      window.removeEventListener("roum_tariffs_updated", handleSync);
+    };
+  }, []);
+
+  // SEULEMENT les destinations configurées et gérées côté Admin (Origine Chine)
+  const adminDestinations = useMemo(() => {
+    return getAdminDestinationsDetailed(tariffs, "Chine");
+  }, [tariffs]);
 
   // Form states communs
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
-  const [destinationCity, setDestinationCity] = useState("Côte d'Ivoire (Abidjan)");
+  const [destinationCity, setDestinationCity] = useState(
+    adminDestinations[0]?.label || "Côte d'Ivoire — Abidjan"
+  );
 
-  // Option 1 : Sans fournisseur (Sourcing & Assistance Achat)
+  // Synchronisation dynamique : si l'admin modifie les destinations, ajuster automatiquement
+  useEffect(() => {
+    if (adminDestinations.length > 0) {
+      const match = adminDestinations.some(
+        (d) => d.label === destinationCity || d.country === destinationCity || destinationCity.includes(d.country)
+      );
+      if (!match) {
+        setDestinationCity(adminDestinations[0].label);
+      }
+    }
+  }, [adminDestinations, destinationCity]);
+
+  // Pays de destination ciblé
+  const currentDestCountry = useMemo(() => {
+    const found = adminDestinations.find((d) => d.label === destinationCity);
+    return found ? found.country : destinationCity.split("—")[0].split("(")[0].trim();
+  }, [adminDestinations, destinationCity]);
+
+  // Option 1 : Sans fournisseur (Sourcing & Achat complet)
   const [productLink, setProductLink] = useState("");
   const [productQuery, setProductQuery] = useState("");
   const [productQuantity, setProductQuantity] = useState<number>(1);
@@ -71,24 +122,27 @@ function CommandeFormContent() {
   const [shippingMode, setShippingMode] = useState<"AIR" | "SEA">("AIR");
   const [estimatedWeight, setEstimatedWeight] = useState<number>(2.5);
 
+  // Option 2 : Avec fournisseur (Fret & Transit seul, marchandises déjà payées)
+  const [clientShippingMark, setClientShippingMark] = useState("");
+  const [paidToSupplier, setPaidToSupplier] = useState("");
+  const [goodsDescription, setGoodsDescription] = useState("");
+  const [opt2ShippingMode, setOpt2ShippingMode] = useState<"AIR_EXPRESS" | "AIR_STANDARD" | "SEA">("AIR_EXPRESS");
+  const [opt2Weight, setOpt2Weight] = useState<number>(5);
+  const [opt2Volume, setOpt2Volume] = useState<number>(0.1);
+
   // État de l'analyse automatique du lien
   const [extracting, setExtracting] = useState(false);
   const [extractedProduct, setExtractedProduct] = useState<ExtractedProduct | null>(null);
   const [extractError, setExtractError] = useState<string | null>(null);
 
-  // Option 2 : Avec fournisseur (Paiement RMB Yuans)
-  const [rmbAmount, setRmbAmount] = useState("");
-  const [supplierContact, setSupplierContact] = useState("");
-  const [goodsDescription, setGoodsDescription] = useState("");
-
-  // Moyen de paiement choisi & preuve de reçu uploadée
+  // Moyen de paiement choisi & preuve de reçu uploadée (Option 1 uniquement)
   const [selectedPayMethod, setSelectedPayMethod] = useState<string>("wave");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptDataUrl, setReceiptDataUrl] = useState<string | null>(null);
   const [receiptFileName, setReceiptFileName] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Synchronisation infaillible en temps réel des coordonnées de paiement avec l'Admin (Multi-canaux & Temps Réel)
+  // Synchronisation des coordonnées bancaires et Mobile Money
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -107,7 +161,6 @@ function CommandeFormContent() {
 
     fetchLiveSettings();
 
-    // 1. Écoute des mises à jour inter-onglets (storage event)
     const onStorage = (e: StorageEvent) => {
       if (e.key === "roum_company_settings" && e.newValue) {
         try {
@@ -118,7 +171,6 @@ function CommandeFormContent() {
     };
     window.addEventListener("storage", onStorage);
 
-    // 2. Écoute des événements locaux envoyés par l'Admin
     const onLocalUpdated = (e: any) => {
       if (e.detail) {
         setSettings(e.detail);
@@ -126,7 +178,6 @@ function CommandeFormContent() {
     };
     window.addEventListener("roum:settings_updated", onLocalUpdated);
 
-    // 3. Canal de communication direct BroadcastChannel
     let bc: BroadcastChannel | null = null;
     try {
       bc = new BroadcastChannel("roum_sync_bus");
@@ -137,7 +188,6 @@ function CommandeFormContent() {
       };
     } catch {}
 
-    // 4. Re-synchronisation dès que l'utilisateur revient sur l'onglet
     const onVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         fetchLiveSettings();
@@ -146,7 +196,6 @@ function CommandeFormContent() {
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("focus", fetchLiveSettings);
 
-    // 5. Polling régulier de secours toutes les 8 secondes (détection des modifs inter-appareils)
     const pollInterval = setInterval(fetchLiveSettings, 8000);
 
     return () => {
@@ -159,7 +208,7 @@ function CommandeFormContent() {
     };
   }, []);
 
-  // SEULS les moyens de paiement expressément configurés dans l'Admin apparaissent
+  // Moyens de paiement actifs (Wave, Orange Money, Maroc)
   const activePaymentMethods = useMemo(() => {
     const list: Array<{
       id: string;
@@ -172,7 +221,6 @@ function CommandeFormContent() {
       logo: React.ReactNode;
     }> = [];
 
-    // 1. Wave (uniquement si configuré dans l'admin)
     const waveNum = settings.payment_wave_ci?.trim();
     if (waveNum) {
       list.push({
@@ -187,7 +235,6 @@ function CommandeFormContent() {
       });
     }
 
-    // 2. Orange Money (uniquement si configuré dans l'admin)
     const omNum = settings.payment_orange_money_ci?.trim();
     if (omNum) {
       list.push({
@@ -202,7 +249,6 @@ function CommandeFormContent() {
       });
     }
 
-    // 3. Compte Maroc (uniquement si configuré dans l'admin)
     const moroccoBank = settings.payment_morocco_bank?.trim();
     const moroccoRib = settings.payment_morocco_rib?.trim();
     if (moroccoBank || moroccoRib) {
@@ -221,7 +267,6 @@ function CommandeFormContent() {
     return list;
   }, [settings]);
 
-  // Si le moyen actuellement sélectionné n'est plus actif, basculer sur le premier moyen actif
   useEffect(() => {
     if (activePaymentMethods.length > 0) {
       const exists = activePaymentMethods.some((m) => m.id === selectedPayMethod);
@@ -231,7 +276,7 @@ function CommandeFormContent() {
     }
   }, [activePaymentMethods, selectedPayMethod]);
 
-  // Détection & extraction automatique du produit dès que le lien est collé
+  // Analyse du lien produit
   const handleExtractProduct = async (urlToExtract?: string) => {
     const targetUrl = urlToExtract || productLink;
     if (!targetUrl.trim() || !targetUrl.startsWith("http")) return;
@@ -257,19 +302,18 @@ function CommandeFormContent() {
         setProductUnitPrice(data.price);
         setProductCurrency((data.currency as "RMB" | "USD" | "FCFA") || "RMB");
       }
-    } catch (e: any) {
+    } catch {
       setExtractError("Impossible d'extraire automatiquement. Renseignez le titre et le prix manuellement.");
     } finally {
       setExtracting(false);
     }
   };
 
-  // Gestion du fichier de reçu (Capture d'écran ou PDF)
+  // Reçu de paiement (Option 1)
   const handleReceiptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Limite 10 MB
     if (file.size > 10 * 1024 * 1024) {
       alert("Le fichier est trop volumineux (maximum 10 Mo).");
       return;
@@ -294,30 +338,92 @@ function CommandeFormContent() {
     }
   };
 
-  // Calculs financiers automatiques en FCFA
-  const rmbRate = 95; // 1 RMB ≈ 95 FCFA
-  const usdRate = 620; // 1 USD ≈ 620 FCFA
+  // Tarifs spécifiques dynamiques depuis l'Admin
+  const matchedExpress = useMemo(() => {
+    return (
+      tariffs.find(
+        (t) =>
+          (t.origin_country || "").toLowerCase().includes("chine") &&
+          (t.destination_country || "").toLowerCase().includes(currentDestCountry.toLowerCase()) &&
+          ((t.shipping_mode_name || "").toLowerCase().includes("express") ||
+            (t.category_tag || "").toLowerCase().includes("express"))
+      ) || findTariff(tariffs, "chine", "express")
+    );
+  }, [tariffs, currentDestCountry]);
 
-  // Prix unitaire en FCFA
+  const matchedStandard = useMemo(() => {
+    return (
+      tariffs.find(
+        (t) =>
+          (t.origin_country || "").toLowerCase().includes("chine") &&
+          (t.destination_country || "").toLowerCase().includes(currentDestCountry.toLowerCase()) &&
+          ((t.shipping_mode_name || "").toLowerCase().includes("normale") ||
+            (t.shipping_mode_name || "").toLowerCase().includes("standard"))
+      ) || findTariff(tariffs, "chine", "normale")
+    );
+  }, [tariffs, currentDestCountry]);
+
+  const matchedSea = useMemo(() => {
+    return (
+      tariffs.find(
+        (t) =>
+          (t.origin_country || "").toLowerCase().includes("chine") &&
+          (t.destination_country || "").toLowerCase().includes(currentDestCountry.toLowerCase()) &&
+          ((t.shipping_mode_name || "").toLowerCase().includes("bateau") ||
+            (t.shipping_mode_name || "").toLowerCase().includes("maritime") ||
+            t.shipping_mode_type === "SEA")
+      ) || findTariff(tariffs, "chine", "bateau")
+    );
+  }, [tariffs, currentDestCountry]);
+
+  const rateAirExpress = useMemo(() => {
+    const minor = matchedExpress?.price_per_unit_minor || 1200000;
+    return minor > 100000 ? Math.round(minor / 100) : minor;
+  }, [matchedExpress]);
+
+  const rateAirStandard = useMemo(() => {
+    const minor = matchedStandard?.price_per_unit_minor || 950000;
+    return minor > 100000 ? Math.round(minor / 100) : minor;
+  }, [matchedStandard]);
+
+  const rateSea = useMemo(() => {
+    const minor = matchedSea?.price_per_unit_minor || 32000000;
+    return minor > 100000 ? Math.round(minor / 100) : minor;
+  }, [matchedSea]);
+
+  // Option 2 devis transport
+  const shippingQuoteOption2 = useMemo(() => {
+    if (opt2ShippingMode === "AIR_EXPRESS") {
+      return Math.round((opt2Weight || 1) * rateAirExpress);
+    }
+    if (opt2ShippingMode === "AIR_STANDARD") {
+      return Math.round((opt2Weight || 1) * rateAirStandard);
+    }
+    return Math.round((opt2Volume || 0.1) * rateSea);
+  }, [opt2ShippingMode, opt2Weight, opt2Volume, rateAirExpress, rateAirStandard, rateSea]);
+
+  const opt2ModeLabel = useMemo(() => {
+    if (opt2ShippingMode === "AIR_EXPRESS") return "Avion Express Cargo (4 à 5 jours)";
+    if (opt2ShippingMode === "AIR_STANDARD") return "Avion Normal Standard (10 à 14 jours)";
+    return "Bateau Maritime Groupage (35 à 45 jours)";
+  }, [opt2ShippingMode]);
+
+  const opt2UnitRateFormatted = useMemo(() => {
+    if (opt2ShippingMode === "AIR_EXPRESS") return `${rateAirExpress.toLocaleString("fr-FR")} FCFA / kg`;
+    if (opt2ShippingMode === "AIR_STANDARD") return `${rateAirStandard.toLocaleString("fr-FR")} FCFA / kg`;
+    return `${rateSea.toLocaleString("fr-FR")} FCFA / m³`;
+  }, [opt2ShippingMode, rateAirExpress, rateAirStandard, rateSea]);
+
+  // Option 1 calculs financiers
+  const rmbRate = 95;
+  const usdRate = 620;
   const unitPriceFCFA = Math.round(
     productUnitPrice * (productCurrency === "USD" ? usdRate : productCurrency === "RMB" ? rmbRate : 1)
   );
-
-  // Total articles en FCFA
-  const totalArticlesFCFA = option === "sans_fournisseur"
-    ? unitPriceFCFA * (productQuantity || 1)
-    : Math.round(parseFloat(rmbAmount.replace(/[^0-9.]/g, "") || "0") * rmbRate);
-
-  // Frais de transport estimés en FCFA (ex: Avion 10 500 FCFA/kg - Bateau forfait 30 000 FCFA)
-  const shippingRateAir = 10500;
-  const shippingFeeFCFA = option === "sans_fournisseur"
-    ? shippingMode === "AIR"
-      ? Math.round((estimatedWeight || 2.5) * shippingRateAir)
-      : 30000
-    : 0; // En option 2 avec fournisseur, l'expédition est réglée au poids à l'arrivée
-
-  // Grand Total Global à payer
-  const grandTotalFCFA = totalArticlesFCFA + shippingFeeFCFA;
+  const totalArticlesFCFA = unitPriceFCFA * (productQuantity || 1);
+  const shippingFeeOption1 =
+    shippingMode === "AIR" ? Math.round((estimatedWeight || 2.5) * rateAirExpress) : 30000;
+  const grandTotalFCFA = totalArticlesFCFA + shippingFeeOption1;
 
   const copyPayMethod = (key: string, val: string) => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -327,12 +433,15 @@ function CommandeFormContent() {
     }
   };
 
-  const copyText = (text: string, type: "ref" | "mark") => {
+  const copyText = (text: string, type: "ref" | "tracking" | "mark") => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(text);
       if (type === "ref") {
         setCopiedRef(true);
         setTimeout(() => setCopiedRef(false), 2000);
+      } else if (type === "tracking") {
+        setCopiedTracking(true);
+        setTimeout(() => setCopiedTracking(false), 2000);
       } else {
         setCopiedMark(true);
         setTimeout(() => setCopiedMark(false), 2000);
@@ -347,6 +456,21 @@ function CommandeFormContent() {
       return;
     }
 
+    if (option === "avec_fournisseur") {
+      if (!productLink.trim()) {
+        alert("Veuillez renseigner le lien Alibaba ou 1688 de votre article.");
+        return;
+      }
+      if (!clientShippingMark.trim()) {
+        alert("Veuillez renseigner le Shipping Mark fourni par votre fournisseur chinois.");
+        return;
+      }
+      if (!goodsDescription.trim()) {
+        alert("Veuillez renseigner la nature ou description de la marchandise.");
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       let cargoDescription = "";
@@ -354,43 +478,49 @@ function CommandeFormContent() {
       if (option === "sans_fournisseur") {
         cargoDescription = `[SOURCING ALIBABA CONFIRMÉ] Produit: ${productQuery.trim() || extractedProduct?.title || "Article Alibaba"} | Qté: ${productQuantity} | P.U: ${productUnitPrice} ${productCurrency} (${unitPriceFCFA.toLocaleString("fr-FR")} FCFA) | Expédition: ${shippingMode === "AIR" ? `Avion (${estimatedWeight}kg)` : "Bateau"} | Total: ${grandTotalFCFA.toLocaleString("fr-FR")} FCFA | Reçu: ${receiptFileName ? "OUI (joint)" : "En attente"}`;
       } else {
-        cargoDescription = `[PAIEMENT FOURNISSEUR RMB] Montant: ${rmbAmount.trim()} ¥ (${totalArticlesFCFA.toLocaleString("fr-FR")} FCFA) | Usine: ${supplierContact.trim()} | Marchandise: ${goodsDescription.trim()} | Reçu: ${receiptFileName ? "OUI (joint)" : "En attente"}`;
+        cargoDescription = `[EXPÉDITION AVEC FOURNISSEUR] Shipping Mark: ${clientShippingMark.trim()} | Déjà Payé Usine: ${paidToSupplier.trim() || "Oui"} | Marchandise: ${goodsDescription.trim()} | Formule: ${opt2ModeLabel} (${opt2ShippingMode === "SEA" ? `${opt2Volume} m³` : `${opt2Weight} kg`} à ${opt2UnitRateFormatted}) | Devis Transit: ${shippingQuoteOption2.toLocaleString("fr-FR")} FCFA | Paiement: Mobile Money à l'arrivée`;
       }
 
-      // Enregistrement unifié avec produit prévisualisé, calcul et preuve de paiement
       const res = await saveClientRequest({
         service_type: "ALIBABA",
         option_type: option === "avec_fournisseur" ? "AVEC_FOURNISSEUR" : "SANS_FOURNISSEUR",
-        rmb_amount: option === "avec_fournisseur" ? rmbAmount.trim() : undefined,
-        supplier_contact: option === "avec_fournisseur" ? supplierContact.trim() : undefined,
+        shipping_mark: option === "avec_fournisseur" ? clientShippingMark.trim() : undefined,
+        paid_to_supplier: option === "avec_fournisseur" ? paidToSupplier.trim() : undefined,
+        rmb_amount: option === "avec_fournisseur" ? paidToSupplier.trim() : undefined,
+        supplier_contact: option === "avec_fournisseur" ? clientShippingMark.trim() : undefined,
         client_name: clientName.trim(),
         client_phone: clientPhone.trim(),
         origin_country: "Chine",
-        destination_country: destinationCity.trim() || "Côte d'Ivoire (Abidjan)",
+        destination_country: destinationCity.trim(),
         product_url: productLink.trim(),
         product_image: extractedProduct?.image,
-        product_name: productQuery.trim() || extractedProduct?.title,
-        unit_price: productUnitPrice,
-        unit_price_currency: productCurrency,
-        total_goods_fcfa: totalArticlesFCFA,
-        shipping_fee_fcfa: shippingFeeFCFA,
-        total_amount_fcfa: grandTotalFCFA,
-        payment_method_selected: selectedPayMethod,
-        payment_receipt_url: receiptDataUrl || undefined,
-        payment_receipt_name: receiptFileName || undefined,
+        product_name:
+          productQuery.trim() ||
+          extractedProduct?.title ||
+          (option === "avec_fournisseur" ? goodsDescription.trim() : "Article Alibaba"),
+        unit_price: option === "sans_fournisseur" ? productUnitPrice : undefined,
+        unit_price_currency: option === "sans_fournisseur" ? productCurrency : undefined,
+        total_goods_fcfa: option === "sans_fournisseur" ? totalArticlesFCFA : undefined,
+        shipping_fee_fcfa: option === "sans_fournisseur" ? shippingFeeOption1 : shippingQuoteOption2,
+        total_amount_fcfa: option === "sans_fournisseur" ? grandTotalFCFA : shippingQuoteOption2,
+        payment_method_selected: option === "sans_fournisseur" ? selectedPayMethod : "MOBILE_MONEY_ARRIVEE",
+        payment_receipt_url: option === "sans_fournisseur" ? receiptDataUrl || undefined : undefined,
+        payment_receipt_name: option === "sans_fournisseur" ? receiptFileName || undefined : undefined,
         product_quantity: String(productQuantity || 1),
-        product_specs: option === "sans_fournisseur"
-          ? `Mode: ${shippingMode} | Poids: ${estimatedWeight}kg | Articles: ${totalArticlesFCFA.toLocaleString("fr-FR")} F | Total: ${grandTotalFCFA.toLocaleString("fr-FR")} F`
-          : `Montant proforma: ${rmbAmount.trim()} RMB (${totalArticlesFCFA.toLocaleString("fr-FR")} FCFA)`,
-        shipping_mode_type: shippingMode,
+        product_specs:
+          option === "sans_fournisseur"
+            ? `Mode: ${shippingMode} | Poids: ${estimatedWeight}kg | Articles: ${totalArticlesFCFA.toLocaleString("fr-FR")} F | Total: ${grandTotalFCFA.toLocaleString("fr-FR")} F`
+            : `Shipping Mark: ${clientShippingMark.trim()} | Déjà Payé Usine: ${paidToSupplier.trim()} | Devis Transit: ${shippingQuoteOption2.toLocaleString("fr-FR")} FCFA`,
+        shipping_mode_type: option === "sans_fournisseur" ? shippingMode : opt2ShippingMode === "SEA" ? "SEA" : "AIR",
+        estimated_weight_kg: option === "sans_fournisseur" ? estimatedWeight : opt2ShippingMode !== "SEA" ? opt2Weight : undefined,
+        estimated_cbm: option === "sans_fournisseur" ? (shippingMode === "SEA" ? estimatedWeight : undefined) : opt2ShippingMode === "SEA" ? opt2Volume : undefined,
         cargo_type: cargoDescription,
       });
 
-      // Construction du message WhatsApp direct vers l'équipe commerciale
       let message = "";
       if (option === "sans_fournisseur") {
         message =
-          `*NOUVELLE COMMANDE ALIBABA N° ${res.reference}*\n` +
+          `*NOUVELLE COMMANDE ALIBABA SOURCING N° ${res.reference}*\n` +
           `• Client : ${clientName}\n` +
           `• Téléphone : ${clientPhone}\n` +
           `• Destination : ${destinationCity}\n` +
@@ -403,26 +533,32 @@ function CommandeFormContent() {
           `• Preuve de paiement : ${receiptFileName ? `Jointe (${receiptFileName})` : "À envoyer"}`;
       } else {
         message =
-          `*DOSSIER PAIEMENT FOURNISSEUR RMB N° ${res.reference}*\n` +
+          `*NOUVEAU DOSSIER EXPÉDITION (AVEC FOURNISSEUR) N° ${res.reference}*\n` +
+          `• N° Suivi officiel : ${res.trackingNumber}\n` +
           `• Client : ${clientName}\n` +
           `• Téléphone : ${clientPhone}\n` +
           `• Destination : ${destinationCity}\n` +
-          `• Montant Proforma : ${rmbAmount} RMB (¥) ≈ ${totalArticlesFCFA.toLocaleString("fr-FR")} FCFA\n` +
-          `• Contact Usine (WeChat/WA) : ${supplierContact}\n` +
-          `• Lien Produit / Proforma : ${productLink}\n` +
+          `• Shipping Mark fournisseur : ${clientShippingMark}\n` +
+          `• Montant payé au fournisseur : ${paidToSupplier || "Déjà réglé"}\n` +
+          `• Lien de l'article : ${productLink}\n` +
           `• Marchandise : ${goodsDescription}\n` +
-          `• Règlement via : ${selectedPayMethod.toUpperCase()}\n` +
-          `• Preuve de paiement : ${receiptFileName ? `Jointe (${receiptFileName})` : "À envoyer"}`;
+          `• Formule choisie : ${opt2ModeLabel} (${opt2ShippingMode === "SEA" ? `${opt2Volume} m³` : `${opt2Weight} kg`} à ${opt2UnitRateFormatted})\n` +
+          `• Devis transit estimé : ${shippingQuoteOption2.toLocaleString("fr-FR")} FCFA\n` +
+          `• Modalité de paiement : Mobile Money (Wave / Orange Money) à l'arrivée en entrepôt`;
       }
 
       const customWaUrl = `https://wa.me/2250787994412?text=${encodeURIComponent(message)}`;
 
       setOrderResult({
         reference: res.reference,
+        trackingNumber: res.trackingNumber,
         shippingMark: res.shippingMark,
         whatsappUrl: customWaUrl,
-        totalAmount: grandTotalFCFA,
+        totalAmount: option === "sans_fournisseur" ? grandTotalFCFA : shippingQuoteOption2,
         receiptName: receiptFileName,
+        option,
+        destination: destinationCity,
+        shippingModeDesc: option === "sans_fournisseur" ? (shippingMode === "AIR" ? "Avion Express" : "Bateau Maritime") : opt2ModeLabel,
       });
       setSubmitted(true);
       window.open(customWaUrl, "_blank");
@@ -447,12 +583,15 @@ function CommandeFormContent() {
 
         {/* En-tête */}
         <div className="page-header">
+          <div className="badge-eyebrow">
+            <span className="dot" />
+            <span>Portail Commandes &amp; Expéditions Chine</span>
+          </div>
           <h1 className="page-title">
             Passer une Commande en Chine
           </h1>
           <p className="page-subtitle">
-            Collez le lien de votre article sur <strong>Alibaba ou 1688</strong> : confirmation visuelle immédiate,
-            calcul automatique du total (articles + transport) et règlement sécurisé via nos comptes officiels.
+            Collez le lien de votre article sur <strong>Alibaba, 1688 ou Taobao</strong> : devis instantané au kilo ou au mètre cube, sécurisation des achats et expédition dédouanée jusqu&apos;à votre magasin.
           </p>
         </div>
 
@@ -461,31 +600,39 @@ function CommandeFormContent() {
             <div className="success-icon-wrap">
               <CheckCircle2 size={46} color="#16A34A" />
             </div>
-            <h2 className="success-title">Commande Enregistrée avec Succès !</h2>
+            <h2 className="success-title">
+              {orderResult.option === "avec_fournisseur"
+                ? "Expédition Enregistrée avec Succès !"
+                : "Commande Enregistrée avec Succès !"}
+            </h2>
             <p className="success-desc">
-              Votre dossier a été transmis à la Centrale d&apos;Achat Roum Transit. Votre preuve de paiement est en cours de validation par notre caisse.
+              {orderResult.option === "avec_fournisseur"
+                ? "Votre dossier de transit est créé dans le système logistique. Votre numéro de suivi officiel est immédiatement actif."
+                : "Votre dossier a été transmis à la Centrale d'Achat Roum Transit. Votre preuve de paiement est en cours de validation par notre caisse."}
             </p>
 
             <div className="reference-box">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+              {/* N° Suivi / Référence */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
                 <div>
                   <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>
-                    Numéro de Dossier Officiel
+                    {orderResult.option === "avec_fournisseur" ? "Numéro de Suivi Officiel (Tracking)" : "Numéro de Dossier Officiel"}
                   </span>
-                  <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "#111827", letterSpacing: "0.03em" }}>
-                    {orderResult.reference}
+                  <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#1D4ED8", letterSpacing: "0.03em", fontFamily: "monospace" }}>
+                    {orderResult.trackingNumber || orderResult.reference}
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => copyText(orderResult.reference, "ref")}
+                  onClick={() => copyText(orderResult.trackingNumber || orderResult.reference, "tracking")}
                   className="copy-btn-pill"
                 >
-                  {copiedRef ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
-                  <span>{copiedRef ? "Copié !" : "Copier"}</span>
+                  {copiedTracking ? <Check size={14} color="#16A34A" /> : <Copy size={14} />}
+                  <span>{copiedTracking ? "Copié !" : "Copier"}</span>
                 </button>
               </div>
 
+              {/* Shipping Mark */}
               <div style={{ borderTop: "1px solid #F3F4F6", paddingTop: "10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>
@@ -505,24 +652,38 @@ function CommandeFormContent() {
                 </button>
               </div>
 
-              {/* Récapitulatif article & montant */}
+              {/* Récapitulatif montant & modalité */}
               <div style={{ borderTop: "1px solid #F3F4F6", paddingTop: "12px", marginTop: "10px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.86rem" }}>
-                  <span style={{ color: "#6B7280" }}>Montant total calculé :</span>
+                  <span style={{ color: "#6B7280" }}>
+                    {orderResult.option === "avec_fournisseur" ? "Devis transport estimé :" : "Montant total calculé :"}
+                  </span>
                   <strong style={{ fontSize: "1.05rem", color: "#CC4E16" }}>
                     {orderResult.totalAmount?.toLocaleString("fr-FR")} FCFA
                   </strong>
                 </div>
-                {orderResult.receiptName && (
-                  <div style={{ marginTop: "6px", display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#16A34A" }}>
-                    <CheckCircle2 size={14} />
-                    <span>Reçu de paiement joint : <strong>{orderResult.receiptName}</strong></span>
+
+                {orderResult.option === "avec_fournisseur" ? (
+                  <div style={{ marginTop: "10px", padding: "10px 12px", background: "#FEF3C7", borderRadius: "10px", fontSize: "0.8rem", color: "#92400E", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Coins size={18} />
+                    <span>Règlement des frais de transit par <strong>Wave ou Orange Money</strong> lors du retrait du colis à destination.</span>
                   </div>
+                ) : (
+                  orderResult.receiptName && (
+                    <div style={{ marginTop: "6px", display: "flex", alignItems: "center", gap: "6px", fontSize: "0.78rem", color: "#16A34A" }}>
+                      <CheckCircle2 size={14} />
+                      <span>Reçu de paiement joint : <strong>{orderResult.receiptName}</strong></span>
+                    </div>
+                  )
                 )}
               </div>
             </div>
 
             <div className="success-actions">
+              <Link href={`/tracking/${orderResult.trackingNumber || orderResult.reference}`} className="tracking-btn">
+                <Package size={17} />
+                <span>Suivre mon Colis en Direct</span>
+              </Link>
               <a
                 href={orderResult?.whatsappUrl || "https://wa.me/2250787994412"}
                 target="_blank"
@@ -530,7 +691,7 @@ function CommandeFormContent() {
                 className="wa-btn"
               >
                 <MessageCircle size={18} />
-                <span>Confirmer sur WhatsApp (+225 07 87 99 44 12)</span>
+                <span>Notifier l&apos;équipe sur WhatsApp</span>
               </a>
               <Link href="/services" className="secondary-btn">
                 <span>Retour aux services</span>
@@ -562,12 +723,12 @@ function CommandeFormContent() {
                 onClick={() => setOption("avec_fournisseur")}
               >
                 <div className="option-card-top">
-                  <span className="option-num">OPTION 2 · PAIEMENT RMB</span>
+                  <span className="option-num">OPTION 2 · EXPÉDITION &amp; TRANSIT</span>
                   <span className="option-radio" />
                 </div>
                 <h3 className="option-title">Avec Fournisseur</h3>
                 <p className="option-desc">
-                  Vous avez déjà votre proforma usine. Nous réglons votre fournisseur en Yuans RMB sous 24h avec quittance officielle.
+                  Vous avez déjà payé votre usine chinoise. Nous prenons en charge le transit complet, l&apos;acheminement et le dédouanement avec règlement à l&apos;arrivée.
                 </p>
               </button>
             </div>
@@ -613,7 +774,7 @@ function CommandeFormContent() {
 
                 <div className="input-group full-width">
                   <label htmlFor="destinationCity">
-                    Pays &amp; Ville de Destination Finale <span style={{ color: "#DC2626" }}>*</span>
+                    Destination Finale (Entrepôt de livraison) <span style={{ color: "#DC2626" }}>*</span>
                   </label>
                   <select
                     id="destinationCity"
@@ -622,25 +783,14 @@ function CommandeFormContent() {
                     value={destinationCity}
                     onChange={(e) => setDestinationCity(e.target.value)}
                   >
-                    <optgroup label="Destinations Principales (Afrique)">
-                      {AFRICAN_COUNTRIES.map((c) => (
-                        <option key={c.code} value={`${c.name} (${c.hubCity || "Capitale"})`}>
-                          {c.name} — {c.hubCity || "Capitale"}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Tous les autres pays du monde">
-                      {ALL_WORLD_COUNTRIES.filter(
-                        (c) => !AFRICAN_COUNTRIES.some((af) => af.code === c.code)
-                      ).map((c) => (
-                        <option key={c.code} value={`${c.name} (${c.hubCity || "Principal"})`}>
-                          {c.name} {c.hubCity ? `— ${c.hubCity}` : ""}
-                        </option>
-                      ))}
-                    </optgroup>
+                    {adminDestinations.map((d) => (
+                      <option key={d.label} value={d.label}>
+                        {d.label}
+                      </option>
+                    ))}
                   </select>
                   <span style={{ fontSize: "0.76rem", color: "#6B7280", marginTop: "3px" }}>
-                    Dédouanement 100% inclus jusqu&apos;à votre magasin ou agence de destination.
+                    Dédouanement 100% inclus jusqu&apos;à votre entrepôt ou agence de destination.
                   </span>
                 </div>
               </div>
@@ -648,7 +798,7 @@ function CommandeFormContent() {
               <div className="section-divider" />
 
               {/* ========================================================
-                  ÉTAPE 2 : LIEN DU PRODUIT & AFFICHAGE VISUEL IMMÉDIAT
+                  ÉTAPE 2 : INFORMATIONS ARTICLES & LOGISTIQUE
                  ======================================================== */}
               <div className="section-heading">
                 <span className="step-num">2</span>
@@ -656,12 +806,12 @@ function CommandeFormContent() {
                   <h3>
                     {option === "sans_fournisseur"
                       ? "Lien de l'Article & Aperçu Automatique"
-                      : "Détails de la Facture Usine (RMB)"}
+                      : "Informations de votre Colis & Fournisseur"}
                   </h3>
                   <p style={{ fontSize: "0.8rem", color: "#6B7280", margin: "2px 0 0 0" }}>
                     {option === "sans_fournisseur"
                       ? "Collez votre lien Alibaba / 1688 pour afficher automatiquement l'article et son prix"
-                      : "Renseignez le montant proforma et le contact WeChat de votre fabricant"}
+                      : "Renseignez le lien Alibaba, le shipping mark et le poids pour calculer votre tarif de transit"}
                   </p>
                 </div>
               </div>
@@ -726,7 +876,6 @@ function CommandeFormContent() {
                           alt={extractedProduct.title}
                           className="product-preview-img"
                           onError={(e) => {
-                            // Fallback si l'image distante est bloquée par Alibaba
                             (e.target as HTMLImageElement).src = "/images/services/sourcing_warehouse.jpg";
                           }}
                         />
@@ -867,65 +1016,165 @@ function CommandeFormContent() {
                   </div>
                 </div>
               ) : (
-                /* OPTION 2 : AVEC FOURNISSEUR (PAIEMENT RMB) */
-                <div className="form-grid">
-                  <div className="input-group">
-                    <label htmlFor="rmbAmount">
-                      Montant exact en Yuans (RMB ¥) <span style={{ color: "#DC2626" }}>*</span>
-                    </label>
-                    <input
-                      id="rmbAmount"
-                      type="text"
-                      required
-                      placeholder="Ex : 5 800 RMB"
-                      value={rmbAmount}
-                      onChange={(e) => setRmbAmount(e.target.value)}
-                    />
-                    <span style={{ fontSize: "0.76rem", color: "#16A34A", marginTop: "3px" }}>
-                      ≈ {totalArticlesFCFA.toLocaleString("fr-FR")} FCFA (Taux officiel 1 ¥ = 95 FCFA)
-                    </span>
-                  </div>
-
-                  <div className="input-group">
-                    <label htmlFor="supplierContact">
-                      Contact fournisseur (WeChat ID / WhatsApp) <span style={{ color: "#DC2626" }}>*</span>
-                    </label>
-                    <input
-                      id="supplierContact"
-                      type="text"
-                      required
-                      placeholder="Ex : WeChat: gz_factory88 ou WhatsApp"
-                      value={supplierContact}
-                      onChange={(e) => setSupplierContact(e.target.value)}
-                    />
-                  </div>
-
+                /* OPTION 2 : AVEC FOURNISSEUR (EXPÉDITION & TRANSIT SEUL) */
+                <div style={{ display: "grid", gap: "16px" }}>
+                  {/* Champ URL de l'article avec aperçu visuel immédiat */}
                   <div className="input-group full-width">
                     <label htmlFor="productLinkOpt2">
-                      Lien du produit ou de la boutique fournisseur (Alibaba / 1688) <span style={{ color: "#DC2626" }}>*</span>
+                      Lien direct du produit Alibaba, 1688 ou Taobao <span style={{ color: "#DC2626" }}>*</span>
                     </label>
-                    <input
-                      id="productLinkOpt2"
-                      type="url"
-                      required
-                      placeholder="https://detail.1688.com/... ou lien proforma"
-                      value={productLink}
-                      onChange={(e) => setProductLink(e.target.value)}
-                    />
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <input
+                        id="productLinkOpt2"
+                        type="url"
+                        required
+                        placeholder="https://detail.1688.com/... ou https://french.alibaba.com/p-detail/..."
+                        value={productLink}
+                        onChange={(e) => {
+                          setProductLink(e.target.value);
+                          if (e.target.value.startsWith("http") && !extractedProduct) {
+                            handleExtractProduct(e.target.value);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (productLink.startsWith("http") && !extractedProduct) {
+                            handleExtractProduct(productLink);
+                          }
+                        }}
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleExtractProduct()}
+                        disabled={extracting || !productLink.trim()}
+                        className="extract-trigger-btn"
+                        title="Analyser le lien"
+                      >
+                        {extracting ? <span>Analyse...</span> : <><Search size={15} /><span>Voir</span></>}
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="input-group full-width">
-                    <label htmlFor="goodsDescription">
-                      Nature de la marchandise <span style={{ color: "#DC2626" }}>*</span>
-                    </label>
-                    <input
-                      id="goodsDescription"
-                      type="text"
-                      required
-                      placeholder="Ex : Écrans téléphones, outillage, cosmétiques..."
-                      value={goodsDescription}
-                      onChange={(e) => setGoodsDescription(e.target.value)}
-                    />
+                  {extractedProduct && (
+                    <div className="product-preview-card">
+                      <div className="product-preview-media">
+                        <img
+                          src={extractedProduct.image}
+                          alt={extractedProduct.title}
+                          className="product-preview-img"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "/images/services/sourcing_warehouse.jpg";
+                          }}
+                        />
+                        <span className="platform-tag">
+                          <CheckCircle2 size={12} />
+                          {extractedProduct.platform}
+                        </span>
+                      </div>
+                      <div className="product-preview-info">
+                        <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#16A34A", textTransform: "uppercase" }}>
+                          Article Détecté
+                        </span>
+                        <h4 className="product-preview-title">{extractedProduct.title}</h4>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="form-grid">
+                    <div className="input-group">
+                      <label htmlFor="clientShippingMark">
+                        Shipping Mark fournisseur (sur vos cartons) <span style={{ color: "#DC2626" }}>*</span>
+                      </label>
+                      <input
+                        id="clientShippingMark"
+                        type="text"
+                        required
+                        placeholder="Ex : ROUM-EXP-Jean ou code usine"
+                        value={clientShippingMark}
+                        onChange={(e) => setClientShippingMark(e.target.value)}
+                      />
+                      <span style={{ fontSize: "0.74rem", color: "#6B7280", marginTop: "3px" }}>
+                        Marquage attribué par votre usine chinoise
+                      </span>
+                    </div>
+
+                    <div className="input-group">
+                      <label htmlFor="paidToSupplier">
+                        Montant déjà payé au fournisseur <span style={{ color: "#DC2626" }}>*</span>
+                      </label>
+                      <input
+                        id="paidToSupplier"
+                        type="text"
+                        required
+                        placeholder="Ex : 5 400 RMB ou 800 $ ou 500 000 FCFA"
+                        value={paidToSupplier}
+                        onChange={(e) => setPaidToSupplier(e.target.value)}
+                      />
+                      <span style={{ fontSize: "0.74rem", color: "#16A34A", marginTop: "3px" }}>
+                        Marchandises déjà réglées par vos soins
+                      </span>
+                    </div>
+
+                    <div className="input-group full-width">
+                      <label htmlFor="goodsDescription">
+                        Nature &amp; Description de la marchandise <span style={{ color: "#DC2626" }}>*</span>
+                      </label>
+                      <input
+                        id="goodsDescription"
+                        type="text"
+                        required
+                        placeholder="Ex : 4 cartons écrans LCD, coques téléphones, outillage..."
+                        value={goodsDescription}
+                        onChange={(e) => setGoodsDescription(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="input-group">
+                      <label htmlFor="opt2ShippingMode">Formule de Transport Souhaitée *</label>
+                      <select
+                        id="opt2ShippingMode"
+                        className="styled-select"
+                        value={opt2ShippingMode}
+                        onChange={(e) => setOpt2ShippingMode(e.target.value as any)}
+                      >
+                        <option value="AIR_EXPRESS">
+                          Avion Express (4 à 5 j) — {rateAirExpress.toLocaleString("fr-FR")} FCFA / kg
+                        </option>
+                        <option value="AIR_STANDARD">
+                          Avion Normal (10 à 14 j) — {rateAirStandard.toLocaleString("fr-FR")} FCFA / kg
+                        </option>
+                        <option value="SEA">
+                          Bateau Maritime Groupage (35 à 45 j) — {rateSea.toLocaleString("fr-FR")} FCFA / m³
+                        </option>
+                      </select>
+                    </div>
+
+                    <div className="input-group">
+                      <label htmlFor="opt2Weight">
+                        {opt2ShippingMode === "SEA" ? "Volume estimé (m³ / CBM) *" : "Poids total estimé (kg) *"}
+                      </label>
+                      {opt2ShippingMode === "SEA" ? (
+                        <input
+                          id="opt2Volume"
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          required
+                          value={opt2Volume}
+                          onChange={(e) => setOpt2Volume(parseFloat(e.target.value) || 0.1)}
+                        />
+                      ) : (
+                        <input
+                          id="opt2Weight"
+                          type="number"
+                          step="0.5"
+                          min="0.5"
+                          required
+                          value={opt2Weight}
+                          onChange={(e) => setOpt2Weight(parseFloat(e.target.value) || 1)}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -938,9 +1187,15 @@ function CommandeFormContent() {
               <div className="section-heading">
                 <span className="step-num">3</span>
                 <div>
-                  <h3>Total Estimé &amp; Décomposition Financière</h3>
+                  <h3>
+                    {option === "sans_fournisseur"
+                      ? "Total Estimé & Décomposition Financière"
+                      : "Devis Transport & Dédouanement à Destination"}
+                  </h3>
                   <p style={{ fontSize: "0.8rem", color: "#6B7280", margin: "2px 0 0 0" }}>
-                    Calcul automatique sans frais cachés : achat usine + expédition dédouanée jusqu&apos;à votre ville
+                    {option === "sans_fournisseur"
+                      ? "Calcul automatique sans frais cachés : achat usine + expédition dédouanée"
+                      : `Tarif calculé en fonction du poids/volume configuré pour ${destinationCity}`}
                   </p>
                 </div>
               </div>
@@ -952,28 +1207,42 @@ function CommandeFormContent() {
                     <span>
                       {option === "sans_fournisseur"
                         ? `Marchandises (${productQuantity} pièce${productQuantity > 1 ? "s" : ""} × ${unitPriceFCFA.toLocaleString("fr-FR")} FCFA)`
-                        : `Facture Usine Chine (${rmbAmount || "0"} RMB)`}
+                        : `Marchandises : Déjà payées au fournisseur chinois (${paidToSupplier || "Réglé"})`}
                     </span>
                   </span>
-                  <strong className="billing-val">{totalArticlesFCFA.toLocaleString("fr-FR")} FCFA</strong>
+                  <strong className="billing-val">
+                    {option === "sans_fournisseur"
+                      ? `${totalArticlesFCFA.toLocaleString("fr-FR")} FCFA`
+                      : "RÉGLÉ PAR VOS SOINS"}
+                  </strong>
                 </div>
 
-                {option === "sans_fournisseur" && (
-                  <div className="billing-row">
-                    <span className="billing-label">
-                      {shippingMode === "AIR" ? <Plane size={15} color="#6B7280" /> : <Ship size={15} color="#6B7280" />}
-                      <span>
-                        Transport {shippingMode === "AIR" ? `Avion Express (${estimatedWeight} kg)` : "Bateau Maritime Groupage"}
-                      </span>
+                <div className="billing-row">
+                  <span className="billing-label">
+                    {(option === "sans_fournisseur" ? shippingMode === "AIR" : opt2ShippingMode !== "SEA") ? (
+                      <Plane size={15} color="#6B7280" />
+                    ) : (
+                      <Ship size={15} color="#6B7280" />
+                    )}
+                    <span>
+                      Transport{" "}
+                      {option === "sans_fournisseur"
+                        ? shippingMode === "AIR"
+                          ? `Avion Express (${estimatedWeight} kg)`
+                          : "Bateau Maritime Groupage"
+                        : `${opt2ModeLabel} (${opt2ShippingMode === "SEA" ? `${opt2Volume} m³` : `${opt2Weight} kg`} à ${opt2UnitRateFormatted})`}
                     </span>
-                    <strong className="billing-val">{shippingFeeFCFA.toLocaleString("fr-FR")} FCFA</strong>
-                  </div>
-                )}
+                  </span>
+                  <strong className="billing-val">
+                    {(option === "sans_fournisseur" ? shippingFeeOption1 : shippingQuoteOption2).toLocaleString("fr-FR")}{" "}
+                    FCFA
+                  </strong>
+                </div>
 
                 <div className="billing-row" style={{ color: "#16A34A" }}>
                   <span className="billing-label" style={{ color: "#16A34A" }}>
                     <ShieldCheck size={15} />
-                    <span>Contrôle qualité en entrepôt Baiyun &amp; Dédouanement</span>
+                    <span>Dédouanement complet inclus jusqu&apos;à l&apos;entrepôt {destinationCity}</span>
                   </span>
                   <strong>INCLUS</strong>
                 </div>
@@ -981,14 +1250,17 @@ function CommandeFormContent() {
                 <div className="billing-total-row">
                   <div>
                     <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#6B7280", textTransform: "uppercase" }}>
-                      Montant Global à Régler
+                      {option === "sans_fournisseur" ? "Montant Global à Régler" : "Total Devis Transport Estimé"}
                     </span>
                     <div style={{ fontSize: "0.75rem", color: "#9CA3AF" }}>
-                      Conversion garantie au taux officiel sans majoration
+                      {option === "sans_fournisseur"
+                        ? "Articles + Fret dédouané inclus"
+                        : "Payable par Mobile Money à l'arrivée lors du retrait du colis"}
                     </div>
                   </div>
                   <div className="billing-total-val">
-                    {grandTotalFCFA.toLocaleString("fr-FR")} <span style={{ fontSize: "0.95rem" }}>FCFA</span>
+                    {(option === "sans_fournisseur" ? grandTotalFCFA : shippingQuoteOption2).toLocaleString("fr-FR")}{" "}
+                    <span style={{ fontSize: "0.95rem" }}>FCFA</span>
                   </div>
                 </div>
               </div>
@@ -996,136 +1268,201 @@ function CommandeFormContent() {
               <div className="section-divider" />
 
               {/* ========================================================
-                  ÉTAPE 4 : COORDONNÉES OFFICIELLES DE PAIEMENT
+                  ÉTAPE 4 : COORDONNÉES DE RÈGLEMENT OU PAIEMENT ARRIVÉE
                  ======================================================== */}
               <div className="section-heading">
                 <span className="step-num">4</span>
                 <div>
-                  <h3>Comptes Officiels de Règlement</h3>
+                  <h3>
+                    {option === "sans_fournisseur"
+                      ? "Comptes Officiels de Règlement"
+                      : "Modalité de Paiement Mobile Money"}
+                  </h3>
                   <p style={{ fontSize: "0.8rem", color: "#6B7280", margin: "2px 0 0 0" }}>
-                    Effectuez votre règlement de <strong>{grandTotalFCFA.toLocaleString("fr-FR")} FCFA</strong> vers nos comptes officiels validés par l&apos;administration
+                    {option === "sans_fournisseur"
+                      ? `Effectuez votre règlement de ${grandTotalFCFA.toLocaleString("fr-FR")} FCFA vers nos comptes officiels`
+                      : "Paiement sécurisé à l'arrivée lors de la récupération de votre colis"}
                   </p>
                 </div>
               </div>
 
-              {activePaymentMethods.length > 0 ? (
-                <div className="payment-methods-grid">
-                  {activePaymentMethods.map((pm) => {
-                    const isSelected = selectedPayMethod === pm.id;
-                    return (
-                      <div
-                        key={pm.id}
-                        className={`payment-method-card ${isSelected ? "active" : ""}`}
-                        onClick={() => setSelectedPayMethod(pm.id)}
-                      >
-                        <div className="pay-card-top">
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            {pm.logo}
-                            <strong style={{ color: pm.color, fontSize: "0.92rem" }}>{pm.label}</strong>
-                          </div>
-                          <span className="pay-pill-tag">{pm.type}</span>
-                        </div>
-                        <div className="pay-account-num" style={{ fontFamily: pm.id === "bank" ? "monospace" : "inherit" }}>
-                          {pm.accountNumber}
-                        </div>
-                        <div className="pay-holder-name">{pm.accountHolder}</div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyPayMethod(pm.id, pm.copyValue);
-                          }}
-                          className="pay-copy-btn"
+              {option === "sans_fournisseur" ? (
+                activePaymentMethods.length > 0 ? (
+                  <div className="payment-methods-grid">
+                    {activePaymentMethods.map((pm) => {
+                      const isSelected = selectedPayMethod === pm.id;
+                      return (
+                        <div
+                          key={pm.id}
+                          className={`payment-method-card ${isSelected ? "active" : ""}`}
+                          onClick={() => setSelectedPayMethod(pm.id)}
                         >
-                          {copiedPay === pm.id ? <Check size={13} color="#16A34A" /> : <Copy size={13} />}
-                          <span>{copiedPay === pm.id ? "Copié !" : "Copier"}</span>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+                          <div className="pay-card-top">
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              {pm.logo}
+                              <strong style={{ color: pm.color, fontSize: "0.92rem" }}>{pm.label}</strong>
+                            </div>
+                            <span className="pay-pill-tag">{pm.type}</span>
+                          </div>
+                          <div
+                            className="pay-account-num"
+                            style={{ fontFamily: pm.id === "bank" ? "monospace" : "inherit" }}
+                          >
+                            {pm.accountNumber}
+                          </div>
+                          <div className="pay-holder-name">{pm.accountHolder}</div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyPayMethod(pm.id, pm.copyValue);
+                            }}
+                            className="pay-copy-btn"
+                          >
+                            {copiedPay === pm.id ? <Check size={13} color="#16A34A" /> : <Copy size={13} />}
+                            <span>{copiedPay === pm.id ? "Copié !" : "Copier"}</span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      padding: "16px",
+                      borderRadius: "12px",
+                      background: "#FFFBEB",
+                      border: "1px solid #FDE68A",
+                      color: "#92400E",
+                      fontSize: "0.86rem",
+                    }}
+                  >
+                    Les comptes de règlement sont en cours de mise à jour par la direction. Vous pouvez valider votre
+                    commande et nos équipes vous transmettront les coordonnées sur WhatsApp.
+                  </div>
+                )
               ) : (
-                <div style={{ padding: "16px", borderRadius: "12px", background: "#FFFBEB", border: "1px solid #FDE68A", color: "#92400E", fontSize: "0.86rem" }}>
-                  Les comptes de règlement sont en cours de mise à jour par la direction. Vous pouvez valider votre commande et nos équipes vous transmettront les coordonnées sur WhatsApp.
+                /* OPTION 2 : PAIEMENT MOBILE MONEY À L'ARRIVÉE */
+                <div className="pickup-payment-card">
+                  <div className="pickup-payment-icon">
+                    <Coins size={28} color="#CC4E16" />
+                  </div>
+                  <div>
+                    <h4 style={{ fontSize: "1.02rem", fontWeight: 800, color: "#111827", marginBottom: "4px" }}>
+                      Paiement Mobile Money à l&apos;Arrivée du Colis
+                    </h4>
+                    <p style={{ fontSize: "0.86rem", color: "#4B5563", lineHeight: 1.5, margin: 0 }}>
+                      Vos marchandises ont déjà été payées à votre fournisseur chinois. Les frais de transport et dédouanement (<strong>{shippingQuoteOption2.toLocaleString("fr-FR")} FCFA</strong>) seront à régler par <strong>Wave ou Orange Money</strong> ou en espèces lors du retrait de vos colis à notre entrepôt de destination à <strong>{destinationCity}</strong>.
+                    </p>
+                    <div style={{ marginTop: "12px", display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#1D4ED8", fontWeight: 700 }}>
+                        <WaveLogo size={20} />
+                        <span>Wave accepté</span>
+                      </div>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#EA580C", fontWeight: 700 }}>
+                        <OrangeMoneyLogo size={20} />
+                        <span>Orange Money accepté</span>
+                      </div>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#16A34A", fontWeight: 700 }}>
+                        <CheckCircle2 size={16} />
+                        <span>Pesée vidéo certifiée avant retrait</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              <div className="section-divider" />
-
-              {/* ========================================================
-                  ÉTAPE 5 : TÉLÉVERSEMENT DU REÇU / PREUVE DE PAIEMENT
-                 ======================================================== */}
-              <div className="section-heading">
-                <span className="step-num">5</span>
-                <div>
-                  <h3>Joindre votre Reçu ou Capture de Paiement</h3>
-                  <p style={{ fontSize: "0.8rem", color: "#6B7280", margin: "2px 0 0 0" }}>
-                    Téléversez la capture de votre écran de transfert Mobile Money ou le reçu bancaire (PNG, JPG ou PDF)
-                  </p>
-                </div>
-              </div>
-
-              <div className="receipt-upload-zone">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,application/pdf"
-                  onChange={handleReceiptChange}
-                  id="receiptUpload"
-                  style={{ display: "none" }}
-                />
-
-                {!receiptDataUrl ? (
-                  <label htmlFor="receiptUpload" className="upload-drop-area">
-                    <div className="upload-icon-circle">
-                      <Upload size={22} color="#CC4E16" />
+              {/* ÉTAPE 5 : Uniquement en Option 1 pour le reçu de paiement */}
+              {option === "sans_fournisseur" && (
+                <>
+                  <div className="section-divider" />
+                  <div className="section-heading">
+                    <span className="step-num">5</span>
+                    <div>
+                      <h3>Joindre votre Reçu ou Capture de Paiement</h3>
+                      <p style={{ fontSize: "0.8rem", color: "#6B7280", margin: "2px 0 0 0" }}>
+                        Téléversez la capture de votre écran de transfert Mobile Money ou le reçu bancaire (PNG, JPG ou PDF)
+                      </p>
                     </div>
-                    <div style={{ textAlign: "center" }}>
-                      <strong style={{ fontSize: "0.92rem", color: "#111827", display: "block" }}>
-                        Cliquez ici ou déposez votre capture de transfert
-                      </strong>
-                      <span style={{ fontSize: "0.76rem", color: "#6B7280", marginTop: "2px", display: "block" }}>
-                        Format PNG, JPG, WebP ou PDF (max. 10 Mo)
-                      </span>
-                    </div>
-                  </label>
-                ) : (
-                  <div className="receipt-preview-box">
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
-                      {receiptFile?.type.includes("pdf") ? (
-                        <div className="receipt-file-icon">
-                          <FileText size={26} color="#DC2626" />
-                        </div>
-                      ) : (
-                        <img
-                          src={receiptDataUrl}
-                          alt="Reçu de paiement"
-                          className="receipt-thumbnail"
-                        />
-                      )}
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {receiptFileName}
-                        </div>
-                        <div style={{ fontSize: "0.74rem", color: "#16A34A", display: "inline-flex", alignItems: "center", gap: "4px", marginTop: "2px" }}>
-                          <CheckCircle2 size={13} />
-                          <span>Preuve prête à être validée</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleRemoveReceipt}
-                      className="receipt-remove-btn"
-                      title="Supprimer ce reçu"
-                    >
-                      <Trash2 size={15} />
-                      <span>Retirer</span>
-                    </button>
                   </div>
-                )}
-              </div>
+
+                  <div className="receipt-upload-zone">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,application/pdf"
+                      onChange={handleReceiptChange}
+                      id="receiptUpload"
+                      style={{ display: "none" }}
+                    />
+
+                    {!receiptDataUrl ? (
+                      <label htmlFor="receiptUpload" className="upload-drop-area">
+                        <div className="upload-icon-circle">
+                          <Upload size={22} color="#CC4E16" />
+                        </div>
+                        <div style={{ textAlign: "center" }}>
+                          <strong style={{ fontSize: "0.92rem", color: "#111827", display: "block" }}>
+                            Cliquez ici ou déposez votre capture de transfert
+                          </strong>
+                          <span style={{ fontSize: "0.76rem", color: "#6B7280", marginTop: "2px", display: "block" }}>
+                            Format PNG, JPG, WebP ou PDF (max. 10 Mo)
+                          </span>
+                        </div>
+                      </label>
+                    ) : (
+                      <div className="receipt-preview-box">
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
+                          {receiptFile?.type.includes("pdf") ? (
+                            <div className="receipt-file-icon">
+                              <FileText size={26} color="#DC2626" />
+                            </div>
+                          ) : (
+                            <img src={receiptDataUrl} alt="Reçu de paiement" className="receipt-thumbnail" />
+                          )}
+                          <div style={{ minWidth: 0 }}>
+                            <div
+                              style={{
+                                fontSize: "0.86rem",
+                                fontWeight: 700,
+                                color: "#111827",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {receiptFileName}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "0.74rem",
+                                color: "#16A34A",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                marginTop: "2px",
+                              }}
+                            >
+                              <CheckCircle2 size={13} />
+                              <span>Preuve prête à être validée</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleRemoveReceipt}
+                          className="receipt-remove-btn"
+                          title="Supprimer ce reçu"
+                        >
+                          <Trash2 size={15} />
+                          <span>Retirer</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
 
               {/* Bouton de validation final */}
               <div className="form-actions" style={{ marginTop: "28px" }}>
@@ -1133,7 +1470,9 @@ function CommandeFormContent() {
                   <span>
                     {submitting
                       ? "Enregistrement en cours..."
-                      : `Confirmer et Envoyer ma Commande (${grandTotalFCFA.toLocaleString("fr-FR")} FCFA)`}
+                      : option === "sans_fournisseur"
+                      ? `Confirmer et Envoyer ma Commande (${grandTotalFCFA.toLocaleString("fr-FR")} FCFA)`
+                      : `Valider l'Expédition & Obtenir mon Numéro de Suivi`}
                   </span>
                   <ArrowRight size={17} />
                 </button>
@@ -1248,19 +1587,17 @@ function CommandeFormContent() {
           text-align: left;
           cursor: pointer;
           transition: all 0.2s ease;
-          display: flex;
-          flex-direction: column;
         }
 
         .option-card:hover {
           border-color: rgba(204, 78, 22, 0.4);
           transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+          box-shadow: 0 8px 24px rgba(20, 13, 9, 0.06);
         }
 
         .option-card.selected {
           border-color: #CC4E16;
-          background: #FFF9F5;
+          background: #FFFDFB;
           box-shadow: 0 8px 24px rgba(204, 78, 22, 0.12);
         }
 
@@ -1273,9 +1610,10 @@ function CommandeFormContent() {
 
         .option-num {
           font-family: var(--c-font-mono);
-          font-size: 0.72rem;
-          font-weight: 800;
+          font-size: 0.7rem;
+          font-weight: 700;
           color: #CC4E16;
+          text-transform: uppercase;
           letter-spacing: 0.05em;
         }
 
@@ -1289,40 +1627,42 @@ function CommandeFormContent() {
 
         .option-card.selected .option-radio {
           border-color: #CC4E16;
+          background-color: #CC4E16;
         }
 
         .option-card.selected .option-radio::after {
           content: "";
           position: absolute;
-          width: 8px;
-          height: 8px;
+          width: 6px;
+          height: 6px;
           border-radius: 50%;
-          background: #CC4E16;
-          top: 3px;
-          left: 3px;
+          background: #FFFFFF;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
         }
 
         .option-title {
-          font-size: 1.12rem;
+          font-size: 1.15rem;
           font-weight: 800;
           color: #140D09;
-          margin-bottom: 6px;
+          margin: 0 0 6px 0;
         }
 
         .option-desc {
           font-size: 0.82rem;
           color: #6B635B;
-          line-height: 1.45;
           margin: 0;
+          line-height: 1.45;
         }
 
         /* Formulaire */
         .form-card {
           background-color: #FFFFFF;
+          border: 1px solid rgba(20, 13, 9, 0.08);
           border-radius: 24px;
           padding: 32px 28px;
           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
-          border: 1px solid rgba(20, 13, 9, 0.08);
         }
 
         @media (max-width: 640px) {
@@ -1334,21 +1674,21 @@ function CommandeFormContent() {
         .section-heading {
           display: flex;
           align-items: flex-start;
-          gap: 12px;
+          gap: 14px;
           margin-bottom: 20px;
         }
 
         .step-num {
           width: 32px;
           height: 32px;
-          border-radius: 10px;
-          background: #140D09;
-          color: #FAF6F0;
+          border-radius: 50%;
+          background: #CC4E16;
+          color: #FFFFFF;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 0.88rem;
           font-weight: 800;
+          font-size: 0.88rem;
           flex-shrink: 0;
         }
 
@@ -1361,7 +1701,7 @@ function CommandeFormContent() {
 
         .section-divider {
           height: 1px;
-          background: #F3F4F6;
+          background: #E5E7EB;
           margin: 28px 0;
         }
 
@@ -1381,7 +1721,6 @@ function CommandeFormContent() {
         .input-group {
           display: flex;
           flex-direction: column;
-          gap: 6px;
         }
 
         .input-group.full-width {
@@ -1391,48 +1730,43 @@ function CommandeFormContent() {
         .input-group label {
           font-size: 0.82rem;
           font-weight: 700;
-          color: #140D09;
+          color: #374151;
+          margin-bottom: 6px;
         }
 
         .input-group input,
-        .input-group textarea,
-        .styled-select {
-          padding: 11px 14px;
-          border-radius: 12px;
+        .input-group select {
+          padding: 12px 14px;
           border: 1.5px solid #E5E7EB;
+          border-radius: 12px;
           font-size: 0.88rem;
-          font-family: inherit;
-          color: #140D09;
+          color: #111827;
           background: #FAFAFA;
           transition: all 0.15s ease;
-          width: 100%;
-          box-sizing: border-box;
+          outline: none;
         }
 
         .input-group input:focus,
-        .input-group textarea:focus,
-        .styled-select:focus {
-          outline: none;
+        .input-group select:focus {
           border-color: #CC4E16;
           background: #FFFFFF;
-          box-shadow: 0 0 0 3px rgba(204, 78, 22, 0.12);
+          box-shadow: 0 0 0 3px rgba(204, 78, 22, 0.15);
         }
 
-        /* Bouton d'analyse */
         .extract-trigger-btn {
           display: inline-flex;
           align-items: center;
           gap: 6px;
           background: #140D09;
-          color: #FAF6F0;
+          color: #FFFFFF;
           border: none;
           border-radius: 12px;
-          padding: 0 18px;
-          font-size: 0.82rem;
+          padding: 0 16px;
+          font-size: 0.84rem;
           font-weight: 700;
           cursor: pointer;
-          transition: background 0.15s ease;
           white-space: nowrap;
+          transition: background 0.15s ease;
         }
 
         .extract-trigger-btn:hover:not(:disabled) {
@@ -1444,7 +1778,7 @@ function CommandeFormContent() {
           cursor: not-allowed;
         }
 
-        /* CARTE APERÇU PRODUIT */
+        /* Aperçu Produit */
         .product-preview-card {
           display: flex;
           gap: 16px;
@@ -1601,7 +1935,7 @@ function CommandeFormContent() {
         }
 
         .billing-total-row {
-          border-top: 1.5px dashed #D1D5DB;
+          border-top: 2px dashed #E5E7EB;
           padding-top: 14px;
           margin-top: 4px;
           display: flex;
@@ -1610,40 +1944,39 @@ function CommandeFormContent() {
         }
 
         .billing-total-val {
-          font-size: 1.55rem;
+          font-size: 1.5rem;
           font-weight: 900;
           color: #CC4E16;
-          letter-spacing: -0.02em;
         }
 
-        /* GRILLE DES MOYENS DE PAIEMENT */
+        /* GRILLE MOYENS DE PAIEMENT */
         .payment-methods-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
           gap: 12px;
         }
 
         .payment-method-card {
           background: #FFFFFF;
-          border: 1.5px solid #E5E7EB;
-          border-radius: 14px;
+          border: 2px solid #E5E7EB;
+          border-radius: 16px;
           padding: 14px;
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: all 0.18s ease;
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 8px;
         }
 
         .payment-method-card:hover {
           border-color: #CC4E16;
-          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(204, 78, 22, 0.08);
         }
 
         .payment-method-card.active {
           border-color: #CC4E16;
-          background: #FFFBF8;
-          box-shadow: 0 4px 14px rgba(204, 78, 22, 0.12);
+          background: #FFFDFB;
+          box-shadow: 0 4px 14px rgba(204, 78, 22, 0.15);
         }
 
         .pay-card-top {
@@ -1692,6 +2025,34 @@ function CommandeFormContent() {
         .pay-copy-btn:hover {
           background: #F3F4F6;
           color: #111827;
+        }
+
+        /* PAIEMENT EN ENTREPÔT AU RETRAIT (OPTION 2) */
+        .pickup-payment-card {
+          background: #FFFDF8;
+          border: 1.5px solid #F59E0B;
+          border-radius: 18px;
+          padding: 20px 22px;
+          display: flex;
+          gap: 16px;
+          align-items: flex-start;
+        }
+
+        @media (max-width: 600px) {
+          .pickup-payment-card {
+            flex-direction: column;
+          }
+        }
+
+        .pickup-payment-icon {
+          width: 50px;
+          height: 50px;
+          border-radius: 14px;
+          background: #FEF3C7;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
         }
 
         /* UPLOAD REÇU DE PAIEMENT */
@@ -1873,6 +2234,25 @@ function CommandeFormContent() {
           flex-wrap: wrap;
         }
 
+        .tracking-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: #1D4ED8;
+          color: #FFFFFF;
+          text-decoration: none;
+          padding: 13px 24px;
+          border-radius: 9999px;
+          font-weight: 700;
+          font-size: 0.92rem;
+          box-shadow: 0 4px 14px rgba(29, 78, 216, 0.25);
+          transition: background 0.15s ease;
+        }
+
+        .tracking-btn:hover {
+          background: #1E40AF;
+        }
+
         .wa-btn {
           display: inline-flex;
           align-items: center;
@@ -1911,7 +2291,13 @@ function CommandeFormContent() {
 
 export default function CommandeAchatPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "50vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Chargement du formulaire...</div>}>
+    <Suspense
+      fallback={
+        <div style={{ minHeight: "50vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          Chargement du formulaire...
+        </div>
+      }
+    >
       <CommandeFormContent />
     </Suspense>
   );
