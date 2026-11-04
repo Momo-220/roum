@@ -7091,7 +7091,7 @@ export default function AdminPage() {
                         const parsedRmbNum = parseFloat(rmbAmountVal.replace(/\s/g, "").replace(",", ".")) || 0;
                         const cfaEquivalent = Math.round(parsedRmbNum * 88);
 
-                        const productImg = r.product_image || (productLinkVal ? "/images/services/sourcing_new.jpg" : "");
+                        const productImg = r.product_image || "";
 
                         return (
                           <tr key={r.id} className="table-row-clean">
@@ -7198,27 +7198,43 @@ export default function AdminPage() {
                               </div>
                             </td>
 
-                            {/* 4. Article & Lien Proforma (avec photo sans glitch) */}
+                            {/* 4. Article & Lien Proforma (avec photo réelle mise par le client) */}
                             <td>
                               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                <img
-                                  src={productImg || "/images/services/sourcing_new.jpg"}
-                                  alt="Photo article"
-                                  referrerPolicy="no-referrer"
-                                  onError={(e) => {
-                                    e.currentTarget.onerror = null;
-                                    e.currentTarget.src = "/images/services/sourcing_new.jpg";
-                                  }}
-                                  style={{
-                                    width: "44px",
-                                    height: "44px",
-                                    objectFit: "cover",
-                                    borderRadius: "10px",
-                                    flexShrink: 0,
-                                    border: "1px solid #E5E7EB",
-                                    background: "#FFFFFF",
-                                  }}
-                                />
+                                {productImg ? (
+                                  <img
+                                    src={productImg}
+                                    alt="Photo article"
+                                    referrerPolicy="no-referrer"
+                                    style={{
+                                      width: "44px",
+                                      height: "44px",
+                                      objectFit: "cover",
+                                      borderRadius: "10px",
+                                      flexShrink: 0,
+                                      border: "1px solid #E5E7EB",
+                                      background: "#FFFFFF",
+                                    }}
+                                  />
+                                ) : (
+                                  <div
+                                    style={{
+                                      width: "44px",
+                                      height: "44px",
+                                      borderRadius: "10px",
+                                      border: "1px dashed #D1D5DB",
+                                      background: "#F9FAFB",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      color: "#9CA3AF",
+                                      flexShrink: 0,
+                                    }}
+                                    title="Aucune photo d'article jointe"
+                                  >
+                                    <Package size={18} />
+                                  </div>
+                                )}
                                 <div style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: 0 }}>
                                   <div
                                     style={{

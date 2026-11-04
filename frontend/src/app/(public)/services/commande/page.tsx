@@ -271,6 +271,28 @@ function CommandeFormContent() {
   const [extractError, setExtractError] = useState<string | null>(null);
   const lastExtractedUrlRef = useRef<string>("");
 
+  // Photo spécifique de l'article mise par l'utilisateur
+  const [userProductImage, setUserProductImage] = useState<string | null>(null);
+  const [userProductImageName, setUserProductImageName] = useState<string>("");
+  const productImageInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUserProductImageName(file.name);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setUserProductImage(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveProductImage = () => {
+    setUserProductImage(null);
+    setUserProductImageName("");
+    if (productImageInputRef.current) productImageInputRef.current.value = "";
+  };
+
   // Extraction automatique sur collage ou saisie avec debounce
   useEffect(() => {
     if (!productLink || typeof productLink !== "string") return;
@@ -395,6 +417,9 @@ function CommandeFormContent() {
       if (!res.ok) throw new Error("Échec d'analyse");
       const data: ExtractedProduct = await res.json();
       setExtractedProduct(data);
+      if (data.image) {
+        setUserProductImage(data.image);
+      }
       if (data.title && (!productQuery || productQuery === "Article Alibaba")) {
         setProductQuery(data.title);
       }
@@ -511,7 +536,7 @@ function CommandeFormContent() {
         origin_country: "Chine",
         destination_country: destinationCity.trim(),
         product_url: productLink.trim(),
-        product_image: extractedProduct?.image,
+        product_image: userProductImage || extractedProduct?.image || undefined,
         product_name:
           productQuery.trim() ||
           extractedProduct?.title ||
@@ -688,6 +713,15 @@ function CommandeFormContent() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="ios-form-root">
+            {/* Input unique pour l'image de l'article (accessible Option 1 & Option 2) */}
+            <input
+              ref={productImageInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleProductImageUpload}
+              style={{ display: "none" }}
+            />
+
             {/* iOS Segmented Control en pilule */}
             <div className="ios-segmented-control" role="tablist">
               <button
@@ -851,46 +885,66 @@ function CommandeFormContent() {
                       {extractError && <span className="ios-error-msg">{extractError}</span>}
                     </div>
 
-                    {/* Aperçu produit authentique */}
-                    {extractedProduct && (
-                      <div className="ios-product-preview">
-                        <img
-                          src={extractedProduct.image}
-                          alt={extractedProduct.title}
-                          referrerPolicy="no-referrer"
-                          className="ios-product-thumb"
-                          onError={(e) => {
-                            e.currentTarget.onerror = null;
-                            e.currentTarget.src = "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=80";
-                          }}
-                        />
-                        <div className="ios-product-info">
-                          <span className="ios-product-platform">{extractedProduct.platform}</span>
-                          <span className="ios-product-title">{extractedProduct.title}</span>
-                          <span className="ios-product-price">
-                            {productUnitPrice} {productCurrency} (≈ {unitPriceFCFA.toLocaleString("fr-FR")} FCFA)
+                    {/* Photo de l'article mise par le client */}
+                    <div className="ios-field">
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <label>Photo de l&apos;article</label>
+                        {userProductImage && (
+                          <span style={{ fontSize: "0.72rem", color: "#16A34A", fontWeight: 700 }}>
+                            ✓ Photo ajoutée
                           </span>
-                        </div>
-                        <label className="ios-photo-change-badge" title="Remplacer la photo de l'article">
-                          <Camera size={13} />
-                          <input
-                            type="file"
-                            accept="image/*"
-                            style={{ display: "none" }}
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) {
-                                const r = new FileReader();
-                                r.onload = (ev) => {
-                                  if (ev.target?.result) {
-                                    setExtractedProduct((prev) => prev ? { ...prev, image: ev.target!.result as string } : null);
-                                  }
-                                };
-                                r.readAsDataURL(f);
-                              }
-                            }}
+                        )}
+                      </div>
+
+                      {userProductImage ? (
+                        <div className="ios-article-photo-card">
+                          <img
+                            src={userProductImage}
+                            alt="Photo de l'article"
+                            className="ios-article-photo-thumb"
                           />
-                        </label>
+                          <div className="ios-article-photo-info">
+                            <span className="ios-article-photo-badge">Photo de votre article</span>
+                            <span className="ios-article-photo-label">
+                              {userProductImageName || extractedProduct?.title || "Image enregistrée"}
+                            </span>
+                          </div>
+                          <div className="ios-article-photo-actions">
+                            <button
+                              type="button"
+                              onClick={() => productImageInputRef.current?.click()}
+                              className="ios-photo-action-btn"
+                              title="Changer la photo"
+                            >
+                              <Camera size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleRemoveProductImage}
+                              className="ios-photo-action-btn danger"
+                              title="Retirer la photo"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => productImageInputRef.current?.click()}
+                          className="ios-article-upload-zone"
+                        >
+                          <Camera size={16} />
+                          <span>Ajouter la photo de l&apos;article (capture ou photo de votre choix)</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Résumé textuel propre de l'article détecté par lien (sans fausse photo) */}
+                    {extractedProduct && extractedProduct.title && (
+                      <div className="ios-extracted-banner">
+                        <span className="ios-extracted-tag">{extractedProduct.platform}</span>
+                        <span className="ios-extracted-text">{extractedProduct.title}</span>
                       </div>
                     )}
 
@@ -990,48 +1044,65 @@ function CommandeFormContent() {
                       {extractError && <span className="ios-error-msg">{extractError}</span>}
                     </div>
 
-                    {/* Aperçu produit authentique */}
-                    {extractedProduct && (
-                      <div className="ios-product-preview">
-                        <img
-                          src={extractedProduct.image}
-                          alt={extractedProduct.title}
-                          referrerPolicy="no-referrer"
-                          className="ios-product-thumb"
-                          onError={(e) => {
-                            e.currentTarget.onerror = null;
-                            e.currentTarget.src = "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=80";
-                          }}
-                        />
-                        <div className="ios-product-info">
-                          <span className="ios-product-platform">{extractedProduct.platform}</span>
-                          <span className="ios-product-title">{extractedProduct.title}</span>
-                          {extractedProduct.price > 0 && (
-                            <span className="ios-product-price">
-                              Prix unitaire indicatif usine : {extractedProduct.price} {extractedProduct.currency}
-                            </span>
-                          )}
-                        </div>
-                        <label className="ios-photo-change-badge" title="Remplacer la photo de l'article">
-                          <Camera size={13} />
-                          <input
-                            type="file"
-                            accept="image/*"
-                            style={{ display: "none" }}
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) {
-                                const r = new FileReader();
-                                r.onload = (ev) => {
-                                  if (ev.target?.result) {
-                                    setExtractedProduct((prev) => prev ? { ...prev, image: ev.target!.result as string } : null);
-                                  }
-                                };
-                                r.readAsDataURL(f);
-                              }
-                            }}
+                    {/* Photo de l'article mise par le client */}
+                    <div className="ios-field">
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <label>Photo de l&apos;article ou colis</label>
+                        {userProductImage && (
+                          <span style={{ fontSize: "0.72rem", color: "#16A34A", fontWeight: 700 }}>
+                            ✓ Photo ajoutée
+                          </span>
+                        )}
+                      </div>
+                      {userProductImage ? (
+                        <div className="ios-article-photo-card">
+                          <img
+                            src={userProductImage}
+                            alt="Photo marchandise"
+                            className="ios-article-photo-thumb"
                           />
-                        </label>
+                          <div className="ios-article-photo-info">
+                            <span className="ios-article-photo-badge">Photo de votre article</span>
+                            <span className="ios-article-photo-label">
+                              {userProductImageName || extractedProduct?.title || "Image enregistrée"}
+                            </span>
+                          </div>
+                          <div className="ios-article-photo-actions">
+                            <button
+                              type="button"
+                              onClick={() => productImageInputRef.current?.click()}
+                              className="ios-photo-action-btn"
+                              title="Changer la photo"
+                            >
+                              <Camera size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleRemoveProductImage}
+                              className="ios-photo-action-btn danger"
+                              title="Retirer la photo"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => productImageInputRef.current?.click()}
+                          className="ios-article-upload-zone"
+                        >
+                          <Camera size={16} />
+                          <span>Ajouter la photo de l&apos;article (depuis votre téléphone ou capture)</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Résumé textuel propre de l'article détecté par lien (sans fausse photo) */}
+                    {extractedProduct && extractedProduct.title && (
+                      <div className="ios-extracted-banner">
+                        <span className="ios-extracted-tag">{extractedProduct.platform}</span>
+                        <span className="ios-extracted-text">{extractedProduct.title}</span>
                       </div>
                     )}
 
@@ -1495,41 +1566,70 @@ function CommandeFormContent() {
           color: #DC2626;
         }
 
-        /* Aperçu produit sans glitch */
-        .ios-product-preview {
+        /* Zone d'import de la photo réelle de l'article par l'utilisateur */
+        .ios-article-upload-zone {
+          width: 100%;
+          min-height: 48px;
+          background: #F7F5F0;
+          border: 1.5px dashed rgba(28, 24, 21, 0.16);
+          border-radius: 16px;
+          color: #716C65;
+          font-size: 0.82rem;
+          font-weight: 600;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 8px 14px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          text-align: center;
+        }
+
+        .ios-article-upload-zone:hover {
+          background: #EFECE6;
+          border-color: #1C1815;
+          color: #1C1815;
+        }
+
+        .ios-article-photo-card {
           display: flex;
           align-items: center;
           gap: 12px;
-          background: #F7F5F0;
-          border: 1px solid rgba(28, 24, 21, 0.06);
+          background: #FFFFFF;
+          border: 1px solid rgba(28, 24, 21, 0.1);
           border-radius: 16px;
-          padding: 10px 12px;
+          padding: 8px 12px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
         }
 
-        .ios-product-thumb {
-          width: 48px;
-          height: 48px;
+        .ios-article-photo-thumb {
+          width: 52px;
+          height: 52px;
           object-fit: cover;
           border-radius: 10px;
+          border: 1px solid rgba(28, 24, 21, 0.08);
+          background: #F7F5F0;
           flex-shrink: 0;
-          background: #FFFFFF;
         }
 
-        .ios-product-info {
+        .ios-article-photo-info {
           display: flex;
           flex-direction: column;
           gap: 2px;
           min-width: 0;
+          flex: 1;
         }
 
-        .ios-product-platform {
+        .ios-article-photo-badge {
           font-size: 0.68rem;
           font-weight: 700;
           color: #16A34A;
           text-transform: uppercase;
+          letter-spacing: 0.03em;
         }
 
-        .ios-product-title {
+        .ios-article-photo-label {
           font-size: 0.82rem;
           font-weight: 600;
           color: #1C1815;
@@ -1538,31 +1638,71 @@ function CommandeFormContent() {
           text-overflow: ellipsis;
         }
 
-        .ios-product-price {
-          font-size: 0.76rem;
-          color: #716C65;
+        .ios-article-photo-actions {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-shrink: 0;
         }
 
-        .ios-photo-change-badge {
+        .ios-photo-action-btn {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          border: 1px solid rgba(28, 24, 21, 0.1);
+          background: #F7F5F0;
+          color: #1C1815;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          width: 28px;
-          height: 28px;
-          border-radius: 50%;
-          background: #FFFFFF;
-          border: 1px solid rgba(28, 24, 21, 0.1);
-          color: #716C65;
           cursor: pointer;
-          margin-left: auto;
-          flex-shrink: 0;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
           transition: all 0.15s ease;
         }
 
-        .ios-photo-change-badge:hover {
-          background: #EFECE6;
-          color: #1C1815;
+        .ios-photo-action-btn:hover {
+          background: #EAE6DE;
+        }
+
+        .ios-photo-action-btn.danger {
+          color: #DC2626;
+          border-color: rgba(220, 38, 38, 0.2);
+          background: #FEF2F2;
+        }
+
+        .ios-photo-action-btn.danger:hover {
+          background: #FEE2E2;
+        }
+
+        /* Bannière textuelle de l'article détecté par lien */
+        .ios-extracted-banner {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: #F7F5F0;
+          border: 1px solid rgba(28, 24, 21, 0.06);
+          border-radius: 12px;
+          padding: 8px 12px;
+          margin-top: 2px;
+        }
+
+        .ios-extracted-tag {
+          font-size: 0.66rem;
+          font-weight: 800;
+          background: #DCFCE7;
+          color: #166534;
+          padding: 2px 7px;
+          border-radius: 9999px;
+          flex-shrink: 0;
+          text-transform: uppercase;
+        }
+
+        .ios-extracted-text {
+          font-size: 0.78rem;
+          font-weight: 600;
+          color: #374151;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         /* Stepper Quantité en pilule */

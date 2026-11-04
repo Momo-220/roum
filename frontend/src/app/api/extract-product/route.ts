@@ -23,72 +23,6 @@ function decodeHtmlEntities(str: string): string {
     .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
 }
 
-function getContextualProductImage(title: string, platform: string): string {
-  const t = title.toLowerCase();
-
-  // 1. Écrans, Moniteurs, Gaming, TV, Affichage
-  if (
-    t.includes("moniteur") ||
-    t.includes("écran") ||
-    t.includes("ecran") ||
-    t.includes("gaming") ||
-    t.includes("oled") ||
-    t.includes("curved") ||
-    t.includes("incurv") ||
-    t.includes("display") ||
-    t.includes("165hz") ||
-    t.includes("144hz") ||
-    t.includes("pouces") ||
-    t.includes("4k") ||
-    t.includes("5k")
-  ) {
-    return "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=600&auto=format&fit=crop&q=80";
-  }
-
-  // 2. Téléphones, Smartphones, Tablettes
-  if (t.includes("iphone") || t.includes("samsung") || t.includes("smartphone") || t.includes("telephone") || t.includes("téléphone") || t.includes("mobile") || t.includes("xiaomi") || t.includes("redmi")) {
-    return "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=600&auto=format&fit=crop&q=80";
-  }
-
-  // 3. Chaussures, Baskets, Sneakers
-  if (t.includes("chaussure") || t.includes("sneaker") || t.includes("basket") || t.includes("shoes") || t.includes("botte") || t.includes("sandale")) {
-    return "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&auto=format&fit=crop&q=80";
-  }
-
-  // 4. Mode, Vêtements, Robes, Chemises, Vestes
-  if (t.includes("vetement") || t.includes("vêtement") || t.includes("robe") || t.includes("chemise") || t.includes("pantalon") || t.includes("jean") || t.includes("veste") || t.includes("tshirt") || t.includes("t-shirt") || t.includes("habit")) {
-    return "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80";
-  }
-
-  // 5. Montres, Smartwatch, Bijoux
-  if (t.includes("montre") || t.includes("watch") || t.includes("smartwatch") || t.includes("bijou") || t.includes("collier") || t.includes("bague")) {
-    return "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80";
-  }
-
-  // 6. Sacs, Valises, Maroquinerie
-  if (t.includes("sac") || t.includes("bag") || t.includes("valise") || t.includes("backpack") || t.includes("maroquinerie")) {
-    return "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&auto=format&fit=crop&q=80";
-  }
-
-  // 7. Électronique grand public, Audio, Écouteurs
-  if (t.includes("audio") || t.includes("casque") || t.includes("ecouteur") || t.includes("écouteur") || t.includes("airpod") || t.includes("speaker") || t.includes("enceinte")) {
-    return "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80";
-  }
-
-  // 8. Cosmétique, Beauté, Perruques, Mèches
-  if (t.includes("perruque") || t.includes("meche") || t.includes("mèche") || t.includes("hair") || t.includes("creme") || t.includes("crème") || t.includes("cosmetique") || t.includes("beaute") || t.includes("beauté")) {
-    return "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600&auto=format&fit=crop&q=80";
-  }
-
-  // 9. Pièces mécaniques, Outils, Auto / Moto
-  if (t.includes("moteur") || t.includes("auto") || t.includes("moto") || t.includes("piece") || t.includes("pièce") || t.includes("outil")) {
-    return "https://images.unsplash.com/photo-1486006920555-c77dce18193b?w=600&auto=format&fit=crop&q=80";
-  }
-
-  // Défaut : Pack commercial e-commerce soigné
-  return "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=80";
-}
-
 export async function POST(req: NextRequest) {
   try {
     const { url } = await req.json();
@@ -149,7 +83,7 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Extraction Image haute fidélité (OpenGraph, Twitter, CDN Alicdn, imgextra)
+        // Extraction Image de l'article UNIQUEMENT si présente dans le HTML
         const ogImageMatch =
           html.match(/<meta\s+property=["']og:image["']\s+content=["'](.*?)["']/i) ||
           html.match(/<meta\s+name=["']twitter:image["']\s+content=["'](.*?)["']/i) ||
@@ -160,7 +94,12 @@ export async function POST(req: NextRequest) {
         if (ogImageMatch && ogImageMatch[1]) {
           let candidate = ogImageMatch[1].trim();
           if (candidate.startsWith("//")) candidate = "https:" + candidate;
-          if (!candidate.includes("favicon") && !candidate.includes("logo") && candidate.length > 10) {
+          if (
+            !candidate.includes("favicon") &&
+            !candidate.includes("logo") &&
+            !candidate.includes("tps-") &&
+            candidate.length > 15
+          ) {
             image = candidate;
           }
         }
@@ -182,7 +121,7 @@ export async function POST(req: NextRequest) {
       // Ignorer si timeout ou protection anti-bot
     }
 
-    // 3. Fallback intelligent propre pour le titre
+    // 3. Titre de repli dérivé proprement du lien
     if (!title) {
       try {
         const urlObj = new URL(trimmedUrl);
@@ -204,26 +143,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Décodage final rigoureux de toutes les entités HTML
     title = decodeHtmlEntities(title);
 
-    // 4. Image de produit authentique et fidèle au contexte (PAS de port / grues)
-    if (!image) {
-      image = getContextualProductImage(title, platform);
-    }
-
-    if (!price || price <= 0) {
-      price = platform.includes("1688") ? 45.0 : 8.5;
-      currency = platform.includes("1688") ? "RMB" : "USD";
-    }
-
+    // AUCUNE fausse image générique : si non trouvée, on laisse vide pour que l'utilisateur mette sa propre photo
     return NextResponse.json({
       success: true,
       platform,
       title: title.length > 120 ? title.substring(0, 117) + "..." : title,
-      image,
-      price,
-      currency,
+      image: image || "", // Strictement la photo de l'article ou vide
+      price: price > 0 ? price : platform.includes("1688") ? 45.0 : 8.5,
+      currency: platform.includes("1688") ? "RMB" : "USD",
       minOrder,
       supplier,
       originalUrl: trimmedUrl,
