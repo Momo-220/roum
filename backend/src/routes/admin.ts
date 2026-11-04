@@ -1025,10 +1025,10 @@ adminRouter.get("/tariffs", async (c) => {
       t.id, t.currency, t.price_per_unit_minor, t.minimum_charge_minor,
       t.estimated_days_min, t.estimated_days_max, t.category_tag, t.note, t.is_active,
       r.origin_country, r.origin_city, r.destination_country, r.destination_city,
-      sm.name as shipping_mode_name, sm.type as shipping_mode_type, sm.pricing_basis
+      sm.name as shipping_mode_name, sm.name as service_name, sm.type as shipping_mode_type, sm.pricing_basis
     FROM tariffs t
-    JOIN routes r ON t.route_id = r.id
-    JOIN shipping_modes sm ON t.shipping_mode_id = sm.id
+    LEFT JOIN routes r ON t.route_id = r.id
+    LEFT JOIN shipping_modes sm ON t.shipping_mode_id = sm.id
     ORDER BY r.origin_country ASC, sm.name ASC
   `).all();
   return c.json({ tariffs });
@@ -1231,8 +1231,8 @@ adminRouter.put("/tariffs/:id", async (c) => {
     `).bind(
       tariffId,
       routeId,
-      body.shipping_mode_id || "mode-air-standard",
-      body.currency || "USD",
+      body.shipping_mode_id || (body.transport_mode === "SEA_GROUPAGE" ? "SEA_LCL" : "AIR_EXPRESS"),
+      body.currency || "FCFA",
       body.price_per_unit_minor || 0,
       body.minimum_charge_minor || 0,
       body.estimated_days_min || null,

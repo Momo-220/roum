@@ -17,8 +17,9 @@ export default function TariffsPage() {
   const [tariffs, setTariffs] = useState<OfficialTariff[]>(() => getLiveTariffs());
   const [settings, setSettings] = useState<Record<string, string>>(() => getLiveCompanySettings());
 
-  // Synchronisation temps réel avec le Dashboard Admin
+  // Synchronisation temps réel avec le Dashboard Admin & la Base de Données
   useEffect(() => {
+    // 1. Paramètres entreprise (Wave, Orange Money, Maroc)
     fetch("/api/v1/public/settings")
       .then((r) => r.json())
       .then((d) => {
@@ -29,12 +30,56 @@ export default function TariffsPage() {
       })
       .catch(() => {});
 
+    // 2. Grille tarifaire officielle en direct
+    const loadApiTariffs = () => {
+      fetch("/api/v1/public/tariffs")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.tariffs && Array.isArray(d.tariffs) && d.tariffs.length > 0) {
+            const mapped: OfficialTariff[] = d.tariffs.map((t: any) => ({
+              id: t.tariff_id || t.id,
+              origin_country: t.origin_country || "",
+              origin_city: t.origin_city || "",
+              destination_country: t.destination_country || "",
+              destination_city: t.destination_city || "",
+              shipping_mode_name: t.mode_name || t.shipping_mode_name || t.service_name || "",
+              service_name: t.service_name || t.mode_name || t.shipping_mode_name || "",
+              shipping_mode_type: (t.mode_type || t.shipping_mode_type || "AIR") as "AIR" | "SEA",
+              category_tag: t.category_tag || "",
+              pricing_basis: t.pricing_basis || (t.mode_type === "SEA" || t.shipping_mode_type === "SEA" ? "PER_CBM" : "PER_KG"),
+              currency: t.currency || "FCFA",
+              price_per_unit_minor: Number(t.price_per_unit_minor) || 0,
+              minimum_charge_minor: t.minimum_charge_minor !== undefined ? Number(t.minimum_charge_minor) : undefined,
+              estimated_days_min: Number(t.estimated_days_min) || 3,
+              estimated_days_max: Number(t.estimated_days_max) || 7,
+              flyer_source: t.flyer_source || "",
+              secondary_display: t.secondary_display || "",
+              note: t.note || "",
+              is_active: t.is_active !== undefined ? Number(t.is_active) : 1,
+            }));
+            setTariffs(mapped);
+            localStorage.setItem("roum_tariffs_data", JSON.stringify(mapped));
+          }
+        })
+        .catch(() => {});
+    };
+
+    loadApiTariffs();
+
     const handleSync = () => {
       setTariffs(getLiveTariffs());
       setSettings(getLiveCompanySettings());
+      loadApiTariffs();
     };
+
     window.addEventListener("storage", handleSync);
-    return () => window.removeEventListener("storage", handleSync);
+    window.addEventListener("roum_tariffs_updated", handleSync);
+    window.addEventListener("focus", handleSync);
+    return () => {
+      window.removeEventListener("storage", handleSync);
+      window.removeEventListener("roum_tariffs_updated", handleSync);
+      window.removeEventListener("focus", handleSync);
+    };
   }, []);
 
   const [origin, setOrigin] = useState("Chine");
@@ -397,13 +442,27 @@ export default function TariffsPage() {
                     3. Formule & Type d&apos;envoi
                   </label>
                   <div style={{ display: "grid", gap: "8px" }}>
-                    {origin === "Chine" && [
-                      { key: "express", label: "Voie Express Avion (4-5 jours)", note: "Ultra rapide · 12 000 F/kg" },
-                      { key: "normal", label: "Voie Normale Avion (2 semaines)", note: "Économique · 10 000 F/kg" },
-                      { key: "battery", label: "Batteries, Crèmes & Liquides", note: "Réglementé · 14 000 F/kg" },
-                      { key: "tech", label: "Pièces Ordinateur & Téléphones", note: "Sécurisé · 50 000 F le carton" },
-                      { key: "sea", label: "Par Bateau au Mètre Cube (m³)", note: "Gros cartons · 300 000 F/m³" },
-                    ].map((f) => (
+                    {origin === "Chine" && (() => {
+                      const exp = findTariff(tariffs, "chine", "express");
+                      const nor = findTariff(tariffs, "chine", "normale");
+                      const bat = findTariff(tariffs, "chine", "batterie");
+                      const tch = findTariff(tariffs, "chine", "ordinateur");
+                      const sea = findTariff(tariffs, "chine", "bateau");
+
+                      const expRate = exp ? (exp.price_per_unit_minor / 100).toLocaleString("fr-FR") : "12 000";
+                      const norRate = nor ? (nor.price_per_unit_minor / 100).toLocaleString("fr-FR") : "10 000";
+                      const batRate = bat ? (bat.price_per_unit_minor / 100).toLocaleString("fr-FR") : "14 000";
+                      const tchRate = tch ? (tch.price_per_unit_minor / 100).toLocaleString("fr-FR") : "50 000";
+                      const seaRate = sea ? (sea.price_per_unit_minor / 100).toLocaleString("fr-FR") : "300 000";
+
+                      return [
+                        { key: "express", label: "Voie Express Avion (4-5 jours)", note: `Ultra rapide · ${expRate} F/kg` },
+                        { key: "normal", label: "Voie Normale Avion (2 semaines)", note: `Économique · ${norRate} F/kg` },
+                        { key: "battery", label: "Batteries, Crèmes & Liquides", note: `Réglementé · ${batRate} F/kg` },
+                        { key: "tech", label: "Pièces Ordinateur & Téléphones", note: `Sécurisé · ${tchRate} F le carton` },
+                        { key: "sea", label: "Par Bateau au Mètre Cube (m³)", note: `Gros cartons · ${seaRate} F/m³` },
+                      ];
+                    })().map((f) => (
                       <button
                         key={f.key}
                         type="button"
@@ -426,12 +485,24 @@ export default function TariffsPage() {
                       </button>
                     ))}
 
-                    {(origin.includes("Dubaï") || origin.includes("Émirats")) && [
-                      { key: "express", label: "Voie Express Dubaï (4-5 jours)", note: "Vol direct · 12 000 F/kg" },
-                      { key: "normal", label: "Voie Normale Dubaï (2 semaines)", note: "Standard · 10 000 F/kg" },
-                      { key: "special", label: "Parfums & Cosmétiques Dubaï", note: "Spécial · 14 000 F/kg" },
-                      { key: "sea", label: "Par Bateau au Mètre Cube (m³)", note: "Jebel Ali · 300 000 F/m³" },
-                    ].map((f) => (
+                    {(origin.includes("Dubaï") || origin.includes("Émirats")) && (() => {
+                      const exp = findTariff(tariffs, "émirat", "express") || findTariff(tariffs, "duba", "express");
+                      const nor = findTariff(tariffs, "émirat", "normale") || findTariff(tariffs, "duba", "normale");
+                      const spe = findTariff(tariffs, "émirat", "spécial") || findTariff(tariffs, "duba", "spécial");
+                      const sea = findTariff(tariffs, "émirat", "bateau") || findTariff(tariffs, "duba", "bateau");
+
+                      const expRate = exp ? (exp.price_per_unit_minor / 100).toLocaleString("fr-FR") : "12 000";
+                      const norRate = nor ? (nor.price_per_unit_minor / 100).toLocaleString("fr-FR") : "10 000";
+                      const speRate = spe ? (spe.price_per_unit_minor / 100).toLocaleString("fr-FR") : "14 000";
+                      const seaRate = sea ? (sea.price_per_unit_minor / 100).toLocaleString("fr-FR") : "300 000";
+
+                      return [
+                        { key: "express", label: "Voie Express Dubaï (4-5 jours)", note: `Vol direct · ${expRate} F/kg` },
+                        { key: "normal", label: "Voie Normale Dubaï (2 semaines)", note: `Standard · ${norRate} F/kg` },
+                        { key: "special", label: "Parfums & Cosmétiques Dubaï", note: `Spécial · ${speRate} F/kg` },
+                        { key: "sea", label: "Par Bateau au Mètre Cube (m³)", note: `Jebel Ali · ${seaRate} F/m³` },
+                      ];
+                    })().map((f) => (
                       <button
                         key={f.key}
                         type="button"
@@ -454,11 +525,21 @@ export default function TariffsPage() {
                       </button>
                     ))}
 
-                    {(origin === "France" || destination === "France") && [
-                      { key: "divers", label: "Colis Divers & Vêtements", note: "8 500 F / 12 € le kg" },
-                      { key: "cosm", label: "Cosmétiques & Liquides", note: "9 000 F / 14 € le kg" },
-                      { key: "doc", label: "Document Administratif & Pli", note: "13 000 F / 20 € le pli" },
-                    ].map((f) => (
+                    {(origin === "France" || destination === "France") && (() => {
+                      const div = findTariff(tariffs, "france", "divers");
+                      const cos = findTariff(tariffs, "france", "cosmétique");
+                      const doc = findTariff(tariffs, "france", "document");
+
+                      const divRate = div ? (div.price_per_unit_minor / 100).toLocaleString("fr-FR") : "8 500";
+                      const cosRate = cos ? (cos.price_per_unit_minor / 100).toLocaleString("fr-FR") : "9 000";
+                      const docRate = doc ? (doc.price_per_unit_minor / 100).toLocaleString("fr-FR") : "13 000";
+
+                      return [
+                        { key: "divers", label: "Colis Divers & Vêtements", note: `${divRate} F / 12 € le kg` },
+                        { key: "cosm", label: "Cosmétiques & Liquides", note: `${cosRate} F / 14 € le kg` },
+                        { key: "doc", label: "Document Administratif & Pli", note: `${docRate} F / 20 € le pli` },
+                      ];
+                    })().map((f) => (
                       <button
                         key={f.key}
                         type="button"

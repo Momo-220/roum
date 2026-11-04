@@ -442,7 +442,27 @@ export function getLiveTariffs(): OfficialTariff[] {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          return parsed.map((t: any) => ({
+            id: t.tariff_id || t.id,
+            origin_country: t.origin_country || "",
+            origin_city: t.origin_city || "",
+            destination_country: t.destination_country || "",
+            destination_city: t.destination_city || "",
+            shipping_mode_name: t.mode_name || t.shipping_mode_name || t.service_name || "",
+            service_name: t.service_name || t.mode_name || t.shipping_mode_name || "",
+            shipping_mode_type: (t.mode_type || t.shipping_mode_type || "AIR") as "AIR" | "SEA",
+            category_tag: t.category_tag || "",
+            pricing_basis: t.pricing_basis || (t.shipping_mode_type === "SEA" || t.mode_type === "SEA" ? "PER_CBM" : "PER_KG"),
+            currency: t.currency || "FCFA",
+            price_per_unit_minor: Number(t.price_per_unit_minor) || 0,
+            minimum_charge_minor: t.minimum_charge_minor !== undefined ? Number(t.minimum_charge_minor) : undefined,
+            estimated_days_min: Number(t.estimated_days_min) || 3,
+            estimated_days_max: Number(t.estimated_days_max) || 7,
+            flyer_source: t.flyer_source || "",
+            secondary_display: t.secondary_display || "",
+            note: t.note || "",
+            is_active: t.is_active !== undefined ? Number(t.is_active) : 1,
+          }));
         }
       }
     } catch (e) {
@@ -458,20 +478,31 @@ export function getLiveTariffs(): OfficialTariff[] {
 export function findTariff(
   tariffs: OfficialTariff[],
   originKeyword: string,
-  modeOrNameKeyword: string
+  modeOrNameKeyword: string,
+  destinationKeyword?: string
 ): OfficialTariff | undefined {
   const oKey = originKeyword.toLowerCase();
   const mKey = modeOrNameKeyword.toLowerCase();
+  const dKey = destinationKeyword ? destinationKeyword.toLowerCase() : "";
 
   return tariffs.find((t) => {
     const origMatch = (t.origin_country || "").toLowerCase().includes(oKey) ||
       (t.origin_city || "").toLowerCase().includes(oKey);
+
+    const destMatch = !dKey ||
+      (t.destination_country || "").toLowerCase().includes(dKey) ||
+      (t.destination_city || "").toLowerCase().includes(dKey) ||
+      (t.id || "").toLowerCase().includes(dKey);
+
     const nameMatch = (t.shipping_mode_name || "").toLowerCase().includes(mKey) ||
       (t.service_name || "").toLowerCase().includes(mKey) ||
       (t.category_tag || "").toLowerCase().includes(mKey) ||
-      (t.id || "").toLowerCase().includes(mKey);
+      (t.note || "").toLowerCase().includes(mKey) ||
+      (t.id || "").toLowerCase().includes(mKey) ||
+      (t.destination_country || "").toLowerCase().includes(mKey) ||
+      (t.destination_city || "").toLowerCase().includes(mKey);
 
-    return origMatch && nameMatch;
+    return origMatch && destMatch && nameMatch;
   });
 }
 

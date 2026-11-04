@@ -3544,6 +3544,9 @@ export default function AdminPage() {
 
     try {
       localStorage.setItem("roum_tariffs_data", JSON.stringify(nextList.length > 0 ? nextList : newItems));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("roum_tariffs_updated"));
+      }
     } catch {}
 
     try {
@@ -3612,6 +3615,9 @@ export default function AdminPage() {
 
     try {
       localStorage.setItem("roum_tariffs_data", JSON.stringify(nextList.length > 0 ? nextList : [newMoroccoTariff]));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("roum_tariffs_updated"));
+      }
     } catch {}
 
     try {
@@ -3767,6 +3773,9 @@ export default function AdminPage() {
 
     try {
       localStorage.setItem("roum_tariffs_data", JSON.stringify(nextList.length > 0 ? nextList : [updatedItem]));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("roum_tariffs_updated"));
+      }
     } catch (e) {
       console.error("Local storage sync error:", e);
     }
@@ -3856,20 +3865,22 @@ export default function AdminPage() {
       }
 
       // Nettoyer l'indicateur d'attente tout en préservant scrupuleusement l'ordre exact à l'écran
-      setTariffsList((prev) =>
-        prev.map((t) => {
-          if (t._isPendingEdit) {
-            const { _isPendingEdit, ...rest } = t;
-            return rest;
-          }
-          return t;
-        })
-      );
+      const cleanedList = tariffsList.map((t) => {
+        if (t._isPendingEdit) {
+          const { _isPendingEdit, ...rest } = t;
+          return rest;
+        }
+        return t;
+      });
+      setTariffsList(cleanedList);
       setPendingTariffEdits({});
       setInitialTariffsBackup(null);
 
       try {
-        localStorage.setItem("roum_tariffs_data", JSON.stringify(tariffsList));
+        localStorage.setItem("roum_tariffs_data", JSON.stringify(cleanedList));
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("roum_tariffs_updated"));
+        }
       } catch {}
 
       triggerToast(`Toutes les ${pendingItems.length} modifications ont été enregistrées avec succès en base !`, "Grille Tarifaire");
@@ -7611,18 +7622,21 @@ export default function AdminPage() {
 
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                       {[
-                        { key: "cn-normale", icon: Plane, name: "Voie normale (2 semaines)", delay: "12 à 14 j", price: "10 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-cn-normal", keyword: "normale", defaultVal: 10000 },
-                        { key: "cn-express", icon: Zap, name: "Voie express (4 jours)", delay: "4 à 5 j", price: "12 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-cn-express", keyword: "express", defaultVal: 12000 },
-                        { key: "cn-batteries", icon: BatteryCharging, name: "Batteries & Compléments", delay: "7 à 10 j", price: "14 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-cn-special", keyword: "batterie", defaultVal: 14000 },
-                        { key: "cn-hightech", icon: Laptop, name: "Pièces d'ordinateur & High-Tech", delay: "Express", price: "50 000 FCFA", unit: "/ pièce", matchId: "tariff-flyer-cn-tech", keyword: "ordinateur", defaultVal: 50000 },
-                        { key: "cn-bateau", icon: Ship, name: "Par Bateau (Le CBM conteneur)", delay: "35 - 45 jours", price: "300 000 FCFA", unit: "/ m³", matchId: "tariff-flyer-cn-sea", keyword: "bateau", defaultVal: 300000 },
+                        { key: "cn-normale", icon: Plane, name: "Voie normale (2 semaines)", delay: "12 à 14 j", price: "10 000 FCFA", unit: "/ kg", matchId: "tariff-cn-ci-normal", altId: "tariff-flyer-cn-normal", keyword: "normale", defaultVal: 10000 },
+                        { key: "cn-express", icon: Zap, name: "Voie express (4 jours)", delay: "4 à 5 j", price: "12 000 FCFA", unit: "/ kg", matchId: "tariff-cn-ci-express", altId: "tariff-flyer-cn-express", keyword: "express", defaultVal: 12000 },
+                        { key: "cn-batteries", icon: BatteryCharging, name: "Batteries & Compléments", delay: "7 à 10 j", price: "14 000 FCFA", unit: "/ kg", matchId: "tariff-cn-ci-special", altId: "tariff-flyer-cn-special", keyword: "batterie", defaultVal: 14000 },
+                        { key: "cn-hightech", icon: Laptop, name: "Pièces d'ordinateur & High-Tech", delay: "Express", price: "50 000 FCFA", unit: "/ pièce", matchId: "tariff-cn-ci-tech", altId: "tariff-flyer-cn-tech", keyword: "ordinateur", defaultVal: 50000 },
+                        { key: "cn-bateau", icon: Ship, name: "Par Bateau (Le CBM conteneur)", delay: "35 - 45 jours", price: "300 000 FCFA", unit: "/ m³", matchId: "tariff-cn-ci-sea", altId: "tariff-flyer-cn-sea", keyword: "bateau", defaultVal: 300000 },
                       ].map((item, idx, arr) => {
                         const matchedTariff = tariffsList.find(
                           (t) =>
                             (t.origin_country || "").toLowerCase().includes("chine") &&
                             (t.id === item.matchId ||
+                              t.id === item.altId ||
                               (t.service_name || "").toLowerCase().includes(item.keyword) ||
-                              (t.category_tag || "").toLowerCase().includes(item.keyword))
+                              (t.shipping_mode_name || "").toLowerCase().includes(item.keyword) ||
+                              (t.category_tag || "").toLowerCase().includes(item.keyword) ||
+                              (t.id || "").toLowerCase().includes(item.keyword))
                         );
                         const currentPrice = matchedTariff ? formatCurrencyPrice(matchedTariff.price_per_unit_minor, matchedTariff.currency) : item.price;
                         const ItemIcon = item.icon;
@@ -7682,8 +7696,9 @@ export default function AdminPage() {
                                     });
                                   } else {
                                     setEditingTariff({
-                                      id: `default-${item.key}`,
+                                      id: item.matchId,
                                       service_name: item.name,
+                                      shipping_mode_name: item.name,
                                       origin_country: "Chine",
                                       destination_country: "Côte d'Ivoire",
                                       price_per_unit: item.defaultVal,
@@ -7741,17 +7756,20 @@ export default function AdminPage() {
 
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                       {[
-                        { key: "ae-express", icon: Zap, name: "Voie express Dubaï (4 jours)", delay: "4 à 5 j", price: "12 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-ae-express", keyword: "express", defaultVal: 12000 },
-                        { key: "ae-normale", icon: Plane, name: "Voie normale Dubaï (2 semaines)", delay: "10 à 14 j", price: "10 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-ae-normal", keyword: "normale", defaultVal: 10000 },
-                        { key: "ae-special", icon: ShoppingBag, name: "Marchandises Spéciales Dubaï", delay: "7 à 10 j", price: "14 000 FCFA", unit: "/ kg", matchId: "tariff-flyer-ae-special", keyword: "spécial", defaultVal: 14000 },
-                        { key: "ae-bateau", icon: Ship, name: "Par Bateau Dubaï (Le CBM)", delay: "30 - 40 jours", price: "300 000 FCFA", unit: "/ m³", matchId: "tariff-flyer-ae-sea", keyword: "bateau", defaultVal: 300000 },
+                        { key: "ae-express", icon: Zap, name: "Voie express Dubaï (4 jours)", delay: "4 à 5 j", price: "12 000 FCFA", unit: "/ kg", matchId: "tariff-ae-ci-express", altId: "tariff-flyer-ae-express", keyword: "express", defaultVal: 12000 },
+                        { key: "ae-normale", icon: Plane, name: "Voie normale Dubaï (2 semaines)", delay: "10 à 14 j", price: "10 000 FCFA", unit: "/ kg", matchId: "tariff-ae-ci-normal", altId: "tariff-flyer-ae-normal", keyword: "normale", defaultVal: 10000 },
+                        { key: "ae-special", icon: ShoppingBag, name: "Marchandises Spéciales Dubaï", delay: "7 à 10 j", price: "14 000 FCFA", unit: "/ kg", matchId: "tariff-ae-ci-special", altId: "tariff-flyer-ae-special", keyword: "spécial", defaultVal: 14000 },
+                        { key: "ae-bateau", icon: Ship, name: "Par Bateau Dubaï (Le CBM)", delay: "30 - 40 jours", price: "300 000 FCFA", unit: "/ m³", matchId: "tariff-ae-ci-sea", altId: "tariff-flyer-ae-sea", keyword: "bateau", defaultVal: 300000 },
                       ].map((item, idx, arr) => {
                         const matchedTariff = tariffsList.find(
                           (t) =>
                             ((t.origin_country || "").toLowerCase().includes("émirat") || (t.origin_country || "").toLowerCase().includes("duba")) &&
                             (t.id === item.matchId ||
+                              t.id === item.altId ||
                               (t.service_name || "").toLowerCase().includes(item.keyword) ||
-                              (t.category_tag || "").toLowerCase().includes(item.keyword))
+                              (t.shipping_mode_name || "").toLowerCase().includes(item.keyword) ||
+                              (t.category_tag || "").toLowerCase().includes(item.keyword) ||
+                              (t.id || "").toLowerCase().includes(item.keyword))
                         );
                         const currentPrice = matchedTariff ? formatCurrencyPrice(matchedTariff.price_per_unit_minor, matchedTariff.currency) : item.price;
                         const ItemIcon = item.icon;
@@ -7811,8 +7829,9 @@ export default function AdminPage() {
                                     });
                                   } else {
                                     setEditingTariff({
-                                      id: `default-${item.key}`,
+                                      id: item.matchId,
                                       service_name: item.name,
+                                      shipping_mode_name: item.name,
                                       origin_country: "Émirats Arabes Unis",
                                       origin_city: "Dubaï",
                                       destination_country: "Côte d'Ivoire",

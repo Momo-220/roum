@@ -140,6 +140,7 @@ publicRouter.get("/tariffs", async (c) => {
       r.destination_country,
       r.destination_city,
       t.id as tariff_id,
+      t.id as id,
       t.currency,
       t.price_per_unit_minor,
       t.minimum_charge_minor,
@@ -149,12 +150,15 @@ publicRouter.get("/tariffs", async (c) => {
       t.note,
       sm.id as mode_id,
       sm.name as mode_name,
+      sm.name as shipping_mode_name,
+      sm.name as service_name,
       sm.type as mode_type,
+      sm.type as shipping_mode_type,
       sm.pricing_basis
     FROM routes r
     JOIN tariffs t ON r.id = t.route_id
-    JOIN shipping_modes sm ON t.shipping_mode_id = sm.id
-    WHERE r.is_active = 1 AND t.is_active = 1 AND sm.is_active = 1
+    LEFT JOIN shipping_modes sm ON t.shipping_mode_id = sm.id
+    WHERE r.is_active = 1 AND t.is_active = 1
     ORDER BY r.origin_country, r.destination_country, sm.sort_order
   `).all();
 
