@@ -66,7 +66,10 @@ export async function POST(req: NextRequest) {
       clearTimeout(timeoutId);
 
       if (resp.ok) {
-        const html = await resp.text();
+        const rawHtml = await resp.text();
+        // Page anti-robot (captcha) : on ignore son contenu pour ne jamais afficher une image ou un titre parasite
+        const isBotWall = /punish|nocaptcha|x5sec|baxia/i.test(rawHtml);
+        const html = isBotWall ? "" : rawHtml;
 
         // Extraction OpenGraph Title
         const ogTitleMatch =

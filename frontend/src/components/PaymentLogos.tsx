@@ -343,44 +343,53 @@ export function WhatsAppLogo({ size = 36 }: { size?: number }) {
 
 /**
  * Déclencheur intelligent pour smartphones (Wave & Orange Money)
- * Sur smartphone : tente d'ouvrir l'application installée.
- * Sur ordinateur : informe poliment l'utilisateur que l'action est prévue pour mobile.
+ * Sur smartphone : copie le numéro dans le presse-papier et lance l'application ou l'USSD direct.
+ * Sur ordinateur : copie le numéro et affiche un message informatif.
  */
 export function openPaymentApp(methodKey: string, phoneNumber?: string): { success: boolean; appOpened: boolean; link: string } {
   if (typeof window === "undefined") return { success: false, appOpened: false, link: "" };
 
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
   const key = (methodKey || "").toLowerCase();
+  const rawNumber = (phoneNumber || "").replace(/[^0-9]/g, "");
 
-  // 1. Sur ordinateur de bureau
-  if (!isMobile) {
-    if (phoneNumber) {
-      navigator.clipboard?.writeText(phoneNumber);
+  // 1. Toujours copier immédiatement le numéro ou code dans le presse-papier
+  if (phoneNumber && navigator.clipboard?.writeText) {
+    try {
+      navigator.clipboard.writeText(phoneNumber);
+    } catch {
+      // ignore
     }
+  }
+
+  // 2. Sur ordinateur de bureau
+  if (!isMobile) {
     alert(
-      "L'ouverture directe de l'application est réservée aux smartphones (Wave / Orange Money).\n\nLe numéro (" +
+      "L'ouverture directe de l'application est conçue pour votre smartphone (Wave / Orange Money).\n\nLe numéro (" +
         (phoneNumber || "") +
         ") a été automatiquement copié dans votre presse-papier."
     );
     return { success: true, appOpened: false, link: "" };
   }
 
-  // 2. Sur smartphone physique
+  // 3. Sur smartphone physique
   if (key.includes("wave")) {
-    const rawNumber = (phoneNumber || "").replace(/[^0-9]/g, "");
-    // Wave deep-link
+    // Schéma d'application Wave (iOS et Android)
     window.location.href = "wave://";
+    // Fallback automatique vers Wave web / Play Store / App Store si l'application n'est pas installée
     setTimeout(() => {
-      // Fallback web Wave si l'app n'est pas installée
       window.location.href = `https://wave.com/send?phone=${rawNumber}`;
-    }, 1500);
+    }, 1200);
     return { success: true, appOpened: true, link: "wave://" };
   }
 
   if (key.includes("orange")) {
     // USSD direct Orange Money Côte d'Ivoire / Afrique
-    window.location.href = "tel:#144#";
-    return { success: true, appOpened: true, link: "tel:#144#" };
+    // IMPORTANT: Le caractère '#' DOIT être encodé en %23 dans une URL tel:
+    const ussdCode = phoneNumber && phoneNumber.includes("#") ? phoneNumber : "*144#";
+    const encodedUssd = `tel:${encodeURIComponent(ussdCode)}`;
+    window.location.href = encodedUssd;
+    return { success: true, appOpened: true, link: encodedUssd };
   }
 
   return { success: false, appOpened: false, link: "" };

@@ -7044,16 +7044,16 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div style={{ overflowX: "auto" }}>
-                  <table className="table-clean" style={{ minWidth: "900px" }}>
+                <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: "6px" }}>
+                  <table className="table-clean" style={{ width: "100%", minWidth: "760px" }}>
                     <thead>
                       <tr>
-                        <th style={{ borderTopLeftRadius: "10px", width: "220px" }}>Dossier &amp; Client</th>
-                        <th style={{ width: "160px" }}>Montant Proforma</th>
-                        <th style={{ width: "200px" }}>Fournisseur &amp; Mark</th>
+                        <th style={{ borderTopLeftRadius: "10px", width: "200px" }}>Dossier &amp; Client</th>
+                        <th style={{ width: "140px" }}>Montant Proforma</th>
+                        <th style={{ width: "180px" }}>Fournisseur &amp; Mark</th>
                         <th>Article &amp; Lien</th>
-                        <th style={{ width: "140px" }}>Statut Virement</th>
-                        <th className="col-right" style={{ borderTopRightRadius: "10px", width: "240px" }}>Actions</th>
+                        <th style={{ width: "130px" }}>Statut Virement</th>
+                        <th className="col-right" style={{ borderTopRightRadius: "10px", width: "200px" }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>

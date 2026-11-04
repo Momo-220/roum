@@ -276,15 +276,57 @@ function CommandeFormContent() {
   const [userProductImageName, setUserProductImageName] = useState<string>("");
   const productImageInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUserProductImageName(file.name);
+  const readImageFile = (file: File) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    setUserProductImageName(file.name || "Image collée");
     const reader = new FileReader();
     reader.onload = (ev) => {
       setUserProductImage(ev.target?.result as string);
     };
     reader.readAsDataURL(file);
+  };
+
+  const isDirectImageUrl = (s: string) =>
+    /^https?:\/\/\S+\.(jpe?g|png|webp|gif|avif)(\?\S*)?$/i.test(s.trim()) ||
+    /^https?:\/\/\S*alicdn\.com\/\S*(kf|imgextra|img\/ibank)\//i.test(s.trim());
+
+  const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) readImageFile(file);
+  };
+
+  // Collage d'une image (copiée depuis Alibaba) ou d'un lien d'image n'importe où dans le formulaire
+  const handlePasteImage = (e: React.ClipboardEvent) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const imageItem = items.find((it) => it.type.startsWith("image/"));
+    if (imageItem) {
+      const file = imageItem.getAsFile();
+      if (file) {
+        e.preventDefault();
+        readImageFile(file);
+        return;
+      }
+    }
+    const text = e.clipboardData?.getData("text") || "";
+    if (text && isDirectImageUrl(text)) {
+      e.preventDefault();
+      setUserProductImage(text.trim());
+      setUserProductImageName("Image de l'article");
+    }
+  };
+
+  const handleDropImage = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer?.files?.[0];
+    if (file) {
+      readImageFile(file);
+      return;
+    }
+    const url = e.dataTransfer?.getData("text/uri-list") || e.dataTransfer?.getData("text") || "";
+    if (url && isDirectImageUrl(url)) {
+      setUserProductImage(url.trim());
+      setUserProductImageName("Image de l'article");
+    }
   };
 
   const handleRemoveProductImage = () => {
@@ -712,7 +754,7 @@ function CommandeFormContent() {
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="ios-form-root">
+          <form onSubmit={handleSubmit} onPaste={handlePasteImage} className="ios-form-root">
             {/* Input unique pour l'image de l'article (accessible Option 1 & Option 2) */}
             <input
               ref={productImageInputRef}
@@ -902,6 +944,7 @@ function CommandeFormContent() {
                             src={userProductImage}
                             alt="Photo de l'article"
                             className="ios-article-photo-thumb"
+                            referrerPolicy="no-referrer"
                           />
                           <div className="ios-article-photo-info">
                             <span className="ios-article-photo-badge">Photo de votre article</span>
@@ -932,10 +975,12 @@ function CommandeFormContent() {
                         <button
                           type="button"
                           onClick={() => productImageInputRef.current?.click()}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={handleDropImage}
                           className="ios-article-upload-zone"
                         >
                           <Camera size={16} />
-                          <span>Ajouter la photo de l&apos;article (capture ou photo de votre choix)</span>
+                          <span>Importer ou coller la photo de l&apos;article</span>
                         </button>
                       )}
                     </div>
@@ -1060,6 +1105,7 @@ function CommandeFormContent() {
                             src={userProductImage}
                             alt="Photo marchandise"
                             className="ios-article-photo-thumb"
+                            referrerPolicy="no-referrer"
                           />
                           <div className="ios-article-photo-info">
                             <span className="ios-article-photo-badge">Photo de votre article</span>
@@ -1090,10 +1136,12 @@ function CommandeFormContent() {
                         <button
                           type="button"
                           onClick={() => productImageInputRef.current?.click()}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={handleDropImage}
                           className="ios-article-upload-zone"
                         >
                           <Camera size={16} />
-                          <span>Ajouter la photo de l&apos;article (depuis votre téléphone ou capture)</span>
+                          <span>Importer ou coller la photo de l&apos;article</span>
                         </button>
                       )}
                     </div>
@@ -1374,13 +1422,15 @@ function CommandeFormContent() {
           background: #EFECE6;
           border-radius: 9999px;
           padding: 4px;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
+          display: flex;
+          width: 100%;
           gap: 4px;
           margin-bottom: 18px;
         }
 
         .ios-segmented-btn {
+          flex: 1 1 50%;
+          min-width: 0;
           height: 38px;
           border: none;
           background: transparent;
@@ -1391,7 +1441,13 @@ function CommandeFormContent() {
           cursor: pointer;
           transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
           white-space: nowrap;
-          padding: 0 12px;
+          padding: 0 8px;
+          text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .ios-segmented-btn.active {
@@ -1437,7 +1493,7 @@ function CommandeFormContent() {
           gap: 12px;
         }
 
-        @media (max-width: 520px) {
+        @media (max-width: 640px) {
           .ios-grid-2 {
             grid-template-columns: 1fr;
           }
@@ -1454,7 +1510,7 @@ function CommandeFormContent() {
           .ios-segmented-btn {
             height: 36px;
             font-size: 0.78rem;
-            padding: 0 8px;
+            padding: 0 6px;
           }
           .ios-seg-prefix {
             display: none;
