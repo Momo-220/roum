@@ -927,70 +927,78 @@ function CommandeFormContent() {
                       {extractError && <span className="ios-error-msg">{extractError}</span>}
                     </div>
 
-                    {/* Photo de l'article mise par le client */}
-                    <div className="ios-field">
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <label>Photo de l&apos;article</label>
-                        {userProductImage && (
-                          <span style={{ fontSize: "0.72rem", color: "#16A34A", fontWeight: 700 }}>
-                            ✓ Photo ajoutée
-                          </span>
-                        )}
-                      </div>
-
-                      {userProductImage ? (
-                        <div className="ios-article-photo-card">
+                    {/* Aperçu instantané et photo du produit détecté depuis le lien */}
+                    {(userProductImage || (extractedProduct && (extractedProduct.image || extractedProduct.title))) ? (
+                      <div className="ios-product-preview-card">
+                        <div className="ios-product-preview-thumb-wrap">
                           <img
-                            src={userProductImage}
-                            alt="Photo de l'article"
-                            className="ios-article-photo-thumb"
+                            src={userProductImage || extractedProduct?.image || ""}
+                            alt={extractedProduct?.title || "Article"}
+                            className="ios-product-preview-thumb"
                             referrerPolicy="no-referrer"
                           />
-                          <div className="ios-article-photo-info">
-                            <span className="ios-article-photo-badge">Photo de votre article</span>
-                            <span className="ios-article-photo-label">
-                              {userProductImageName || extractedProduct?.title || "Image enregistrée"}
+                          <button
+                            type="button"
+                            onClick={() => productImageInputRef.current?.click()}
+                            className="ios-thumb-change-btn"
+                            title="Remplacer la photo par une capture personnelle"
+                          >
+                            <Camera size={12} />
+                          </button>
+                        </div>
+
+                        <div className="ios-product-preview-body">
+                          <div className="ios-product-preview-header">
+                            <span className="ios-product-preview-platform">
+                              {extractedProduct?.platform || "ALIBABA"}
+                            </span>
+                            <span className="ios-product-preview-badge">
+                              ✓ Image liée au produit
                             </span>
                           </div>
-                          <div className="ios-article-photo-actions">
-                            <button
-                              type="button"
-                              onClick={() => productImageInputRef.current?.click()}
-                              className="ios-photo-action-btn"
-                              title="Changer la photo"
-                            >
-                              <Camera size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleRemoveProductImage}
-                              className="ios-photo-action-btn danger"
-                              title="Retirer la photo"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+
+                          <div className="ios-product-preview-title" title={extractedProduct?.title || productQuery}>
+                            {extractedProduct?.title || productQuery || "Article sélectionné"}
+                          </div>
+
+                          <div className="ios-product-preview-price-row">
+                            {extractedProduct?.price && extractedProduct.price > 0 ? (
+                              <>
+                                <span className="ios-product-preview-price-cny">
+                                  {extractedProduct.price.toLocaleString("fr-FR")} {extractedProduct.currency || "RMB"}
+                                </span>
+                                <span className="ios-product-preview-price-cfa">
+                                  (≈ {Math.round(extractedProduct.price * 88).toLocaleString("fr-FR")} FCFA)
+                                </span>
+                              </>
+                            ) : (
+                              <span style={{ fontSize: "0.72rem", color: "#8E877E" }}>
+                                Prix confirmé sur devis
+                              </span>
+                            )}
                           </div>
                         </div>
-                      ) : (
+
                         <button
                           type="button"
-                          onClick={() => productImageInputRef.current?.click()}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={handleDropImage}
-                          className="ios-article-upload-zone"
+                          onClick={handleRemoveProductImage}
+                          className="ios-preview-remove-btn"
+                          title="Retirer la photo"
                         >
-                          <Camera size={16} />
-                          <span>Importer ou coller la photo de l&apos;article</span>
+                          <Trash2 size={13} />
                         </button>
-                      )}
-                    </div>
-
-                    {/* Résumé textuel propre de l'article détecté par lien (sans fausse photo) */}
-                    {extractedProduct && extractedProduct.title && (
-                      <div className="ios-extracted-banner">
-                        <span className="ios-extracted-tag">{extractedProduct.platform}</span>
-                        <span className="ios-extracted-text">{extractedProduct.title}</span>
                       </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => productImageInputRef.current?.click()}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={handleDropImage}
+                        className="ios-article-upload-zone"
+                      >
+                        <Camera size={15} />
+                        <span>Ou joindre / coller une photo directement</span>
+                      </button>
                     )}
 
                     <div className="ios-field">
@@ -1089,69 +1097,78 @@ function CommandeFormContent() {
                       {extractError && <span className="ios-error-msg">{extractError}</span>}
                     </div>
 
-                    {/* Photo de l'article mise par le client */}
-                    <div className="ios-field">
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <label>Photo de l&apos;article ou colis</label>
-                        {userProductImage && (
-                          <span style={{ fontSize: "0.72rem", color: "#16A34A", fontWeight: 700 }}>
-                            ✓ Photo ajoutée
-                          </span>
-                        )}
-                      </div>
-                      {userProductImage ? (
-                        <div className="ios-article-photo-card">
+                    {/* Aperçu instantané et photo du produit détecté depuis le lien */}
+                    {(userProductImage || (extractedProduct && (extractedProduct.image || extractedProduct.title))) ? (
+                      <div className="ios-product-preview-card">
+                        <div className="ios-product-preview-thumb-wrap">
                           <img
-                            src={userProductImage}
-                            alt="Photo marchandise"
-                            className="ios-article-photo-thumb"
+                            src={userProductImage || extractedProduct?.image || ""}
+                            alt={extractedProduct?.title || "Article"}
+                            className="ios-product-preview-thumb"
                             referrerPolicy="no-referrer"
                           />
-                          <div className="ios-article-photo-info">
-                            <span className="ios-article-photo-badge">Photo de votre article</span>
-                            <span className="ios-article-photo-label">
-                              {userProductImageName || extractedProduct?.title || "Image enregistrée"}
+                          <button
+                            type="button"
+                            onClick={() => productImageInputRef.current?.click()}
+                            className="ios-thumb-change-btn"
+                            title="Remplacer la photo par une capture personnelle"
+                          >
+                            <Camera size={12} />
+                          </button>
+                        </div>
+
+                        <div className="ios-product-preview-body">
+                          <div className="ios-product-preview-header">
+                            <span className="ios-product-preview-platform">
+                              {extractedProduct?.platform || "ALIBABA"}
+                            </span>
+                            <span className="ios-product-preview-badge">
+                              ✓ Image liée au produit
                             </span>
                           </div>
-                          <div className="ios-article-photo-actions">
-                            <button
-                              type="button"
-                              onClick={() => productImageInputRef.current?.click()}
-                              className="ios-photo-action-btn"
-                              title="Changer la photo"
-                            >
-                              <Camera size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleRemoveProductImage}
-                              className="ios-photo-action-btn danger"
-                              title="Retirer la photo"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+
+                          <div className="ios-product-preview-title" title={extractedProduct?.title || goodsDescription}>
+                            {extractedProduct?.title || goodsDescription || "Article sélectionné"}
+                          </div>
+
+                          <div className="ios-product-preview-price-row">
+                            {extractedProduct?.price && extractedProduct.price > 0 ? (
+                              <>
+                                <span className="ios-product-preview-price-cny">
+                                  {extractedProduct.price.toLocaleString("fr-FR")} {extractedProduct.currency || "RMB"}
+                                </span>
+                                <span className="ios-product-preview-price-cfa">
+                                  (≈ {Math.round(extractedProduct.price * 88).toLocaleString("fr-FR")} FCFA)
+                                </span>
+                              </>
+                            ) : (
+                              <span style={{ fontSize: "0.72rem", color: "#8E877E" }}>
+                                Prix usine vérifié par nos équipes
+                              </span>
+                            )}
                           </div>
                         </div>
-                      ) : (
+
                         <button
                           type="button"
-                          onClick={() => productImageInputRef.current?.click()}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={handleDropImage}
-                          className="ios-article-upload-zone"
+                          onClick={handleRemoveProductImage}
+                          className="ios-preview-remove-btn"
+                          title="Retirer la photo"
                         >
-                          <Camera size={16} />
-                          <span>Importer ou coller la photo de l&apos;article</span>
+                          <Trash2 size={13} />
                         </button>
-                      )}
-                    </div>
-
-                    {/* Résumé textuel propre de l'article détecté par lien (sans fausse photo) */}
-                    {extractedProduct && extractedProduct.title && (
-                      <div className="ios-extracted-banner">
-                        <span className="ios-extracted-tag">{extractedProduct.platform}</span>
-                        <span className="ios-extracted-text">{extractedProduct.title}</span>
                       </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => productImageInputRef.current?.click()}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={handleDropImage}
+                        className="ios-article-upload-zone"
+                      >
+                        <Camera size={15} />
+                        <span>Ou joindre / coller une photo directement</span>
+                      </button>
                     )}
 
                     <div className="ios-field">
@@ -1727,6 +1744,138 @@ function CommandeFormContent() {
 
         .ios-photo-action-btn.danger:hover {
           background: #FEE2E2;
+        }
+
+        /* Carte de prévisualisation directe du produit extrait par le lien */
+        .ios-product-preview-card {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: #F7F5F0;
+          border: 1px solid rgba(28, 24, 21, 0.08);
+          border-radius: 18px;
+          padding: 10px 14px;
+          margin-top: 4px;
+          position: relative;
+          transition: all 0.2s ease;
+        }
+
+        .ios-product-preview-thumb-wrap {
+          position: relative;
+          width: 58px;
+          height: 58px;
+          flex-shrink: 0;
+          border-radius: 14px;
+          overflow: hidden;
+          background: #FFFFFF;
+          border: 1px solid rgba(28, 24, 21, 0.08);
+        }
+
+        .ios-product-preview-thumb {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+
+        .ios-thumb-change-btn {
+          position: absolute;
+          bottom: 2px;
+          right: 2px;
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: rgba(28, 24, 21, 0.75);
+          color: #FFFFFF;
+          border: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          backdrop-filter: blur(4px);
+          transition: transform 0.15s ease;
+        }
+
+        .ios-thumb-change-btn:hover {
+          transform: scale(1.1);
+          background: #1C1815;
+        }
+
+        .ios-product-preview-body {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+
+        .ios-product-preview-header {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .ios-product-preview-platform {
+          font-size: 0.64rem;
+          font-weight: 800;
+          background: #DCFCE7;
+          color: #166534;
+          padding: 2px 7px;
+          border-radius: 9999px;
+          text-transform: uppercase;
+        }
+
+        .ios-product-preview-badge {
+          font-size: 0.68rem;
+          font-weight: 600;
+          color: #16A34A;
+        }
+
+        .ios-product-preview-title {
+          font-size: 0.82rem;
+          font-weight: 700;
+          color: #1C1815;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .ios-product-preview-price-row {
+          display: flex;
+          align-items: baseline;
+          gap: 6px;
+        }
+
+        .ios-product-preview-price-cny {
+          font-size: 0.84rem;
+          font-weight: 800;
+          color: #C2410C;
+        }
+
+        .ios-product-preview-price-cfa {
+          font-size: 0.72rem;
+          font-weight: 600;
+          color: #716C65;
+        }
+
+        .ios-preview-remove-btn {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          border: none;
+          background: transparent;
+          color: #A39D93;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          flex-shrink: 0;
+        }
+
+        .ios-preview-remove-btn:hover {
+          background: #FEE2E2;
+          color: #DC2626;
         }
 
         /* Bannière textuelle de l'article détecté par lien */
