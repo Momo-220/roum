@@ -14,7 +14,7 @@ import {
   MessageCircle,
   Smartphone,
   ExternalLink,
-  Sparkles,
+  Camera,
 } from "lucide-react";
 import {
   saveClientRequest,
@@ -415,8 +415,8 @@ function CommandeFormContent() {
   const handleReceiptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      alert("Le fichier est trop volumineux (maximum 10 Mo).");
+    if (file.size > 25 * 1024 * 1024) {
+      alert("Le fichier est trop volumineux (maximum 25 Mo).");
       return;
     }
     setReceiptFile(file);
@@ -697,7 +697,7 @@ function CommandeFormContent() {
                 className={`ios-segmented-btn ${option === "sans_fournisseur" ? "active" : ""}`}
                 onClick={() => setOption("sans_fournisseur")}
               >
-                Option 1 · Sans Fournisseur
+                <span className="ios-seg-prefix">Option 1 · </span>Sans Fournisseur
               </button>
               <button
                 type="button"
@@ -706,7 +706,7 @@ function CommandeFormContent() {
                 className={`ios-segmented-btn ${option === "avec_fournisseur" ? "active" : ""}`}
                 onClick={() => setOption("avec_fournisseur")}
               >
-                Option 2 · Avec Fournisseur
+                <span className="ios-seg-prefix">Option 2 · </span>Avec Fournisseur
               </button>
             </div>
 
@@ -828,14 +828,7 @@ function CommandeFormContent() {
                 {option === "sans_fournisseur" ? (
                   <>
                     <div className="ios-field">
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <label htmlFor="productLink">Lien Alibaba, 1688 ou Taobao</label>
-                        {extracting && (
-                          <span style={{ fontSize: "0.74rem", color: "#C5A265", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                            <Sparkles size={12} className="spin" /> Détection auto...
-                          </span>
-                        )}
-                      </div>
+                      <label htmlFor="productLink">Lien Alibaba, 1688 ou Taobao</label>
                       <div className="ios-input-action-group">
                         <input
                           id="productLink"
@@ -852,23 +845,23 @@ function CommandeFormContent() {
                           className="ios-btn-inline"
                           title="Rechercher / actualiser"
                         >
-                          {extracting ? "..." : <Search size={15} />}
+                          <Search size={15} />
                         </button>
                       </div>
                       {extractError && <span className="ios-error-msg">{extractError}</span>}
                     </div>
 
-                    {/* Aperçu produit sans glitch avec referrerPolicy */}
+                    {/* Aperçu produit authentique */}
                     {extractedProduct && (
                       <div className="ios-product-preview">
                         <img
-                          src={extractedProduct.image || "/images/services/sourcing_new.jpg"}
+                          src={extractedProduct.image}
                           alt={extractedProduct.title}
                           referrerPolicy="no-referrer"
                           className="ios-product-thumb"
                           onError={(e) => {
                             e.currentTarget.onerror = null;
-                            e.currentTarget.src = "/images/services/sourcing_new.jpg";
+                            e.currentTarget.src = "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=80";
                           }}
                         />
                         <div className="ios-product-info">
@@ -878,6 +871,26 @@ function CommandeFormContent() {
                             {productUnitPrice} {productCurrency} (≈ {unitPriceFCFA.toLocaleString("fr-FR")} FCFA)
                           </span>
                         </div>
+                        <label className="ios-photo-change-badge" title="Remplacer la photo de l'article">
+                          <Camera size={13} />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            style={{ display: "none" }}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) {
+                                const r = new FileReader();
+                                r.onload = (ev) => {
+                                  if (ev.target?.result) {
+                                    setExtractedProduct((prev) => prev ? { ...prev, image: ev.target!.result as string } : null);
+                                  }
+                                };
+                                r.readAsDataURL(f);
+                              }
+                            }}
+                          />
+                        </label>
                       </div>
                     )}
 
@@ -954,14 +967,7 @@ function CommandeFormContent() {
                   <>
                     {/* OPTION 2 : LIEN ARTICLE ALIBABA / 1688 AVEC AUTO-EXTRACTION & PHOTO */}
                     <div className="ios-field">
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <label htmlFor="productLink">Lien de l&apos;article Alibaba, 1688 ou Taobao</label>
-                        {extracting && (
-                          <span style={{ fontSize: "0.74rem", color: "#C5A265", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                            <Sparkles size={12} className="spin" /> Détection auto...
-                          </span>
-                        )}
-                      </div>
+                      <label htmlFor="productLink">Lien de l&apos;article Alibaba, 1688 ou Taobao</label>
                       <div className="ios-input-action-group">
                         <input
                           id="productLink"
@@ -978,23 +984,23 @@ function CommandeFormContent() {
                           className="ios-btn-inline"
                           title="Rechercher / actualiser"
                         >
-                          {extracting ? "..." : <Search size={15} />}
+                          <Search size={15} />
                         </button>
                       </div>
                       {extractError && <span className="ios-error-msg">{extractError}</span>}
                     </div>
 
-                    {/* Aperçu produit sans glitch avec referrerPolicy */}
+                    {/* Aperçu produit authentique */}
                     {extractedProduct && (
                       <div className="ios-product-preview">
                         <img
-                          src={extractedProduct.image || "/images/services/sourcing_new.jpg"}
+                          src={extractedProduct.image}
                           alt={extractedProduct.title}
                           referrerPolicy="no-referrer"
                           className="ios-product-thumb"
                           onError={(e) => {
                             e.currentTarget.onerror = null;
-                            e.currentTarget.src = "/images/services/sourcing_new.jpg";
+                            e.currentTarget.src = "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=80";
                           }}
                         />
                         <div className="ios-product-info">
@@ -1006,6 +1012,26 @@ function CommandeFormContent() {
                             </span>
                           )}
                         </div>
+                        <label className="ios-photo-change-badge" title="Remplacer la photo de l'article">
+                          <Camera size={13} />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            style={{ display: "none" }}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) {
+                                const r = new FileReader();
+                                r.onload = (ev) => {
+                                  if (ev.target?.result) {
+                                    setExtractedProduct((prev) => prev ? { ...prev, image: ev.target!.result as string } : null);
+                                  }
+                                };
+                                r.readAsDataURL(f);
+                              }
+                            }}
+                          />
+                        </label>
                       </div>
                     )}
 
@@ -1122,6 +1148,7 @@ function CommandeFormContent() {
                     <div className="ios-payment-list">
                       {activePaymentMethods.map((pm) => {
                         const isSelected = selectedPayMethod === pm.id;
+                        const isBankRib = pm.id === "morocco";
                         return (
                           <div
                             key={pm.id}
@@ -1136,19 +1163,21 @@ function CommandeFormContent() {
                                 <div style={{ fontSize: "0.72rem", color: "#8E8E93" }}>{pm.accountHolder}</div>
                               </div>
                             </div>
-                            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openPaymentApp(pm.id, pm.copyValue);
-                                }}
-                                className="ios-open-app-pill"
-                                title="Ouvrir directement l'application sur votre smartphone"
-                              >
-                                <Smartphone size={12} />
-                                <span>Ouvrir l&apos;app</span>
-                              </button>
+                            <div className="ios-pay-actions">
+                              {!isBankRib && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openPaymentApp(pm.id, pm.copyValue);
+                                  }}
+                                  className="ios-open-app-pill"
+                                  title="Ouvrir directement l'application sur votre smartphone"
+                                >
+                                  <Smartphone size={12} />
+                                  <span>Ouvrir l&apos;app</span>
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -1158,7 +1187,7 @@ function CommandeFormContent() {
                                 className="ios-copy-pill"
                               >
                                 {copiedPay === pm.id ? <Check size={12} color="#16A34A" /> : <Copy size={12} />}
-                                <span>{copiedPay === pm.id ? "Copié" : "Copier"}</span>
+                                <span>{copiedPay === pm.id ? "Copié" : isBankRib ? "Copier le RIB" : "Copier"}</span>
                               </button>
                             </div>
                           </div>
@@ -1170,7 +1199,7 @@ function CommandeFormContent() {
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept="image/*,.pdf"
+                        accept="image/*,video/*,.pdf"
                         onChange={handleReceiptChange}
                         style={{ display: "none" }}
                         id="receiptUpload"
@@ -1182,12 +1211,15 @@ function CommandeFormContent() {
                           className="ios-upload-btn"
                         >
                           <Upload size={14} />
-                          <span>Joindre la preuve de paiement (optionnel)</span>
+                          <span>Joindre la preuve de paiement (capture, reçu ou vidéo)</span>
                         </button>
                       ) : (
                         <div className="ios-receipt-attached">
-                          <span className="ios-receipt-name">{receiptFileName}</span>
-                          <button type="button" onClick={handleRemoveReceipt} className="ios-receipt-remove">
+                          <span className="ios-receipt-name">
+                            {receiptFile?.type?.startsWith("video/") ? "📹 Vidéo jointe : " : "🖼️ Justificatif : "}
+                            {receiptFileName}
+                          </span>
+                          <button type="button" onClick={handleRemoveReceipt} className="ios-receipt-remove" title="Supprimer">
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -1338,6 +1370,24 @@ function CommandeFormContent() {
           .ios-grid-2 {
             grid-template-columns: 1fr;
           }
+          .ios-page-wrap {
+            padding: 16px 12px 60px 12px;
+          }
+          .ios-card {
+            padding: 20px 14px;
+            border-radius: 20px;
+          }
+          .ios-segmented-control {
+            padding: 3px;
+          }
+          .ios-segmented-btn {
+            height: 36px;
+            font-size: 0.78rem;
+            padding: 0 8px;
+          }
+          .ios-seg-prefix {
+            display: none;
+          }
         }
 
         .ios-field {
@@ -1375,6 +1425,17 @@ function CommandeFormContent() {
 
         .ios-input::placeholder {
           color: #A39D93;
+        }
+
+        /* Suppression stricte des flèches spinners (upper / lower) */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type="number"] {
+          -moz-appearance: textfield;
+          appearance: textfield;
         }
 
         .ios-select {
@@ -1480,6 +1541,28 @@ function CommandeFormContent() {
         .ios-product-price {
           font-size: 0.76rem;
           color: #716C65;
+        }
+
+        .ios-photo-change-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          background: #FFFFFF;
+          border: 1px solid rgba(28, 24, 21, 0.1);
+          color: #716C65;
+          cursor: pointer;
+          margin-left: auto;
+          flex-shrink: 0;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+          transition: all 0.15s ease;
+        }
+
+        .ios-photo-change-badge:hover {
+          background: #EFECE6;
+          color: #1C1815;
         }
 
         /* Stepper Quantité en pilule */
@@ -1634,6 +1717,13 @@ function CommandeFormContent() {
           font-size: 0.8rem;
           color: #524B43;
           margin-top: 1px;
+        }
+
+        .ios-pay-actions {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-shrink: 0;
         }
 
         .ios-copy-pill {

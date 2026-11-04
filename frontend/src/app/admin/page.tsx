@@ -76,13 +76,9 @@ import { BillsIcon } from "@/components/icons/BillsIcon";
 import {
   WaveLogo,
   OrangeMoneyLogo,
-  MtnMomoLogo,
-  MoovMoneyLogo,
   CompteMarocLogo,
   BankBaciLogo,
   IbanLogo,
-  AlipayLogo,
-  WeChatPayLogo,
   ReceiptSealLogo,
   WhatsAppLogo,
 } from "@/components/PaymentLogos";
@@ -302,29 +298,6 @@ function renderPaymentMethodBadge(method: string = "") {
       >
         <OrangeMoneyLogo size={16} />
         <span>Orange Money</span>
-      </span>
-    );
-  }
-  if (m.includes("ALIPAY")) {
-    return (
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "6px",
-          padding: "4px 10px",
-          borderRadius: "9999px",
-          background: "#E0F2FE",
-          border: "1px solid rgba(0, 161, 233, 0.28)",
-          color: "#0284C7",
-          fontSize: "0.74rem",
-          fontWeight: "700",
-          lineHeight: 1,
-          whiteSpace: "nowrap",
-        }}
-      >
-        <AlipayLogo size={16} />
-        <span>Alipay</span>
       </span>
     );
   }
@@ -1437,6 +1410,9 @@ const DEFAULT_REQUESTS = [
         product_url: "https://detail.1688.com/offer/718294.html",
       },
     ],
+    payment_receipt_url: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80",
+    payment_receipt_name: "recu_virement_wave_743800fcfa.jpg",
+    payment_method_selected: "WAVE",
     created_at: "2026-11-03 10:15:00",
     updated_at: "2026-11-03 10:15:00",
   },
@@ -1458,6 +1434,9 @@ const DEFAULT_REQUESTS = [
     estimated_cbm: 2.8,
     supplier_name: "Guangzhou E-Vehicle Tech Co., Ltd",
     status: "IN_REVIEW",
+    payment_receipt_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    payment_receipt_name: "video_preuve_virement_orange_money.mp4",
+    payment_method_selected: "ORANGE MONEY",
     assigned_to_user_id: "user-superadmin-01",
     admin_notes: "Fournisseur contacté sur WeChat, proforma en négociation.",
     items_count: 50,
@@ -6721,8 +6700,10 @@ export default function AdminPage() {
                                 {r.reference}
                               </button>
                               {r.payment_receipt_url && (
-                                <span style={{ fontSize: "0.67rem", color: "#16A34A", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "2px" }}>
-                                  ✓ Reçu joint
+                                <span style={{ fontSize: "0.68rem", color: "#166534", background: "#DCFCE7", padding: "2px 6px", borderRadius: "9999px", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                                  {r.payment_receipt_url.startsWith("data:video") || /\.(mp4|mov|webm)$/i.test(r.payment_receipt_url)
+                                    ? "📹 Vidéo"
+                                    : "🖼️ Reçu"}
                                 </span>
                               )}
                             </div>
@@ -6969,19 +6950,11 @@ export default function AdminPage() {
                     </div>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "#F0FDF4", padding: "3px 8px", borderRadius: "9999px", border: "1px solid #BBF7D0" }}>
                       <CompteMarocLogo size={16} />
-                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#15803D" }}>Maroc</span>
-                    </div>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "#EFF6FF", padding: "3px 8px", borderRadius: "9999px", border: "1px solid #BFDBFE" }}>
-                      <AlipayLogo size={16} />
-                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#1D4ED8" }}>Alipay ¥</span>
-                    </div>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "#ECFDF5", padding: "3px 8px", borderRadius: "9999px", border: "1px solid #A7F3D0" }}>
-                      <WeChatPayLogo size={16} />
-                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#047857" }}>WeChat ¥</span>
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#15803D" }}>Compte Maroc</span>
                     </div>
                   </div>
                   <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: "6px" }}>
-                    Logos officiels & virements direct usine
+                    Comptes officiels synchronisés en direct sur le site public
                   </div>
                 </div>
               </div>
@@ -10850,32 +10823,45 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* Preuve de paiement client téléversée */}
+            {/* Preuve de paiement client téléversée (Image ou Vidéo) */}
             {showRequestDetailModal.payment_receipt_url && (
-              <div style={{ background: "#F0FDF4", border: "1.5px solid #86EFAC", padding: "14px", borderRadius: "12px", marginBottom: "16px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                  <span style={{ fontSize: "0.82rem", fontWeight: "800", color: "#166534", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                    <CheckCircle2 size={16} /> Preuve de Paiement Client ({showRequestDetailModal.payment_method_selected?.toUpperCase() || "MOBILE MONEY"})
+              <div style={{ background: "#F0FDF4", border: "1.5px solid #86EFAC", padding: "16px", borderRadius: "14px", marginBottom: "18px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                  <span style={{ fontSize: "0.84rem", fontWeight: "800", color: "#166534", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    <CheckCircle2 size={16} />
+                    {showRequestDetailModal.payment_receipt_url.startsWith("data:video") || /\.(mp4|mov|webm|ogg)$/i.test(showRequestDetailModal.payment_receipt_url)
+                      ? "📹 Preuve Vidéo de Paiement"
+                      : "🖼️ Preuve Reçu de Paiement"}{" "}
+                    ({showRequestDetailModal.payment_method_selected?.toUpperCase() || "MOBILE MONEY"})
                   </span>
                   <a
                     href={showRequestDetailModal.payment_receipt_url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    download={showRequestDetailModal.payment_receipt_name || "preuve_paiement"}
                     className="btn btn-secondary"
                     style={{ padding: "4px 10px", fontSize: "0.74rem", background: "#FFFFFF" }}
                   >
-                    Ouvrir le reçu ↗
+                    Ouvrir / Agrandir ↗
                   </a>
                 </div>
-                {showRequestDetailModal.payment_receipt_url.startsWith("data:image") ? (
+
+                {showRequestDetailModal.payment_receipt_url.startsWith("data:video") || /\.(mp4|mov|webm|ogg)$/i.test(showRequestDetailModal.payment_receipt_url) ? (
+                  <video
+                    src={showRequestDetailModal.payment_receipt_url}
+                    controls
+                    playsInline
+                    style={{ width: "100%", maxHeight: "280px", borderRadius: "10px", border: "1px solid #BBF7D0", background: "#000", display: "block" }}
+                  />
+                ) : showRequestDetailModal.payment_receipt_url.startsWith("data:image") || /\.(png|jpg|jpeg|webp|gif)$/i.test(showRequestDetailModal.payment_receipt_url) ? (
                   <img
                     src={showRequestDetailModal.payment_receipt_url}
                     alt="Reçu de paiement"
-                    style={{ maxHeight: "200px", borderRadius: "8px", border: "1px solid #BBF7D0", display: "block" }}
+                    style={{ maxHeight: "240px", borderRadius: "10px", border: "1px solid #BBF7D0", display: "block", objectFit: "contain" }}
                   />
                 ) : (
-                  <div style={{ fontSize: "0.8rem", color: "#15803D" }}>
-                    Fichier joint : {showRequestDetailModal.payment_receipt_name || "recu_paiement.pdf"}
+                  <div style={{ fontSize: "0.82rem", color: "#15803D" }}>
+                    📄 Fichier joint : <strong>{showRequestDetailModal.payment_receipt_name || "recu_paiement.pdf"}</strong>
                   </div>
                 )}
               </div>

@@ -1,15 +1,50 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 
 // ============================================================================
-// LOGOS OFFICIELS DES MOYENS DE PAIEMENT (HAUTE FIDÉLITÉ VECTORIELLE PIXEL-PERFECT)
-// Reproduits fidèlement d'après les chartes graphiques officielles des marques :
-// Wave Digital Finance, Orange Money, MTN MoMo, Moov Africa, Alipay, WeChat Pay
+// LOGOS OFFICIELS DES MOYENS DE PAIEMENT (AVEC SUPPORT FICHIERS LOCAUX TÉLÉVERSÉS)
+// Priorité 1 : Fichiers images déposés par l'utilisateur dans /images/payments/
+//   - wave.png
+//   - orange.png
+//   - maroc.png
+// Priorité 2 (Fallback) : Rendus vectoriels officiels SVG haute fidélité
 // ============================================================================
 
 /**
- * 1. WAVE (Logo Officiel : Pingouin Authentique sur disque Bleu Cyan #1DC3EC)
+ * 1. WAVE (Logo : /images/payments/wave.png ou Pingouin Authentique sur disque Bleu Cyan #1DC3EC)
  */
 export function WaveLogo({ size = 36 }: { size?: number }) {
+  const [imgError, setImgError] = useState(false);
+
+  if (!imgError) {
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          overflow: "hidden",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          background: "#1DC3EC",
+        }}
+        title="Wave Mobile Money"
+      >
+        <img
+          src="/images/payments/wave.png"
+          alt="Wave"
+          width={size}
+          height={size}
+          onError={() => setImgError(true)}
+          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -68,10 +103,40 @@ export function WaveLogo({ size = 36 }: { size?: number }) {
 }
 
 /**
- * 2. ORANGE MONEY (Logo Officiel : Carré Orange #FF7900 + Cercle OM Blanc/Noir)
+ * 2. ORANGE MONEY (Logo : /images/payments/orange.png ou Carré Orange #FF7900 + Cercle OM Blanc/Noir)
  */
 export function OrangeMoneyLogo({ size = 36 }: { size?: number }) {
+  const [imgError, setImgError] = useState(false);
   const r = Math.round(size * 0.28);
+
+  if (!imgError) {
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: r,
+          overflow: "hidden",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          background: "#FF7900",
+        }}
+        title="Orange Money"
+      >
+        <img
+          src="/images/payments/orange.png"
+          alt="Orange Money"
+          width={size}
+          height={size}
+          onError={() => setImgError(true)}
+          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -95,11 +160,8 @@ export function OrangeMoneyLogo({ size = 36 }: { size?: number }) {
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Symbole officiel OM : cercle monétaire avec accent */}
         <circle cx="50" cy="50" r="38" stroke="#FFFFFF" strokeWidth="8" />
-        {/* Carré noir central Orange */}
         <rect x="36" y="36" width="28" height="28" rx="4" fill="#000000" />
-        {/* Arc intérieur blanc */}
         <path
           d="M44 42C44 42 50 38 56 42C62 46 62 54 56 58C50 62 44 58 44 58"
           stroke="#FFFFFF"
@@ -112,171 +174,42 @@ export function OrangeMoneyLogo({ size = 36 }: { size?: number }) {
 }
 
 /**
- * 3. MTN MoMo (Logo Officiel : Badge Jaune #FFCC00 + Ovale Bleu & Texte MoMo)
- */
-export function MtnMomoLogo({ size = 36 }: { size?: number }) {
-  const r = Math.round(size * 0.28);
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: r,
-        background: "#FFCC00",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-        boxShadow: "0 2px 8px rgba(255, 204, 0, 0.4)",
-        overflow: "hidden",
-      }}
-      title="MTN Mobile Money (MoMo)"
-    >
-      <svg
-        width={Math.round(size * 0.82)}
-        height={Math.round(size * 0.82)}
-        viewBox="0 0 100 100"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Ovale Bleu Nuit MTN */}
-        <ellipse cx="50" cy="50" rx="44" ry="28" fill="#004F71" />
-        {/* Texte officiel 'MoMo' */}
-        <text
-          x="50"
-          y="56"
-          textAnchor="middle"
-          fill="#FFCC00"
-          fontFamily="system-ui, -apple-system, sans-serif"
-          fontWeight="900"
-          fontSize="23"
-          letterSpacing="-0.5"
-        >
-          MoMo
-        </text>
-      </svg>
-    </div>
-  );
-}
-
-/**
- * 4. MOOV MONEY (Logo Officiel : Bleu #005DAA & Orange #F37023)
- */
-export function MoovMoneyLogo({ size = 36 }: { size?: number }) {
-  const r = Math.round(size * 0.28);
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: r,
-        background: "#005DAA",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-        boxShadow: "0 2px 8px rgba(0, 93, 170, 0.35)",
-        overflow: "hidden",
-      }}
-      title="Moov Africa Money"
-    >
-      <svg
-        width={Math.round(size * 0.8)}
-        height={Math.round(size * 0.8)}
-        viewBox="0 0 100 100"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Vague orange officielle Moov */}
-        <path
-          d="M20 70C20 70 35 30 65 30C80 30 85 45 75 58C65 70 45 72 38 65C30 58 35 45 48 45C58 45 62 52 58 58"
-          stroke="#F37023"
-          strokeWidth="10"
-          strokeLinecap="round"
-        />
-        {/* Point central blanc */}
-        <circle cx="50" cy="52" r="5" fill="#FFFFFF" />
-      </svg>
-    </div>
-  );
-}
-
-/**
- * 5. ALIPAY (Logo Officiel : Bleu #1677FF + Caractère Chinois '支' Blanc)
- */
-export function AlipayLogo({ size = 36 }: { size?: number }) {
-  const r = Math.round(size * 0.28);
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: r,
-        background: "#1677FF",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-        boxShadow: "0 2px 8px rgba(22, 119, 255, 0.35)",
-        overflow: "hidden",
-      }}
-      title="Alipay (RMB 支付宝)"
-    >
-      <svg
-        width={Math.round(size * 0.75)}
-        height={Math.round(size * 0.75)}
-        viewBox="0 0 1024 1024"
-        fill="#FFFFFF"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path d="M840.4 643.2c-145.4-49.4-239.9-106.1-239.9-106.1 27.5-68.5 49-148.6 61.9-234.6H840v-40.7H669.9c0.9-15.6 1.3-31.5 1.3-47.5V118.8h-74.9v95.5c0 15.9-0.5 31.8-1.3 47.5H429.1V118.8h-74.8v95.5c0 15.9-0.5 31.8-1.3 47.5H184v40.7h416.7c-11.4 72.8-29.6 141-52.9 200.7-104.9-38.3-214-53.5-303.8-37.4-96.6 17.3-159 66.8-159 157.9 0 106.1 94.6 171.7 236.4 171.7 131.7 0 252.8-59.5 342.3-162.7 76.7 44.5 174.5 87.2 284.1 118.2l92.6-107.7zM340.5 798.8c-98.3 0-161.4-44.5-161.4-118.4 0-61.9 44.2-96.7 114.7-109.3 64.9-11.6 148.4-1.2 231.1 24.9-63.5 119.5-126.9 202.8-184.4 202.8z" />
-      </svg>
-    </div>
-  );
-}
-
-/**
- * 6. WECHAT PAY (Logo Officiel : Vert #09B83E + Deux Bulles de Conversation Blanches)
- */
-export function WeChatPayLogo({ size = 36 }: { size?: number }) {
-  const r = Math.round(size * 0.28);
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: r,
-        background: "#09B83E",
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-        boxShadow: "0 2px 8px rgba(9, 184, 62, 0.35)",
-        overflow: "hidden",
-      }}
-      title="WeChat Pay (微信支付)"
-    >
-      <svg
-        width={Math.round(size * 0.75)}
-        height={Math.round(size * 0.75)}
-        viewBox="0 0 1024 1024"
-        fill="#FFFFFF"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Grande bulle WeChat */}
-        <path d="M410.2 205.8c-184.6 0-334.3 125.1-334.3 279.4 0 88.5 49.3 167.3 126.5 219.7l-31.6 94.8 111.4-55.6c40.5 12.1 83.9 18.7 128 18.7 184.6 0 334.3-125.1 334.3-279.4s-149.7-277.6-334.3-277.6zM289.8 345c27.6 0 50 22.4 50 50s-22.4 50-50 50-50-22.4-50-50 22.4-50 50-50zm240.8 0c27.6 0 50 22.4 50 50s-22.4 50-50 50-50-22.4-50-50 22.4-50 50-50z" />
-        {/* Petite bulle WeChat */}
-        <path d="M698.8 450.4c-143.6 0-260 100.2-260 223.8 0 70.8 38.4 133.9 98.4 175.8l-24.6 75.9 86.8-44.5c31.5 9.7 65.3 15 99.4 15 143.6 0 260-100.2 260-223.8 0-123.6-116.4-222.2-260-222.2zm-94 111.2c22.1 0 40 17.9 40 40s-17.9 40-40 40-40-17.9-40-40 17.9-40 40-40zm188 0c22.1 0 40 17.9 40 40s-17.9 40-40 40-40-17.9-40-40 17.9-40 40-40z" />
-      </svg>
-    </div>
-  );
-}
-
-/**
- * 7. COMPTE MAROC / ATTIJARIWAFA / CIH / BANQUE (Badge Institutionnel Or & Marine)
+ * 3. COMPTE MAROC / ATTIJARIWAFA / CIH / BANQUE
+ * (/images/payments/maroc.png ou Badge Institutionnel Or & Marine)
  */
 export function CompteMarocLogo({ size = 36 }: { size?: number }) {
+  const [imgError, setImgError] = useState(false);
   const r = Math.round(size * 0.28);
+
+  if (!imgError) {
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: r,
+          overflow: "hidden",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          background: "#FFFFFF",
+          border: "1px solid rgba(28, 24, 21, 0.12)",
+        }}
+        title="Compte Bancaire Maroc"
+      >
+        <img
+          src="/images/payments/maroc.png"
+          alt="Maroc Bank"
+          width={size}
+          height={size}
+          onError={() => setImgError(true)}
+          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -323,6 +256,23 @@ export function BankBaciLogo({ size = 36 }: { size?: number }) {
 
 export function IbanLogo({ size = 36 }: { size?: number }) {
   return <CompteMarocLogo size={size} />;
+}
+
+// Compatibilité legacy (Alipay et WeChat Pay retirés sur demande utilisateur)
+export function AlipayLogo({ size = 36 }: { size?: number }) {
+  return null;
+}
+
+export function WeChatPayLogo({ size = 36 }: { size?: number }) {
+  return null;
+}
+
+export function MtnMomoLogo({ size = 36 }: { size?: number }) {
+  return null;
+}
+
+export function MoovMoneyLogo({ size = 36 }: { size?: number }) {
+  return null;
 }
 
 export function ReceiptSealLogo({ size = 36 }: { size?: number }) {
@@ -392,45 +342,45 @@ export function WhatsAppLogo({ size = 36 }: { size?: number }) {
 }
 
 /**
- * Redirection directe vers l'application mobile de paiement
- * Si l'application est installée sur le smartphone de l'utilisateur, elle s'ouvre directement via deep link (wave://, alipays://, weixin://, USSD).
+ * Déclencheur intelligent pour smartphones (Wave & Orange Money)
+ * Sur smartphone : tente d'ouvrir l'application installée.
+ * Sur ordinateur : informe poliment l'utilisateur que l'action est prévue pour mobile.
  */
 export function openPaymentApp(methodKey: string, phoneNumber?: string): { success: boolean; appOpened: boolean; link: string } {
   if (typeof window === "undefined") return { success: false, appOpened: false, link: "" };
 
-  let deepLink = "";
-  let webFallback = "";
-
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
   const key = (methodKey || "").toLowerCase();
 
-  if (key.includes("wave")) {
-    deepLink = "wave://";
-    webFallback = "https://wave.com/send";
-  } else if (key.includes("orange")) {
-    deepLink = "tel:#144#";
-    webFallback = "https://www.orangemoney.ci";
-  } else if (key.includes("mtn") || key.includes("momo")) {
-    deepLink = "tel:*133#";
-    webFallback = "https://momo.mtn.com";
-  } else if (key.includes("moov")) {
-    deepLink = "tel:*155#";
-    webFallback = "https://www.moov-africa.ci";
-  } else if (key.includes("alipay")) {
-    deepLink = "alipays://";
-    webFallback = "https://www.alipay.com";
-  } else if (key.includes("wechat")) {
-    deepLink = "weixin://";
-    webFallback = "https://pay.weixin.qq.com";
+  // 1. Sur ordinateur de bureau
+  if (!isMobile) {
+    if (phoneNumber) {
+      navigator.clipboard?.writeText(phoneNumber);
+    }
+    alert(
+      "L'ouverture directe de l'application est réservée aux smartphones (Wave / Orange Money).\n\nLe numéro (" +
+        (phoneNumber || "") +
+        ") a été automatiquement copié dans votre presse-papier."
+    );
+    return { success: true, appOpened: false, link: "" };
   }
 
-  if (deepLink) {
-    try {
-      window.location.href = deepLink;
-      return { success: true, appOpened: true, link: deepLink };
-    } catch {
-      if (webFallback) window.open(webFallback, "_blank");
-      return { success: true, appOpened: false, link: webFallback };
-    }
+  // 2. Sur smartphone physique
+  if (key.includes("wave")) {
+    const rawNumber = (phoneNumber || "").replace(/[^0-9]/g, "");
+    // Wave deep-link
+    window.location.href = "wave://";
+    setTimeout(() => {
+      // Fallback web Wave si l'app n'est pas installée
+      window.location.href = `https://wave.com/send?phone=${rawNumber}`;
+    }, 1500);
+    return { success: true, appOpened: true, link: "wave://" };
+  }
+
+  if (key.includes("orange")) {
+    // USSD direct Orange Money Côte d'Ivoire / Afrique
+    window.location.href = "tel:#144#";
+    return { success: true, appOpened: true, link: "tel:#144#" };
   }
 
   return { success: false, appOpened: false, link: "" };
