@@ -1179,7 +1179,28 @@ adminRouter.put("/tariffs/:id", async (c) => {
   const tariffId = c.req.param("id");
   const body = await c.req.json<any>().catch(() => ({}));
 
-  const existing = await c.env.DB.prepare("SELECT id FROM tariffs WHERE id = ?").bind(tariffId).first();
+  let validModeId = "AIR_STANDARD";
+  const requestedMode = body.shipping_mode_id || body.transport_mode;
+  if (requestedMode) {
+    if (requestedMode === "SEA" || requestedMode === "SEA_LCL" || requestedMode === "SEA_GROUPAGE") {
+      validModeId = "SEA_LCL";
+    } else if (requestedMode === "AIR_EXPRESS") {
+      validModeId = "AIR_EXPRESS";
+    } else if (requestedMode === "AIR_SPECIAL") {
+      validModeId = "AIR_SPECIAL";
+    } else if (requestedMode === "AIR_TECH") {
+      validModeId = "AIR_TECH";
+    } else if (requestedMode === "AIR_COSMETIC") {
+      validModeId = "AIR_COSMETIC";
+    } else if (requestedMode === "AIR_DOC") {
+      validModeId = "AIR_DOC";
+    } else {
+      const modeRow = await c.env.DB.prepare("SELECT id FROM shipping_modes WHERE id = ?").bind(requestedMode).first<{ id: string }>();
+      if (modeRow?.id) validModeId = modeRow.id;
+    }
+  }
+
+  const existing = await c.env.DB.prepare("SELECT id, route_id FROM tariffs WHERE id = ?").bind(tariffId).first<{ id: string; route_id: string }>();
 
   if (existing) {
     await c.env.DB.batch([
@@ -1192,16 +1213,18 @@ adminRouter.put("/tariffs/:id", async (c) => {
             estimated_days_max = COALESCE(?, estimated_days_max),
             note = COALESCE(?, note),
             category_tag = COALESCE(?, category_tag),
+            shipping_mode_id = COALESCE(?, shipping_mode_id),
             updated_at = datetime('now')
         WHERE id = ?
       `).bind(
         body.price_per_unit_minor !== undefined ? Number(body.price_per_unit_minor) : null,
         body.minimum_charge_minor !== undefined ? Number(body.minimum_charge_minor) : null,
-        body.currency || null,
+        body.currency || "FCFA",
         body.estimated_days_min !== undefined ? Number(body.estimated_days_min) : null,
         body.estimated_days_max !== undefined ? Number(body.estimated_days_max) : null,
         body.note !== undefined ? String(body.note) : null,
-        body.category_tag !== undefined ? String(body.category_tag) : null,
+        body.category_tag || body.service_name || null,
+        validModeId,
         tariffId
       ),
       c.env.DB.prepare(`
@@ -1209,6 +1232,15 @@ adminRouter.put("/tariffs/:id", async (c) => {
         VALUES (?, ?, 'tariff.update', 'tariff', ?, ?)
       `).bind(crypto.randomUUID(), user?.userId || "admin", tariffId, JSON.stringify(body)),
     ]);
+
+    if (body.origin_country || body.destination_country) {
+      await c.env.DB.prepare(`
+        UPDATE routes
+        SET origin_country = COALESCE(?, origin_country),
+            destination_country = COALESCE(?, destination_country)
+        WHERE id = ?
+      `).bind(body.origin_country || null, body.destination_country || null, existing.route_id).run();
+    }
   } else {
     // Upsert pour les tarifs par défaut / créés côté interface
     let routeId = "route-default";
@@ -1237,13 +1269,13 @@ adminRouter.put("/tariffs/:id", async (c) => {
     `).bind(
       tariffId,
       routeId,
-      body.shipping_mode_id || "mode-air-standard",
-      body.currency || "USD",
+      validModeId,
+      body.currency || "FCFA",
       body.price_per_unit_minor || 0,
       body.minimum_charge_minor || 0,
       body.estimated_days_min || null,
       body.estimated_days_max || null,
-      body.category_tag || null,
+      body.category_tag || body.service_name || null,
       body.note || null
     ).run();
 

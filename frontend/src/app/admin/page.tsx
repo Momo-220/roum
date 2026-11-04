@@ -3821,19 +3821,16 @@ export default function AdminPage() {
       _isPendingEdit: false,
     };
 
-    let nextList: any[] = [];
-    setTariffsList((prev) => {
-      const exists = prev.some((t) => t.id === editingTariff.id);
-      if (exists) {
-        nextList = prev.map((t) => (t.id === editingTariff.id ? updatedItem : t));
-      } else {
-        nextList = [updatedItem, ...prev];
-      }
-      return nextList;
-    });
+    const currentList = tariffsList && tariffsList.length > 0 ? tariffsList : DEFAULT_INITIAL_TARIFFS;
+    const exists = currentList.some((t) => t.id === editingTariff.id);
+    const nextList = exists
+      ? currentList.map((t) => (t.id === editingTariff.id ? updatedItem : t))
+      : [updatedItem, ...currentList];
+
+    setTariffsList(nextList);
 
     try {
-      localStorage.setItem("roum_tariffs_data", JSON.stringify(nextList.length > 0 ? nextList : [updatedItem]));
+      localStorage.setItem("roum_tariffs_data", JSON.stringify(nextList));
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("roum_tariffs_updated"));
       }
@@ -3842,10 +3839,11 @@ export default function AdminPage() {
     }
 
     try {
-      if (token) {
-        await fetch(`/api/admin/tariffs/${editingTariff.id}`, {
+      const activeToken = token || (typeof window !== "undefined" ? sessionStorage.getItem("roum_admin_token") || localStorage.getItem("roum_admin_token") : null);
+      if (activeToken) {
+        const res = await fetch(`/api/admin/tariffs/${editingTariff.id}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${activeToken}` },
           body: JSON.stringify({
             service_name: updatedItem.service_name,
             origin_country: updatedItem.origin_country,
@@ -3859,6 +3857,20 @@ export default function AdminPage() {
             note: updatedItem.note,
           }),
         });
+
+        if (res.ok) {
+          fetch("/api/admin/tariffs", { headers: { Authorization: `Bearer ${activeToken}` } })
+            .then((r) => r.json())
+            .then((d) => {
+              if (d.tariffs && d.tariffs.length > 0) {
+                setTariffsList(d.tariffs);
+                localStorage.setItem("roum_tariffs_data", JSON.stringify(d.tariffs));
+              }
+            })
+            .catch(() => {});
+        } else {
+          console.error("Erreur serveur lors de la mise à jour du tarif:", await res.text());
+        }
       }
     } catch (err) {
       console.error("Auto-save error to backend:", err);
