@@ -109,8 +109,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (!image) {
-      // Image générique par défaut esthétique liée au sourcing
-      image = "/images/services/sourcing_warehouse.jpg";
+      // Image générique par défaut esthétique liée au sourcing réel
+      image = "/images/services/sourcing_new.jpg";
     }
 
     if (!price || price <= 0) {

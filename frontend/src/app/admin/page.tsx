@@ -77,6 +77,8 @@ import {
   WaveLogo,
   OrangeMoneyLogo,
   MtnMomoLogo,
+  MoovMoneyLogo,
+  CompteMarocLogo,
   BankBaciLogo,
   IbanLogo,
   AlipayLogo,
@@ -2856,29 +2858,64 @@ export default function AdminPage() {
       fetch("/api/admin/shipments", { headers })
         .then((r) => r.json())
         .then((d) => {
-          if (d.shipments && d.shipments.length > 0) {
-            setShipments(d.shipments);
-            if (typeof window !== "undefined") {
+          setShipments((prevLocal) => {
+            let localSaved: any[] = [];
+            try {
+              const str = localStorage.getItem("roum_shipments_data");
+              if (str) localSaved = JSON.parse(str);
+            } catch {}
+            const baseList = localSaved.length > 0 ? localSaved : (prevLocal.length > 0 ? prevLocal : DEFAULT_15_SHIPMENTS);
+
+            if (d.shipments && Array.isArray(d.shipments) && d.shipments.length > 0) {
+              const merged = [...baseList];
+              d.shipments.forEach((serverS: any) => {
+                const idx = merged.findIndex((m) => (m.id && m.id === serverS.id) || (m.tracking_number && m.tracking_number === serverS.tracking_number));
+                if (idx >= 0) {
+                  merged[idx] = { ...serverS, ...merged[idx] };
+                } else {
+                  merged.push(serverS);
+                }
+              });
               try {
-                localStorage.setItem("roum_shipments_data", JSON.stringify(d.shipments));
+                localStorage.setItem("roum_shipments_data", JSON.stringify(merged));
               } catch {}
+              return merged;
             }
-          } else {
-            setShipments(DEFAULT_15_SHIPMENTS);
-          }
+            return baseList;
+          });
         })
-        .catch(() => setShipments(DEFAULT_15_SHIPMENTS));
+        .catch(() => {});
 
       fetch("/api/admin/requests", { headers })
         .then((r) => r.json())
         .then((d) => {
-          if (d.requests && d.requests.length > 0) {
-            setRequestsList(d.requests);
-          } else {
-            setRequestsList(DEFAULT_REQUESTS);
-          }
+          setRequestsList((prevLocal) => {
+            let localSaved: any[] = [];
+            try {
+              const str = localStorage.getItem("roum_requests_data");
+              if (str) localSaved = JSON.parse(str);
+            } catch {}
+            const baseList = localSaved.length > 0 ? localSaved : (prevLocal.length > 0 ? prevLocal : DEFAULT_REQUESTS);
+
+            if (d.requests && Array.isArray(d.requests) && d.requests.length > 0) {
+              const merged = [...baseList];
+              d.requests.forEach((sReq: any) => {
+                const idx = merged.findIndex((m) => (m.id && m.id === sReq.id) || (m.reference && m.reference === sReq.reference));
+                if (idx >= 0) {
+                  merged[idx] = { ...sReq, ...merged[idx] };
+                } else {
+                  merged.push(sReq);
+                }
+              });
+              try {
+                localStorage.setItem("roum_requests_data", JSON.stringify(merged));
+              } catch {}
+              return merged;
+            }
+            return baseList;
+          });
         })
-        .catch(() => setRequestsList(DEFAULT_REQUESTS));
+        .catch(() => {});
 
       fetch("/api/admin/clients", { headers })
         .then((r) => r.json())
@@ -2894,16 +2931,33 @@ export default function AdminPage() {
       fetch("/api/admin/tariffs", { headers })
         .then((r) => r.json())
         .then((d) => {
-          if (d.tariffs && d.tariffs.length > 0) {
-            setTariffsList((curr) => {
-              if (Object.keys(pendingTariffEditsRef.current).length > 0) return curr;
-              return d.tariffs;
-            });
-          } else {
-            setTariffsList((curr) => (curr.length > 0 ? curr : DEFAULT_INITIAL_TARIFFS));
-          }
+          setTariffsList((prevLocal) => {
+            let localSaved: any[] = [];
+            try {
+              const str = localStorage.getItem("roum_tariffs_data");
+              if (str) localSaved = JSON.parse(str);
+            } catch {}
+            const baseList = localSaved.length > 0 ? localSaved : (prevLocal.length > 0 ? prevLocal : DEFAULT_INITIAL_TARIFFS);
+
+            if (d.tariffs && Array.isArray(d.tariffs) && d.tariffs.length > 0) {
+              const merged = [...baseList];
+              d.tariffs.forEach((serverT: any) => {
+                const idx = merged.findIndex((m) => m.id === serverT.id);
+                if (idx >= 0) {
+                  merged[idx] = { ...serverT, ...merged[idx] };
+                } else {
+                  merged.push(serverT);
+                }
+              });
+              try {
+                localStorage.setItem("roum_tariffs_data", JSON.stringify(merged));
+              } catch {}
+              return merged;
+            }
+            return baseList;
+          });
         })
-        .catch(() => setTariffsList((curr) => (curr.length > 0 ? curr : DEFAULT_INITIAL_TARIFFS)));
+        .catch(() => {});
       fetch("/api/admin/routes", { headers })
         .then((r) => r.json())
         .then((d) => d.routes && setRoutesList(d.routes))
@@ -3220,9 +3274,22 @@ export default function AdminPage() {
   };
 
   const handleOpenConvertModal = (reqItem: any) => {
-    let matchedRouteId = availableRoutes[0]?.id || "route-cn-ci";
+    const defaultFallbackRoutes = [
+      { id: "route-cn-ci-gz", origin_country: "Chine", destination_country: "Côte d'Ivoire" },
+      { id: "route-cn-sn", origin_country: "Chine", destination_country: "Sénégal" },
+      { id: "route-cn-ml", origin_country: "Chine", destination_country: "Mali" },
+      { id: "route-cn-bf", origin_country: "Chine", destination_country: "Burkina Faso" },
+      { id: "route-cn-gn", origin_country: "Chine", destination_country: "Guinée" },
+      { id: "route-cn-cm-gz", origin_country: "Chine", destination_country: "Cameroun" },
+      { id: "route-cn-bj-gz", origin_country: "Chine", destination_country: "Bénin" },
+      { id: "route-ae-ci", origin_country: "Émirats Arabes Unis", destination_country: "Côte d'Ivoire" },
+      { id: "route-ma-sn", origin_country: "Maroc", destination_country: "Sénégal" },
+      { id: "route-fr-ci", origin_country: "France", destination_country: "Côte d'Ivoire" },
+    ];
+    const routesPool = availableRoutes && availableRoutes.length > 0 ? availableRoutes : defaultFallbackRoutes;
+    let matchedRouteId = routesPool[0]?.id || "route-cn-ci-gz";
     if (reqItem.destination_country) {
-      const found = availableRoutes.find(
+      const found = routesPool.find(
         (r) =>
           (r.destination_country || "").toLowerCase().includes((reqItem.destination_country || "").toLowerCase()) ||
           (reqItem.destination_country || "").toLowerCase().includes((r.destination_country || "").toLowerCase())
@@ -3230,9 +3297,16 @@ export default function AdminPage() {
       if (found) matchedRouteId = found.id;
     }
 
-    let matchedModeId = availableModes[0]?.id || "AIR_STANDARD";
+    const defaultFallbackModes = [
+      { id: "AIR_EXPRESS", name: "Avion Express (4 à 5 jours)" },
+      { id: "AIR_STANDARD", name: "Avion Normal (10 à 14 jours)" },
+      { id: "AIR_SPECIAL", name: "Avion Spécial Batteries & High-Tech (7 à 10 jours)" },
+      { id: "SEA_LCL", name: "Voie Maritime Groupage (35 à 45 jours)" },
+    ];
+    const modesPool = availableModes && availableModes.length > 0 ? availableModes : defaultFallbackModes;
+    let matchedModeId = modesPool[0]?.id || "AIR_STANDARD";
     if (reqItem.shipping_mode_id || reqItem.shipping_mode_type) {
-      const found = availableModes.find(
+      const found = modesPool.find(
         (m) =>
           m.id === reqItem.shipping_mode_id ||
           (reqItem.shipping_mode_type === "SEA" ? m.id.includes("SEA") : m.id.includes("AIR"))
@@ -6874,25 +6948,40 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* KPI 4 : Comptes Réception Client */}
+                {/* KPI 4 : Canaux de Réception & Envoi Officiels */}
                 <div className="card-clean" style={{ padding: "18px 20px", borderRadius: "18px", background: "#FFFFFF" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
                     <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                      Canaux de Réception Officiels
+                      Canaux de Paiement Officiels
                     </span>
                     <span style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#FAF5FF", display: "flex", alignItems: "center", justifyContent: "center", color: "#7E22CE" }}>
                       <ShieldCheck size={16} />
                     </span>
                   </div>
-                  <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#140D09", marginTop: "4px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px" }}>
-                    <span style={{ color: "#1E40AF" }}>Wave</span>
-                    <span style={{ color: "#9CA3AF", fontWeight: 400 }}>·</span>
-                    <span style={{ color: "#C2410C" }}>Orange Money</span>
-                    <span style={{ color: "#9CA3AF", fontWeight: 400 }}>·</span>
-                    <span style={{ color: "#047857" }}>Compte Maroc</span>
+                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px", marginTop: "4px" }}>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "#F0F9FF", padding: "3px 8px", borderRadius: "9999px", border: "1px solid #BAE6FD" }}>
+                      <WaveLogo size={16} />
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#0369A1" }}>Wave</span>
+                    </div>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "#FFF7ED", padding: "3px 8px", borderRadius: "9999px", border: "1px solid #FFEDD5" }}>
+                      <OrangeMoneyLogo size={16} />
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#C2410C" }}>Orange</span>
+                    </div>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "#F0FDF4", padding: "3px 8px", borderRadius: "9999px", border: "1px solid #BBF7D0" }}>
+                      <CompteMarocLogo size={16} />
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#15803D" }}>Maroc</span>
+                    </div>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "#EFF6FF", padding: "3px 8px", borderRadius: "9999px", border: "1px solid #BFDBFE" }}>
+                      <AlipayLogo size={16} />
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#1D4ED8" }}>Alipay ¥</span>
+                    </div>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "#ECFDF5", padding: "3px 8px", borderRadius: "9999px", border: "1px solid #A7F3D0" }}>
+                      <WeChatPayLogo size={16} />
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#047857" }}>WeChat ¥</span>
+                    </div>
                   </div>
-                  <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: "6px" }}>
-                    Comptes synchronisés en direct sur le site public
+                  <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: "6px" }}>
+                    Logos officiels & virements direct usine
                   </div>
                 </div>
               </div>
@@ -6983,17 +7072,15 @@ export default function AdminPage() {
                 </div>
 
                 <div style={{ overflowX: "auto" }}>
-                  <table className="table-clean">
+                  <table className="table-clean" style={{ minWidth: "900px" }}>
                     <thead>
                       <tr>
-                        <th style={{ borderTopLeftRadius: "10px" }}>Dossier</th>
-                        <th>Client &amp; Destination</th>
-                        <th>Montant Proforma</th>
-                        <th>Fournisseur Usine</th>
-                        <th>Lien Boutique / Proforma</th>
-                        <th>Marchandise</th>
-                        <th>Statut Virement</th>
-                        <th className="col-right" style={{ borderTopRightRadius: "10px" }}>Actions</th>
+                        <th style={{ borderTopLeftRadius: "10px", width: "220px" }}>Dossier &amp; Client</th>
+                        <th style={{ width: "160px" }}>Montant Proforma</th>
+                        <th style={{ width: "200px" }}>Fournisseur &amp; Mark</th>
+                        <th>Article &amp; Lien</th>
+                        <th style={{ width: "140px" }}>Statut Virement</th>
+                        <th className="col-right" style={{ borderTopRightRadius: "10px", width: "240px" }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -7008,7 +7095,12 @@ export default function AdminPage() {
                           r.supplier_contact ||
                           r.description?.match(/Usine:\s*([^|]+)/)?.[1]?.trim() ||
                           r.supplier_name ||
-                          "WeChat: contact_usine";
+                          "WeChat: sz_supplier";
+
+                        const shippingMarkVal =
+                          r.shipping_mark ||
+                          r.description?.match(/Shipping Mark:\s*([^|]+)/)?.[1]?.trim() ||
+                          `ROUM / ${r.reference}`;
 
                         const productLinkVal =
                           r.product_url ||
@@ -7017,160 +7109,186 @@ export default function AdminPage() {
                           "";
 
                         const goodsVal =
+                          r.product_name ||
                           r.items?.[0]?.description ||
                           r.description?.match(/Marchandise:\s*([^|]+)/)?.[1]?.trim() ||
                           r.description ||
-                          "Marchandises générales";
+                          "Marchandises Chine";
 
                         const parsedRmbNum = parseFloat(rmbAmountVal.replace(/\s/g, "").replace(",", ".")) || 0;
                         const cfaEquivalent = Math.round(parsedRmbNum * 88);
 
+                        const productImg = r.product_image || (productLinkVal ? "/images/services/sourcing_new.jpg" : "");
+
                         return (
                           <tr key={r.id} className="table-row-clean">
-                            {/* Réf Dossier */}
+                            {/* 1. Dossier & Client */}
                             <td>
-                              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenRequestDetail(r)}
-                                  className="tabular-nums"
-                                  style={{
-                                    background: "none",
-                                    border: "none",
-                                    color: "#CC4E16",
-                                    fontWeight: 800,
-                                    fontSize: "0.82rem",
-                                    cursor: "pointer",
-                                    padding: 0,
-                                    textAlign: "left",
-                                    fontFamily: "monospace",
-                                  }}
-                                  title="Consulter le dossier complet"
-                                >
-                                  {r.reference}
-                                </button>
-                                <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                                  {r.created_at?.substring(0, 10) || "Aujourd'hui"}
-                                </span>
+                              <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenRequestDetail(r)}
+                                    className="tabular-nums"
+                                    style={{
+                                      background: "#FFF7ED",
+                                      border: "1px solid #FFEDD5",
+                                      color: "#CC4E16",
+                                      fontWeight: 800,
+                                      fontSize: "0.78rem",
+                                      cursor: "pointer",
+                                      padding: "2px 8px",
+                                      borderRadius: "9999px",
+                                      fontFamily: "monospace",
+                                    }}
+                                    title="Consulter le dossier complet"
+                                  >
+                                    {r.reference}
+                                  </button>
+                                  <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                                    {r.created_at?.substring(0, 10) || "Aujourd'hui"}
+                                  </span>
+                                </div>
+                                <div style={{ fontWeight: 700, color: "var(--text-main)", fontSize: "0.84rem", marginTop: "2px" }}>
+                                  {r.client_name}
+                                </div>
+                                <div style={{ fontSize: "0.72rem", color: "#15803D" }}>
+                                  <a
+                                    href={`https://wa.me/${(r.client_phone || "").replace(/[^0-9]/g, "")}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ color: "#15803D", textDecoration: "none", fontWeight: 600 }}
+                                  >
+                                    WhatsApp: {r.client_phone}
+                                  </a>
+                                </div>
+                                <div style={{ fontSize: "0.70rem", color: "#6B7280" }}>
+                                  ➔ {r.destination_country || "Côte d'Ivoire"}
+                                </div>
                               </div>
                             </td>
 
-                            {/* Client & Destination */}
-                            <td>
-                              <div style={{ fontWeight: 700, color: "var(--text-main)", fontSize: "0.82rem" }}>
-                                {r.client_name}
-                              </div>
-                              <div style={{ fontSize: "0.71rem", color: "var(--text-muted)" }}>
-                                <a
-                                  href={`https://wa.me/${(r.client_phone || "").replace(/[^0-9]/g, "")}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{ color: "#15803D", textDecoration: "none", fontWeight: 600 }}
-                                >
-                                  {r.client_phone}
-                                </a>
-                              </div>
-                              <div style={{ fontSize: "0.70rem", color: "#6B7280", marginTop: "2px" }}>
-                                ➔ {r.destination_country || "Afrique"}
-                              </div>
-                            </td>
-
-                            {/* Montant Yuans RMB */}
+                            {/* 2. Montant Yuans RMB */}
                             <td>
                               <div
                                 style={{
                                   display: "inline-block",
                                   background: "#FFF7ED",
                                   border: "1px solid #FFEDD5",
-                                  padding: "4px 10px",
-                                  borderRadius: "8px",
+                                  padding: "6px 10px",
+                                  borderRadius: "12px",
                                 }}
                               >
-                                <div style={{ fontSize: "0.98rem", fontWeight: 800, color: "#9A3412", fontFamily: "var(--c-font-display)" }}>
+                                <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#9A3412", fontFamily: "var(--c-font-display)" }}>
                                   ¥ {rmbAmountVal}
                                 </div>
-                                <div style={{ fontSize: "0.70rem", color: "#C2410C", fontWeight: 600 }}>
+                                <div style={{ fontSize: "0.72rem", color: "#C2410C", fontWeight: 600, marginTop: "2px" }}>
                                   ~ {cfaEquivalent.toLocaleString("fr-FR")} FCFA
                                 </div>
                               </div>
                             </td>
 
-                            {/* Contact Fournisseur WeChat */}
+                            {/* 3. Fournisseur & Shipping Mark */}
                             <td>
-                              <div style={{ fontSize: "0.80rem", fontWeight: 600, color: "var(--text-main)" }}>
-                                {supplierVal}
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (typeof navigator !== "undefined") {
-                                    navigator.clipboard.writeText(supplierVal);
-                                  }
-                                }}
-                                style={{
-                                  background: "transparent",
-                                  border: "none",
-                                  color: "#CC4E16",
-                                  fontSize: "0.69rem",
-                                  fontWeight: 600,
-                                  cursor: "pointer",
-                                  padding: 0,
-                                  marginTop: "2px",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "4px",
-                                }}
-                              >
-                                <Copy size={11} />
-                                <span>Copier contact usine</span>
-                              </button>
-                            </td>
-
-                            {/* Lien Produit / Facture */}
-                            <td>
-                              {productLinkVal ? (
-                                <a
-                                  href={productLinkVal}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="btn btn-secondary"
+                              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                <div style={{ fontSize: "0.80rem", fontWeight: 600, color: "var(--text-main)" }}>
+                                  {supplierVal}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (typeof navigator !== "undefined") {
+                                      navigator.clipboard.writeText(supplierVal);
+                                    }
+                                  }}
                                   style={{
+                                    background: "#F3F4F6",
+                                    border: "none",
+                                    borderRadius: "9999px",
+                                    color: "#4B5563",
+                                    fontSize: "0.68rem",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    padding: "3px 8px",
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    gap: "6px",
-                                    padding: "5px 10px",
-                                    fontSize: "0.72rem",
-                                    borderRadius: "8px",
-                                    textDecoration: "none",
+                                    gap: "4px",
+                                    width: "fit-content",
                                   }}
-                                  title={productLinkVal}
                                 >
-                                  <span>Ouvrir proforma</span>
-                                  <ExternalLink size={12} />
-                                </a>
-                              ) : (
-                                <span style={{ fontSize: "0.74rem", color: "#9CA3AF" }}>Non fourni</span>
-                              )}
-                            </td>
-
-                            {/* Marchandise */}
-                            <td style={{ maxWidth: "200px" }}>
-                              <div
-                                style={{
-                                  fontSize: "0.76rem",
-                                  color: "var(--text-main)",
-                                  lineHeight: 1.35,
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                }}
-                                title={goodsVal}
-                              >
-                                {goodsVal}
+                                  <Copy size={10} />
+                                  <span>Copier contact usine</span>
+                                </button>
+                                <div style={{ fontSize: "0.70rem", color: "#475569", marginTop: "2px" }}>
+                                  Mark : <span style={{ fontWeight: 700, fontFamily: "monospace", color: "#0F172A" }}>{shippingMarkVal}</span>
+                                </div>
                               </div>
                             </td>
 
-                            {/* Statut Virement */}
+                            {/* 4. Article & Lien Proforma (avec photo sans glitch) */}
+                            <td>
+                              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <img
+                                  src={productImg || "/images/services/sourcing_new.jpg"}
+                                  alt="Photo article"
+                                  referrerPolicy="no-referrer"
+                                  onError={(e) => {
+                                    e.currentTarget.onerror = null;
+                                    e.currentTarget.src = "/images/services/sourcing_new.jpg";
+                                  }}
+                                  style={{
+                                    width: "44px",
+                                    height: "44px",
+                                    objectFit: "cover",
+                                    borderRadius: "10px",
+                                    flexShrink: 0,
+                                    border: "1px solid #E5E7EB",
+                                    background: "#FFFFFF",
+                                  }}
+                                />
+                                <div style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: 0 }}>
+                                  <div
+                                    style={{
+                                      fontSize: "0.78rem",
+                                      fontWeight: 600,
+                                      color: "var(--text-main)",
+                                      lineHeight: 1.35,
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                      maxWidth: "180px",
+                                    }}
+                                    title={goodsVal}
+                                  >
+                                    {goodsVal}
+                                  </div>
+                                  {productLinkVal ? (
+                                    <a
+                                      href={productLinkVal}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "4px",
+                                        fontSize: "0.70rem",
+                                        fontWeight: 600,
+                                        color: "#2563EB",
+                                        textDecoration: "none",
+                                      }}
+                                      title={productLinkVal}
+                                    >
+                                      <span>Lien proforma</span>
+                                      <ExternalLink size={10} />
+                                    </a>
+                                  ) : (
+                                    <span style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>Lien direct</span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* 5. Statut Virement */}
                             <td>
                               <select
                                 value={r.status}
@@ -7178,7 +7296,7 @@ export default function AdminPage() {
                                 className="status-select-pill"
                                 style={{
                                   fontSize: "0.74rem",
-                                  padding: "4px 8px",
+                                  padding: "5px 10px",
                                   borderRadius: "9999px",
                                   fontWeight: 700,
                                 }}
@@ -7192,9 +7310,19 @@ export default function AdminPage() {
                               </select>
                             </td>
 
-                            {/* Actions */}
+                            {/* 6. Actions en pilules */}
                             <td className="col-right">
-                              <div style={{ display: "inline-flex", gap: "6px", alignItems: "center", justifyContent: "flex-end" }}>
+                              <div style={{ display: "inline-flex", gap: "6px", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenConvertModal(r)}
+                                  className="btn btn-secondary"
+                                  style={{ padding: "5px 10px", fontSize: "0.72rem", borderRadius: "9999px", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                  title="Attribuer un numéro de suivi et créer l'expédition"
+                                >
+                                  <Package size={12} />
+                                  <span>Convertir</span>
+                                </button>
                                 <a
                                   href={`https://wa.me/${(r.client_phone || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
                                     `Bonjour ${r.client_name}, concernant votre dossier de règlement usine N° ${r.reference} (${rmbAmountVal} RMB ¥), nous avons bien reçu votre demande.`
@@ -7202,7 +7330,7 @@ export default function AdminPage() {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="btn btn-secondary"
-                                  style={{ padding: "5px 10px", fontSize: "0.72rem", color: "#15803D" }}
+                                  style={{ padding: "5px 10px", fontSize: "0.72rem", color: "#15803D", borderRadius: "9999px" }}
                                   title="Contacter le client sur WhatsApp"
                                 >
                                   WhatsApp
@@ -7212,7 +7340,7 @@ export default function AdminPage() {
                                     type="button"
                                     onClick={() => handleUpdateRequestStatus(r.id, "CONVERTED")}
                                     className="btn btn-primary"
-                                    style={{ padding: "5px 10px", fontSize: "0.72rem" }}
+                                    style={{ padding: "5px 10px", fontSize: "0.72rem", borderRadius: "9999px" }}
                                     title="Confirmer que le virement a été fait en Chine"
                                   >
                                     Valider Virement
@@ -10853,29 +10981,68 @@ export default function AdminPage() {
               Attribue un numéro de suivi officiel et crée le dossier dans le système.
             </p>
 
-            <form onSubmit={handleConvertRequestSubmit} style={{ display: "grid", gap: "12px" }}>
+            <form onSubmit={handleConvertRequestSubmit} style={{ display: "grid", gap: "14px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div>
-                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Liaison</label>
+                  <label style={{ fontSize: "0.78rem", color: "#374151", display: "block", marginBottom: "4px", fontWeight: "700" }}>Liaison Corridors</label>
                   <select
-                    value={availableRoutes.some((r) => r.id === convertForm.route_id) ? convertForm.route_id : availableRoutes[0]?.id || ""}
+                    value={convertForm.route_id}
                     onChange={(e) => setConvertForm({ ...convertForm, route_id: e.target.value })}
                     className="input-clean"
+                    style={{
+                      color: "#111827",
+                      backgroundColor: "#FFFFFF",
+                      fontWeight: "600",
+                      fontSize: "0.85rem",
+                      height: "44px",
+                      borderRadius: "14px",
+                      border: "1px solid #D1D5DB",
+                    }}
                   >
-                    {availableRoutes.map((r) => (
-                      <option key={r.id} value={r.id}>{r.origin_country} → {r.destination_country}</option>
+                    {(availableRoutes.length > 0 ? availableRoutes : [
+                      { id: "route-cn-ci-gz", origin_country: "Chine", destination_country: "Côte d'Ivoire" },
+                      { id: "route-cn-sn", origin_country: "Chine", destination_country: "Sénégal" },
+                      { id: "route-cn-ml", origin_country: "Chine", destination_country: "Mali" },
+                      { id: "route-cn-bf", origin_country: "Chine", destination_country: "Burkina Faso" },
+                      { id: "route-cn-gn", origin_country: "Chine", destination_country: "Guinée" },
+                      { id: "route-cn-cm-gz", origin_country: "Chine", destination_country: "Cameroun" },
+                      { id: "route-cn-bj-gz", origin_country: "Chine", destination_country: "Bénin" },
+                      { id: "route-ae-ci", origin_country: "Émirats Arabes Unis", destination_country: "Côte d'Ivoire" },
+                      { id: "route-ma-sn", origin_country: "Maroc", destination_country: "Sénégal" },
+                      { id: "route-fr-ci", origin_country: "France", destination_country: "Côte d'Ivoire" },
+                    ]).map((r) => (
+                      <option key={r.id} value={r.id} style={{ color: "#111827", backgroundColor: "#FFFFFF" }}>
+                        {r.origin_country} ➔ {r.destination_country}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Mode de Transport</label>
+                  <label style={{ fontSize: "0.78rem", color: "#374151", display: "block", marginBottom: "4px", fontWeight: "700" }}>Mode de Transport</label>
                   <select
-                    value={availableModes.some((m) => m.id === convertForm.shipping_mode_id) ? convertForm.shipping_mode_id : availableModes[0]?.id || ""}
+                    value={convertForm.shipping_mode_id}
                     onChange={(e) => setConvertForm({ ...convertForm, shipping_mode_id: e.target.value })}
                     className="input-clean"
+                    style={{
+                      color: "#111827",
+                      backgroundColor: "#FFFFFF",
+                      fontWeight: "600",
+                      fontSize: "0.85rem",
+                      height: "44px",
+                      borderRadius: "14px",
+                      border: "1px solid #D1D5DB",
+                    }}
                   >
-                    {availableModes.map((m) => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
+                    {(availableModes.length > 0 ? availableModes : [
+                      { id: "AIR_EXPRESS", name: "Avion Express (4 à 5 jours)" },
+                      { id: "AIR_STANDARD", name: "Avion Normal (10 à 14 jours)" },
+                      { id: "AIR_SPECIAL", name: "Spécial Batteries & High-Tech (7 à 10 jours)" },
+                      { id: "SEA_LCL", name: "Voie Maritime Groupage (35 à 45 jours)" },
+                      { id: "SEA_FCL", name: "Voie Maritime Conteneur Complet" },
+                    ]).map((m) => (
+                      <option key={m.id} value={m.id} style={{ color: "#111827", backgroundColor: "#FFFFFF" }}>
+                        {m.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -10892,6 +11059,7 @@ export default function AdminPage() {
                     value={convertForm.weight_kg}
                     onChange={(e) => setConvertForm({ ...convertForm, weight_kg: Number(e.target.value) })}
                     className="input-clean"
+                    style={{ borderRadius: "12px" }}
                   />
                 </div>
                 <div>
@@ -10903,6 +11071,7 @@ export default function AdminPage() {
                     value={convertForm.volume_cbm}
                     onChange={(e) => setConvertForm({ ...convertForm, volume_cbm: Number(e.target.value) })}
                     className="input-clean"
+                    style={{ borderRadius: "12px" }}
                     placeholder="Ex: 0.12"
                   />
                 </div>
@@ -10917,6 +11086,7 @@ export default function AdminPage() {
                   value={convertForm.estimated_price}
                   onChange={(e) => setConvertForm({ ...convertForm, estimated_price: Number(e.target.value) })}
                   className="input-clean"
+                  style={{ borderRadius: "12px" }}
                   placeholder="Ex : 60000"
                 />
               </div>
@@ -10928,16 +11098,17 @@ export default function AdminPage() {
                   value={convertForm.package_label}
                   onChange={(e) => setConvertForm({ ...convertForm, package_label: e.target.value })}
                   className="input-clean"
+                  style={{ borderRadius: "12px" }}
                   placeholder="Ex: Colis Vêtements & Marchandises"
                 />
               </div>
 
-              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "12px" }}>
-                <button type="button" onClick={() => setShowConvertRequestModal(null)} className="btn btn-secondary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "14px" }}>
+                <button type="button" onClick={() => setShowConvertRequestModal(null)} className="btn btn-secondary" style={{ borderRadius: "9999px", padding: "8px 18px", display: "inline-flex", alignItems: "center", gap: "6px" }}>
                   <X size={14} /> Annuler
                 </button>
-                <button type="submit" className="btn btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                  <Package size={14} /> Générer le Suivi & Créer Expédition
+                <button type="submit" className="btn btn-primary" style={{ borderRadius: "9999px", padding: "8px 22px", display: "inline-flex", alignItems: "center", gap: "6px", background: "#1C1815", color: "#FAF8F5" }}>
+                  <Package size={14} /> Générer le Suivi &amp; Créer Expédition
                 </button>
               </div>
             </form>

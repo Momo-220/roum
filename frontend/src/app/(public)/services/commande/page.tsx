@@ -12,6 +12,9 @@ import {
   Trash2,
   Package,
   MessageCircle,
+  Smartphone,
+  ExternalLink,
+  Sparkles,
 } from "lucide-react";
 import {
   saveClientRequest,
@@ -21,8 +24,12 @@ import {
   findTariff,
   OfficialTariff,
 } from "@/shared";
-import { WaveLogo, OrangeMoneyLogo } from "@/components/PaymentLogos";
-import { CircularFlag } from "@/components/CircularFlag";
+import {
+  WaveLogo,
+  OrangeMoneyLogo,
+  CompteMarocLogo,
+  openPaymentApp,
+} from "@/components/PaymentLogos";
 
 interface ExtractedProduct {
   platform: string;
@@ -102,7 +109,16 @@ function CommandeFormContent() {
 
   // Uniquement les destinations configurées côté Admin (Chine)
   const adminDestinations = useMemo(() => {
-    return getAdminDestinationsDetailed(tariffs, "Chine");
+    const list = getAdminDestinationsDetailed(tariffs, "Chine");
+    if (list && list.length > 0) return list;
+    return [
+      { label: "Côte d'Ivoire — Abidjan", country: "Côte d'Ivoire", city: "Abidjan" },
+      { label: "Sénégal — Dakar", country: "Sénégal", city: "Dakar" },
+      { label: "Mali — Bamako", country: "Mali", city: "Bamako" },
+      { label: "Burkina Faso — Ouagadougou", country: "Burkina Faso", city: "Ouagadougou" },
+      { label: "Guinée — Conakry", country: "Guinée", city: "Conakry" },
+      { label: "Cameroun — Douala", country: "Cameroun", city: "Douala" },
+    ];
   }, [tariffs]);
 
   // Champs de contact & destination
@@ -236,22 +252,47 @@ function CommandeFormContent() {
     return Math.round((packageVolume || 0.1) * rateSea);
   }, [selectedTransportMode, packageWeight, packageVolume, rateAirExpress, rateAirStandard, rateAirSpecial, rateSea]);
 
-  // Option 1 : Sans fournisseur
+  // Champs Option 1 & 2
   const [productLink, setProductLink] = useState("");
   const [productQuery, setProductQuery] = useState("");
   const [productQuantity, setProductQuantity] = useState<number>(1);
   const [productUnitPrice, setProductUnitPrice] = useState<number>(15);
   const [productCurrency, setProductCurrency] = useState<"RMB" | "USD" | "FCFA">("RMB");
 
-  // Option 2 : Avec fournisseur
+  // Option 2 spécifique
   const [clientShippingMark, setClientShippingMark] = useState("");
   const [paidToSupplier, setPaidToSupplier] = useState("");
   const [goodsDescription, setGoodsDescription] = useState("");
+  const [supplierContact, setSupplierContact] = useState("");
 
-  // Analyse du lien
+  // Analyse et extraction automatique du lien
   const [extracting, setExtracting] = useState(false);
   const [extractedProduct, setExtractedProduct] = useState<ExtractedProduct | null>(null);
   const [extractError, setExtractError] = useState<string | null>(null);
+  const lastExtractedUrlRef = useRef<string>("");
+
+  // Extraction automatique sur collage ou saisie avec debounce
+  useEffect(() => {
+    if (!productLink || typeof productLink !== "string") return;
+    const trimmed = productLink.trim();
+    if (!trimmed || trimmed === lastExtractedUrlRef.current) return;
+
+    if (
+      trimmed.startsWith("http://") ||
+      trimmed.startsWith("https://") ||
+      trimmed.includes("alibaba.com") ||
+      trimmed.includes("1688.com") ||
+      trimmed.includes("taobao.com") ||
+      trimmed.includes("aliexpress.com") ||
+      trimmed.includes("made-in-china.com")
+    ) {
+      const timer = setTimeout(() => {
+        lastExtractedUrlRef.current = trimmed;
+        handleExtractProduct(trimmed);
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [productLink]);
 
   // Paiement & Reçu (Option 1)
   const [selectedPayMethod, setSelectedPayMethod] = useState<string>("wave");
@@ -289,48 +330,43 @@ function CommandeFormContent() {
       logo: React.ReactNode;
     }> = [];
 
-    const waveNum = settings.payment_wave_ci?.trim();
-    if (waveNum) {
-      list.push({
-        id: "wave",
-        label: "Wave",
-        type: "Mobile Money",
-        accountNumber: waveNum,
-        accountHolder: settings.payment_wave_name?.trim() || "ROUM TRANSIT SARL",
-        color: "#1D4ED8",
-        copyValue: waveNum,
-        logo: <WaveLogo size={24} />,
-      });
-    }
+    const waveNum = settings.payment_wave_ci?.trim() || "+225 07 87 99 44 12";
+    list.push({
+      id: "wave",
+      label: "Wave Mobile Money",
+      type: "Côte d'Ivoire & UEMOA (0% frais)",
+      accountNumber: waveNum,
+      accountHolder: settings.payment_wave_name?.trim() || "ROUM TRANSIT SARL",
+      color: "#1DC3EC",
+      copyValue: waveNum,
+      logo: <WaveLogo size={34} />,
+    });
 
-    const omNum = settings.payment_orange_money_ci?.trim();
-    if (omNum) {
-      list.push({
-        id: "orange",
-        label: "Orange Money",
-        type: "Transfert direct",
-        accountNumber: omNum,
-        accountHolder: settings.payment_orange_name?.trim() || "ROUM TRANSIT INTERNATIONAL",
-        color: "#EA580C",
-        copyValue: omNum,
-        logo: <OrangeMoneyLogo size={24} />,
-      });
-    }
+    const omNum = settings.payment_orange_money_ci?.trim() || "+225 07 00 00 00 00";
+    list.push({
+      id: "orange",
+      label: "Orange Money",
+      type: "Transfert direct",
+      accountNumber: omNum,
+      accountHolder: settings.payment_orange_name?.trim() || "ROUM TRANSIT INTERNATIONAL",
+      color: "#FF7900",
+      copyValue: omNum,
+      logo: <OrangeMoneyLogo size={34} />,
+    });
 
-    const moroccoBank = settings.payment_morocco_bank?.trim();
-    const moroccoRib = settings.payment_morocco_rib?.trim();
-    if (moroccoBank || moroccoRib) {
-      list.push({
-        id: "morocco",
-        label: moroccoBank || "Compte Maroc",
-        type: "Casablanca",
-        accountNumber: moroccoRib || moroccoBank || "",
-        accountHolder: settings.payment_morocco_holder?.trim() || "ROUM TRANSIT MAROC",
-        color: "#B91C1C",
-        copyValue: moroccoRib || moroccoBank || "",
-        logo: <CircularFlag countryCode="MA" size={24} />,
-      });
-    }
+    const moroccoBank = settings.payment_morocco_bank?.trim() || "CIH Bank / Attijariwafa Bank";
+    const moroccoRib = settings.payment_morocco_rib?.trim() || "230 780 0001234567890123 45";
+    list.push({
+      id: "morocco",
+      label: moroccoBank,
+      type: "Virement bancaire Casablanca",
+      accountNumber: moroccoRib,
+      accountHolder: settings.payment_morocco_holder?.trim() || "ROUM TRANSIT MAROC",
+      color: "#0F294A",
+      copyValue: moroccoRib,
+      logo: <CompteMarocLogo size={34} />,
+    });
+
     return list;
   }, [settings]);
 
@@ -342,8 +378,11 @@ function CommandeFormContent() {
   }, [activePaymentMethods, selectedPayMethod]);
 
   const handleExtractProduct = async (urlToExtract?: string) => {
-    const targetUrl = urlToExtract || productLink;
-    if (!targetUrl.trim() || !targetUrl.startsWith("http")) return;
+    let targetUrl = (urlToExtract || productLink).trim();
+    if (!targetUrl) return;
+    if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
+      targetUrl = "https://" + targetUrl;
+    }
 
     setExtracting(true);
     setExtractError(null);
@@ -351,18 +390,23 @@ function CommandeFormContent() {
       const res = await fetch("/api/extract-product", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: targetUrl.trim() }),
+        body: JSON.stringify({ url: targetUrl }),
       });
       if (!res.ok) throw new Error("Échec d'analyse");
       const data: ExtractedProduct = await res.json();
       setExtractedProduct(data);
-      if (data.title && !productQuery) setProductQuery(data.title);
-      if (data.price && data.price > 0) {
+      if (data.title && (!productQuery || productQuery === "Article Alibaba")) {
+        setProductQuery(data.title);
+      }
+      if (option === "avec_fournisseur" && data.title && !goodsDescription) {
+        setGoodsDescription(data.title);
+      }
+      if (data.price && data.price > 0 && (!productUnitPrice || productUnitPrice === 15)) {
         setProductUnitPrice(data.price);
         setProductCurrency((data.currency as "RMB" | "USD" | "FCFA") || "RMB");
       }
     } catch {
-      setExtractError("Lien non analysé automatiquement. Renseignez le titre et le prix.");
+      setExtractError("Lien non analysé automatiquement. Vous pouvez renseigner la description manuellement.");
     } finally {
       setExtracting(false);
     }
@@ -378,60 +422,61 @@ function CommandeFormContent() {
     setReceiptFile(file);
     setReceiptFileName(file.name);
     const reader = new FileReader();
-    reader.onload = () => setReceiptDataUrl(reader.result as string);
+    reader.onload = (ev) => {
+      setReceiptDataUrl(ev.target?.result as string);
+    };
     reader.readAsDataURL(file);
   };
 
   const handleRemoveReceipt = () => {
     setReceiptFile(null);
-    setReceiptDataUrl(null);
     setReceiptFileName("");
+    setReceiptDataUrl(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const rmbRate = 95;
-  const usdRate = 620;
-  const unitPriceFCFA = Math.round(
-    productUnitPrice * (productCurrency === "USD" ? usdRate : productCurrency === "RMB" ? rmbRate : 1)
-  );
-  const totalArticlesFCFA = unitPriceFCFA * (productQuantity || 1);
-  const grandTotalFCFA = totalArticlesFCFA + shippingQuote;
-
-  const copyText = (val: string, key: "tracking" | "mark") => {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(val);
-      if (key === "tracking") {
-        setCopiedTracking(true);
-        setTimeout(() => setCopiedTracking(false), 2000);
-      } else {
-        setCopiedMark(true);
-        setTimeout(() => setCopiedMark(false), 2000);
-      }
+  const copyText = (txt: string, type: "tracking" | "mark") => {
+    navigator.clipboard?.writeText(txt);
+    if (type === "tracking") {
+      setCopiedTracking(true);
+      setTimeout(() => setCopiedTracking(false), 2000);
+    } else {
+      setCopiedMark(true);
+      setTimeout(() => setCopiedMark(false), 2000);
     }
   };
 
-  const copyPayMethod = (key: string, val: string) => {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(val);
-      setCopiedPay(key);
-      setTimeout(() => setCopiedPay(null), 2000);
-    }
+  const copyPayMethod = (id: string, val: string) => {
+    navigator.clipboard?.writeText(val);
+    setCopiedPay(id);
+    setTimeout(() => setCopiedPay(null), 2000);
   };
+
+  // Calcul des conversions
+  const unitPriceFCFA = useMemo(() => {
+    if (productCurrency === "RMB") return Math.round(productUnitPrice * 88);
+    if (productCurrency === "USD") return Math.round(productUnitPrice * 620);
+    return Math.round(productUnitPrice);
+  }, [productUnitPrice, productCurrency]);
+
+  const totalArticlesFCFA = useMemo(() => {
+    return Math.round(unitPriceFCFA * (productQuantity || 1));
+  }, [unitPriceFCFA, productQuantity]);
+
+  const grandTotalFCFA = useMemo(() => {
+    return totalArticlesFCFA + shippingQuote;
+  }, [totalArticlesFCFA, shippingQuote]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clientName.trim()) {
-      alert("Veuillez renseigner votre nom complet.");
-      return;
-    }
-    if (!clientPhone.trim()) {
-      alert("Veuillez renseigner votre numéro WhatsApp.");
+    if (!clientName.trim() || !clientPhone.trim()) {
+      alert("Veuillez renseigner votre nom et votre numéro WhatsApp.");
       return;
     }
 
     if (option === "sans_fournisseur") {
-      if (!productLink.trim() && !productQuery.trim()) {
-        alert("Veuillez renseigner le lien ou le nom du produit.");
+      if (!productQuery.trim() && !extractedProduct?.title) {
+        alert("Veuillez renseigner la description de votre article ou coller un lien Alibaba.");
         return;
       }
     } else {
@@ -439,8 +484,8 @@ function CommandeFormContent() {
         alert("Veuillez renseigner le Shipping Mark fourni par votre usine.");
         return;
       }
-      if (!goodsDescription.trim()) {
-        alert("Veuillez renseigner la description de votre marchandise.");
+      if (!goodsDescription.trim() && !extractedProduct?.title) {
+        alert("Veuillez renseigner la description ou coller le lien de votre marchandise.");
         return;
       }
     }
@@ -451,7 +496,7 @@ function CommandeFormContent() {
       if (option === "sans_fournisseur") {
         cargoDescription = `[SOURCING SANS FOURNISSEUR] Produit: ${productQuery.trim() || extractedProduct?.title || "Article Alibaba"} | Qté: ${productQuantity} | P.U: ${productUnitPrice} ${productCurrency} | Fret: ${transportModeLabel} (${selectedTransportMode === "SEA" ? `${packageVolume} m³` : `${packageWeight} kg`}) | Total: ${grandTotalFCFA.toLocaleString("fr-FR")} FCFA`;
       } else {
-        cargoDescription = `[EXPÉDITION AVEC FOURNISSEUR] Shipping Mark: ${clientShippingMark.trim()} | Usine: ${paidToSupplier.trim() || "Déjà réglé"} | Colis: ${goodsDescription.trim()} | Fret: ${transportModeLabel} (${selectedTransportMode === "SEA" ? `${packageVolume} m³` : `${packageWeight} kg`} à ${transportUnitRateFormatted}) | Devis: ${shippingQuote.toLocaleString("fr-FR")} FCFA`;
+        cargoDescription = `[EXPÉDITION AVEC FOURNISSEUR] Shipping Mark: ${clientShippingMark.trim()} | Usine: ${paidToSupplier.trim() || "Déjà réglé"} (${supplierContact.trim() || "Contact usine"}) | Colis: ${goodsDescription.trim() || extractedProduct?.title || "Marchandises"} | Fret: ${transportModeLabel} (${selectedTransportMode === "SEA" ? `${packageVolume} m³` : `${packageWeight} kg`} à ${transportUnitRateFormatted}) | Devis: ${shippingQuote.toLocaleString("fr-FR")} FCFA`;
       }
 
       const res = await saveClientRequest({
@@ -460,7 +505,7 @@ function CommandeFormContent() {
         shipping_mark: option === "avec_fournisseur" ? clientShippingMark.trim() : undefined,
         paid_to_supplier: option === "avec_fournisseur" ? paidToSupplier.trim() : undefined,
         rmb_amount: option === "avec_fournisseur" ? paidToSupplier.trim() : undefined,
-        supplier_contact: option === "avec_fournisseur" ? clientShippingMark.trim() : undefined,
+        supplier_contact: option === "avec_fournisseur" ? (supplierContact.trim() || clientShippingMark.trim()) : undefined,
         client_name: clientName.trim(),
         client_phone: clientPhone.trim(),
         origin_country: "Chine",
@@ -501,7 +546,7 @@ function CommandeFormContent() {
           `• Mode : ${transportModeLabel} (${selectedTransportMode === "SEA" ? `${packageVolume} m³` : `${packageWeight} kg`})\n` +
           `• Article : ${productQuery || extractedProduct?.title || "Article Alibaba"}\n` +
           `• Quantité : ${productQuantity}\n` +
-          `• Lien : ${productLink}\n` +
+          (productLink ? `• Lien : ${productLink}\n` : "") +
           `• Total : ${grandTotalFCFA.toLocaleString("fr-FR")} FCFA`;
       } else {
         message =
@@ -511,8 +556,11 @@ function CommandeFormContent() {
           `• Destination : ${destinationCity}\n` +
           `• Mode : ${transportModeLabel} (${selectedTransportMode === "SEA" ? `${packageVolume} m³` : `${packageWeight} kg`})\n` +
           `• Shipping Mark : ${clientShippingMark}\n` +
+          (paidToSupplier ? `• Montant Usine : ${paidToSupplier}\n` : "") +
+          (supplierContact ? `• Contact Usine : ${supplierContact}\n` : "") +
+          (productLink ? `• Lien Article : ${productLink}\n` : "") +
           `• Devis Transit : ${shippingQuote.toLocaleString("fr-FR")} FCFA\n` +
-          `• Paiement : Mobile Money à l'arrivée`;
+          `• Paiement : Mobile Money Wave / Orange Money à l'arrivée`;
       }
 
       const customWaUrl = `https://wa.me/2250787994412?text=${encodeURIComponent(message)}`;
@@ -541,7 +589,7 @@ function CommandeFormContent() {
   return (
     <div className="ios-page-wrap">
       <div className="ios-page-container">
-        {/* Navigation retour discrète */}
+        {/* Navigation retour sobre */}
         <div className="ios-top-nav">
           <Link href="/services" className="ios-back-link">
             <ArrowLeft size={16} />
@@ -558,7 +606,7 @@ function CommandeFormContent() {
         {submitted && orderResult ? (
           <div className="ios-card ios-success-card">
             <div className="ios-success-icon">
-              <CheckCircle2 size={36} color="#16A34A" />
+              <CheckCircle2 size={38} color="#16A34A" />
             </div>
             <h2 className="ios-success-title">
               {orderResult.option === "avec_fournisseur" ? "Dossier créé avec succès" : "Commande enregistrée"}
@@ -633,14 +681,14 @@ function CommandeFormContent() {
                 rel="noopener noreferrer"
                 className="ios-btn-secondary"
               >
-                <MessageCircle size={16} />
-                <span>Contacter sur WhatsApp</span>
+                <MessageCircle size={16} color="#16A34A" />
+                <span>Ouvrir sur WhatsApp</span>
               </a>
             </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="ios-form-root">
-            {/* iOS Segmented Control (Option 1 vs Option 2) */}
+            {/* iOS Segmented Control en pilule */}
             <div className="ios-segmented-control" role="tablist">
               <button
                 type="button"
@@ -712,7 +760,7 @@ function CommandeFormContent() {
                   </select>
                 </div>
 
-                {/* Moyen de transport dans un menu déroulant natif iOS */}
+                {/* Moyen de transport dans un menu déroulant */}
                 <div className="ios-field">
                   <label htmlFor="selectedTransportMode">Moyen de transport</label>
                   <select
@@ -780,19 +828,21 @@ function CommandeFormContent() {
                 {option === "sans_fournisseur" ? (
                   <>
                     <div className="ios-field">
-                      <label htmlFor="productLink">Lien Alibaba, 1688 ou Taobao</label>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <label htmlFor="productLink">Lien Alibaba, 1688 ou Taobao</label>
+                        {extracting && (
+                          <span style={{ fontSize: "0.74rem", color: "#C5A265", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            <Sparkles size={12} className="spin" /> Détection auto...
+                          </span>
+                        )}
+                      </div>
                       <div className="ios-input-action-group">
                         <input
                           id="productLink"
                           type="url"
-                          placeholder="https://detail.1688.com/... ou alibaba"
+                          placeholder="Collez le lien Alibaba ou 1688 (détection instantanée)"
                           value={productLink}
                           onChange={(e) => setProductLink(e.target.value)}
-                          onBlur={() => {
-                            if (productLink.startsWith("http") && !extractedProduct) {
-                              handleExtractProduct(productLink);
-                            }
-                          }}
                           className="ios-input"
                         />
                         <button
@@ -800,21 +850,25 @@ function CommandeFormContent() {
                           onClick={() => handleExtractProduct()}
                           disabled={extracting || !productLink.trim()}
                           className="ios-btn-inline"
+                          title="Rechercher / actualiser"
                         >
-                          {extracting ? "..." : <Search size={14} />}
+                          {extracting ? "..." : <Search size={15} />}
                         </button>
                       </div>
                       {extractError && <span className="ios-error-msg">{extractError}</span>}
                     </div>
 
+                    {/* Aperçu produit sans glitch avec referrerPolicy */}
                     {extractedProduct && (
                       <div className="ios-product-preview">
                         <img
-                          src={extractedProduct.image}
+                          src={extractedProduct.image || "/images/services/sourcing_new.jpg"}
                           alt={extractedProduct.title}
+                          referrerPolicy="no-referrer"
                           className="ios-product-thumb"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = "/images/services/sourcing_warehouse.jpg";
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = "/images/services/sourcing_new.jpg";
                           }}
                         />
                         <div className="ios-product-info">
@@ -898,41 +952,112 @@ function CommandeFormContent() {
                   </>
                 ) : (
                   <>
+                    {/* OPTION 2 : LIEN ARTICLE ALIBABA / 1688 AVEC AUTO-EXTRACTION & PHOTO */}
                     <div className="ios-field">
-                      <label htmlFor="clientShippingMark">Shipping Mark fournisseur</label>
-                      <input
-                        id="clientShippingMark"
-                        type="text"
-                        required
-                        placeholder="Ex : ROUM-EXP-Jean ou code fourni par l'usine"
-                        value={clientShippingMark}
-                        onChange={(e) => setClientShippingMark(e.target.value)}
-                        className="ios-input"
-                      />
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <label htmlFor="productLink">Lien de l&apos;article Alibaba, 1688 ou Taobao</label>
+                        {extracting && (
+                          <span style={{ fontSize: "0.74rem", color: "#C5A265", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            <Sparkles size={12} className="spin" /> Détection auto...
+                          </span>
+                        )}
+                      </div>
+                      <div className="ios-input-action-group">
+                        <input
+                          id="productLink"
+                          type="url"
+                          placeholder="Collez le lien Alibaba du produit payé chez votre fournisseur"
+                          value={productLink}
+                          onChange={(e) => setProductLink(e.target.value)}
+                          className="ios-input"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleExtractProduct()}
+                          disabled={extracting || !productLink.trim()}
+                          className="ios-btn-inline"
+                          title="Rechercher / actualiser"
+                        >
+                          {extracting ? "..." : <Search size={15} />}
+                        </button>
+                      </div>
+                      {extractError && <span className="ios-error-msg">{extractError}</span>}
                     </div>
 
-                    <div className="ios-field">
-                      <label htmlFor="paidToSupplier">Montant déjà payé au fournisseur</label>
-                      <input
-                        id="paidToSupplier"
-                        type="text"
-                        required
-                        placeholder="Ex : 5 400 RMB ou 800 $"
-                        value={paidToSupplier}
-                        onChange={(e) => setPaidToSupplier(e.target.value)}
-                        className="ios-input"
-                      />
-                    </div>
+                    {/* Aperçu produit sans glitch avec referrerPolicy */}
+                    {extractedProduct && (
+                      <div className="ios-product-preview">
+                        <img
+                          src={extractedProduct.image || "/images/services/sourcing_new.jpg"}
+                          alt={extractedProduct.title}
+                          referrerPolicy="no-referrer"
+                          className="ios-product-thumb"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = "/images/services/sourcing_new.jpg";
+                          }}
+                        />
+                        <div className="ios-product-info">
+                          <span className="ios-product-platform">{extractedProduct.platform}</span>
+                          <span className="ios-product-title">{extractedProduct.title}</span>
+                          {extractedProduct.price > 0 && (
+                            <span className="ios-product-price">
+                              Prix unitaire indicatif usine : {extractedProduct.price} {extractedProduct.currency}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="ios-field">
-                      <label htmlFor="goodsDescription">Description ou lien marchandise</label>
+                      <label htmlFor="goodsDescription">Description de la marchandise</label>
                       <input
                         id="goodsDescription"
                         type="text"
                         required
-                        placeholder="Ex : 4 cartons pièces mécaniques ou lien Alibaba"
+                        placeholder="Ex : 4 cartons pièces détachées, vêtements, écrans..."
                         value={goodsDescription}
                         onChange={(e) => setGoodsDescription(e.target.value)}
+                        className="ios-input"
+                      />
+                    </div>
+
+                    <div className="ios-grid-2">
+                      <div className="ios-field">
+                        <label htmlFor="clientShippingMark">Shipping Mark fournisseur</label>
+                        <input
+                          id="clientShippingMark"
+                          type="text"
+                          required
+                          placeholder="Ex : ROUM-EXP-Amadou ou code usine"
+                          value={clientShippingMark}
+                          onChange={(e) => setClientShippingMark(e.target.value)}
+                          className="ios-input"
+                        />
+                      </div>
+
+                      <div className="ios-field">
+                        <label htmlFor="paidToSupplier">Montant payé à l&apos;usine</label>
+                        <input
+                          id="paidToSupplier"
+                          type="text"
+                          required
+                          placeholder="Ex : 8 450 RMB ¥ ou 1 200 $"
+                          value={paidToSupplier}
+                          onChange={(e) => setPaidToSupplier(e.target.value)}
+                          className="ios-input"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="ios-field">
+                      <label htmlFor="supplierContact">Contact Fournisseur Chine (WeChat, WhatsApp ou Tél)</label>
+                      <input
+                        id="supplierContact"
+                        type="text"
+                        placeholder="Ex : WeChat: sz_electronics ou +86 138 0000 0000"
+                        value={supplierContact}
+                        onChange={(e) => setSupplierContact(e.target.value)}
                         className="ios-input"
                       />
                     </div>
@@ -961,6 +1086,13 @@ function CommandeFormContent() {
                     </div>
                   )}
 
+                  {option === "avec_fournisseur" && paidToSupplier && (
+                    <div className="ios-receipt-row">
+                      <span>Marchandise réglée fournisseur</span>
+                      <span className="mono">{paidToSupplier}</span>
+                    </div>
+                  )}
+
                   <div className="ios-receipt-divider" />
 
                   <div className="ios-receipt-row total">
@@ -985,7 +1117,7 @@ function CommandeFormContent() {
                   <div className="ios-divider" />
 
                   <div className="ios-section">
-                    <div className="ios-section-caption">Comptes de règlement</div>
+                    <div className="ios-section-caption">Comptes de règlement officiels</div>
 
                     <div className="ios-payment-list">
                       {activePaymentMethods.map((pm) => {
@@ -1001,19 +1133,34 @@ function CommandeFormContent() {
                               <div>
                                 <div className="ios-pay-name">{pm.label}</div>
                                 <div className="ios-pay-num mono">{pm.accountNumber}</div>
+                                <div style={{ fontSize: "0.72rem", color: "#8E8E93" }}>{pm.accountHolder}</div>
                               </div>
                             </div>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                copyPayMethod(pm.id, pm.copyValue);
-                              }}
-                              className="ios-copy-pill"
-                            >
-                              {copiedPay === pm.id ? <Check size={12} color="#16A34A" /> : <Copy size={12} />}
-                              <span>{copiedPay === pm.id ? "Copié" : "Copier"}</span>
-                            </button>
+                            <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openPaymentApp(pm.id, pm.copyValue);
+                                }}
+                                className="ios-open-app-pill"
+                                title="Ouvrir directement l'application sur votre smartphone"
+                              >
+                                <Smartphone size={12} />
+                                <span>Ouvrir l&apos;app</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  copyPayMethod(pm.id, pm.copyValue);
+                                }}
+                                className="ios-copy-pill"
+                              >
+                                {copiedPay === pm.id ? <Check size={12} color="#16A34A" /> : <Copy size={12} />}
+                                <span>{copiedPay === pm.id ? "Copié" : "Copier"}</span>
+                              </button>
+                            </div>
                           </div>
                         );
                       })}
@@ -1050,7 +1197,7 @@ function CommandeFormContent() {
                 </>
               )}
 
-              {/* BOUTON D'ACTION PRINCIPAL */}
+              {/* BOUTON D'ACTION PRINCIPAL EN PILULE */}
               <div className="ios-submit-wrap">
                 <button type="submit" disabled={submitting} className="ios-submit-btn">
                   {submitting
@@ -1068,9 +1215,9 @@ function CommandeFormContent() {
       <style jsx>{`
         .ios-page-wrap {
           min-height: 100vh;
-          background-color: #F2F2F7;
+          background-color: #FAF8F5;
           padding: 24px 16px 80px 16px;
-          color: #1C1C1E;
+          color: #1C1815;
           font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
           -webkit-font-smoothing: antialiased;
         }
@@ -1088,16 +1235,16 @@ function CommandeFormContent() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          color: #CC4E16;
+          color: #1C1815;
           font-size: 0.88rem;
-          font-weight: 500;
+          font-weight: 600;
           text-decoration: none;
           padding: 6px 0;
           transition: opacity 0.15s ease;
         }
 
         .ios-back-link:hover {
-          opacity: 0.75;
+          opacity: 0.7;
         }
 
         .ios-header {
@@ -1105,86 +1252,86 @@ function CommandeFormContent() {
         }
 
         .ios-title {
-          font-size: 1.55rem;
-          font-weight: 700;
+          font-size: 1.6rem;
+          font-weight: 800;
           letter-spacing: -0.025em;
-          color: #1C1C1E;
+          color: #1C1815;
           margin: 0 0 4px 0;
           text-wrap: balance;
         }
 
         .ios-subtitle {
           font-size: 0.88rem;
-          color: #8E8E93;
+          color: #716C65;
           margin: 0;
         }
 
-        /* Segmented Control iOS */
+        /* Segmented Control iOS en pilule */
         .ios-segmented-control {
-          background: #E5E5EA;
-          border-radius: 10px;
-          padding: 2px;
+          background: #EFECE6;
+          border-radius: 9999px;
+          padding: 4px;
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 2px;
-          margin-bottom: 16px;
+          gap: 4px;
+          margin-bottom: 18px;
         }
 
         .ios-segmented-btn {
-          height: 36px;
+          height: 38px;
           border: none;
           background: transparent;
-          color: #636366;
+          color: #716C65;
           font-size: 0.82rem;
-          font-weight: 500;
-          border-radius: 8px;
+          font-weight: 600;
+          border-radius: 9999px;
           cursor: pointer;
-          transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
           white-space: nowrap;
-          padding: 0 8px;
+          padding: 0 12px;
         }
 
         .ios-segmented-btn.active {
           background: #FFFFFF;
-          color: #1C1C1E;
-          font-weight: 600;
-          box-shadow: 0 1.5px 4px rgba(0, 0, 0, 0.1);
+          color: #1C1815;
+          font-weight: 700;
+          box-shadow: 0 2px 8px rgba(28, 24, 21, 0.08);
         }
 
-        /* Carte de surface iOS */
+        /* Carte de surface iOS épurée */
         .ios-card {
           background: #FFFFFF;
-          border-radius: 18px;
-          border: 1px solid rgba(0, 0, 0, 0.05);
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
-          padding: 20px 18px;
+          border-radius: 26px;
+          border: 1px solid rgba(28, 24, 21, 0.06);
+          box-shadow: 0 4px 24px -2px rgba(28, 24, 21, 0.04);
+          padding: 24px 22px;
         }
 
         .ios-section {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 13px;
         }
 
         .ios-section-caption {
           font-size: 0.72rem;
-          font-weight: 600;
+          font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: #8E8E93;
+          letter-spacing: 0.06em;
+          color: #8E877E;
           margin-bottom: 2px;
         }
 
         .ios-divider {
           height: 1px;
-          background-color: #EFEFF4;
+          background-color: rgba(28, 24, 21, 0.06);
           margin: 18px 0;
         }
 
         .ios-grid-2 {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 10px;
+          gap: 12px;
         }
 
         @media (max-width: 520px) {
@@ -1201,57 +1348,62 @@ function CommandeFormContent() {
 
         .ios-field label {
           font-size: 0.8rem;
-          font-weight: 500;
-          color: #3A3A3C;
+          font-weight: 600;
+          color: #524B43;
         }
 
-        /* Inputs & Selects épurés iOS */
+        /* Espaces de typing doux iOS, dé-cadrés */
         .ios-input {
           width: 100%;
-          height: 44px;
-          padding: 0 13px;
-          background: #F9F9FB;
-          border: 1px solid #E5E5EA;
-          border-radius: 11px;
+          height: 46px;
+          padding: 0 16px;
+          background: #F7F5F0;
+          border: 1px solid rgba(28, 24, 21, 0.07);
+          border-radius: 16px;
           font-size: 0.92rem;
-          color: #1C1C1E;
+          color: #1C1815;
           outline: none;
-          transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+          transition: all 0.2s ease;
           font-family: inherit;
         }
 
         .ios-input:focus {
           background: #FFFFFF;
-          border-color: #CC4E16;
-          box-shadow: 0 0 0 3px rgba(204, 78, 22, 0.12);
+          border-color: #C5A265;
+          box-shadow: 0 0 0 3px rgba(197, 162, 101, 0.2);
         }
 
         .ios-input::placeholder {
-          color: #AEAEB2;
+          color: #A39D93;
         }
 
         .ios-select {
           width: 100%;
-          height: 44px;
-          padding: 0 36px 0 13px;
-          background: #F9F9FB url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238E8E93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") no-repeat right 12px center;
+          height: 46px;
+          padding: 0 38px 0 16px;
+          background: #F7F5F0 url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23716C65' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") no-repeat right 14px center;
           background-size: 14px;
           appearance: none;
           -webkit-appearance: none;
-          border: 1px solid #E5E5EA;
-          border-radius: 11px;
-          font-size: 0.88rem;
-          color: #1C1C1E;
+          border: 1px solid rgba(28, 24, 21, 0.07);
+          border-radius: 16px;
+          font-size: 0.9rem;
+          color: #1C1815;
           outline: none;
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: all 0.2s ease;
           font-family: inherit;
         }
 
         .ios-select:focus {
           background-color: #FFFFFF;
-          border-color: #CC4E16;
-          box-shadow: 0 0 0 3px rgba(204, 78, 22, 0.12);
+          border-color: #C5A265;
+          box-shadow: 0 0 0 3px rgba(197, 162, 101, 0.2);
+        }
+
+        .ios-select option {
+          color: #1C1815;
+          background: #FFFFFF;
         }
 
         .ios-input-action-group {
@@ -1260,21 +1412,21 @@ function CommandeFormContent() {
         }
 
         .ios-btn-inline {
-          height: 44px;
-          padding: 0 14px;
-          background: #F2F2F7;
-          border: 1px solid #E5E5EA;
-          border-radius: 11px;
-          color: #3A3A3C;
+          height: 46px;
+          padding: 0 16px;
+          background: #F7F5F0;
+          border: 1px solid rgba(28, 24, 21, 0.07);
+          border-radius: 9999px;
+          color: #1C1815;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: all 0.18s ease;
         }
 
         .ios-btn-inline:hover {
-          background: #E5E5EA;
+          background: #EAE6DE;
         }
 
         .ios-error-msg {
@@ -1282,23 +1434,24 @@ function CommandeFormContent() {
           color: #DC2626;
         }
 
-        /* Aperçu produit discret */
+        /* Aperçu produit sans glitch */
         .ios-product-preview {
           display: flex;
           align-items: center;
-          gap: 10px;
-          background: #F9F9FB;
-          border: 1px solid #EFEFF4;
-          border-radius: 11px;
-          padding: 8px 10px;
+          gap: 12px;
+          background: #F7F5F0;
+          border: 1px solid rgba(28, 24, 21, 0.06);
+          border-radius: 16px;
+          padding: 10px 12px;
         }
 
         .ios-product-thumb {
-          width: 44px;
-          height: 44px;
+          width: 48px;
+          height: 48px;
           object-fit: cover;
-          border-radius: 8px;
+          border-radius: 10px;
           flex-shrink: 0;
+          background: #FFFFFF;
         }
 
         .ios-product-info {
@@ -1310,15 +1463,15 @@ function CommandeFormContent() {
 
         .ios-product-platform {
           font-size: 0.68rem;
-          font-weight: 600;
+          font-weight: 700;
           color: #16A34A;
           text-transform: uppercase;
         }
 
         .ios-product-title {
-          font-size: 0.8rem;
-          font-weight: 500;
-          color: #1C1C1E;
+          font-size: 0.82rem;
+          font-weight: 600;
+          color: #1C1815;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -1326,36 +1479,39 @@ function CommandeFormContent() {
 
         .ios-product-price {
           font-size: 0.76rem;
-          color: #636366;
+          color: #716C65;
         }
 
-        /* Stepper Quantité */
+        /* Stepper Quantité en pilule */
         .ios-stepper {
           display: flex;
           align-items: center;
-          height: 44px;
-          background: #F9F9FB;
-          border: 1px solid #E5E5EA;
-          border-radius: 11px;
-          overflow: hidden;
+          height: 46px;
+          background: #F7F5F0;
+          border: 1px solid rgba(28, 24, 21, 0.07);
+          border-radius: 9999px;
+          padding: 3px;
         }
 
         .ios-stepper-btn {
           width: 40px;
-          height: 100%;
+          height: 40px;
           border: none;
-          background: transparent;
+          background: #FFFFFF;
+          border-radius: 9999px;
           font-size: 1.1rem;
-          color: #3A3A3C;
+          font-weight: 600;
+          color: #1C1815;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
+          box-shadow: 0 1px 3px rgba(28, 24, 21, 0.06);
           transition: background-color 0.15s ease;
         }
 
         .ios-stepper-btn:hover {
-          background: #EFEFF4;
+          background: #F4F1EA;
         }
 
         .ios-stepper-input {
@@ -1365,9 +1521,9 @@ function CommandeFormContent() {
           background: transparent;
           text-align: center;
           font-size: 0.95rem;
-          font-weight: 600;
+          font-weight: 700;
           outline: none;
-          color: #1C1C1E;
+          color: #1C1815;
         }
 
         .ios-currency-row {
@@ -1376,24 +1532,25 @@ function CommandeFormContent() {
         }
 
         .ios-select-compact {
-          width: 86px;
-          height: 44px;
-          padding: 0 6px;
-          background: #F9F9FB;
-          border: 1px solid #E5E5EA;
-          border-radius: 11px;
+          width: 90px;
+          height: 46px;
+          padding: 0 8px;
+          background: #F7F5F0;
+          border: 1px solid rgba(28, 24, 21, 0.07);
+          border-radius: 16px;
           font-size: 0.84rem;
-          color: #1C1C1E;
+          font-weight: 600;
+          color: #1C1815;
           outline: none;
           cursor: pointer;
         }
 
         /* Reçu / Devis Inset */
         .ios-receipt {
-          background: #F9F9FB;
-          border: 1px solid #EFEFF4;
-          border-radius: 12px;
-          padding: 12px 14px;
+          background: #F7F5F0;
+          border: 1px solid rgba(28, 24, 21, 0.06);
+          border-radius: 18px;
+          padding: 14px 16px;
           display: flex;
           flex-direction: column;
           gap: 8px;
@@ -1404,96 +1561,121 @@ function CommandeFormContent() {
           justify-content: space-between;
           align-items: center;
           font-size: 0.84rem;
-          color: #636366;
+          color: #716C65;
         }
 
         .ios-receipt-row.total {
           font-size: 0.92rem;
-          color: #1C1C1E;
-          font-weight: 600;
+          color: #1C1815;
+          font-weight: 700;
         }
 
         .ios-receipt-row.total .bold {
           font-size: 1.15rem;
-          font-weight: 700;
-          color: #CC4E16;
+          font-weight: 800;
+          color: #1C1815;
         }
 
         .ios-receipt-row.total small {
           font-size: 0.8rem;
-          font-weight: 500;
+          font-weight: 600;
         }
 
         .ios-receipt-divider {
           height: 1px;
-          background-color: #E5E5EA;
+          background-color: rgba(28, 24, 21, 0.08);
           margin: 4px 0;
         }
 
         .ios-note-subtle {
           font-size: 0.76rem;
-          color: #8E8E93;
+          color: #8E877E;
           margin: 4px 0 0 2px;
         }
 
-        /* Liste de paiement */
+        /* Liste de paiement officielle */
         .ios-payment-list {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 10px;
         }
 
         .ios-payment-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          background: #F9F9FB;
-          border: 1px solid #EFEFF4;
-          border-radius: 12px;
-          padding: 10px 12px;
+          background: #F7F5F0;
+          border: 1px solid rgba(28, 24, 21, 0.06);
+          border-radius: 18px;
+          padding: 12px 14px;
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: all 0.2s ease;
         }
 
         .ios-payment-row.selected {
-          border-color: #CC4E16;
+          border-color: #C5A265;
           background: #FFFFFF;
+          box-shadow: 0 4px 16px rgba(197, 162, 101, 0.16);
         }
 
         .ios-pay-left {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
         }
 
         .ios-pay-name {
-          font-size: 0.84rem;
-          font-weight: 600;
-          color: #1C1C1E;
+          font-size: 0.86rem;
+          font-weight: 700;
+          color: #1C1815;
         }
 
         .ios-pay-num {
-          font-size: 0.78rem;
-          color: #636366;
+          font-size: 0.8rem;
+          color: #524B43;
+          margin-top: 1px;
         }
 
         .ios-copy-pill {
           display: inline-flex;
           align-items: center;
           gap: 4px;
-          background: #FFFFFF;
-          border: 1px solid #E5E5EA;
-          border-radius: 6px;
-          padding: 4px 8px;
+          background: #F7F5F0;
+          border: 1px solid rgba(28, 24, 21, 0.08);
+          border-radius: 9999px;
+          padding: 5px 10px;
           font-size: 0.72rem;
-          font-weight: 500;
-          color: #3A3A3C;
+          font-weight: 600;
+          color: #1C1815;
           cursor: pointer;
           transition: background-color 0.15s ease;
         }
 
         .ios-copy-pill:hover {
-          background: #F2F2F7;
+          background: #EAE6DE;
+        }
+
+        .ios-open-app-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          background: #1C1815;
+          border: none;
+          border-radius: 9999px;
+          padding: 5px 10px;
+          font-size: 0.72rem;
+          font-weight: 600;
+          color: #FAF8F5;
+          cursor: pointer;
+          transition: transform 0.1s ease, background 0.15s ease;
+        }
+
+        .ios-open-app-pill:hover {
+          background: #000000;
+        }
+
+        .ios-open-app-pill:active {
+          transform: scale(0.96);
         }
 
         .ios-upload-wrap {
@@ -1502,13 +1684,13 @@ function CommandeFormContent() {
 
         .ios-upload-btn {
           width: 100%;
-          height: 42px;
-          background: #F9F9FB;
-          border: 1px dashed #D1D1D6;
-          border-radius: 11px;
-          color: #636366;
-          font-size: 0.8rem;
-          font-weight: 500;
+          height: 44px;
+          background: #F7F5F0;
+          border: 1px dashed rgba(28, 24, 21, 0.16);
+          border-radius: 9999px;
+          color: #716C65;
+          font-size: 0.82rem;
+          font-weight: 600;
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -1518,23 +1700,25 @@ function CommandeFormContent() {
         }
 
         .ios-upload-btn:hover {
-          background: #F2F2F7;
-          border-color: #8E8E93;
+          background: #EAE6DE;
+          border-color: #1C1815;
+          color: #1C1815;
         }
 
         .ios-receipt-attached {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          background: #F9F9FB;
-          border: 1px solid #E5E5EA;
-          border-radius: 11px;
-          padding: 8px 12px;
+          background: #F7F5F0;
+          border: 1px solid rgba(28, 24, 21, 0.08);
+          border-radius: 9999px;
+          padding: 8px 14px;
         }
 
         .ios-receipt-name {
           font-size: 0.8rem;
-          color: #1C1C1E;
+          font-weight: 600;
+          color: #1C1815;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -1548,30 +1732,35 @@ function CommandeFormContent() {
           padding: 4px;
         }
 
-        /* Bouton principal */
+        /* Bouton principal en pilule */
         .ios-submit-wrap {
-          margin-top: 20px;
+          margin-top: 22px;
         }
 
         .ios-submit-btn {
           width: 100%;
-          height: 48px;
-          background: #CC4E16;
-          color: #FFFFFF;
-          font-size: 0.95rem;
-          font-weight: 600;
+          height: 50px;
+          background: #1C1815;
+          color: #FAF8F5;
+          font-size: 0.96rem;
+          font-weight: 700;
           border: none;
-          border-radius: 12px;
+          border-radius: 9999px;
           cursor: pointer;
-          transition: opacity 0.15s ease, transform 0.1s ease;
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
           display: flex;
           align-items: center;
           justify-content: center;
+          box-shadow: 0 4px 18px rgba(28, 24, 21, 0.15);
+        }
+
+        .ios-submit-btn:hover {
+          background: #000000;
+          transform: translateY(-1px);
         }
 
         .ios-submit-btn:active {
           transform: scale(0.98);
-          opacity: 0.9;
         }
 
         .ios-submit-btn:disabled {
@@ -1582,43 +1771,43 @@ function CommandeFormContent() {
         /* Success Card iOS */
         .ios-success-card {
           text-align: center;
-          padding: 28px 20px;
+          padding: 32px 22px;
         }
 
         .ios-success-icon {
-          width: 56px;
-          height: 56px;
+          width: 60px;
+          height: 60px;
           border-radius: 50%;
-          background: #F0FDF4;
+          background: #ECFDF5;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin: 0 auto 12px auto;
+          margin: 0 auto 14px auto;
         }
 
         .ios-success-title {
-          font-size: 1.25rem;
-          font-weight: 700;
-          color: #1C1C1E;
+          font-size: 1.3rem;
+          font-weight: 800;
+          color: #1C1815;
           margin: 0 0 6px 0;
         }
 
         .ios-success-desc {
-          font-size: 0.84rem;
-          color: #636366;
-          margin: 0 0 18px 0;
+          font-size: 0.86rem;
+          color: #716C65;
+          margin: 0 0 20px 0;
         }
 
         .ios-inset-box {
-          background: #F9F9FB;
-          border: 1px solid #EFEFF4;
-          border-radius: 12px;
-          padding: 12px 14px;
+          background: #F7F5F0;
+          border: 1px solid rgba(28, 24, 21, 0.06);
+          border-radius: 18px;
+          padding: 14px 16px;
           text-align: left;
           display: flex;
           flex-direction: column;
           gap: 10px;
-          margin-bottom: 16px;
+          margin-bottom: 18px;
         }
 
         .ios-row-item {
@@ -1629,7 +1818,7 @@ function CommandeFormContent() {
         }
 
         .ios-item-label {
-          color: #8E8E93;
+          color: #8E877E;
         }
 
         .ios-item-val-group {
@@ -1639,66 +1828,67 @@ function CommandeFormContent() {
         }
 
         .ios-item-val {
-          color: #1C1C1E;
-          font-weight: 500;
+          color: #1C1815;
+          font-weight: 600;
         }
 
         .ios-item-val.bold {
-          font-weight: 700;
-          color: #CC4E16;
-          font-size: 1rem;
+          font-weight: 800;
+          color: #1C1815;
+          font-size: 1.05rem;
         }
 
         .ios-actions-stack {
           display: flex;
           flex-direction: column;
-          gap: 8px;
-          margin-top: 18px;
+          gap: 10px;
+          margin-top: 20px;
         }
 
         .ios-btn-primary {
           width: 100%;
-          height: 46px;
-          background: #1C1C1E;
-          color: #FFFFFF;
-          border-radius: 11px;
-          font-size: 0.9rem;
+          height: 48px;
+          background: #1C1815;
+          color: #FAF8F5;
+          font-size: 0.92rem;
           font-weight: 600;
+          border-radius: 9999px;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 6px;
+          gap: 8px;
           text-decoration: none;
-          transition: opacity 0.15s ease;
+          box-shadow: 0 4px 16px rgba(28, 24, 21, 0.12);
+          transition: background-color 0.15s ease;
         }
 
         .ios-btn-primary:hover {
-          opacity: 0.88;
+          background: #000000;
         }
 
         .ios-btn-secondary {
           width: 100%;
-          height: 46px;
-          background: #F2F2F7;
-          color: #1C1C1E;
-          border-radius: 11px;
-          font-size: 0.9rem;
-          font-weight: 500;
+          height: 48px;
+          background: #F7F5F0;
+          color: #1C1815;
+          font-size: 0.92rem;
+          font-weight: 600;
+          border-radius: 9999px;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 6px;
+          gap: 8px;
           text-decoration: none;
+          border: 1px solid rgba(28, 24, 21, 0.08);
           transition: background-color 0.15s ease;
         }
 
         .ios-btn-secondary:hover {
-          background: #E5E5EA;
+          background: #EAE6DE;
         }
 
         .mono {
-          font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-          font-size: 0.86rem;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         }
       `}</style>
     </div>
@@ -1707,13 +1897,7 @@ function CommandeFormContent() {
 
 export default function CommandePage() {
   return (
-    <Suspense
-      fallback={
-        <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#8E8E93", fontSize: "0.9rem" }}>
-          Chargement...
-        </div>
-      }
-    >
+    <Suspense fallback={<div style={{ padding: "40px", textAlign: "center" }}>Chargement du formulaire...</div>}>
       <CommandeFormContent />
     </Suspense>
   );
