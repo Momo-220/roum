@@ -59,6 +59,36 @@ function CommandeFormContent() {
   const [tariffs, setTariffs] = useState<OfficialTariff[]>(() => getLiveTariffs());
 
   useEffect(() => {
+    fetch("/api/public/tariffs")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.tariffs && Array.isArray(d.tariffs) && d.tariffs.length > 0) {
+          const mapped: OfficialTariff[] = d.tariffs.map((t: any) => ({
+            id: t.id || t.tariff_id,
+            origin_country: t.origin_country || "Chine",
+            origin_city: t.origin_city || "",
+            destination_country: t.destination_country || "Côte d'Ivoire",
+            destination_city: t.destination_city || "",
+            shipping_mode_name: t.shipping_mode_name || t.mode_name || "Transport",
+            shipping_mode_type: (t.shipping_mode_type || t.mode_type || "AIR") as "AIR" | "SEA",
+            category_tag: t.category_tag || "",
+            pricing_basis: (t.pricing_basis || "PER_KG") as any,
+            currency: t.currency || "FCFA",
+            price_per_unit_minor: t.price_per_unit_minor || 0,
+            minimum_charge_minor: t.minimum_charge_minor || 0,
+            estimated_days_min: t.estimated_days_min || 7,
+            estimated_days_max: t.estimated_days_max || 14,
+            note: t.note || "",
+            is_active: t.is_active ?? 1,
+          }));
+          setTariffs(mapped);
+          try {
+            localStorage.setItem("roum_tariffs_data", JSON.stringify(mapped));
+          } catch {}
+        }
+      })
+      .catch(() => {});
+
     const handleSync = () => {
       setTariffs(getLiveTariffs());
     };

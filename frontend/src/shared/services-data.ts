@@ -38,7 +38,7 @@ export interface OfficialTariff {
 export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
   // --- 1. CHINE ➔ AFRIQUE (COTE D'IVOIRE) ---
   {
-    id: "tariff-flyer-cn-express",
+    id: "tariff-cn-ci-express",
     origin_country: "Chine",
     origin_city: "Guangzhou",
     destination_country: "Côte d'Ivoire",
@@ -57,7 +57,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     is_active: 1,
   },
   {
-    id: "tariff-flyer-cn-normal",
+    id: "tariff-cn-ci-normal",
     origin_country: "Chine",
     origin_city: "Guangzhou",
     destination_country: "Côte d'Ivoire",
@@ -76,7 +76,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     is_active: 1,
   },
   {
-    id: "tariff-flyer-cn-special",
+    id: "tariff-cn-ci-special",
     origin_country: "Chine",
     origin_city: "Guangzhou",
     destination_country: "Côte d'Ivoire",
@@ -95,7 +95,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     is_active: 1,
   },
   {
-    id: "tariff-flyer-cn-tech",
+    id: "tariff-cn-ci-tech",
     origin_country: "Chine",
     origin_city: "Guangzhou",
     destination_country: "Côte d'Ivoire",
@@ -114,7 +114,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     is_active: 1,
   },
   {
-    id: "tariff-flyer-cn-sea",
+    id: "tariff-cn-ci-sea",
     origin_country: "Chine",
     origin_city: "Yiwu / Guangzhou",
     destination_country: "Côte d'Ivoire",
@@ -135,7 +135,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
 
   // --- 2. DUBAÏ ➔ AFRIQUE (COTE D'IVOIRE) ---
   {
-    id: "tariff-flyer-ae-express",
+    id: "tariff-ae-ci-express",
     origin_country: "Émirats Arabes Unis",
     origin_city: "Dubaï",
     destination_country: "Côte d'Ivoire",
@@ -154,7 +154,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     is_active: 1,
   },
   {
-    id: "tariff-flyer-ae-normal",
+    id: "tariff-ae-ci-normal",
     origin_country: "Émirats Arabes Unis",
     origin_city: "Dubaï",
     destination_country: "Côte d'Ivoire",
@@ -173,7 +173,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     is_active: 1,
   },
   {
-    id: "tariff-flyer-ae-special",
+    id: "tariff-ae-ci-special",
     origin_country: "Émirats Arabes Unis",
     origin_city: "Dubaï",
     destination_country: "Côte d'Ivoire",
@@ -192,7 +192,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     is_active: 1,
   },
   {
-    id: "tariff-flyer-ae-sea",
+    id: "tariff-ae-ci-sea",
     origin_country: "Émirats Arabes Unis",
     origin_city: "Dubaï (Jebel Ali)",
     destination_country: "Côte d'Ivoire",
@@ -213,7 +213,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
 
   // --- 3. MAROC ➔ AFRIQUE SUBSAHARIENNE (CASABLANCA) ---
   {
-    id: "tariff-flyer-ma-ci",
+    id: "tariff-ma-ci-sub",
     origin_country: "Maroc",
     origin_city: "Casablanca",
     destination_country: "Côte d'Ivoire",
@@ -232,7 +232,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     is_active: 1,
   },
   {
-    id: "tariff-flyer-ma-sn",
+    id: "tariff-ma-sn-sub",
     origin_country: "Maroc",
     origin_city: "Casablanca",
     destination_country: "Sénégal",
@@ -251,7 +251,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     is_active: 1,
   },
   {
-    id: "tariff-flyer-ma-ml",
+    id: "tariff-ma-ml-sub",
     origin_country: "Maroc",
     origin_city: "Casablanca",
     destination_country: "Mali",
@@ -270,7 +270,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     is_active: 1,
   },
   {
-    id: "tariff-flyer-ma-bf",
+    id: "tariff-ma-bf-sub",
     origin_country: "Maroc",
     origin_city: "Casablanca",
     destination_country: "Burkina Faso",
@@ -289,7 +289,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     is_active: 1,
   },
   {
-    id: "tariff-flyer-ma-ga",
+    id: "tariff-ma-ga-sub",
     origin_country: "Maroc",
     origin_city: "Casablanca",
     destination_country: "Gabon",
@@ -310,7 +310,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
 
   // --- 4. FRANCE ↔ CÔTE D'IVOIRE (PARIS ↔ ABIDJAN LIAISON ALLER-RETOUR) ---
   {
-    id: "tariff-flyer-fr-ci-divers",
+    id: "tariff-fr-ci-divers",
     origin_country: "France",
     origin_city: "Paris",
     destination_country: "Côte d'Ivoire",
@@ -330,7 +330,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     is_active: 1,
   },
   {
-    id: "tariff-flyer-fr-ci-cosm",
+    id: "tariff-fr-ci-cosmetic",
     origin_country: "France",
     origin_city: "Paris",
     destination_country: "Côte d'Ivoire",
@@ -350,7 +350,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     is_active: 1,
   },
   {
-    id: "tariff-flyer-fr-ci-doc",
+    id: "tariff-fr-ci-doc",
     origin_country: "France",
     origin_city: "Paris",
     destination_country: "Côte d'Ivoire",
@@ -370,7 +370,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     is_active: 1,
   },
   {
-    id: "tariff-flyer-ci-fr-divers",
+    id: "tariff-ci-fr-divers",
     origin_country: "Côte d'Ivoire",
     origin_city: "Abidjan",
     destination_country: "France",
@@ -390,7 +390,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     is_active: 1,
   },
   {
-    id: "tariff-flyer-ci-fr-cosm",
+    id: "tariff-ci-fr-cosmetic",
     origin_country: "Côte d'Ivoire",
     origin_city: "Abidjan",
     destination_country: "France",
@@ -410,7 +410,7 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
     is_active: 1,
   },
   {
-    id: "tariff-flyer-ci-fr-doc",
+    id: "tariff-ci-fr-doc",
     origin_country: "Côte d'Ivoire",
     origin_city: "Abidjan",
     destination_country: "France",

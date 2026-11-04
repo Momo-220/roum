@@ -1047,7 +1047,7 @@ const createTariffSchema = z.object({
   destination_country: z.string().optional(),
   destination_city: z.string().optional(),
   shipping_mode_id: z.string().min(1, "Mode de transport requis"),
-  currency: z.string().default("USD"),
+  currency: z.string().default("FCFA"),
   price_per_unit_minor: z.number().int().positive("Prix unitaire requis"),
   minimum_charge_minor: z.number().int().nonnegative().optional(),
   estimated_days_min: z.number().int().positive().optional(),
@@ -1092,28 +1092,53 @@ adminRouter.post("/tariffs", zValidator("json", createTariffSchema), async (c) =
     return c.json({ error: "Veuillez sélectionner ou renseigner un pays de départ et un pays de destination." }, 400);
   }
 
+  let validModeId = "AIR_STANDARD";
+  if (data.shipping_mode_id) {
+    const requestedMode = data.shipping_mode_id;
+    if (requestedMode === "SEA" || requestedMode === "SEA_LCL" || requestedMode === "SEA_GROUPAGE") {
+      validModeId = "SEA_LCL";
+    } else if (requestedMode === "AIR_EXPRESS") {
+      validModeId = "AIR_EXPRESS";
+    } else if (requestedMode === "AIR_SPECIAL") {
+      validModeId = "AIR_SPECIAL";
+    } else if (requestedMode === "AIR_TECH") {
+      validModeId = "AIR_TECH";
+    } else if (requestedMode === "AIR_COSMETIC") {
+      validModeId = "AIR_COSMETIC";
+    } else if (requestedMode === "AIR_DOC") {
+      validModeId = "AIR_DOC";
+    } else {
+      const modeRow = await c.env.DB.prepare("SELECT id FROM shipping_modes WHERE id = ?").bind(requestedMode).first<{ id: string }>();
+      if (modeRow?.id) validModeId = modeRow.id;
+    }
+  }
+
   const tariffId = crypto.randomUUID();
 
-  await c.env.DB.prepare(`
-    INSERT INTO tariffs (
-      id, route_id, shipping_mode_id, currency, price_per_unit_minor,
-      minimum_charge_minor, estimated_days_min, estimated_days_max,
-      category_tag, note, is_active
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-  `).bind(
-    tariffId,
-    routeId,
-    data.shipping_mode_id,
-    data.currency || "USD",
-    data.price_per_unit_minor,
-    data.minimum_charge_minor || 0,
-    data.estimated_days_min || null,
-    data.estimated_days_max || null,
-    data.category_tag || null,
-    data.note || null
-  ).run();
+  try {
+    await c.env.DB.prepare(`
+      INSERT INTO tariffs (
+        id, route_id, shipping_mode_id, currency, price_per_unit_minor,
+        minimum_charge_minor, estimated_days_min, estimated_days_max,
+        category_tag, note, is_active
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+    `).bind(
+      tariffId,
+      routeId,
+      validModeId,
+      data.currency || "FCFA",
+      data.price_per_unit_minor,
+      data.minimum_charge_minor || 0,
+      data.estimated_days_min || null,
+      data.estimated_days_max || null,
+      data.category_tag || null,
+      data.note || null
+    ).run();
 
-  return c.json({ success: true, tariff_id: tariffId, message: "Tarif enregistré avec succès." }, 201);
+    return c.json({ success: true, tariff_id: tariffId, message: "Tarif enregistré avec succès." }, 201);
+  } catch (err: any) {
+    return c.json({ error: `Erreur base de données lors de la création : ${err?.message || "Erreur interne"}` }, 500);
+  }
 });
 
 adminRouter.put("/tariffs/batch", async (c) => {
@@ -1129,9 +1154,33 @@ adminRouter.put("/tariffs/batch", async (c) => {
     return c.json({ success: true, count: 0, message: "Aucune modification à enregistrer." });
   }
 
+  const legacyMap: Record<string, string> = {
+    "tariff-flyer-cn-express": "tariff-cn-ci-express",
+    "tariff-flyer-cn-normal": "tariff-cn-ci-normal",
+    "tariff-flyer-cn-special": "tariff-cn-ci-special",
+    "tariff-flyer-cn-tech": "tariff-cn-ci-tech",
+    "tariff-flyer-cn-sea": "tariff-cn-ci-sea",
+    "tariff-flyer-ae-express": "tariff-ae-ci-express",
+    "tariff-flyer-ae-normal": "tariff-ae-ci-normal",
+    "tariff-flyer-ae-special": "tariff-ae-ci-special",
+    "tariff-flyer-ae-sea": "tariff-ae-ci-sea",
+    "tariff-flyer-ma-ci": "tariff-ma-ci-sub",
+    "tariff-flyer-ma-sn": "tariff-ma-sn-sub",
+    "tariff-flyer-ma-ml": "tariff-ma-ml-sub",
+    "tariff-flyer-ma-bf": "tariff-ma-bf-sub",
+    "tariff-flyer-ma-ga": "tariff-ma-ga-sub",
+    "tariff-flyer-fr-ci-divers": "tariff-fr-ci-divers",
+    "tariff-flyer-fr-ci-cosm": "tariff-fr-ci-cosmetic",
+    "tariff-flyer-fr-ci-doc": "tariff-fr-ci-doc",
+    "tariff-flyer-ci-fr-divers": "tariff-ci-fr-divers",
+    "tariff-flyer-ci-fr-cosm": "tariff-ci-fr-cosmetic",
+    "tariff-flyer-ci-fr-doc": "tariff-ci-fr-doc",
+  };
+
   const statements: any[] = [];
   for (const item of items) {
     if (!item.id) continue;
+    const resolvedId = legacyMap[item.id] || item.id;
     statements.push(
       c.env.DB.prepare(`
         UPDATE tariffs 
@@ -1152,7 +1201,7 @@ adminRouter.put("/tariffs/batch", async (c) => {
         item.estimated_days_max !== undefined ? Number(item.estimated_days_max) : null,
         item.note !== undefined ? String(item.note) : null,
         item.category_tag !== undefined ? String(item.category_tag) : null,
-        item.id
+        resolvedId
       )
     );
   }
@@ -1176,7 +1225,30 @@ adminRouter.put("/tariffs/:id", async (c) => {
   }
 
   const user = c.get("user");
-  const tariffId = c.req.param("id");
+  const rawId = c.req.param("id");
+  const legacyMap: Record<string, string> = {
+    "tariff-flyer-cn-express": "tariff-cn-ci-express",
+    "tariff-flyer-cn-normal": "tariff-cn-ci-normal",
+    "tariff-flyer-cn-special": "tariff-cn-ci-special",
+    "tariff-flyer-cn-tech": "tariff-cn-ci-tech",
+    "tariff-flyer-cn-sea": "tariff-cn-ci-sea",
+    "tariff-flyer-ae-express": "tariff-ae-ci-express",
+    "tariff-flyer-ae-normal": "tariff-ae-ci-normal",
+    "tariff-flyer-ae-special": "tariff-ae-ci-special",
+    "tariff-flyer-ae-sea": "tariff-ae-ci-sea",
+    "tariff-flyer-ma-ci": "tariff-ma-ci-sub",
+    "tariff-flyer-ma-sn": "tariff-ma-sn-sub",
+    "tariff-flyer-ma-ml": "tariff-ma-ml-sub",
+    "tariff-flyer-ma-bf": "tariff-ma-bf-sub",
+    "tariff-flyer-ma-ga": "tariff-ma-ga-sub",
+    "tariff-flyer-fr-ci-divers": "tariff-fr-ci-divers",
+    "tariff-flyer-fr-ci-cosm": "tariff-fr-ci-cosmetic",
+    "tariff-flyer-fr-ci-doc": "tariff-fr-ci-doc",
+    "tariff-flyer-ci-fr-divers": "tariff-ci-fr-divers",
+    "tariff-flyer-ci-fr-cosm": "tariff-ci-fr-cosmetic",
+    "tariff-flyer-ci-fr-doc": "tariff-ci-fr-doc",
+  };
+  const tariffId = legacyMap[rawId] || rawId;
   const body = await c.req.json<any>().catch(() => ({}));
 
   let validModeId = "AIR_STANDARD";
@@ -1200,92 +1272,96 @@ adminRouter.put("/tariffs/:id", async (c) => {
     }
   }
 
-  const existing = await c.env.DB.prepare("SELECT id, route_id FROM tariffs WHERE id = ?").bind(tariffId).first<{ id: string; route_id: string }>();
+  try {
+    const existing = await c.env.DB.prepare("SELECT id, route_id FROM tariffs WHERE id = ?").bind(tariffId).first<{ id: string; route_id: string }>();
 
-  if (existing) {
-    await c.env.DB.batch([
-      c.env.DB.prepare(`
-        UPDATE tariffs 
-        SET price_per_unit_minor = COALESCE(?, price_per_unit_minor),
-            minimum_charge_minor = COALESCE(?, minimum_charge_minor),
-            currency = COALESCE(?, currency),
-            estimated_days_min = COALESCE(?, estimated_days_min),
-            estimated_days_max = COALESCE(?, estimated_days_max),
-            note = COALESCE(?, note),
-            category_tag = COALESCE(?, category_tag),
-            shipping_mode_id = COALESCE(?, shipping_mode_id),
-            updated_at = datetime('now')
-        WHERE id = ?
-      `).bind(
-        body.price_per_unit_minor !== undefined ? Number(body.price_per_unit_minor) : null,
-        body.minimum_charge_minor !== undefined ? Number(body.minimum_charge_minor) : null,
-        body.currency || "FCFA",
-        body.estimated_days_min !== undefined ? Number(body.estimated_days_min) : null,
-        body.estimated_days_max !== undefined ? Number(body.estimated_days_max) : null,
-        body.note !== undefined ? String(body.note) : null,
-        body.category_tag || body.service_name || null,
-        validModeId,
-        tariffId
-      ),
-      c.env.DB.prepare(`
-        INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
-        VALUES (?, ?, 'tariff.update', 'tariff', ?, ?)
-      `).bind(crypto.randomUUID(), user?.userId || "admin", tariffId, JSON.stringify(body)),
-    ]);
+    if (existing) {
+      await c.env.DB.batch([
+        c.env.DB.prepare(`
+          UPDATE tariffs 
+          SET price_per_unit_minor = COALESCE(?, price_per_unit_minor),
+              minimum_charge_minor = COALESCE(?, minimum_charge_minor),
+              currency = COALESCE(?, currency),
+              estimated_days_min = COALESCE(?, estimated_days_min),
+              estimated_days_max = COALESCE(?, estimated_days_max),
+              note = COALESCE(?, note),
+              category_tag = COALESCE(?, category_tag),
+              shipping_mode_id = COALESCE(?, shipping_mode_id),
+              updated_at = datetime('now')
+          WHERE id = ?
+        `).bind(
+          body.price_per_unit_minor !== undefined ? Number(body.price_per_unit_minor) : null,
+          body.minimum_charge_minor !== undefined ? Number(body.minimum_charge_minor) : null,
+          body.currency || "FCFA",
+          body.estimated_days_min !== undefined ? Number(body.estimated_days_min) : null,
+          body.estimated_days_max !== undefined ? Number(body.estimated_days_max) : null,
+          body.note !== undefined ? String(body.note) : null,
+          body.category_tag || body.service_name || null,
+          validModeId,
+          tariffId
+        ),
+        c.env.DB.prepare(`
+          INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
+          VALUES (?, ?, 'tariff.update', 'tariff', ?, ?)
+        `).bind(crypto.randomUUID(), user?.userId || "admin", tariffId, JSON.stringify(body)),
+      ]);
 
-    if (body.origin_country || body.destination_country) {
-      await c.env.DB.prepare(`
-        UPDATE routes
-        SET origin_country = COALESCE(?, origin_country),
-            destination_country = COALESCE(?, destination_country)
-        WHERE id = ?
-      `).bind(body.origin_country || null, body.destination_country || null, existing.route_id).run();
-    }
-  } else {
-    // Upsert pour les tarifs par défaut / créés côté interface
-    let routeId = "route-default";
-    const origCountry = (body.origin_country || "Chine").trim();
-    const destCountry = (body.destination_country || "Côte d'Ivoire").trim();
-    const existingRoute = await c.env.DB.prepare(`
-      SELECT id FROM routes WHERE LOWER(origin_country) = LOWER(?) AND LOWER(destination_country) = LOWER(?) LIMIT 1
-    `).bind(origCountry, destCountry).first<{ id: string }>();
-
-    if (existingRoute?.id) {
-      routeId = existingRoute.id;
+      if (body.origin_country || body.destination_country) {
+        await c.env.DB.prepare(`
+          UPDATE routes
+          SET origin_country = COALESCE(?, origin_country),
+              destination_country = COALESCE(?, destination_country)
+          WHERE id = ?
+        `).bind(body.origin_country || null, body.destination_country || null, existing.route_id).run();
+      }
     } else {
-      routeId = `route-${crypto.randomUUID().slice(0, 8)}`;
+      // Upsert pour les tarifs par défaut / créés côté interface
+      let routeId = "route-default";
+      const origCountry = (body.origin_country || "Chine").trim();
+      const destCountry = (body.destination_country || "Côte d'Ivoire").trim();
+      const existingRoute = await c.env.DB.prepare(`
+        SELECT id FROM routes WHERE LOWER(origin_country) = LOWER(?) AND LOWER(destination_country) = LOWER(?) LIMIT 1
+      `).bind(origCountry, destCountry).first<{ id: string }>();
+
+      if (existingRoute?.id) {
+        routeId = existingRoute.id;
+      } else {
+        routeId = `route-${crypto.randomUUID().slice(0, 8)}`;
+        await c.env.DB.prepare(`
+          INSERT INTO routes (id, origin_country, origin_city, destination_country, destination_city, is_active)
+          VALUES (?, ?, ?, ?, ?, 1)
+        `).bind(routeId, origCountry, body.origin_city || null, destCountry, body.destination_city || null).run();
+      }
+
       await c.env.DB.prepare(`
-        INSERT INTO routes (id, origin_country, origin_city, destination_country, destination_city, is_active)
-        VALUES (?, ?, ?, ?, ?, 1)
-      `).bind(routeId, origCountry, body.origin_city || null, destCountry, body.destination_city || null).run();
+        INSERT INTO tariffs (
+          id, route_id, shipping_mode_id, currency, price_per_unit_minor,
+          minimum_charge_minor, estimated_days_min, estimated_days_max,
+          category_tag, note, is_active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+      `).bind(
+        tariffId,
+        routeId,
+        validModeId,
+        body.currency || "FCFA",
+        body.price_per_unit_minor || 0,
+        body.minimum_charge_minor || 0,
+        body.estimated_days_min || null,
+        body.estimated_days_max || null,
+        body.category_tag || body.service_name || null,
+        body.note || null
+      ).run();
+
+      await c.env.DB.prepare(`
+        INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
+        VALUES (?, ?, 'tariff.create_upsert', 'tariff', ?, ?)
+      `).bind(crypto.randomUUID(), user?.userId || "admin", tariffId, JSON.stringify(body)).run();
     }
 
-    await c.env.DB.prepare(`
-      INSERT INTO tariffs (
-        id, route_id, shipping_mode_id, currency, price_per_unit_minor,
-        minimum_charge_minor, estimated_days_min, estimated_days_max,
-        category_tag, note, is_active
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-    `).bind(
-      tariffId,
-      routeId,
-      validModeId,
-      body.currency || "FCFA",
-      body.price_per_unit_minor || 0,
-      body.minimum_charge_minor || 0,
-      body.estimated_days_min || null,
-      body.estimated_days_max || null,
-      body.category_tag || body.service_name || null,
-      body.note || null
-    ).run();
-
-    await c.env.DB.prepare(`
-      INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
-      VALUES (?, ?, 'tariff.create_upsert', 'tariff', ?, ?)
-    `).bind(crypto.randomUUID(), user?.userId || "admin", tariffId, JSON.stringify(body)).run();
+    return c.json({ success: true, message: "Tarif mis à jour avec succès." });
+  } catch (err: any) {
+    return c.json({ error: `Erreur SQLite D1 lors de la mise à jour : ${err?.message || "Erreur interne"}` }, 500);
   }
-
-  return c.json({ success: true, message: "Tarif mis à jour avec succès." });
 });
 
 adminRouter.delete("/tariffs/:id", async (c) => {
@@ -1295,15 +1371,19 @@ adminRouter.delete("/tariffs/:id", async (c) => {
 
   const user = c.get("user");
   const tariffId = c.req.param("id");
-  await c.env.DB.batch([
-    c.env.DB.prepare(`DELETE FROM tariffs WHERE id = ?`).bind(tariffId),
-    c.env.DB.prepare(`
-      INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
-      VALUES (?, ?, 'tariff.delete', 'tariff', ?, ?)
-    `).bind(crypto.randomUUID(), user.userId, tariffId, JSON.stringify({ tariff_id: tariffId })),
-  ]);
+  try {
+    await c.env.DB.batch([
+      c.env.DB.prepare(`DELETE FROM tariffs WHERE id = ?`).bind(tariffId),
+      c.env.DB.prepare(`
+        INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
+        VALUES (?, ?, 'tariff.delete', 'tariff', ?, ?)
+      `).bind(crypto.randomUUID(), user?.userId || "admin", tariffId, JSON.stringify({ tariff_id: tariffId })),
+    ]);
 
-  return c.json({ success: true, message: "Tarif supprimé avec succès." });
+    return c.json({ success: true, message: "Tarif supprimé avec succès." });
+  } catch (err: any) {
+    return c.json({ error: `Erreur lors de la suppression du tarif : ${err?.message || "Erreur interne"}` }, 500);
+  }
 });
 
 /* ==========================================================================
