@@ -17,6 +17,8 @@ import {
   Package,
   Plane,
   Ship,
+  Zap,
+  ShoppingBag,
   Sparkles,
   ExternalLink,
   Coins,
@@ -121,7 +123,8 @@ function CommandeFormContent() {
           (t.origin_country || "").toLowerCase().includes("chine") &&
           (t.destination_country || "").toLowerCase().includes(currentDestCountry.toLowerCase()) &&
           ((t.shipping_mode_name || "").toLowerCase().includes("express") ||
-            (t.category_tag || "").toLowerCase().includes("express"))
+            (t.category_tag || "").toLowerCase().includes("express") ||
+            (t.id || "").toLowerCase().includes("express"))
       ) || findTariff(tariffs, "chine", "express")
     );
   }, [tariffs, currentDestCountry]);
@@ -133,8 +136,25 @@ function CommandeFormContent() {
           (t.origin_country || "").toLowerCase().includes("chine") &&
           (t.destination_country || "").toLowerCase().includes(currentDestCountry.toLowerCase()) &&
           ((t.shipping_mode_name || "").toLowerCase().includes("normale") ||
-            (t.shipping_mode_name || "").toLowerCase().includes("standard"))
+            (t.shipping_mode_name || "").toLowerCase().includes("standard") ||
+            (t.category_tag || "").toLowerCase().includes("standard") ||
+            (t.id || "").toLowerCase().includes("normal"))
       ) || findTariff(tariffs, "chine", "normale")
+    );
+  }, [tariffs, currentDestCountry]);
+
+  const matchedSpecial = useMemo(() => {
+    return (
+      tariffs.find(
+        (t) =>
+          (t.origin_country || "").toLowerCase().includes("chine") &&
+          (t.destination_country || "").toLowerCase().includes(currentDestCountry.toLowerCase()) &&
+          ((t.shipping_mode_name || "").toLowerCase().includes("batterie") ||
+            (t.shipping_mode_name || "").toLowerCase().includes("spécial") ||
+            (t.category_tag || "").toLowerCase().includes("batterie") ||
+            (t.category_tag || "").toLowerCase().includes("spécial") ||
+            (t.id || "").toLowerCase().includes("special"))
+      ) || findTariff(tariffs, "chine", "batterie") || findTariff(tariffs, "chine", "spécial")
     );
   }, [tariffs, currentDestCountry]);
 
@@ -146,42 +166,49 @@ function CommandeFormContent() {
           (t.destination_country || "").toLowerCase().includes(currentDestCountry.toLowerCase()) &&
           ((t.shipping_mode_name || "").toLowerCase().includes("bateau") ||
             (t.shipping_mode_name || "").toLowerCase().includes("maritime") ||
-            t.shipping_mode_type === "SEA")
+            (t.category_tag || "").toLowerCase().includes("maritime") ||
+            t.shipping_mode_type === "SEA" ||
+            (t.id || "").toLowerCase().includes("sea"))
       ) || findTariff(tariffs, "chine", "bateau")
     );
   }, [tariffs, currentDestCountry]);
 
-  const rateAirExpress = useMemo(() => {
-    const minor = matchedExpress?.price_per_unit_minor || 1200000;
-    return minor > 100000 ? Math.round(minor / 100) : minor;
-  }, [matchedExpress]);
+  const getSafeRate = (tariff: any, defaultVal: number): number => {
+    if (!tariff) return defaultVal;
+    if (typeof tariff.price_per_unit === "number" && tariff.price_per_unit > 0) {
+      return Math.round(tariff.price_per_unit);
+    }
+    const minor = Number(tariff.price_per_unit_minor) || 0;
+    if (minor <= 0) return defaultVal;
+    if (minor >= 50000) {
+      return Math.round(minor / 100);
+    }
+    return minor;
+  };
 
-  const rateAirStandard = useMemo(() => {
-    const minor = matchedStandard?.price_per_unit_minor || 950000;
-    return minor > 100000 ? Math.round(minor / 100) : minor;
-  }, [matchedStandard]);
-
-  const rateSea = useMemo(() => {
-    const minor = matchedSea?.price_per_unit_minor || 32000000;
-    return minor > 100000 ? Math.round(minor / 100) : minor;
-  }, [matchedSea]);
+  const rateAirExpress = useMemo(() => getSafeRate(matchedExpress, 12000), [matchedExpress]);
+  const rateAirStandard = useMemo(() => getSafeRate(matchedStandard, 10000), [matchedStandard]);
+  const rateAirSpecial = useMemo(() => getSafeRate(matchedSpecial, 14000), [matchedSpecial]);
+  const rateSea = useMemo(() => getSafeRate(matchedSea, 300000), [matchedSea]);
 
   // MOYEN DE TRANSPORT CHOISI APRÈS LA DESTINATION
-  const [selectedTransportMode, setSelectedTransportMode] = useState<"AIR_EXPRESS" | "AIR_STANDARD" | "SEA">("AIR_EXPRESS");
+  const [selectedTransportMode, setSelectedTransportMode] = useState<"AIR_EXPRESS" | "AIR_STANDARD" | "AIR_SPECIAL" | "SEA">("AIR_EXPRESS");
   const [packageWeight, setPackageWeight] = useState<number>(5);
   const [packageVolume, setPackageVolume] = useState<number>(0.1);
 
   const transportModeLabel = useMemo(() => {
     if (selectedTransportMode === "AIR_EXPRESS") return "Avion Express Cargo (4 à 5 jours)";
     if (selectedTransportMode === "AIR_STANDARD") return "Avion Normal Standard (10 à 14 jours)";
+    if (selectedTransportMode === "AIR_SPECIAL") return "Avion Spécial Batteries & Liquides (7 à 10 jours)";
     return "Bateau Maritime Groupage (35 à 45 jours)";
   }, [selectedTransportMode]);
 
   const transportUnitRateFormatted = useMemo(() => {
     if (selectedTransportMode === "AIR_EXPRESS") return `${rateAirExpress.toLocaleString("fr-FR")} FCFA / kg`;
     if (selectedTransportMode === "AIR_STANDARD") return `${rateAirStandard.toLocaleString("fr-FR")} FCFA / kg`;
+    if (selectedTransportMode === "AIR_SPECIAL") return `${rateAirSpecial.toLocaleString("fr-FR")} FCFA / kg`;
     return `${rateSea.toLocaleString("fr-FR")} FCFA / m³`;
-  }, [selectedTransportMode, rateAirExpress, rateAirStandard, rateSea]);
+  }, [selectedTransportMode, rateAirExpress, rateAirStandard, rateAirSpecial, rateSea]);
 
   // Calcul du montant de transport au poids ou au volume
   const shippingQuote = useMemo(() => {
@@ -191,8 +218,11 @@ function CommandeFormContent() {
     if (selectedTransportMode === "AIR_STANDARD") {
       return Math.round((packageWeight || 1) * rateAirStandard);
     }
+    if (selectedTransportMode === "AIR_SPECIAL") {
+      return Math.round((packageWeight || 1) * rateAirSpecial);
+    }
     return Math.round((packageVolume || 0.1) * rateSea);
-  }, [selectedTransportMode, packageWeight, packageVolume, rateAirExpress, rateAirStandard, rateSea]);
+  }, [selectedTransportMode, packageWeight, packageVolume, rateAirExpress, rateAirStandard, rateAirSpecial, rateSea]);
 
   // Option 1 : Sans fournisseur (Sourcing & Achat complet)
   const [productLink, setProductLink] = useState("");
@@ -835,6 +865,23 @@ function CommandeFormContent() {
                       </div>
                       <div className="transport-rate-tag">
                         {rateAirStandard.toLocaleString("fr-FR")} FCFA / kg
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`transport-mode-btn ${selectedTransportMode === "AIR_SPECIAL" ? "selected" : ""}`}
+                      onClick={() => setSelectedTransportMode("AIR_SPECIAL")}
+                    >
+                      <div className="transport-btn-header">
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <ShoppingBag size={16} color={selectedTransportMode === "AIR_SPECIAL" ? "#CC4E16" : "#6B7280"} />
+                          <strong style={{ fontSize: "0.88rem" }}>Spécial / Batteries</strong>
+                        </div>
+                        <span className="speed-badge special">7 à 10 jours</span>
+                      </div>
+                      <div className="transport-rate-tag">
+                        {rateAirSpecial.toLocaleString("fr-FR")} FCFA / kg
                       </div>
                     </button>
 
@@ -1837,6 +1884,11 @@ function CommandeFormContent() {
         .speed-badge.sea {
           background: #F0FDF4;
           color: #16A34A;
+        }
+
+        .speed-badge.special {
+          background: #FFF7ED;
+          color: #C2410C;
         }
 
         .extract-trigger-btn {

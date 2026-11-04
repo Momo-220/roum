@@ -663,6 +663,14 @@ export async function saveClientRequest(data: {
           ? "SANS_FOURNISSEUR"
           : "FORWARDING");
 
+      const resolvedModeId = data.shipping_mode_type === "SEA"
+        ? "SEA_LCL"
+        : data.shipping_mode_name?.toLowerCase().includes("express")
+        ? "AIR_EXPRESS"
+        : data.shipping_mode_name?.toLowerCase().includes("spécial") || data.shipping_mode_name?.toLowerCase().includes("batterie")
+        ? "AIR_SPECIAL"
+        : "AIR_STANDARD";
+
       const newRequestObject = {
         id: `req-${Date.now()}`,
         reference,
@@ -688,7 +696,7 @@ export async function saveClientRequest(data: {
         origin_city: data.origin_country === "Chine" ? "Guangzhou" : data.origin_country === "France" ? "Paris" : data.origin_country === "Maroc" ? "Casablanca" : "Dubaï",
         destination_country: data.destination_country,
         destination_city: data.destination_country.includes("(") ? data.destination_country.split("(")[1].replace(")", "").trim() : data.destination_country,
-        shipping_mode_id: data.shipping_mode_type === "SEA" ? "SEA_LCL" : "AIR_EXPRESS",
+        shipping_mode_id: resolvedModeId,
         description,
         shipping_mark: shippingMark,
         tracking_number: trackingNumber,
@@ -731,7 +739,13 @@ export async function saveClientRequest(data: {
         client_phone: data.client_phone.trim(),
         origin_country: data.origin_country,
         destination_country: data.destination_country,
-        shipping_mode_id: data.shipping_mode_type === "SEA" ? "SEA_LCL" : "AIR_EXPRESS",
+        shipping_mode_id: data.shipping_mode_type === "SEA"
+          ? "SEA_LCL"
+          : data.shipping_mode_name?.toLowerCase().includes("express")
+          ? "AIR_EXPRESS"
+          : data.shipping_mode_name?.toLowerCase().includes("spécial") || data.shipping_mode_name?.toLowerCase().includes("batterie")
+          ? "AIR_SPECIAL"
+          : "AIR_STANDARD",
         cargo_type: description,
         product_url: data.product_url || "",
         product_quantity: data.product_quantity || "",
