@@ -429,14 +429,50 @@ export default function TariffsPage() {
                 </select>
               </div>
 
-              {/* 3. Formule / Type de Marchandises selon le pays de départ */}
-              {origin !== "Maroc" && (
-                <div>
-                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#111827", marginBottom: "8px" }}>
-                    3. Formule & Type d&apos;envoi
-                  </label>
-                  <div style={{ display: "grid", gap: "8px" }}>
-                    {origin === "Chine" && (() => {
+              {/* 3. Formule / Moyen de transport selon la destination */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#111827", marginBottom: "8px" }}>
+                  3. Formule &amp; Moyen de transport
+                </label>
+                <div style={{ display: "grid", gap: "8px" }}>
+                  {origin === "Maroc" && (() => {
+                    let matched = findTariff(tariffs, "maroc", destination);
+                    if (!matched) {
+                      if (destination === "Côte d'Ivoire") matched = findTariff(tariffs, "maroc", "ci") || findTariff(tariffs, "maroc", "abidjan");
+                      else if (destination === "Sénégal") matched = findTariff(tariffs, "maroc", "sn") || findTariff(tariffs, "maroc", "dakar");
+                      else if (destination === "Mali") matched = findTariff(tariffs, "maroc", "ml") || findTariff(tariffs, "maroc", "bamako");
+                      else if (destination === "Burkina Faso") matched = findTariff(tariffs, "maroc", "bf") || findTariff(tariffs, "maroc", "ouaga");
+                      else if (destination === "Gabon") matched = findTariff(tariffs, "maroc", "ga") || findTariff(tariffs, "maroc", "libreville");
+                    }
+                    const rate = matched?.price_per_unit_minor ? (matched.price_per_unit_minor / 100).toLocaleString("fr-FR") : (destination === "Côte d'Ivoire" ? "6 500" : "7 000");
+
+                    return [
+                      { key: "subsaharien", label: `Groupage Aérien Casablanca ➔ ${destination} (5 jours)`, note: `Vol direct · ${rate} FCFA/kg` },
+                    ];
+                  })().map((f) => (
+                    <button
+                      key={f.key}
+                      type="button"
+                      onClick={() => setFormulaKey(f.key)}
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: "8px",
+                        border: formulaKey === f.key ? "2px solid #111827" : "1px solid #E5E7EB",
+                        backgroundColor: formulaKey === f.key ? "#FAF9F6" : "#FFFFFF",
+                        color: "#111827",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        cursor: "pointer",
+                        textAlign: "left",
+                      }}
+                    >
+                      <span style={{ fontSize: "0.84rem", fontWeight: 700 }}>{f.label}</span>
+                      <span style={{ fontSize: "0.76rem", color: "#6B7280" }}>{f.note}</span>
+                    </button>
+                  ))}
+
+                  {origin === "Chine" && (() => {
                       const exp = findTariff(tariffs, "chine", "express");
                       const nor = findTariff(tariffs, "chine", "normale");
                       const bat = findTariff(tariffs, "chine", "batterie");
@@ -557,7 +593,6 @@ export default function TariffsPage() {
                     ))}
                   </div>
                 </div>
-              )}
 
               {/* 4. Saisie Quantité (kg, m³ ou unités) */}
               <div>

@@ -10172,16 +10172,16 @@ export default function AdminPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                   <div>
                     <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Liaison</label>
-                    <select value={newShipment.route_id} onChange={(e) => setNewShipment({ ...newShipment, route_id: e.target.value })} className="input-clean" style={{ height: "40px" }}>
-                      {routesList.map((r) => (
+                    <select value={availableRoutes.some((r) => r.id === newShipment.route_id) ? newShipment.route_id : availableRoutes[0]?.id || ""} onChange={(e) => setNewShipment({ ...newShipment, route_id: e.target.value })} className="input-clean" style={{ height: "40px" }}>
+                      {availableRoutes.map((r) => (
                         <option key={r.id} value={r.id}>{r.origin_country} → {r.destination_country}</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Mode</label>
-                    <select value={newShipment.shipping_mode_id} onChange={(e) => setNewShipment({ ...newShipment, shipping_mode_id: e.target.value })} className="input-clean" style={{ height: "40px" }}>
-                      {modesList.map((m) => (
+                    <select value={availableModes.some((m) => m.id === newShipment.shipping_mode_id) ? newShipment.shipping_mode_id : availableModes[0]?.id || ""} onChange={(e) => setNewShipment({ ...newShipment, shipping_mode_id: e.target.value })} className="input-clean" style={{ height: "40px" }}>
+                      {availableModes.map((m) => (
                         <option key={m.id} value={m.id}>{m.name}</option>
                       ))}
                     </select>
@@ -10827,7 +10827,7 @@ export default function AdminPage() {
                 <div>
                   <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Liaison</label>
                   <select
-                    value={convertForm.route_id}
+                    value={availableRoutes.some((r) => r.id === convertForm.route_id) ? convertForm.route_id : availableRoutes[0]?.id || ""}
                     onChange={(e) => setConvertForm({ ...convertForm, route_id: e.target.value })}
                     className="input-clean"
                   >
@@ -10839,7 +10839,7 @@ export default function AdminPage() {
                 <div>
                   <label style={{ fontSize: "0.78rem", color: "var(--text-secondary)", display: "block", marginBottom: "4px", fontWeight: "600" }}>Mode de Transport</label>
                   <select
-                    value={convertForm.shipping_mode_id}
+                    value={availableModes.some((m) => m.id === convertForm.shipping_mode_id) ? convertForm.shipping_mode_id : availableModes[0]?.id || ""}
                     onChange={(e) => setConvertForm({ ...convertForm, shipping_mode_id: e.target.value })}
                     className="input-clean"
                   >

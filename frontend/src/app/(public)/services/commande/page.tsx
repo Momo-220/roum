@@ -113,22 +113,98 @@ function CommandeFormContent() {
     return found ? found.country : destinationCity.split("—")[0].split("(")[0].trim();
   }, [adminDestinations, destinationCity]);
 
+  // Tarifs spécifiques dynamiques depuis l'Admin
+  const matchedExpress = useMemo(() => {
+    return (
+      tariffs.find(
+        (t) =>
+          (t.origin_country || "").toLowerCase().includes("chine") &&
+          (t.destination_country || "").toLowerCase().includes(currentDestCountry.toLowerCase()) &&
+          ((t.shipping_mode_name || "").toLowerCase().includes("express") ||
+            (t.category_tag || "").toLowerCase().includes("express"))
+      ) || findTariff(tariffs, "chine", "express")
+    );
+  }, [tariffs, currentDestCountry]);
+
+  const matchedStandard = useMemo(() => {
+    return (
+      tariffs.find(
+        (t) =>
+          (t.origin_country || "").toLowerCase().includes("chine") &&
+          (t.destination_country || "").toLowerCase().includes(currentDestCountry.toLowerCase()) &&
+          ((t.shipping_mode_name || "").toLowerCase().includes("normale") ||
+            (t.shipping_mode_name || "").toLowerCase().includes("standard"))
+      ) || findTariff(tariffs, "chine", "normale")
+    );
+  }, [tariffs, currentDestCountry]);
+
+  const matchedSea = useMemo(() => {
+    return (
+      tariffs.find(
+        (t) =>
+          (t.origin_country || "").toLowerCase().includes("chine") &&
+          (t.destination_country || "").toLowerCase().includes(currentDestCountry.toLowerCase()) &&
+          ((t.shipping_mode_name || "").toLowerCase().includes("bateau") ||
+            (t.shipping_mode_name || "").toLowerCase().includes("maritime") ||
+            t.shipping_mode_type === "SEA")
+      ) || findTariff(tariffs, "chine", "bateau")
+    );
+  }, [tariffs, currentDestCountry]);
+
+  const rateAirExpress = useMemo(() => {
+    const minor = matchedExpress?.price_per_unit_minor || 1200000;
+    return minor > 100000 ? Math.round(minor / 100) : minor;
+  }, [matchedExpress]);
+
+  const rateAirStandard = useMemo(() => {
+    const minor = matchedStandard?.price_per_unit_minor || 950000;
+    return minor > 100000 ? Math.round(minor / 100) : minor;
+  }, [matchedStandard]);
+
+  const rateSea = useMemo(() => {
+    const minor = matchedSea?.price_per_unit_minor || 32000000;
+    return minor > 100000 ? Math.round(minor / 100) : minor;
+  }, [matchedSea]);
+
+  // MOYEN DE TRANSPORT CHOISI APRÈS LA DESTINATION
+  const [selectedTransportMode, setSelectedTransportMode] = useState<"AIR_EXPRESS" | "AIR_STANDARD" | "SEA">("AIR_EXPRESS");
+  const [packageWeight, setPackageWeight] = useState<number>(5);
+  const [packageVolume, setPackageVolume] = useState<number>(0.1);
+
+  const transportModeLabel = useMemo(() => {
+    if (selectedTransportMode === "AIR_EXPRESS") return "Avion Express Cargo (4 à 5 jours)";
+    if (selectedTransportMode === "AIR_STANDARD") return "Avion Normal Standard (10 à 14 jours)";
+    return "Bateau Maritime Groupage (35 à 45 jours)";
+  }, [selectedTransportMode]);
+
+  const transportUnitRateFormatted = useMemo(() => {
+    if (selectedTransportMode === "AIR_EXPRESS") return `${rateAirExpress.toLocaleString("fr-FR")} FCFA / kg`;
+    if (selectedTransportMode === "AIR_STANDARD") return `${rateAirStandard.toLocaleString("fr-FR")} FCFA / kg`;
+    return `${rateSea.toLocaleString("fr-FR")} FCFA / m³`;
+  }, [selectedTransportMode, rateAirExpress, rateAirStandard, rateSea]);
+
+  // Calcul du montant de transport au poids ou au volume
+  const shippingQuote = useMemo(() => {
+    if (selectedTransportMode === "AIR_EXPRESS") {
+      return Math.round((packageWeight || 1) * rateAirExpress);
+    }
+    if (selectedTransportMode === "AIR_STANDARD") {
+      return Math.round((packageWeight || 1) * rateAirStandard);
+    }
+    return Math.round((packageVolume || 0.1) * rateSea);
+  }, [selectedTransportMode, packageWeight, packageVolume, rateAirExpress, rateAirStandard, rateSea]);
+
   // Option 1 : Sans fournisseur (Sourcing & Achat complet)
   const [productLink, setProductLink] = useState("");
   const [productQuery, setProductQuery] = useState("");
   const [productQuantity, setProductQuantity] = useState<number>(1);
   const [productUnitPrice, setProductUnitPrice] = useState<number>(15);
   const [productCurrency, setProductCurrency] = useState<"RMB" | "USD" | "FCFA">("RMB");
-  const [shippingMode, setShippingMode] = useState<"AIR" | "SEA">("AIR");
-  const [estimatedWeight, setEstimatedWeight] = useState<number>(2.5);
 
   // Option 2 : Avec fournisseur (Fret & Transit seul, marchandises déjà payées)
   const [clientShippingMark, setClientShippingMark] = useState("");
   const [paidToSupplier, setPaidToSupplier] = useState("");
   const [goodsDescription, setGoodsDescription] = useState("");
-  const [opt2ShippingMode, setOpt2ShippingMode] = useState<"AIR_EXPRESS" | "AIR_STANDARD" | "SEA">("AIR_EXPRESS");
-  const [opt2Weight, setOpt2Weight] = useState<number>(5);
-  const [opt2Volume, setOpt2Volume] = useState<number>(0.1);
 
   // État de l'analyse automatique du lien
   const [extracting, setExtracting] = useState(false);
@@ -338,82 +414,6 @@ function CommandeFormContent() {
     }
   };
 
-  // Tarifs spécifiques dynamiques depuis l'Admin
-  const matchedExpress = useMemo(() => {
-    return (
-      tariffs.find(
-        (t) =>
-          (t.origin_country || "").toLowerCase().includes("chine") &&
-          (t.destination_country || "").toLowerCase().includes(currentDestCountry.toLowerCase()) &&
-          ((t.shipping_mode_name || "").toLowerCase().includes("express") ||
-            (t.category_tag || "").toLowerCase().includes("express"))
-      ) || findTariff(tariffs, "chine", "express")
-    );
-  }, [tariffs, currentDestCountry]);
-
-  const matchedStandard = useMemo(() => {
-    return (
-      tariffs.find(
-        (t) =>
-          (t.origin_country || "").toLowerCase().includes("chine") &&
-          (t.destination_country || "").toLowerCase().includes(currentDestCountry.toLowerCase()) &&
-          ((t.shipping_mode_name || "").toLowerCase().includes("normale") ||
-            (t.shipping_mode_name || "").toLowerCase().includes("standard"))
-      ) || findTariff(tariffs, "chine", "normale")
-    );
-  }, [tariffs, currentDestCountry]);
-
-  const matchedSea = useMemo(() => {
-    return (
-      tariffs.find(
-        (t) =>
-          (t.origin_country || "").toLowerCase().includes("chine") &&
-          (t.destination_country || "").toLowerCase().includes(currentDestCountry.toLowerCase()) &&
-          ((t.shipping_mode_name || "").toLowerCase().includes("bateau") ||
-            (t.shipping_mode_name || "").toLowerCase().includes("maritime") ||
-            t.shipping_mode_type === "SEA")
-      ) || findTariff(tariffs, "chine", "bateau")
-    );
-  }, [tariffs, currentDestCountry]);
-
-  const rateAirExpress = useMemo(() => {
-    const minor = matchedExpress?.price_per_unit_minor || 1200000;
-    return minor > 100000 ? Math.round(minor / 100) : minor;
-  }, [matchedExpress]);
-
-  const rateAirStandard = useMemo(() => {
-    const minor = matchedStandard?.price_per_unit_minor || 950000;
-    return minor > 100000 ? Math.round(minor / 100) : minor;
-  }, [matchedStandard]);
-
-  const rateSea = useMemo(() => {
-    const minor = matchedSea?.price_per_unit_minor || 32000000;
-    return minor > 100000 ? Math.round(minor / 100) : minor;
-  }, [matchedSea]);
-
-  // Option 2 devis transport
-  const shippingQuoteOption2 = useMemo(() => {
-    if (opt2ShippingMode === "AIR_EXPRESS") {
-      return Math.round((opt2Weight || 1) * rateAirExpress);
-    }
-    if (opt2ShippingMode === "AIR_STANDARD") {
-      return Math.round((opt2Weight || 1) * rateAirStandard);
-    }
-    return Math.round((opt2Volume || 0.1) * rateSea);
-  }, [opt2ShippingMode, opt2Weight, opt2Volume, rateAirExpress, rateAirStandard, rateSea]);
-
-  const opt2ModeLabel = useMemo(() => {
-    if (opt2ShippingMode === "AIR_EXPRESS") return "Avion Express Cargo (4 à 5 jours)";
-    if (opt2ShippingMode === "AIR_STANDARD") return "Avion Normal Standard (10 à 14 jours)";
-    return "Bateau Maritime Groupage (35 à 45 jours)";
-  }, [opt2ShippingMode]);
-
-  const opt2UnitRateFormatted = useMemo(() => {
-    if (opt2ShippingMode === "AIR_EXPRESS") return `${rateAirExpress.toLocaleString("fr-FR")} FCFA / kg`;
-    if (opt2ShippingMode === "AIR_STANDARD") return `${rateAirStandard.toLocaleString("fr-FR")} FCFA / kg`;
-    return `${rateSea.toLocaleString("fr-FR")} FCFA / m³`;
-  }, [opt2ShippingMode, rateAirExpress, rateAirStandard, rateSea]);
-
   // Option 1 calculs financiers
   const rmbRate = 95;
   const usdRate = 620;
@@ -421,9 +421,7 @@ function CommandeFormContent() {
     productUnitPrice * (productCurrency === "USD" ? usdRate : productCurrency === "RMB" ? rmbRate : 1)
   );
   const totalArticlesFCFA = unitPriceFCFA * (productQuantity || 1);
-  const shippingFeeOption1 =
-    shippingMode === "AIR" ? Math.round((estimatedWeight || 2.5) * rateAirExpress) : 30000;
-  const grandTotalFCFA = totalArticlesFCFA + shippingFeeOption1;
+  const grandTotalFCFA = totalArticlesFCFA + shippingQuote;
 
   const copyPayMethod = (key: string, val: string) => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -476,9 +474,9 @@ function CommandeFormContent() {
       let cargoDescription = "";
 
       if (option === "sans_fournisseur") {
-        cargoDescription = `[SOURCING ALIBABA CONFIRMÉ] Produit: ${productQuery.trim() || extractedProduct?.title || "Article Alibaba"} | Qté: ${productQuantity} | P.U: ${productUnitPrice} ${productCurrency} (${unitPriceFCFA.toLocaleString("fr-FR")} FCFA) | Expédition: ${shippingMode === "AIR" ? `Avion (${estimatedWeight}kg)` : "Bateau"} | Total: ${grandTotalFCFA.toLocaleString("fr-FR")} FCFA | Reçu: ${receiptFileName ? "OUI (joint)" : "En attente"}`;
+        cargoDescription = `[SOURCING ALIBABA CONFIRMÉ] Produit: ${productQuery.trim() || extractedProduct?.title || "Article Alibaba"} | Qté: ${productQuantity} | P.U: ${productUnitPrice} ${productCurrency} (${unitPriceFCFA.toLocaleString("fr-FR")} FCFA) | Formule: ${transportModeLabel} (${selectedTransportMode === "SEA" ? `${packageVolume} m³` : `${packageWeight} kg`}) | Total: ${grandTotalFCFA.toLocaleString("fr-FR")} FCFA | Reçu: ${receiptFileName ? "OUI (joint)" : "En attente"}`;
       } else {
-        cargoDescription = `[EXPÉDITION AVEC FOURNISSEUR] Shipping Mark: ${clientShippingMark.trim()} | Déjà Payé Usine: ${paidToSupplier.trim() || "Oui"} | Marchandise: ${goodsDescription.trim()} | Formule: ${opt2ModeLabel} (${opt2ShippingMode === "SEA" ? `${opt2Volume} m³` : `${opt2Weight} kg`} à ${opt2UnitRateFormatted}) | Devis Transit: ${shippingQuoteOption2.toLocaleString("fr-FR")} FCFA | Paiement: Mobile Money à l'arrivée`;
+        cargoDescription = `[EXPÉDITION AVEC FOURNISSEUR] Shipping Mark: ${clientShippingMark.trim()} | Déjà Payé Usine: ${paidToSupplier.trim() || "Oui"} | Marchandise: ${goodsDescription.trim()} | Formule: ${transportModeLabel} (${selectedTransportMode === "SEA" ? `${packageVolume} m³` : `${packageWeight} kg`} à ${transportUnitRateFormatted}) | Devis Transit: ${shippingQuote.toLocaleString("fr-FR")} FCFA | Paiement: Mobile Money à l'arrivée`;
       }
 
       const res = await saveClientRequest({
@@ -501,19 +499,20 @@ function CommandeFormContent() {
         unit_price: option === "sans_fournisseur" ? productUnitPrice : undefined,
         unit_price_currency: option === "sans_fournisseur" ? productCurrency : undefined,
         total_goods_fcfa: option === "sans_fournisseur" ? totalArticlesFCFA : undefined,
-        shipping_fee_fcfa: option === "sans_fournisseur" ? shippingFeeOption1 : shippingQuoteOption2,
-        total_amount_fcfa: option === "sans_fournisseur" ? grandTotalFCFA : shippingQuoteOption2,
+        shipping_fee_fcfa: shippingQuote,
+        total_amount_fcfa: option === "sans_fournisseur" ? grandTotalFCFA : shippingQuote,
         payment_method_selected: option === "sans_fournisseur" ? selectedPayMethod : "MOBILE_MONEY_ARRIVEE",
         payment_receipt_url: option === "sans_fournisseur" ? receiptDataUrl || undefined : undefined,
         payment_receipt_name: option === "sans_fournisseur" ? receiptFileName || undefined : undefined,
         product_quantity: String(productQuantity || 1),
         product_specs:
           option === "sans_fournisseur"
-            ? `Mode: ${shippingMode} | Poids: ${estimatedWeight}kg | Articles: ${totalArticlesFCFA.toLocaleString("fr-FR")} F | Total: ${grandTotalFCFA.toLocaleString("fr-FR")} F`
-            : `Shipping Mark: ${clientShippingMark.trim()} | Déjà Payé Usine: ${paidToSupplier.trim()} | Devis Transit: ${shippingQuoteOption2.toLocaleString("fr-FR")} FCFA`,
-        shipping_mode_type: option === "sans_fournisseur" ? shippingMode : opt2ShippingMode === "SEA" ? "SEA" : "AIR",
-        estimated_weight_kg: option === "sans_fournisseur" ? estimatedWeight : opt2ShippingMode !== "SEA" ? opt2Weight : undefined,
-        estimated_cbm: option === "sans_fournisseur" ? (shippingMode === "SEA" ? estimatedWeight : undefined) : opt2ShippingMode === "SEA" ? opt2Volume : undefined,
+            ? `Mode: ${transportModeLabel} | Articles: ${totalArticlesFCFA.toLocaleString("fr-FR")} F | Fret: ${shippingQuote.toLocaleString("fr-FR")} F | Total: ${grandTotalFCFA.toLocaleString("fr-FR")} F`
+            : `Shipping Mark: ${clientShippingMark.trim()} | Déjà Payé Usine: ${paidToSupplier.trim()} | Devis Transit: ${shippingQuote.toLocaleString("fr-FR")} FCFA`,
+        shipping_mode_type: selectedTransportMode === "SEA" ? "SEA" : "AIR",
+        shipping_mode_name: transportModeLabel,
+        estimated_weight_kg: selectedTransportMode !== "SEA" ? packageWeight : undefined,
+        estimated_cbm: selectedTransportMode === "SEA" ? packageVolume : undefined,
         cargo_type: cargoDescription,
       });
 
@@ -524,10 +523,10 @@ function CommandeFormContent() {
           `• Client : ${clientName}\n` +
           `• Téléphone : ${clientPhone}\n` +
           `• Destination : ${destinationCity}\n` +
+          `• Moyen de transport : ${transportModeLabel} (${selectedTransportMode === "SEA" ? `${packageVolume} m³` : `${packageWeight} kg`} à ${transportUnitRateFormatted})\n` +
           `• Article : ${productQuery || extractedProduct?.title || "Article Alibaba"}\n` +
           `• Quantité : ${productQuantity}\n` +
           `• Lien : ${productLink}\n` +
-          `• Mode : ${shippingMode === "AIR" ? `Avion Express (${estimatedWeight} kg)` : "Bateau Maritime"}\n` +
           `• Total Calculé : ${grandTotalFCFA.toLocaleString("fr-FR")} FCFA\n` +
           `• Règlement via : ${selectedPayMethod.toUpperCase()}\n` +
           `• Preuve de paiement : ${receiptFileName ? `Jointe (${receiptFileName})` : "À envoyer"}`;
@@ -538,12 +537,12 @@ function CommandeFormContent() {
           `• Client : ${clientName}\n` +
           `• Téléphone : ${clientPhone}\n` +
           `• Destination : ${destinationCity}\n` +
+          `• Moyen de transport : ${transportModeLabel} (${selectedTransportMode === "SEA" ? `${packageVolume} m³` : `${packageWeight} kg`} à ${transportUnitRateFormatted})\n` +
           `• Shipping Mark fournisseur : ${clientShippingMark}\n` +
           `• Montant payé au fournisseur : ${paidToSupplier || "Déjà réglé"}\n` +
           `• Lien de l'article : ${productLink}\n` +
           `• Marchandise : ${goodsDescription}\n` +
-          `• Formule choisie : ${opt2ModeLabel} (${opt2ShippingMode === "SEA" ? `${opt2Volume} m³` : `${opt2Weight} kg`} à ${opt2UnitRateFormatted})\n` +
-          `• Devis transit estimé : ${shippingQuoteOption2.toLocaleString("fr-FR")} FCFA\n` +
+          `• Devis transit estimé : ${shippingQuote.toLocaleString("fr-FR")} FCFA\n` +
           `• Modalité de paiement : Mobile Money (Wave / Orange Money) à l'arrivée en entrepôt`;
       }
 
@@ -554,11 +553,11 @@ function CommandeFormContent() {
         trackingNumber: res.trackingNumber,
         shippingMark: res.shippingMark,
         whatsappUrl: customWaUrl,
-        totalAmount: option === "sans_fournisseur" ? grandTotalFCFA : shippingQuoteOption2,
+        totalAmount: option === "sans_fournisseur" ? grandTotalFCFA : shippingQuote,
         receiptName: receiptFileName,
         option,
         destination: destinationCity,
-        shippingModeDesc: option === "sans_fournisseur" ? (shippingMode === "AIR" ? "Avion Express" : "Bateau Maritime") : opt2ModeLabel,
+        shippingModeDesc: transportModeLabel,
       });
       setSubmitted(true);
       window.open(customWaUrl, "_blank");
@@ -735,14 +734,14 @@ function CommandeFormContent() {
 
             <div className="form-card">
               {/* ========================================================
-                  ÉTAPE 1 : COORDONNÉES CLIENT
+                  ÉTAPE 1 : COORDONNÉES, DESTINATION & MOYEN DE TRANSPORT
                  ======================================================== */}
               <div className="section-heading">
                 <span className="step-num">1</span>
                 <div>
-                  <h3>Coordonnées du Destinataire</h3>
+                  <h3>Destinataire, Destination &amp; Mode de Transport</h3>
                   <p style={{ fontSize: "0.8rem", color: "#6B7280", margin: "2px 0 0 0" }}>
-                    Informations nécessaires pour la création de votre dossier et la livraison
+                    Choisissez votre destination et votre formule d&apos;acheminement avec tarifs au kilo/m³ synchronisés
                   </p>
                 </div>
               </div>
@@ -772,6 +771,7 @@ function CommandeFormContent() {
                   />
                 </div>
 
+                {/* Choix Destination */}
                 <div className="input-group full-width">
                   <label htmlFor="destinationCity">
                     Destination Finale (Entrepôt de livraison) <span style={{ color: "#DC2626" }}>*</span>
@@ -793,12 +793,112 @@ function CommandeFormContent() {
                     Dédouanement 100% inclus jusqu&apos;à votre entrepôt ou agence de destination.
                   </span>
                 </div>
+
+                {/* Choix du Moyen de Transport (immédiatement après la destination) */}
+                <div className="input-group full-width" style={{ marginTop: "4px" }}>
+                  <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>Moyen de Transport Souhaité <span style={{ color: "#DC2626" }}>*</span></span>
+                    <span style={{ fontSize: "0.74rem", color: "#16A34A", fontWeight: 700 }}>
+                      ✓ Dédouanement inclus
+                    </span>
+                  </label>
+
+                  <div className="transport-modes-selector">
+                    <button
+                      type="button"
+                      className={`transport-mode-btn ${selectedTransportMode === "AIR_EXPRESS" ? "selected" : ""}`}
+                      onClick={() => setSelectedTransportMode("AIR_EXPRESS")}
+                    >
+                      <div className="transport-btn-header">
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <Plane size={16} color={selectedTransportMode === "AIR_EXPRESS" ? "#CC4E16" : "#6B7280"} />
+                          <strong style={{ fontSize: "0.88rem" }}>Voie Aérienne Express</strong>
+                        </div>
+                        <span className="speed-badge express">4 à 5 jours</span>
+                      </div>
+                      <div className="transport-rate-tag">
+                        {rateAirExpress.toLocaleString("fr-FR")} FCFA / kg
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`transport-mode-btn ${selectedTransportMode === "AIR_STANDARD" ? "selected" : ""}`}
+                      onClick={() => setSelectedTransportMode("AIR_STANDARD")}
+                    >
+                      <div className="transport-btn-header">
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <Plane size={16} color={selectedTransportMode === "AIR_STANDARD" ? "#CC4E16" : "#6B7280"} />
+                          <strong style={{ fontSize: "0.88rem" }}>Voie Aérienne Normale</strong>
+                        </div>
+                        <span className="speed-badge standard">10 à 14 jours</span>
+                      </div>
+                      <div className="transport-rate-tag">
+                        {rateAirStandard.toLocaleString("fr-FR")} FCFA / kg
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`transport-mode-btn ${selectedTransportMode === "SEA" ? "selected" : ""}`}
+                      onClick={() => setSelectedTransportMode("SEA")}
+                    >
+                      <div className="transport-btn-header">
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <Ship size={16} color={selectedTransportMode === "SEA" ? "#CC4E16" : "#6B7280"} />
+                          <strong style={{ fontSize: "0.88rem" }}>Voie Maritime Groupage</strong>
+                        </div>
+                        <span className="speed-badge sea">35 à 45 jours</span>
+                      </div>
+                      <div className="transport-rate-tag">
+                        {rateSea.toLocaleString("fr-FR")} FCFA / m³
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Saisie Poids ou Volume selon le mode sélectionné */}
+                <div className="input-group full-width" style={{ marginTop: "4px" }}>
+                  <label htmlFor="packageWeightOrVolume">
+                    {selectedTransportMode === "SEA"
+                      ? "Volume total estimé (m³ / CBM) *"
+                      : "Poids total estimé du colis (kg) *"}
+                  </label>
+                  {selectedTransportMode === "SEA" ? (
+                    <input
+                      id="packageWeightOrVolume"
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      required
+                      value={packageVolume}
+                      onChange={(e) => setPackageVolume(parseFloat(e.target.value) || 0.1)}
+                      placeholder="Ex : 0.25 m³"
+                    />
+                  ) : (
+                    <input
+                      id="packageWeightOrVolume"
+                      type="number"
+                      step="0.5"
+                      min="0.5"
+                      required
+                      value={packageWeight}
+                      onChange={(e) => setPackageWeight(parseFloat(e.target.value) || 1)}
+                      placeholder="Ex : 5 kg"
+                    />
+                  )}
+                  <span style={{ fontSize: "0.74rem", color: "#6B7280", marginTop: "3px" }}>
+                    {selectedTransportMode === "SEA"
+                      ? "Tarification au mètre cube (CBM). Pesée et cubage vérifiés au déchargement."
+                      : "Pesée vidéo certifiée dès réception en magasin en Chine."}
+                  </span>
+                </div>
               </div>
 
               <div className="section-divider" />
 
               {/* ========================================================
-                  ÉTAPE 2 : INFORMATIONS ARTICLES & LOGISTIQUE
+                  ÉTAPE 2 : INFORMATIONS ARTICLES & FOURNISSEUR
                  ======================================================== */}
               <div className="section-heading">
                 <span className="step-num">2</span>
@@ -811,7 +911,7 @@ function CommandeFormContent() {
                   <p style={{ fontSize: "0.8rem", color: "#6B7280", margin: "2px 0 0 0" }}>
                     {option === "sans_fournisseur"
                       ? "Collez votre lien Alibaba / 1688 pour afficher automatiquement l'article et son prix"
-                      : "Renseignez le lien Alibaba, le shipping mark et le poids pour calculer votre tarif de transit"}
+                      : "Renseignez le lien Alibaba, le shipping mark et le montant payé à l'usine"}
                   </p>
                 </div>
               </div>
@@ -918,7 +1018,7 @@ function CommandeFormContent() {
                     </div>
                   )}
 
-                  {/* Description et ajustement des caractéristiques */}
+                  {/* Description et caractéristiques articles */}
                   <div className="form-grid">
                     <div className="input-group full-width">
                       <label htmlFor="productQuery">Titre / Description de l&apos;article *</label>
@@ -985,33 +1085,6 @@ function CommandeFormContent() {
                           <option value="FCFA">FCFA</option>
                         </select>
                       </div>
-                    </div>
-
-                    <div className="input-group">
-                      <label htmlFor="shippingMode">Mode d&apos;acheminement *</label>
-                      <select
-                        id="shippingMode"
-                        className="styled-select"
-                        value={shippingMode}
-                        onChange={(e) => setShippingMode(e.target.value as any)}
-                      >
-                        <option value="AIR">Avion Express Cargo (4 à 5 jours chrono)</option>
-                        <option value="SEA">Bateau Maritime Groupage CBM (35 à 45 jours)</option>
-                      </select>
-                    </div>
-
-                    <div className="input-group">
-                      <label htmlFor="estimatedWeight">
-                        {shippingMode === "AIR" ? "Poids estimé total (kg)" : "Volume estimé (CBM)"}
-                      </label>
-                      <input
-                        id="estimatedWeight"
-                        type="number"
-                        step="0.5"
-                        min="0.5"
-                        value={estimatedWeight}
-                        onChange={(e) => setEstimatedWeight(parseFloat(e.target.value) || 1)}
-                      />
                     </div>
                   </div>
                 </div>
@@ -1128,53 +1201,6 @@ function CommandeFormContent() {
                         onChange={(e) => setGoodsDescription(e.target.value)}
                       />
                     </div>
-
-                    <div className="input-group">
-                      <label htmlFor="opt2ShippingMode">Formule de Transport Souhaitée *</label>
-                      <select
-                        id="opt2ShippingMode"
-                        className="styled-select"
-                        value={opt2ShippingMode}
-                        onChange={(e) => setOpt2ShippingMode(e.target.value as any)}
-                      >
-                        <option value="AIR_EXPRESS">
-                          Avion Express (4 à 5 j) — {rateAirExpress.toLocaleString("fr-FR")} FCFA / kg
-                        </option>
-                        <option value="AIR_STANDARD">
-                          Avion Normal (10 à 14 j) — {rateAirStandard.toLocaleString("fr-FR")} FCFA / kg
-                        </option>
-                        <option value="SEA">
-                          Bateau Maritime Groupage (35 à 45 j) — {rateSea.toLocaleString("fr-FR")} FCFA / m³
-                        </option>
-                      </select>
-                    </div>
-
-                    <div className="input-group">
-                      <label htmlFor="opt2Weight">
-                        {opt2ShippingMode === "SEA" ? "Volume estimé (m³ / CBM) *" : "Poids total estimé (kg) *"}
-                      </label>
-                      {opt2ShippingMode === "SEA" ? (
-                        <input
-                          id="opt2Volume"
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          required
-                          value={opt2Volume}
-                          onChange={(e) => setOpt2Volume(parseFloat(e.target.value) || 0.1)}
-                        />
-                      ) : (
-                        <input
-                          id="opt2Weight"
-                          type="number"
-                          step="0.5"
-                          min="0.5"
-                          required
-                          value={opt2Weight}
-                          onChange={(e) => setOpt2Weight(parseFloat(e.target.value) || 1)}
-                        />
-                      )}
-                    </div>
                   </div>
                 </div>
               )}
@@ -1219,23 +1245,17 @@ function CommandeFormContent() {
 
                 <div className="billing-row">
                   <span className="billing-label">
-                    {(option === "sans_fournisseur" ? shippingMode === "AIR" : opt2ShippingMode !== "SEA") ? (
+                    {selectedTransportMode !== "SEA" ? (
                       <Plane size={15} color="#6B7280" />
                     ) : (
                       <Ship size={15} color="#6B7280" />
                     )}
                     <span>
-                      Transport{" "}
-                      {option === "sans_fournisseur"
-                        ? shippingMode === "AIR"
-                          ? `Avion Express (${estimatedWeight} kg)`
-                          : "Bateau Maritime Groupage"
-                        : `${opt2ModeLabel} (${opt2ShippingMode === "SEA" ? `${opt2Volume} m³` : `${opt2Weight} kg`} à ${opt2UnitRateFormatted})`}
+                      Transport {transportModeLabel} ({selectedTransportMode === "SEA" ? `${packageVolume} m³` : `${packageWeight} kg`} à {transportUnitRateFormatted})
                     </span>
                   </span>
                   <strong className="billing-val">
-                    {(option === "sans_fournisseur" ? shippingFeeOption1 : shippingQuoteOption2).toLocaleString("fr-FR")}{" "}
-                    FCFA
+                    {shippingQuote.toLocaleString("fr-FR")} FCFA
                   </strong>
                 </div>
 
@@ -1259,7 +1279,7 @@ function CommandeFormContent() {
                     </div>
                   </div>
                   <div className="billing-total-val">
-                    {(option === "sans_fournisseur" ? grandTotalFCFA : shippingQuoteOption2).toLocaleString("fr-FR")}{" "}
+                    {(option === "sans_fournisseur" ? grandTotalFCFA : shippingQuote).toLocaleString("fr-FR")}{" "}
                     <span style={{ fontSize: "0.95rem" }}>FCFA</span>
                   </div>
                 </div>
@@ -1352,7 +1372,7 @@ function CommandeFormContent() {
                       Paiement Mobile Money à l&apos;Arrivée du Colis
                     </h4>
                     <p style={{ fontSize: "0.86rem", color: "#4B5563", lineHeight: 1.5, margin: 0 }}>
-                      Vos marchandises ont déjà été payées à votre fournisseur chinois. Les frais de transport et dédouanement (<strong>{shippingQuoteOption2.toLocaleString("fr-FR")} FCFA</strong>) seront à régler par <strong>Wave ou Orange Money</strong> ou en espèces lors du retrait de vos colis à notre entrepôt de destination à <strong>{destinationCity}</strong>.
+                      Vos marchandises ont déjà été payées à votre fournisseur chinois. Les frais de transport et dédouanement (<strong>{shippingQuote.toLocaleString("fr-FR")} FCFA</strong>) seront à régler par <strong>Wave ou Orange Money</strong> ou en espèces lors du retrait de vos colis à notre entrepôt de destination à <strong>{destinationCity}</strong>.
                     </p>
                     <div style={{ marginTop: "12px", display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
                       <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#1D4ED8", fontWeight: 700 }}>
@@ -1751,6 +1771,72 @@ function CommandeFormContent() {
           border-color: #CC4E16;
           background: #FFFFFF;
           box-shadow: 0 0 0 3px rgba(204, 78, 22, 0.15);
+        }
+
+        /* SÉLECTEUR DE MOYENS DE TRANSPORT IMMÉDIAT */
+        .transport-modes-selector {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+          gap: 10px;
+        }
+
+        .transport-mode-btn {
+          background: #FAFAFA;
+          border: 1.5px solid #E5E7EB;
+          border-radius: 14px;
+          padding: 12px 14px;
+          text-align: left;
+          cursor: pointer;
+          transition: all 0.18s ease;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .transport-mode-btn:hover {
+          border-color: #CC4E16;
+          background: #FFFDFB;
+        }
+
+        .transport-mode-btn.selected {
+          border-color: #CC4E16;
+          background: #FFF9F5;
+          box-shadow: 0 4px 14px rgba(204, 78, 22, 0.12);
+        }
+
+        .transport-btn-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .transport-rate-tag {
+          font-size: 0.84rem;
+          font-weight: 800;
+          color: #CC4E16;
+        }
+
+        .speed-badge {
+          font-size: 0.68rem;
+          font-weight: 700;
+          padding: 2px 7px;
+          border-radius: 9999px;
+        }
+
+        .speed-badge.express {
+          background: #FEF2F2;
+          color: #DC2626;
+        }
+
+        .speed-badge.standard {
+          background: #EFF6FF;
+          color: #2563EB;
+        }
+
+        .speed-badge.sea {
+          background: #F0FDF4;
+          color: #16A34A;
         }
 
         .extract-trigger-btn {
