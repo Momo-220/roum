@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plane, Ship, MessageCircle, Scale, ShieldCheck, Zap, BatteryCharging, Laptop, FileText, CheckCircle2 } from "lucide-react";
+import { Plane, Ship, MessageCircle, Scale, ShieldCheck, Zap, BatteryCharging, Laptop, FileText, CheckCircle2, Download, Printer } from "lucide-react";
 import { CircularFlag } from "@/components/CircularFlag";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import {
@@ -13,6 +13,12 @@ import {
   getAdminDestinations,
   OfficialTariff,
 } from "@/shared";
+import {
+  RoumReceiptData,
+  downloadOfficialReceiptPdf,
+  printOfficialReceipt,
+  buildClientReceiptWhatsAppUrl,
+} from "@/utils/receiptPdf";
 
 export default function TariffsPage() {
   const [tariffs, setTariffs] = useState<OfficialTariff[]>(() => getLiveTariffs());
@@ -295,13 +301,38 @@ export default function TariffsPage() {
 
   const estimate = calculateEstimate();
 
-  const getWaLink = () => {
+  const getQuoteReceiptData = (): RoumReceiptData => {
     let qtyDesc = `${weight} kg`;
-    if (formulaKey === "sea") qtyDesc = `${cbm} m³`;
+    if (formulaKey === "sea") qtyDesc = `${cbm} m³ (CBM)`;
     else if (formulaKey === "doc" || formulaKey === "tech") qtyDesc = `${docCount} unité(s)`;
 
-    const text = `Bonjour Roum Transit, je souhaite une confirmation de devis :\n- Origine : ${origin}\n- Destination : ${destination}\n- Formule : ${estimate.label}\n- Quantité : ${qtyDesc}\n- Total estimé : ${estimate.amountFcfa.toLocaleString("fr-FR")} FCFA (Douane comprise)\n- Délai garanti : ${estimate.duration}`;
-    return `https://wa.me/2250153638569?text=${encodeURIComponent(text)}`;
+    return {
+      receiptTitle: "DEVIS OFFICIEL DE TRANSIT & DÉDOUANEMENT",
+      reference: `DEVIS-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`,
+      date: new Date().toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      clientName: "Client ROUM TRANSIT",
+      clientPhone: "Confirmation via WhatsApp",
+      origin,
+      destination,
+      optionType: "devis_tarif",
+      transportMode: `${estimate.label} — Délai : ${estimate.duration}`,
+      weightOrVolume: qtyDesc,
+      shippingFeeFcfa: estimate.amountFcfa,
+      grandTotalFcfa: estimate.amountFcfa,
+      paymentMethodLabel: "Wave / Orange Money / Virement bancaire (100% Douane comprise)",
+    };
+  };
+
+  const getWaLink = () => {
+    const receiptData = getQuoteReceiptData();
+    const agencyPhone = settings.whatsapp_number?.trim() || "2250153638569";
+    return buildClientReceiptWhatsAppUrl(receiptData, agencyPhone);
   };
 
   return (
@@ -750,16 +781,61 @@ export default function TariffsPage() {
                 </div>
               </div>
 
-              <div style={{ marginTop: "24px" }}>
+              <div style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => downloadOfficialReceiptPdf(getQuoteReceiptData())}
+                    style={{
+                      height: "44px",
+                      borderRadius: "9999px",
+                      border: "1.5px solid #F59E0B",
+                      background: "#FFFBEB",
+                      color: "#92400E",
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Download size={15} />
+                    <span>Télécharger Devis PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => printOfficialReceipt(getQuoteReceiptData())}
+                    style={{
+                      height: "44px",
+                      borderRadius: "9999px",
+                      border: "1.5px solid #D1D5DB",
+                      background: "#FFFFFF",
+                      color: "#111827",
+                      fontSize: "0.82rem",
+                      fontWeight: 700,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Printer size={15} />
+                    <span>Imprimer le Devis</span>
+                  </button>
+                </div>
+
                 <a
                   href={getWaLink()}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="roum-btn-primary"
-                  style={{ width: "100%", height: "48px", boxSizing: "border-box", fontSize: "0.92rem", justifyContent: "center" }}
+                  style={{ width: "100%", height: "48px", boxSizing: "border-box", fontSize: "0.92rem", justifyContent: "center", borderRadius: "9999px" }}
                 >
                   <MessageCircle size={16} />
-                  <span>Confirmer ce calcul sur WhatsApp</span>
+                  <span>Envoyer ce devis par WhatsApp à l&apos;agence</span>
                 </a>
               </div>
             </div>

@@ -14,8 +14,16 @@ import {
   Check,
   RefreshCw,
   MessageCircle,
+  Download,
+  Printer,
 } from "lucide-react";
 import { CircularFlag } from "@/components/CircularFlag";
+import {
+  RoumReceiptData,
+  downloadOfficialReceiptPdf,
+  printOfficialReceipt,
+  buildClientReceiptWhatsAppUrl,
+} from "@/utils/receiptPdf";
 
 interface TrackingData {
   tracking_number: string;
@@ -425,38 +433,137 @@ export default function TrackingResultPage() {
               </div>
             )}
 
-            {/* 4. Contact WhatsApp contextualisé */}
-            <div
-              className="card-clean"
-              style={{
-                padding: "24px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "16px",
-              }}
-            >
-              <div>
-                <h4 style={{ fontSize: "1.05rem", marginBottom: "4px", color: "var(--text-main)" }}>
-                  Une question sur ce colis ?
-                </h4>
-                <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>
-                  Votre message arrivera pré-rempli avec votre référence ({data.tracking_number}).
-                </p>
-              </div>
+            {/* 4. Reçu PDF de Suivi & Contact WhatsApp contextualisé */}
+            {(() => {
+              const trackingReceipt: RoumReceiptData = {
+                receiptTitle: "FICHE OFFICIELLE DE SUIVI D'EXPÉDITION",
+                reference: data.tracking_number,
+                trackingNumber: data.tracking_number,
+                date: new Date().toLocaleDateString("fr-FR", {
+                  day: "2-digit",
+                  month: "long",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+                clientName: "Expéditeur / Destinataire ROUM TRANSIT",
+                clientPhone: "Suivi en ligne vérifié",
+                origin: data.route.origin || "Chine",
+                destination: data.route.destination || "Afrique",
+                optionType: "suivi_colis",
+                transportMode: `${data.shipping_mode} — Statut : ${data.status.label}`,
+                weightOrVolume:
+                  data.summary.total_volume_cbm > 0
+                    ? `${data.summary.total_volume_cbm} m³ (${data.summary.total_parcels} colis)`
+                    : `${data.summary.total_weight_kg} kg (${data.summary.total_parcels} colis)`,
+                productTitle:
+                  data.parcels?.[0]?.description ||
+                  data.parcels?.[0]?.package_label ||
+                  `Lot de ${data.summary.total_parcels} colis (${data.status.label})`,
+                grandTotalFcfa: 0,
+              };
+              const waUrl = buildClientReceiptWhatsAppUrl(trackingReceipt);
 
-              <a
-                href={data.whatsapp_support_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-whatsapp"
-                style={{ padding: "10px 18px", fontSize: "0.86rem", display: "inline-flex", alignItems: "center", gap: "8px" }}
-              >
-                <MessageCircle size={18} />
-                Contacter sur WhatsApp
-              </a>
-            </div>
+              return (
+                <div
+                  className="card-clean"
+                  style={{
+                    padding: "24px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "16px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "12px",
+                    }}
+                  >
+                    <div>
+                      <h4 style={{ fontSize: "1.05rem", marginBottom: "4px", color: "var(--text-main)" }}>
+                        Fiche de Suivi PDF &amp; Assistance Directe
+                      </h4>
+                      <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>
+                        Téléchargez ou imprimez votre fiche de suivi officielle ({data.tracking_number}), ou envoyez-la sur WhatsApp à l&apos;agence.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "10px",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => downloadOfficialReceiptPdf(trackingReceipt)}
+                      style={{
+                        padding: "10px 18px",
+                        borderRadius: "9999px",
+                        border: "1.5px solid #F59E0B",
+                        background: "#FFFBEB",
+                        color: "#92400E",
+                        fontSize: "0.84rem",
+                        fontWeight: 700,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Download size={16} />
+                      <span>Télécharger la Fiche PDF</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => printOfficialReceipt(trackingReceipt)}
+                      style={{
+                        padding: "10px 18px",
+                        borderRadius: "9999px",
+                        border: "1.5px solid #D1D5DB",
+                        background: "#FFFFFF",
+                        color: "#111827",
+                        fontSize: "0.84rem",
+                        fontWeight: 700,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Printer size={16} />
+                      <span>Imprimer la Fiche (A4)</span>
+                    </button>
+
+                    <a
+                      href={waUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-whatsapp"
+                      style={{
+                        padding: "10px 20px",
+                        borderRadius: "9999px",
+                        fontSize: "0.86rem",
+                        fontWeight: 700,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      <MessageCircle size={18} />
+                      <span>Envoyer ce reçu par WhatsApp à l&apos;agence</span>
+                    </a>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

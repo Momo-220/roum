@@ -90,6 +90,16 @@ import {
   DEFAULT_CURRENCY,
   getCountryCodeFromName,
 } from "@/data/countries";
+import {
+  buildAdminShipmentWhatsAppUrl,
+  buildAdminRequestWhatsAppUrl,
+  getTrackingPageUrl,
+} from "@/shared";
+import {
+  downloadOfficialReceiptPdf,
+  printOfficialReceipt,
+  RoumReceiptData,
+} from "@/utils/receiptPdf";
 
 interface UserSession {
   userId: string;
@@ -212,12 +222,34 @@ function getShipmentPhase(status?: string): number {
   }
 }
 
-function getWhatsAppUrl(phone?: string, trackingNumber?: string, clientName?: string): string {
-  const cleanPhone = (phone || "").replace(/[^0-9]/g, "");
-  const message = encodeURIComponent(
-    `Bonjour ${clientName || "cher client"}, ici la direction ROUM TRANSIT concernant votre expédition réf. ${trackingNumber || ""}. Votre dossier est actuellement actif sur notre radar de transport international.`
-  );
-  return `https://wa.me/${cleanPhone}?text=${message}`;
+function getWhatsAppUrl(
+  phone?: string,
+  trackingNumber?: string,
+  clientName?: string,
+  extra?: {
+    origin?: string;
+    destination?: string;
+    statusLabel?: string;
+    shippingMode?: string;
+    weightKg?: number;
+    volumeCbm?: number;
+    amountLabel?: string;
+    shippingMark?: string;
+  }
+): string {
+  return buildAdminShipmentWhatsAppUrl({
+    clientPhone: phone || "",
+    clientName: clientName || "cher client",
+    trackingNumber: trackingNumber || "",
+    origin: extra?.origin,
+    destination: extra?.destination,
+    statusLabel: extra?.statusLabel,
+    shippingMode: extra?.shippingMode,
+    weightKg: extra?.weightKg,
+    volumeCbm: extra?.volumeCbm,
+    amountLabel: extra?.amountLabel,
+    shippingMark: extra?.shippingMark,
+  });
 }
 
 const POPULAR_ORIGINS = STRATEGIC_HUBS.map((h) => ({
@@ -6809,13 +6841,27 @@ export default function AdminPage() {
                               </button>
                             )}
                             <a
-                              href={`https://wa.me/${r.client_phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-                                `Bonjour ${r.client_name}, concernant votre demande ${r.reference} chez ROUM TRANSIT :`
-                              )}`}
+                              href={buildAdminRequestWhatsAppUrl({
+                                clientPhone: r.client_phone || "",
+                                clientName: r.client_name || "Client",
+                                reference: r.reference || "",
+                                trackingNumber: r.tracking_number || r.reference || "",
+                                shippingMark: r.shipping_mark,
+                                destination: r.destination_country,
+                                productName: r.product_name || r.cargo_type,
+                                totalAmountFcfa: r.total_amount_fcfa,
+                                rmbAmount: r.rmb_amount || r.paid_to_supplier,
+                                statusLabel:
+                                  r.status === "CONVERTED"
+                                    ? "Converti en expédition active"
+                                    : r.status === "QUOTE_SENT"
+                                    ? "Devis validé & en cours"
+                                    : "Dossier pris en charge par notre équipe",
+                              })}
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none", flexShrink: 0 }}
-                              title="Message WhatsApp pré-rempli"
+                              title="Envoyer un message WhatsApp détaillé avec lien de suivi cliquable"
                             >
                               <WhatsAppLogo size={28} />
                             </a>
@@ -7127,7 +7173,17 @@ export default function AdminPage() {
                                 </div>
                                 <div style={{ fontSize: "0.72rem", color: "#15803D" }}>
                                   <a
-                                    href={`https://wa.me/${(r.client_phone || "").replace(/[^0-9]/g, "")}`}
+                                    href={buildAdminRequestWhatsAppUrl({
+                                      clientPhone: r.client_phone || "",
+                                      clientName: r.client_name || "Client",
+                                      reference: r.reference || "",
+                                      trackingNumber: r.tracking_number || r.reference || "",
+                                      shippingMark: shippingMarkVal,
+                                      destination: r.destination_country,
+                                      productName: goodsVal,
+                                      rmbAmount: `${rmbAmountVal} RMB ¥ (~ ${cfaEquivalent.toLocaleString("fr-FR")} FCFA)`,
+                                      statusLabel: "Suivi Règlement Fournisseur Chine",
+                                    })}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     style={{ color: "#15803D", textDecoration: "none", fontWeight: 600 }}
@@ -7313,14 +7369,25 @@ export default function AdminPage() {
                                   <span>Convertir</span>
                                 </button>
                                 <a
-                                  href={`https://wa.me/${(r.client_phone || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-                                    `Bonjour ${r.client_name}, concernant votre dossier de règlement usine N° ${r.reference} (${rmbAmountVal} RMB ¥), nous avons bien reçu votre demande.`
-                                  )}`}
+                                  href={buildAdminRequestWhatsAppUrl({
+                                    clientPhone: r.client_phone || "",
+                                    clientName: r.client_name || "Client",
+                                    reference: r.reference || "",
+                                    trackingNumber: r.tracking_number || r.reference || "",
+                                    shippingMark: shippingMarkVal,
+                                    destination: r.destination_country,
+                                    productName: goodsVal,
+                                    rmbAmount: `${rmbAmountVal} RMB ¥ (~ ${cfaEquivalent.toLocaleString("fr-FR")} FCFA)`,
+                                    statusLabel:
+                                      r.status === "CONVERTED"
+                                        ? "Virement RMB effectué en Chine"
+                                        : "Dossier fournisseur en traitement",
+                                  })}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="btn btn-secondary"
                                   style={{ padding: "5px 10px", fontSize: "0.72rem", color: "#15803D", borderRadius: "9999px" }}
-                                  title="Contacter le client sur WhatsApp"
+                                  title="Contacter le client sur WhatsApp avec lien de suivi cliquable"
                                 >
                                   WhatsApp
                                 </a>
@@ -7570,6 +7637,27 @@ export default function AdminPage() {
                               >
                                 <Printer size={13} />
                               </button>
+                              <a
+                                href={getWhatsAppUrl(
+                                  s.client_phone,
+                                  s.tracking_number,
+                                  s.client_name,
+                                  {
+                                    origin: s.origin_country,
+                                    destination: s.destination_country,
+                                    statusLabel: formatShipmentStatus(s.current_status, s.status_label),
+                                    shippingMode: shortMode,
+                                    weightKg: s.total_weight_kg,
+                                    volumeCbm: s.total_volume_cbm,
+                                  }
+                                )}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none", flexShrink: 0 }}
+                                title="Envoyer le suivi WhatsApp cliquable au client"
+                              >
+                                <WhatsAppLogo size={26} />
+                              </a>
                             </div>
                           </td>
                         </tr>
@@ -7666,7 +7754,7 @@ export default function AdminPage() {
                             </button>
                             <a
                               href={`https://wa.me/${(c.phone_whatsapp || c.phone || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-                                `Bonjour ${c.full_name}, nous vous contactons depuis ROUM TRANSIT :`
+                                `Bonjour ${c.full_name} 👋,\n\nIci la Direction de *ROUM TRANSIT INTERNATIONAL*.\nNous prenons contact avec vous concernant vos opérations d'achat et de transit Chine ➔ ${c.country || "Afrique"}.\n\nVous pouvez consulter vos expéditions en direct sur :\n${getTrackingPageUrl("")}\n\nCordialement,\n*Service Clientèle ROUM TRANSIT*`
                               )}`}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -10947,26 +11035,123 @@ export default function AdminPage() {
               )}
             </div>
 
-            {/* Actions : Conversion & Clôture */}
-            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", borderTop: "1px solid var(--border-light)", paddingTop: "16px" }}>
-              <button
-                type="button"
-                onClick={() => setShowRequestDetailModal(null)}
-                className="btn btn-secondary"
-              >
-                Fermer
-              </button>
-              {showRequestDetailModal.status !== "CONVERTED" && showRequestDetailModal.status !== "CANCELLED" && (
+            {/* Actions : Reçu PDF, WhatsApp Client avec lien de suivi cliquable, Conversion & Clôture */}
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border-light)", paddingTop: "16px" }}>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 <button
                   type="button"
                   onClick={() => {
-                    handleOpenConvertModal(showRequestDetailModal);
+                    const r = showRequestDetailModal;
+                    const receipt: RoumReceiptData = {
+                      receiptTitle: "BON OFFICIEL DE COMMANDE & TRANSIT",
+                      reference: r.reference || "DOSSIER",
+                      trackingNumber: r.tracking_number || r.reference,
+                      shippingMark: r.shipping_mark,
+                      date: r.created_at?.substring(0, 10) || new Date().toLocaleDateString("fr-FR"),
+                      clientName: r.client_name || "Client",
+                      clientPhone: r.client_phone || "",
+                      origin: r.origin_country || "Chine",
+                      destination: r.destination_country || "Côte d'Ivoire",
+                      optionType: r.option_type === "AVEC_FOURNISSEUR" ? "avec_fournisseur" : "sans_fournisseur",
+                      transportMode: r.shipping_mode_name || r.shipping_mode_type || "Fret International",
+                      weightOrVolume: r.estimated_cbm ? `${r.estimated_cbm} m³` : `${r.estimated_weight_kg || 1} kg`,
+                      productTitle: r.product_name || r.cargo_type || "Marchandises",
+                      productUrl: r.product_url,
+                      productImage: r.product_image,
+                      goodsTotalFcfa: r.total_goods_fcfa,
+                      paidToSupplierLabel: r.paid_to_supplier || r.rmb_amount,
+                      shippingFeeFcfa: r.shipping_fee_fcfa,
+                      grandTotalFcfa: r.total_amount_fcfa || r.shipping_fee_fcfa || 0,
+                      paymentMethodLabel: r.payment_method_selected,
+                    };
+                    downloadOfficialReceiptPdf(receipt);
                   }}
-                  className="btn btn-primary"
+                  className="btn btn-secondary"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px", borderRadius: "9999px" }}
                 >
-                  Convertir en Dossier d&apos;Expédition
+                  <Download size={14} />
+                  <span>Reçu PDF</span>
                 </button>
-              )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const r = showRequestDetailModal;
+                    const receipt: RoumReceiptData = {
+                      receiptTitle: "BON OFFICIEL DE COMMANDE & TRANSIT",
+                      reference: r.reference || "DOSSIER",
+                      trackingNumber: r.tracking_number || r.reference,
+                      shippingMark: r.shipping_mark,
+                      date: r.created_at?.substring(0, 10) || new Date().toLocaleDateString("fr-FR"),
+                      clientName: r.client_name || "Client",
+                      clientPhone: r.client_phone || "",
+                      origin: r.origin_country || "Chine",
+                      destination: r.destination_country || "Côte d'Ivoire",
+                      optionType: r.option_type === "AVEC_FOURNISSEUR" ? "avec_fournisseur" : "sans_fournisseur",
+                      transportMode: r.shipping_mode_name || r.shipping_mode_type || "Fret International",
+                      weightOrVolume: r.estimated_cbm ? `${r.estimated_cbm} m³` : `${r.estimated_weight_kg || 1} kg`,
+                      productTitle: r.product_name || r.cargo_type || "Marchandises",
+                      productUrl: r.product_url,
+                      productImage: r.product_image,
+                      goodsTotalFcfa: r.total_goods_fcfa,
+                      paidToSupplierLabel: r.paid_to_supplier || r.rmb_amount,
+                      shippingFeeFcfa: r.shipping_fee_fcfa,
+                      grandTotalFcfa: r.total_amount_fcfa || r.shipping_fee_fcfa || 0,
+                      paymentMethodLabel: r.payment_method_selected,
+                    };
+                    printOfficialReceipt(receipt);
+                  }}
+                  className="btn btn-secondary"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px", borderRadius: "9999px" }}
+                >
+                  <Printer size={14} />
+                  <span>Imprimer</span>
+                </button>
+                <a
+                  href={buildAdminRequestWhatsAppUrl({
+                    clientPhone: showRequestDetailModal.client_phone || "",
+                    clientName: showRequestDetailModal.client_name || "Client",
+                    reference: showRequestDetailModal.reference || "",
+                    trackingNumber: showRequestDetailModal.tracking_number || showRequestDetailModal.reference || "",
+                    shippingMark: showRequestDetailModal.shipping_mark,
+                    destination: showRequestDetailModal.destination_country,
+                    productName: showRequestDetailModal.product_name || showRequestDetailModal.cargo_type,
+                    totalAmountFcfa: showRequestDetailModal.total_amount_fcfa,
+                    rmbAmount: showRequestDetailModal.rmb_amount || showRequestDetailModal.paid_to_supplier,
+                    statusLabel:
+                      showRequestDetailModal.status === "CONVERTED"
+                        ? "Expédition active en transit"
+                        : "Dossier validé par la Direction",
+                  })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-secondary"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "#15803D", borderColor: "#BBF7D0", background: "#F0FDF4", borderRadius: "9999px" }}
+                >
+                  <WhatsAppLogo size={18} />
+                  <span>Envoyer suivi cliquable sur WhatsApp</span>
+                </a>
+              </div>
+
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowRequestDetailModal(null)}
+                  className="btn btn-secondary"
+                >
+                  Fermer
+                </button>
+                {showRequestDetailModal.status !== "CONVERTED" && showRequestDetailModal.status !== "CANCELLED" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleOpenConvertModal(showRequestDetailModal);
+                    }}
+                    className="btn btn-primary"
+                  >
+                    Convertir en Dossier d&apos;Expédition
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

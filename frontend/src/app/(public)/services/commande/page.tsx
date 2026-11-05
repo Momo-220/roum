@@ -15,6 +15,10 @@ import {
   Smartphone,
   ExternalLink,
   Camera,
+  Download,
+  Printer,
+  ZoomIn,
+  X,
 } from "lucide-react";
 import {
   saveClientRequest,
@@ -23,6 +27,7 @@ import {
   getAdminDestinationsDetailed,
   findTariff,
   OfficialTariff,
+  getTrackingPageUrl,
 } from "@/shared";
 import {
   WaveLogo,
@@ -30,13 +35,30 @@ import {
   CompteMarocLogo,
   openPaymentApp,
 } from "@/components/PaymentLogos";
+import {
+  RoumReceiptData,
+  downloadOfficialReceiptPdf,
+  printOfficialReceipt,
+  buildClientReceiptWhatsAppUrl,
+} from "@/utils/receiptPdf";
+
+interface PriceTier {
+  minQty: number;
+  maxQty: number | null;
+  label: string;
+  price: number;
+  currency: "RMB" | "USD" | "FCFA";
+}
 
 interface ExtractedProduct {
   platform: string;
   title: string;
   image: string;
+  rawImage?: string;
   price: number;
   currency: string;
+  minOrder?: number;
+  priceTiers?: PriceTier[];
   originalUrl: string;
 }
 
@@ -45,6 +67,7 @@ function CommandeFormContent() {
 
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [zoomImageUrl, setZoomImageUrl] = useState<string | null>(null);
   const [orderResult, setOrderResult] = useState<{
     reference: string;
     trackingNumber: string;
@@ -55,6 +78,7 @@ function CommandeFormContent() {
     option: "sans_fournisseur" | "avec_fournisseur";
     destination: string;
     shippingModeDesc: string;
+    receiptData: RoumReceiptData;
   } | null>(null);
 
   const [copiedTracking, setCopiedTracking] = useState(false);
@@ -471,9 +495,12 @@ function CommandeFormContent() {
       if (option === "avec_fournisseur" && data.title && !goodsDescription) {
         setGoodsDescription(data.title);
       }
-      if (data.price && data.price > 0 && (!productUnitPrice || productUnitPrice === 15)) {
+      if (data.price && data.price > 0) {
         setProductUnitPrice(data.price);
         setProductCurrency((data.currency as "RMB" | "USD" | "FCFA") || "RMB");
+      }
+      if (data.minOrder && data.minOrder > 1 && productQuantity < data.minOrder) {
+        setProductQuantity(data.minOrder);
       }
     } catch {
       setExtractError("Lien non analysé automatiquement. Vous pouvez renseigner la description manuellement.");
@@ -481,6 +508,20 @@ function CommandeFormContent() {
       setExtracting(false);
     }
   };
+
+  // Ajustement automatique du prix unitaire selon la tranche de quantité fournisseur (MOQ)
+  useEffect(() => {
+    const tiers = extractedProduct?.priceTiers;
+    if (!tiers || tiers.length === 0) return;
+    const qty = Math.max(1, productQuantity || 1);
+    const matchedTier =
+      tiers.find((t) => qty >= t.minQty && (t.maxQty === null || qty <= t.maxQty)) ||
+      (qty < tiers[0].minQty ? tiers[0] : tiers[tiers.length - 1]);
+    if (matchedTier && matchedTier.price > 0) {
+      setProductUnitPrice(matchedTier.price);
+      setProductCurrency(matchedTier.currency || "RMB");
+    }
+  }, [productQuantity, extractedProduct]);
 
   const handleReceiptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -606,34 +647,55 @@ function CommandeFormContent() {
         cargo_type: cargoDescription,
       });
 
-      let message = "";
-      if (option === "sans_fournisseur") {
-        message =
-          `*NOUVELLE COMMANDE ROUM N° ${res.reference}*\n` +
-          `• Client : ${clientName}\n` +
-          `• Contact : ${clientPhone}\n` +
-          `• Destination : ${destinationCity}\n` +
-          `• Mode : ${transportModeLabel} (${selectedTransportMode === "SEA" ? `${packageVolume} m³` : `${packageWeight} kg`})\n` +
-          `• Article : ${productQuery || extractedProduct?.title || "Article Alibaba"}\n` +
-          `• Quantité : ${productQuantity}\n` +
-          (productLink ? `• Lien : ${productLink}\n` : "") +
-          `• Total : ${grandTotalFCFA.toLocaleString("fr-FR")} FCFA`;
-      } else {
-        message =
-          `*DOSSIER EXPÉDITION N° ${res.reference}*\n` +
-          `• N° Suivi : ${res.trackingNumber}\n` +
-          `• Client : ${clientName}\n` +
-          `• Destination : ${destinationCity}\n` +
-          `• Mode : ${transportModeLabel} (${selectedTransportMode === "SEA" ? `${packageVolume} m³` : `${packageWeight} kg`})\n` +
-          `• Shipping Mark : ${clientShippingMark}\n` +
-          (paidToSupplier ? `• Montant Usine : ${paidToSupplier}\n` : "") +
-          (supplierContact ? `• Contact Usine : ${supplierContact}\n` : "") +
-          (productLink ? `• Lien Article : ${productLink}\n` : "") +
-          `• Devis Transit : ${shippingQuote.toLocaleString("fr-FR")} FCFA\n` +
-          `• Paiement : Mobile Money Wave / Orange Money à l'arrivée`;
-      }
+      const selectedPaymentLabel =
+        option === "sans_fournisseur"
+          ? activePaymentMethods.find((m) => m.id === selectedPayMethod)?.label || selectedPayMethod.toUpperCase()
+          : "Mobile Money Wave / Orange Money à la réception";
 
-      const customWaUrl = `https://wa.me/2250787994412?text=${encodeURIComponent(message)}`;
+      const receiptData: RoumReceiptData = {
+        receiptTitle:
+          option === "avec_fournisseur"
+            ? "BON D'EXPÉDITION & TRANSIT OFFICIEL"
+            : "BON DE COMMANDE & ACHAT CHINE",
+        reference: res.reference,
+        trackingNumber: res.trackingNumber || res.reference,
+        shippingMark: res.shippingMark || (option === "avec_fournisseur" ? clientShippingMark.trim() : undefined),
+        date: new Date().toLocaleDateString("fr-FR", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        clientName: clientName.trim(),
+        clientPhone: clientPhone.trim(),
+        origin: "Chine (Guangzhou / Yiwu)",
+        destination: destinationCity.trim(),
+        optionType: option,
+        transportMode: transportModeLabel,
+        weightOrVolume:
+          selectedTransportMode === "SEA" ? `${packageVolume} m³ (CBM)` : `${packageWeight} kg`,
+        productTitle:
+          productQuery.trim() ||
+          extractedProduct?.title ||
+          (option === "avec_fournisseur" ? goodsDescription.trim() : "Article Alibaba"),
+        productUrl: productLink.trim() || undefined,
+        productImage: userProductImage || extractedProduct?.image || undefined,
+        quantity: option === "sans_fournisseur" ? productQuantity : undefined,
+        unitPriceLabel:
+          option === "sans_fournisseur"
+            ? `${productUnitPrice.toLocaleString("fr-FR")} ${productCurrency} (≈ ${unitPriceFCFA.toLocaleString("fr-FR")} FCFA)`
+            : undefined,
+        goodsTotalFcfa: option === "sans_fournisseur" ? totalArticlesFCFA : undefined,
+        paidToSupplierLabel: option === "avec_fournisseur" ? paidToSupplier.trim() || undefined : undefined,
+        supplierContact: option === "avec_fournisseur" ? supplierContact.trim() || undefined : undefined,
+        shippingFeeFcfa: shippingQuote,
+        grandTotalFcfa: option === "sans_fournisseur" ? grandTotalFCFA : shippingQuote,
+        paymentMethodLabel: selectedPaymentLabel,
+      };
+
+      const agencyWaPhone = settings.whatsapp_number?.trim() || "2250787994412";
+      const customWaUrl = buildClientReceiptWhatsAppUrl(receiptData, agencyWaPhone);
 
       setOrderResult({
         reference: res.reference,
@@ -645,9 +707,9 @@ function CommandeFormContent() {
         option,
         destination: destinationCity,
         shippingModeDesc: transportModeLabel,
+        receiptData,
       });
       setSubmitted(true);
-      window.open(customWaUrl, "_blank");
     } catch (err) {
       console.error("Erreur enregistrement commande:", err);
       setSubmitted(true);
@@ -679,20 +741,50 @@ function CommandeFormContent() {
               <CheckCircle2 size={38} color="#16A34A" />
             </div>
             <h2 className="ios-success-title">
-              {orderResult.option === "avec_fournisseur" ? "Dossier créé avec succès" : "Commande enregistrée"}
+              {orderResult.option === "avec_fournisseur"
+                ? "Dossier & Reçu officiel générés"
+                : "Commande & Reçu officiel générés"}
             </h2>
             <p className="ios-success-desc">
-              Votre numéro officiel est généré et actif dans le système.
+              Vous pouvez télécharger ou imprimer votre reçu PDF ci-dessous, puis l&apos;envoyer en un clic à l&apos;agence sur WhatsApp.
             </p>
+
+            {/* Aperçu visuel de l'article sur le reçu */}
+            {orderResult.receiptData.productImage && (
+              <div className="ios-receipt-product-banner">
+                <img
+                  src={orderResult.receiptData.productImage}
+                  alt={orderResult.receiptData.productTitle || "Article"}
+                  className="ios-receipt-product-img"
+                />
+                <div className="ios-receipt-product-meta">
+                  <div className="ios-receipt-product-title">
+                    {orderResult.receiptData.productTitle}
+                  </div>
+                  <div className="ios-receipt-product-sub">
+                    {orderResult.receiptData.transportMode} · {orderResult.receiptData.weightOrVolume}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Inset information */}
             <div className="ios-inset-box">
               <div className="ios-row-item">
-                <span className="ios-item-label">
-                  {orderResult.option === "avec_fournisseur" ? "N° de Suivi" : "Référence"}
-                </span>
+                <span className="ios-item-label">Référence Dossier</span>
+                <span className="ios-item-val mono">{orderResult.reference}</span>
+              </div>
+
+              <div className="ios-row-item">
+                <span className="ios-item-label">N° de Suivi Colis</span>
                 <div className="ios-item-val-group">
-                  <span className="ios-item-val mono">{orderResult.trackingNumber || orderResult.reference}</span>
+                  <Link
+                    href={`/tracking/${orderResult.trackingNumber || orderResult.reference}`}
+                    className="ios-item-val mono"
+                    style={{ color: "#0F766E", textDecoration: "underline", fontWeight: 800 }}
+                  >
+                    {orderResult.trackingNumber || orderResult.reference}
+                  </Link>
                   <button
                     type="button"
                     onClick={() => copyText(orderResult.trackingNumber || orderResult.reference, "tracking")}
@@ -721,7 +813,19 @@ function CommandeFormContent() {
                 </div>
               )}
 
-              <div className="ios-row-item highlight">
+              <div className="ios-row-item">
+                <span className="ios-item-label">Client</span>
+                <span className="ios-item-val">
+                  {orderResult.receiptData.clientName} ({orderResult.receiptData.clientPhone})
+                </span>
+              </div>
+
+              <div className="ios-row-item">
+                <span className="ios-item-label">Destination</span>
+                <span className="ios-item-val">{orderResult.destination}</span>
+              </div>
+
+              <div className="ios-row-item highlight" style={{ paddingTop: "6px", borderTop: "1px solid rgba(28,24,21,0.08)" }}>
                 <span className="ios-item-label">
                   {orderResult.option === "avec_fournisseur" ? "Devis Transit estimé" : "Total à régler"}
                 </span>
@@ -731,29 +835,49 @@ function CommandeFormContent() {
               </div>
             </div>
 
+            {/* BOUTONS PDF : TÉLÉCHARGER & IMPRIMER */}
+            <div className="ios-pdf-actions-grid">
+              <button
+                type="button"
+                onClick={() => downloadOfficialReceiptPdf(orderResult.receiptData)}
+                className="ios-btn-pdf"
+              >
+                <Download size={16} />
+                <span>Télécharger le Reçu PDF</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => printOfficialReceipt(orderResult.receiptData)}
+                className="ios-btn-print"
+              >
+                <Printer size={16} />
+                <span>Imprimer le Reçu (A4)</span>
+              </button>
+            </div>
+
             {orderResult.option === "avec_fournisseur" && (
-              <p className="ios-note-subtle">
+              <p className="ios-note-subtle" style={{ marginTop: "10px" }}>
                 Paiement par Wave ou Orange Money lors du retrait à l&apos;entrepôt ({orderResult.destination}).
               </p>
             )}
 
             <div className="ios-actions-stack">
+              <a
+                href={orderResult.whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ios-btn-whatsapp-agency"
+              >
+                <MessageCircle size={18} />
+                <span>Envoyer ce reçu par WhatsApp à l&apos;agence</span>
+              </a>
               <Link
                 href={`/tracking/${orderResult.trackingNumber || orderResult.reference}`}
                 className="ios-btn-primary"
               >
                 <Package size={16} />
-                <span>Suivre mon colis</span>
+                <span>Suivre mon colis en direct</span>
               </Link>
-              <a
-                href={orderResult.whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ios-btn-secondary"
-              >
-                <MessageCircle size={16} color="#16A34A" />
-                <span>Ouvrir sur WhatsApp</span>
-              </a>
             </div>
           </div>
         ) : (
@@ -930,95 +1054,165 @@ function CommandeFormContent() {
                       {extractError && <span className="ios-error-msg">{extractError}</span>}
                     </div>
 
-                    {/* Aperçu instantané et photo du produit détecté depuis le lien */}
+                    {/* Aperçu instantané et photo agrandie du produit détecté depuis le lien + Tranches de prix */}
                     {(userProductImage || (extractedProduct && (extractedProduct.image || extractedProduct.title))) ? (
                       <div className="ios-product-preview-card">
-                        <div className="ios-product-preview-thumb-wrap">
-                          {(userProductImage || extractedProduct?.image) ? (
-                            <img
-                              src={userProductImage || extractedProduct?.image || ""}
-                              alt={extractedProduct?.title || "Article"}
-                              className="ios-product-preview-thumb"
-                              onError={(e) => {
-                                const currentSrc = e.currentTarget.getAttribute("src") || "";
-                                if (currentSrc.startsWith("http") && !currentSrc.includes("/api/image-proxy")) {
-                                  e.currentTarget.src = `/api/image-proxy?url=${encodeURIComponent(currentSrc)}`;
-                                } else {
-                                  setUserProductImage(null);
-                                  setExtractedProduct((prev) => (prev ? { ...prev, image: "" } : null));
-                                }
-                              }}
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => productImageInputRef.current?.click()}
-                              style={{
-                                width: "100%",
-                                height: "100%",
-                                border: "none",
-                                background: "#F7F5F0",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                cursor: "pointer",
-                                color: "#8E877E",
-                              }}
-                              title="Ajouter la photo de l'article"
-                            >
-                              <Camera size={20} />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => productImageInputRef.current?.click()}
-                            className="ios-thumb-change-btn"
-                            title="Remplacer la photo par une capture personnelle"
+                        <div className="ios-product-preview-main">
+                          <div
+                            className="ios-product-preview-thumb-wrap"
+                            onClick={() => {
+                              const img = userProductImage || extractedProduct?.image;
+                              if (img) setZoomImageUrl(img);
+                            }}
+                            title="Cliquez pour agrandir la photo du produit"
                           >
-                            <Camera size={12} />
-                          </button>
-                        </div>
-
-                        <div className="ios-product-preview-body">
-                          <div className="ios-product-preview-header">
-                            <span className="ios-product-preview-platform">
-                              {extractedProduct?.platform || "ALIBABA"}
-                            </span>
-                            <span className="ios-product-preview-badge">
-                              ✓ Image liée au produit
-                            </span>
-                          </div>
-
-                          <div className="ios-product-preview-title" title={extractedProduct?.title || productQuery}>
-                            {extractedProduct?.title || productQuery || "Article sélectionné"}
-                          </div>
-
-                          <div className="ios-product-preview-price-row">
-                            {extractedProduct?.price && extractedProduct.price > 0 ? (
+                            {(userProductImage || extractedProduct?.image) ? (
                               <>
-                                <span className="ios-product-preview-price-cny">
-                                  {extractedProduct.price.toLocaleString("fr-FR")} {extractedProduct.currency || "RMB"}
-                                </span>
-                                <span className="ios-product-preview-price-cfa">
-                                  (≈ {Math.round(extractedProduct.price * 88).toLocaleString("fr-FR")} FCFA)
+                                <img
+                                  src={userProductImage || extractedProduct?.image || ""}
+                                  alt={extractedProduct?.title || "Article"}
+                                  className="ios-product-preview-thumb"
+                                  onError={(e) => {
+                                    const currentSrc = e.currentTarget.getAttribute("src") || "";
+                                    if (currentSrc.startsWith("http") && !currentSrc.includes("/api/image-proxy")) {
+                                      e.currentTarget.src = `/api/image-proxy?url=${encodeURIComponent(currentSrc)}`;
+                                    } else {
+                                      setUserProductImage(null);
+                                      setExtractedProduct((prev) => (prev ? { ...prev, image: "" } : null));
+                                    }
+                                  }}
+                                />
+                                <span className="ios-thumb-zoom-hint">
+                                  <ZoomIn size={12} />
                                 </span>
                               </>
                             ) : (
-                              <span style={{ fontSize: "0.72rem", color: "#8E877E" }}>
-                                Prix confirmé sur devis
-                              </span>
+                              <button
+                                type="button"
+                                onClick={(ev) => {
+                                  ev.stopPropagation();
+                                  productImageInputRef.current?.click();
+                                }}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  border: "none",
+                                  background: "#F7F5F0",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "4px",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  cursor: "pointer",
+                                  color: "#8E877E",
+                                  fontSize: "0.7rem",
+                                  fontWeight: 600,
+                                }}
+                                title="Ajouter la photo de l'article"
+                              >
+                                <Camera size={22} />
+                                <span>Photo</span>
+                              </button>
                             )}
+                          </div>
+
+                          <div className="ios-product-preview-body">
+                            <div className="ios-product-preview-header">
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                <span className="ios-product-preview-platform">
+                                  {extractedProduct?.platform || "ALIBABA"}
+                                </span>
+                                <span className="ios-product-preview-badge">
+                                  ✓ Article &amp; Photo détectés
+                                </span>
+                              </div>
+                              <div className="ios-preview-top-actions">
+                                <button
+                                  type="button"
+                                  onClick={() => productImageInputRef.current?.click()}
+                                  className="ios-preview-mini-pill"
+                                  title="Changer la photo"
+                                >
+                                  <Camera size={11} />
+                                  <span>Photo</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleRemoveProductImage}
+                                  className="ios-preview-remove-btn"
+                                  title="Retirer l'aperçu"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="ios-product-preview-title" title={extractedProduct?.title || productQuery}>
+                              {extractedProduct?.title || productQuery || "Article sélectionné"}
+                            </div>
+
+                            <div className="ios-product-preview-price-row">
+                              {productUnitPrice > 0 ? (
+                                <>
+                                  <span className="ios-product-preview-price-cny">
+                                    {productUnitPrice.toLocaleString("fr-FR")} {productCurrency}
+                                  </span>
+                                  <span className="ios-product-preview-price-cfa">
+                                    / unité (≈ {unitPriceFCFA.toLocaleString("fr-FR")} FCFA)
+                                  </span>
+                                </>
+                              ) : (
+                                <span style={{ fontSize: "0.76rem", color: "#8E877E" }}>
+                                  Prix fournisseur sur devis
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={handleRemoveProductImage}
-                          className="ios-preview-remove-btn"
-                          title="Retirer la photo"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                        {/* Grille des prix par tranches fournisseur (Alibaba / 1688 MOQ) */}
+                        {extractedProduct?.priceTiers && extractedProduct.priceTiers.length > 0 && (
+                          <div className="ios-tiers-box">
+                            <div className="ios-tiers-header">
+                              <span>Prix fournisseur par tranche de quantité (cliquez pour choisir)</span>
+                              {extractedProduct.minOrder && extractedProduct.minOrder > 1 && (
+                                <span className="ios-moq-tag">MOQ : {extractedProduct.minOrder} pcs</span>
+                              )}
+                            </div>
+                            <div className="ios-tiers-grid">
+                              {extractedProduct.priceTiers.map((tier, idx) => {
+                                const qty = Math.max(1, productQuantity || 1);
+                                const isActive =
+                                  (qty >= tier.minQty && (tier.maxQty === null || qty <= tier.maxQty)) ||
+                                  (idx === 0 && qty < tier.minQty);
+                                const tierFcfa =
+                                  tier.currency === "RMB"
+                                    ? Math.round(tier.price * 88)
+                                    : tier.currency === "USD"
+                                    ? Math.round(tier.price * 620)
+                                    : Math.round(tier.price);
+                                return (
+                                  <button
+                                    key={`${tier.label}-${idx}`}
+                                    type="button"
+                                    onClick={() => {
+                                      setProductQuantity(tier.minQty);
+                                      setProductUnitPrice(tier.price);
+                                      setProductCurrency(tier.currency);
+                                    }}
+                                    className={`ios-tier-pill ${isActive ? "active" : ""}`}
+                                  >
+                                    <span className="ios-tier-qty">{tier.label}</span>
+                                    <span className="ios-tier-price">
+                                      {tier.price.toLocaleString("fr-FR")} {tier.currency}
+                                    </span>
+                                    <span className="ios-tier-fcfa">≈ {tierFcfa.toLocaleString("fr-FR")} F</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <button
@@ -1129,95 +1323,158 @@ function CommandeFormContent() {
                       {extractError && <span className="ios-error-msg">{extractError}</span>}
                     </div>
 
-                    {/* Aperçu instantané et photo du produit détecté depuis le lien */}
+                    {/* Aperçu instantané et photo agrandie du produit détecté depuis le lien + Tranches de prix */}
                     {(userProductImage || (extractedProduct && (extractedProduct.image || extractedProduct.title))) ? (
                       <div className="ios-product-preview-card">
-                        <div className="ios-product-preview-thumb-wrap">
-                          {(userProductImage || extractedProduct?.image) ? (
-                            <img
-                              src={userProductImage || extractedProduct?.image || ""}
-                              alt={extractedProduct?.title || "Article"}
-                              className="ios-product-preview-thumb"
-                              onError={(e) => {
-                                const currentSrc = e.currentTarget.getAttribute("src") || "";
-                                if (currentSrc.startsWith("http") && !currentSrc.includes("/api/image-proxy")) {
-                                  e.currentTarget.src = `/api/image-proxy?url=${encodeURIComponent(currentSrc)}`;
-                                } else {
-                                  setUserProductImage(null);
-                                  setExtractedProduct((prev) => (prev ? { ...prev, image: "" } : null));
-                                }
-                              }}
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => productImageInputRef.current?.click()}
-                              style={{
-                                width: "100%",
-                                height: "100%",
-                                border: "none",
-                                background: "#F7F5F0",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                cursor: "pointer",
-                                color: "#8E877E",
-                              }}
-                              title="Ajouter la photo de l'article"
-                            >
-                              <Camera size={20} />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => productImageInputRef.current?.click()}
-                            className="ios-thumb-change-btn"
-                            title="Remplacer la photo par une capture personnelle"
+                        <div className="ios-product-preview-main">
+                          <div
+                            className="ios-product-preview-thumb-wrap"
+                            onClick={() => {
+                              const img = userProductImage || extractedProduct?.image;
+                              if (img) setZoomImageUrl(img);
+                            }}
+                            title="Cliquez pour agrandir la photo du produit"
                           >
-                            <Camera size={12} />
-                          </button>
-                        </div>
-
-                        <div className="ios-product-preview-body">
-                          <div className="ios-product-preview-header">
-                            <span className="ios-product-preview-platform">
-                              {extractedProduct?.platform || "ALIBABA"}
-                            </span>
-                            <span className="ios-product-preview-badge">
-                              ✓ Image liée au produit
-                            </span>
-                          </div>
-
-                          <div className="ios-product-preview-title" title={extractedProduct?.title || goodsDescription}>
-                            {extractedProduct?.title || goodsDescription || "Article sélectionné"}
-                          </div>
-
-                          <div className="ios-product-preview-price-row">
-                            {extractedProduct?.price && extractedProduct.price > 0 ? (
+                            {(userProductImage || extractedProduct?.image) ? (
                               <>
-                                <span className="ios-product-preview-price-cny">
-                                  {extractedProduct.price.toLocaleString("fr-FR")} {extractedProduct.currency || "RMB"}
-                                </span>
-                                <span className="ios-product-preview-price-cfa">
-                                  (≈ {Math.round(extractedProduct.price * 88).toLocaleString("fr-FR")} FCFA)
+                                <img
+                                  src={userProductImage || extractedProduct?.image || ""}
+                                  alt={extractedProduct?.title || "Article"}
+                                  className="ios-product-preview-thumb"
+                                  onError={(e) => {
+                                    const currentSrc = e.currentTarget.getAttribute("src") || "";
+                                    if (currentSrc.startsWith("http") && !currentSrc.includes("/api/image-proxy")) {
+                                      e.currentTarget.src = `/api/image-proxy?url=${encodeURIComponent(currentSrc)}`;
+                                    } else {
+                                      setUserProductImage(null);
+                                      setExtractedProduct((prev) => (prev ? { ...prev, image: "" } : null));
+                                    }
+                                  }}
+                                />
+                                <span className="ios-thumb-zoom-hint">
+                                  <ZoomIn size={12} />
                                 </span>
                               </>
                             ) : (
-                              <span style={{ fontSize: "0.72rem", color: "#8E877E" }}>
-                                Prix usine vérifié par nos équipes
-                              </span>
+                              <button
+                                type="button"
+                                onClick={(ev) => {
+                                  ev.stopPropagation();
+                                  productImageInputRef.current?.click();
+                                }}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  border: "none",
+                                  background: "#F7F5F0",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "4px",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  cursor: "pointer",
+                                  color: "#8E877E",
+                                  fontSize: "0.7rem",
+                                  fontWeight: 600,
+                                }}
+                                title="Ajouter la photo de l'article"
+                              >
+                                <Camera size={22} />
+                                <span>Photo</span>
+                              </button>
                             )}
+                          </div>
+
+                          <div className="ios-product-preview-body">
+                            <div className="ios-product-preview-header">
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                <span className="ios-product-preview-platform">
+                                  {extractedProduct?.platform || "ALIBABA"}
+                                </span>
+                                <span className="ios-product-preview-badge">
+                                  ✓ Article &amp; Photo détectés
+                                </span>
+                              </div>
+                              <div className="ios-preview-top-actions">
+                                <button
+                                  type="button"
+                                  onClick={() => productImageInputRef.current?.click()}
+                                  className="ios-preview-mini-pill"
+                                  title="Changer la photo"
+                                >
+                                  <Camera size={11} />
+                                  <span>Photo</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleRemoveProductImage}
+                                  className="ios-preview-remove-btn"
+                                  title="Retirer l'aperçu"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="ios-product-preview-title" title={extractedProduct?.title || goodsDescription}>
+                              {extractedProduct?.title || goodsDescription || "Article sélectionné"}
+                            </div>
+
+                            <div className="ios-product-preview-price-row">
+                              {extractedProduct?.price && extractedProduct.price > 0 ? (
+                                <>
+                                  <span className="ios-product-preview-price-cny">
+                                    {extractedProduct.price.toLocaleString("fr-FR")} {extractedProduct.currency || "RMB"}
+                                  </span>
+                                  <span className="ios-product-preview-price-cfa">
+                                    / unité (≈ {Math.round(extractedProduct.price * 88).toLocaleString("fr-FR")} FCFA)
+                                  </span>
+                                </>
+                              ) : (
+                                <span style={{ fontSize: "0.76rem", color: "#8E877E" }}>
+                                  Prix usine vérifié par nos équipes
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={handleRemoveProductImage}
-                          className="ios-preview-remove-btn"
-                          title="Retirer la photo"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                        {extractedProduct?.priceTiers && extractedProduct.priceTiers.length > 0 && (
+                          <div className="ios-tiers-box">
+                            <div className="ios-tiers-header">
+                              <span>Grille fournisseur par tranche de quantité</span>
+                              {extractedProduct.minOrder && extractedProduct.minOrder > 1 && (
+                                <span className="ios-moq-tag">MOQ : {extractedProduct.minOrder} pcs</span>
+                              )}
+                            </div>
+                            <div className="ios-tiers-grid">
+                              {extractedProduct.priceTiers.map((tier, idx) => {
+                                const tierFcfa =
+                                  tier.currency === "RMB"
+                                    ? Math.round(tier.price * 88)
+                                    : tier.currency === "USD"
+                                    ? Math.round(tier.price * 620)
+                                    : Math.round(tier.price);
+                                return (
+                                  <button
+                                    key={`${tier.label}-${idx}`}
+                                    type="button"
+                                    onClick={() => {
+                                      setPaidToSupplier(`${(tier.price * tier.minQty).toLocaleString("fr-FR")} ${tier.currency}`);
+                                    }}
+                                    className="ios-tier-pill"
+                                  >
+                                    <span className="ios-tier-qty">{tier.label}</span>
+                                    <span className="ios-tier-price">
+                                      {tier.price.toLocaleString("fr-FR")} {tier.currency}
+                                    </span>
+                                    <span className="ios-tier-fcfa">≈ {tierFcfa.toLocaleString("fr-FR")} F</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <button
@@ -1809,59 +2066,74 @@ function CommandeFormContent() {
           background: #FEE2E2;
         }
 
-        /* Carte de prévisualisation directe du produit extrait par le lien */
+        /* Carte de prévisualisation directe agrandie du produit extrait par le lien */
         .ios-product-preview-card {
           display: flex;
-          align-items: center;
+          flex-direction: column;
           gap: 12px;
           background: #F7F5F0;
-          border: 1px solid rgba(28, 24, 21, 0.08);
-          border-radius: 18px;
-          padding: 10px 14px;
-          margin-top: 4px;
+          border: 1.5px solid rgba(197, 162, 101, 0.35);
+          border-radius: 22px;
+          padding: 16px;
+          margin-top: 6px;
           position: relative;
           transition: all 0.2s ease;
+          box-shadow: 0 6px 20px -4px rgba(28, 24, 21, 0.06);
+        }
+
+        .ios-product-preview-main {
+          display: flex;
+          align-items: flex-start;
+          gap: 16px;
         }
 
         .ios-product-preview-thumb-wrap {
           position: relative;
-          width: 58px;
-          height: 58px;
+          width: 118px;
+          height: 118px;
           flex-shrink: 0;
-          border-radius: 14px;
+          border-radius: 18px;
           overflow: hidden;
           background: #FFFFFF;
-          border: 1px solid rgba(28, 24, 21, 0.08);
+          border: 1px solid rgba(28, 24, 21, 0.1);
+          cursor: zoom-in;
+          box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        @media (max-width: 640px) {
+          .ios-product-preview-thumb-wrap {
+            width: 96px;
+            height: 96px;
+            border-radius: 15px;
+          }
+          .ios-product-preview-main {
+            gap: 12px;
+          }
         }
 
         .ios-product-preview-thumb {
           width: 100%;
           height: 100%;
-          object-fit: cover;
+          object-fit: contain;
           display: block;
+          background: #FFFFFF;
+          padding: 4px;
         }
 
-        .ios-thumb-change-btn {
+        .ios-thumb-zoom-hint {
           position: absolute;
-          bottom: 2px;
-          right: 2px;
-          width: 22px;
-          height: 22px;
+          bottom: 6px;
+          right: 6px;
+          width: 24px;
+          height: 24px;
           border-radius: 50%;
-          background: rgba(28, 24, 21, 0.75);
+          background: rgba(28, 24, 21, 0.65);
           color: #FFFFFF;
-          border: none;
           display: flex;
           align-items: center;
           justify-content: center;
-          cursor: pointer;
           backdrop-filter: blur(4px);
-          transition: transform 0.15s ease;
-        }
-
-        .ios-thumb-change-btn:hover {
-          transform: scale(1.1);
-          background: #1C1815;
+          pointer-events: none;
         }
 
         .ios-product-preview-body {
@@ -1869,54 +2141,169 @@ function CommandeFormContent() {
           min-width: 0;
           display: flex;
           flex-direction: column;
-          gap: 3px;
+          gap: 6px;
         }
 
         .ios-product-preview-header {
           display: flex;
           align-items: center;
+          justify-content: space-between;
           gap: 6px;
         }
 
+        .ios-preview-top-actions {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-shrink: 0;
+        }
+
+        .ios-preview-mini-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          background: #FFFFFF;
+          border: 1px solid rgba(28, 24, 21, 0.12);
+          border-radius: 9999px;
+          padding: 4px 10px;
+          font-size: 0.7rem;
+          font-weight: 600;
+          color: #1C1815;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .ios-preview-mini-pill:hover {
+          background: #EAE6DE;
+        }
+
         .ios-product-preview-platform {
-          font-size: 0.64rem;
+          font-size: 0.66rem;
           font-weight: 800;
           background: #DCFCE7;
           color: #166534;
-          padding: 2px 7px;
+          padding: 3px 8px;
           border-radius: 9999px;
           text-transform: uppercase;
         }
 
         .ios-product-preview-badge {
-          font-size: 0.68rem;
-          font-weight: 600;
+          font-size: 0.7rem;
+          font-weight: 700;
           color: #16A34A;
         }
 
         .ios-product-preview-title {
-          font-size: 0.82rem;
+          font-size: 0.92rem;
           font-weight: 700;
           color: #1C1815;
-          white-space: nowrap;
+          line-height: 1.38;
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
           overflow: hidden;
-          text-overflow: ellipsis;
         }
 
         .ios-product-preview-price-row {
           display: flex;
           align-items: baseline;
+          flex-wrap: wrap;
           gap: 6px;
+          margin-top: 2px;
         }
 
         .ios-product-preview-price-cny {
-          font-size: 0.84rem;
+          font-size: 1.02rem;
           font-weight: 800;
           color: #C2410C;
         }
 
         .ios-product-preview-price-cfa {
-          font-size: 0.72rem;
+          font-size: 0.76rem;
+          font-weight: 600;
+          color: #716C65;
+        }
+
+        /* Grille de prix par tranches (MOQ Alibaba / 1688) */
+        .ios-tiers-box {
+          background: #FFFFFF;
+          border: 1px solid rgba(28, 24, 21, 0.08);
+          border-radius: 16px;
+          padding: 10px 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .ios-tiers-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          font-size: 0.7rem;
+          font-weight: 700;
+          color: #716C65;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+        }
+
+        .ios-moq-tag {
+          background: #FEF3C7;
+          color: #92400E;
+          padding: 2px 8px;
+          border-radius: 9999px;
+          font-size: 0.68rem;
+          font-weight: 800;
+        }
+
+        .ios-tiers-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+          gap: 8px;
+        }
+
+        .ios-tier-pill {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 2px;
+          padding: 8px 10px;
+          border-radius: 12px;
+          border: 1.5px solid rgba(28, 24, 21, 0.08);
+          background: #FAF8F5;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          text-align: left;
+        }
+
+        .ios-tier-pill:hover {
+          border-color: #C5A265;
+          background: #FFFFFF;
+        }
+
+        .ios-tier-pill.active {
+          border-color: #16A34A;
+          background: #ECFDF5;
+          box-shadow: 0 2px 8px rgba(22, 163, 74, 0.12);
+        }
+
+        .ios-tier-qty {
+          font-size: 0.7rem;
+          font-weight: 700;
+          color: #524B43;
+        }
+
+        .ios-tier-pill.active .ios-tier-qty {
+          color: #166534;
+        }
+
+        .ios-tier-price {
+          font-size: 0.88rem;
+          font-weight: 800;
+          color: #1C1815;
+        }
+
+        .ios-tier-fcfa {
+          font-size: 0.68rem;
           font-weight: 600;
           color: #716C65;
         }
@@ -1926,7 +2313,7 @@ function CommandeFormContent() {
           height: 28px;
           border-radius: 50%;
           border: none;
-          background: transparent;
+          background: #FFFFFF;
           color: #A39D93;
           display: flex;
           align-items: center;
@@ -2336,11 +2723,128 @@ function CommandeFormContent() {
           font-size: 1.05rem;
         }
 
+        .ios-receipt-product-banner {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: #FFFFFF;
+          border: 1px solid rgba(28, 24, 21, 0.08);
+          border-radius: 16px;
+          padding: 10px 12px;
+          margin-bottom: 14px;
+          text-align: left;
+        }
+
+        .ios-receipt-product-img {
+          width: 64px;
+          height: 64px;
+          object-fit: contain;
+          border-radius: 12px;
+          border: 1px solid rgba(28, 24, 21, 0.08);
+          background: #FFFFFF;
+          flex-shrink: 0;
+        }
+
+        .ios-receipt-product-meta {
+          min-width: 0;
+          flex: 1;
+        }
+
+        .ios-receipt-product-title {
+          font-size: 0.84rem;
+          font-weight: 700;
+          color: #1C1815;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .ios-receipt-product-sub {
+          font-size: 0.74rem;
+          color: #716C65;
+          margin-top: 2px;
+        }
+
+        .ios-pdf-actions-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          margin-top: 4px;
+        }
+
+        @media (max-width: 480px) {
+          .ios-pdf-actions-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        .ios-btn-pdf {
+          height: 46px;
+          background: #FFFBEB;
+          color: #92400E;
+          border: 1.5px solid #F59E0B;
+          border-radius: 9999px;
+          font-size: 0.84rem;
+          font-weight: 700;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .ios-btn-pdf:hover {
+          background: #FEF3C7;
+        }
+
+        .ios-btn-print {
+          height: 46px;
+          background: #F7F5F0;
+          color: #1C1815;
+          border: 1.5px solid rgba(28, 24, 21, 0.14);
+          border-radius: 9999px;
+          font-size: 0.84rem;
+          font-weight: 700;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .ios-btn-print:hover {
+          background: #EAE6DE;
+        }
+
+        .ios-btn-whatsapp-agency {
+          width: 100%;
+          height: 50px;
+          background: #16A34A;
+          color: #FFFFFF;
+          font-size: 0.94rem;
+          font-weight: 700;
+          border-radius: 9999px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          text-decoration: none;
+          box-shadow: 0 4px 16px rgba(22, 163, 74, 0.25);
+          transition: background-color 0.15s ease, transform 0.1s ease;
+        }
+
+        .ios-btn-whatsapp-agency:hover {
+          background: #15803D;
+        }
+
         .ios-actions-stack {
           display: flex;
           flex-direction: column;
           gap: 10px;
-          margin-top: 20px;
+          margin-top: 16px;
         }
 
         .ios-btn-primary {
@@ -2391,6 +2895,78 @@ function CommandeFormContent() {
       `,
         }}
       />
+
+      {/* Lightbox plein écran pour voir la photo de l'article en grand */}
+      {zoomImageUrl && (
+        <div
+          onClick={() => setZoomImageUrl(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(28, 24, 21, 0.85)",
+            backdropFilter: "blur(6px)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "relative",
+              background: "#FFFFFF",
+              borderRadius: "24px",
+              padding: "16px",
+              maxWidth: "92vw",
+              maxHeight: "88vh",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "12px",
+              boxShadow: "0 20px 50px rgba(0,0,0,0.35)",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setZoomImageUrl(null)}
+              style={{
+                position: "absolute",
+                top: "12px",
+                right: "12px",
+                width: "36px",
+                height: "36px",
+                borderRadius: "50%",
+                border: "none",
+                background: "#1C1815",
+                color: "#FFFFFF",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+              }}
+            >
+              <X size={18} />
+            </button>
+            <img
+              src={zoomImageUrl}
+              alt="Photo du produit en grand"
+              style={{
+                maxWidth: "84vw",
+                maxHeight: "75vh",
+                objectFit: "contain",
+                borderRadius: "14px",
+              }}
+            />
+            {extractedProduct?.title && (
+              <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1C1815", textAlign: "center", maxWidth: "500px" }}>
+                {extractedProduct.title}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

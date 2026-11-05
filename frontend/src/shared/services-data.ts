@@ -758,9 +758,25 @@ export async function saveClientRequest(data: {
     console.warn("Envoi API Hono asynchrone :", err);
   }
 
-  // 3. Lien WhatsApp pré-rempli
-  const supportPhone = "+2250153638569";
-  const waText = `Bonjour Roum Transit, je viens de créer le dossier n° *${reference}*.\n- Client : ${data.client_name}\n- Service : ${data.service_type}\n- Trajet : ${data.origin_country} ➔ ${data.destination_country}\n- Détails : ${description}\nMerci de me confirmer la prise en charge !`;
+  // 3. Lien WhatsApp pré-rempli courtois avec numéro de suivi cliquable
+  const supportPhone = "+2250787994412";
+  const originUrl =
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : "https://roum-transit.pages.dev";
+  const trackingLink = `${originUrl}/tracking/${encodeURIComponent(trackingNumber)}`;
+  const waText =
+    `Bonjour l'équipe *ROUM TRANSIT INTERNATIONAL*,\n` +
+    `Je viens d'enregistrer mon dossier sur votre plateforme officielle :\n\n` +
+    `• Référence Dossier : *${reference}*\n` +
+    `• N° de Suivi Officiel : *${trackingNumber}*\n` +
+    (shippingMark ? `• Shipping Mark : *${shippingMark}*\n` : "") +
+    `• Client : ${data.client_name} (${data.client_phone})\n` +
+    `• Corridor : ${data.origin_country} ➔ ${data.destination_country}\n` +
+    `• Détails : ${description}\n\n` +
+    `👉 *Suivi en direct du colis (${trackingNumber}) :*\n` +
+    `${trackingLink}\n\n` +
+    `Merci de bien vouloir me confirmer la prise en charge de mon dossier. Cordialement !`;
   const whatsappUrl = `https://wa.me/${supportPhone.replace(/\D/g, "")}?text=${encodeURIComponent(waText)}`;
 
   return {

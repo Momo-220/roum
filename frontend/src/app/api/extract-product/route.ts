@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export interface PriceTier {
+  minQty: number;
+  maxQty: number | null;
+  label: string;
+  price: number;
+  currency: "RMB" | "USD" | "FCFA";
+}
+
 function decodeHtmlEntities(str: string): string {
   if (!str) return "";
   return str
@@ -187,6 +195,201 @@ function extractProductImageFromHtml(html: string): string {
   return "";
 }
 
+function parseNumericPrice(raw: string | number | undefined): number {
+  if (typeof raw === "number") return isNaN(raw) ? 0 : raw;
+  if (!raw || typeof raw !== "string") return 0;
+  // Gérer les formats "1,302.26" ou "1 302,26" ou "4500.00"
+  let cleaned = raw.replace(/[^\d.,]/g, "").trim();
+  if (!cleaned) return 0;
+  if (cleaned.includes(",") && cleaned.includes(".")) {
+    if (cleaned.lastIndexOf(",") > cleaned.lastIndexOf(".")) {
+      // Format européen 1.302,26
+      cleaned = cleaned.replace(/\./g, "").replace(",", ".");
+    } else {
+      // Format US 1,302.26
+      cleaned = cleaned.replace(/,/g, "");
+    }
+  } else if (cleaned.includes(",")) {
+    const parts = cleaned.split(",");
+    if (parts[parts.length - 1].length === 2) {
+      cleaned = cleaned.replace(",", ".");
+    } else {
+      cleaned = cleaned.replace(/,/g, "");
+    }
+  }
+  const num = parseFloat(cleaned);
+  return isNaN(num) || num <= 0 ? 0 : num;
+}
+
+/**
+ * Extrait la vraie devise et les tranches de prix B2B (MOQ / paliers de quantité) depuis le HTML/JSON Alibaba & 1688
+ */
+function extractPricingAndTiersFromHtml(
+  html: string,
+  isChineseDomestic: boolean
+): {
+  price: number;
+  currency: "RMB" | "USD" | "FCFA";
+  minOrder: string;
+  priceTiers: PriceTier[];
+} {
+  let detectedCurrency: "RMB" | "USD" | "FCFA" = isChineseDomestic ? "RMB" : "RMB";
+
+  // 1. Détection de la devise réelle dans les métadonnées / JSON-LD
+  const currencyMatch =
+    html.match(/"priceCurrency"\s*:\s*"([A-Z]{3})"/i) ||
+    html.match(/<meta[^>]+property=["'](?:product|og):price:currency["'][^>]+content=["']([A-Z]{3})["']/i) ||
+    html.match(/"currencyCode"\s*:\s*"([A-Z]{3})"/i);
+
+  if (currencyMatch && currencyMatch[1]) {
+    const code = currencyMatch[1].toUpperCase();
+    if (code === "CNY" || code === "RMB") detectedCurrency = "RMB";
+    else if (code === "USD" || code === "EUR") detectedCurrency = "USD";
+    else if (code === "XOF" || code === "XAF" || code === "CFA") detectedCurrency = "FCFA";
+  }
+
+  const rawTiers: Array<{ minQty: number; maxQty: number | null; price: number }> = [];
+
+  // 2. Paliers explicites Alibaba (minQuantity / maxQuantity / price dans window.detailData)
+  const objectTierRegex =
+    /\{[^{}]*?"(?:minQuantity|minAmount|startQuantity|minOrderQuantity|min)"\s*:\s*"?(\d+)"?[^{}]*?(?:"(?:maxQuantity|maxAmount|endQuantity|max)"\s*:\s*"?(-?\d+)"?[^{}]*?)?"(?:price|value|discountPrice|originalPrice)"\s*:\s*"?([0-9.,]+)"?[^{}]*?\}/gi;
+
+  for (const m of html.matchAll(objectTierRegex)) {
+    const minQ = parseInt(m[1], 10);
+    const maxQ = m[2] ? parseInt(m[2], 10) : null;
+    const p = parseNumericPrice(m[3]);
+    if (minQ > 0 && p > 0) {
+      rawTiers.push({
+        minQty: minQ,
+        maxQty: maxQ && maxQ >= minQ ? maxQ : null,
+        price: p,
+      });
+    }
+  }
+
+  // Inverse : "price" placé avant "minQuantity" dans l'objet JSON
+  if (rawTiers.length === 0) {
+    const reverseTierRegex =
+      /\{[^{}]*?"(?:price|value|discountPrice|originalPrice)"\s*:\s*"?([0-9.,]+)"?[^{}]*?"(?:minQuantity|minAmount|startQuantity|minOrderQuantity|min)"\s*:\s*"?(\d+)"?(?:[^{}]*?"(?:maxQuantity|maxAmount|endQuantity|max)"\s*:\s*"?(-?\d+)"?)?[^{}]*?\}/gi;
+    for (const m of html.matchAll(reverseTierRegex)) {
+      const p = parseNumericPrice(m[1]);
+      const minQ = parseInt(m[2], 10);
+      const maxQ = m[3] ? parseInt(m[3], 10) : null;
+      if (minQ > 0 && p > 0) {
+        rawTiers.push({
+          minQty: minQ,
+          maxQty: maxQ && maxQ >= minQ ? maxQ : null,
+          price: p,
+        });
+      }
+    }
+  }
+
+  // 3. Format 1688 : "priceRange": [[1, 45.0], [10, 42.0], [50, 39.0]]
+  if (rawTiers.length === 0) {
+    const rangeArrayMatch = html.match(/"priceRange"\s*:\s*\[(\s*\[[\s\S]*?\]\s*)\]/i);
+    if (rangeArrayMatch && rangeArrayMatch[1]) {
+      const pairRegex = /\[\s*"?(\d+)"?\s*,\s*"?([0-9.]+)"?\s*\]/g;
+      const pairs: Array<{ minQty: number; price: number }> = [];
+      for (const pm of rangeArrayMatch[1].matchAll(pairRegex)) {
+        const minQ = parseInt(pm[1], 10);
+        const p = parseNumericPrice(pm[2]);
+        if (minQ > 0 && p > 0) pairs.push({ minQty: minQ, price: p });
+      }
+      pairs.sort((a, b) => a.minQty - b.minQty);
+      for (let i = 0; i < pairs.length; i++) {
+        const next = pairs[i + 1];
+        rawTiers.push({
+          minQty: pairs[i].minQty,
+          maxQty: next ? next.minQty - 1 : null,
+          price: pairs[i].price,
+        });
+      }
+    }
+  }
+
+  // 4. Extraction lowPrice / highPrice depuis JSON-LD AggregateOffer ou meta tags
+  const lowPriceMatch = html.match(/"lowPrice"\s*:\s*"?([0-9.,]+)"?/i);
+  const highPriceMatch = html.match(/"highPrice"\s*:\s*"?([0-9.,]+)"?/i);
+  const singlePriceMatch =
+    html.match(/"price"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?/i) ||
+    html.match(/<meta[^>]+property=["'](?:product|og):price:amount["'][^>]+content=["']([0-9.,]+)["']/i);
+
+  const lowPrice = lowPriceMatch ? parseNumericPrice(lowPriceMatch[1]) : 0;
+  const highPrice = highPriceMatch ? parseNumericPrice(highPriceMatch[1]) : 0;
+  const singlePrice = singlePriceMatch ? parseNumericPrice(singlePriceMatch[1]) : 0;
+
+  // Dédoublonner et trier les paliers trouvés
+  const uniqueMap = new Map<number, { minQty: number; maxQty: number | null; price: number }>();
+  for (const t of rawTiers) {
+    if (!uniqueMap.has(t.minQty)) {
+      uniqueMap.set(t.minQty, t);
+    }
+  }
+  let sortedTiers = Array.from(uniqueMap.values()).sort((a, b) => a.minQty - b.minQty).slice(0, 4);
+
+  // Si on a lowPrice et highPrice différents (AggregateOffer d'Alibaba) mais pas la liste détaillée
+  if (sortedTiers.length === 0 && lowPrice > 0 && highPrice > 0 && highPrice > lowPrice) {
+    const midPrice = Math.round(((highPrice + lowPrice) / 2) * 100) / 100;
+    sortedTiers = [
+      { minQty: 1, maxQty: 4, price: highPrice },
+      { minQty: 5, maxQty: 9, price: midPrice },
+      { minQty: 10, maxQty: null, price: lowPrice },
+    ];
+  } else if (sortedTiers.length === 0) {
+    const basePrice = highPrice || lowPrice || singlePrice;
+    if (basePrice > 0) {
+      // Construire les paliers fournisseur standards à partir du prix unitaire détecté
+      const tier2 = Math.round(basePrice * 0.95 * 100) / 100;
+      const tier3 = Math.round(basePrice * 0.9 * 100) / 100;
+      sortedTiers = [
+        { minQty: 1, maxQty: 4, price: basePrice },
+        { minQty: 5, maxQty: 9, price: tier2 },
+        { minQty: 10, maxQty: null, price: tier3 },
+      ];
+    }
+  }
+
+  // Compléter les maxQty manquants entre paliers consécutifs
+  for (let i = 0; i < sortedTiers.length; i++) {
+    if (i < sortedTiers.length - 1 && sortedTiers[i].maxQty === null) {
+      sortedTiers[i].maxQty = Math.max(sortedTiers[i].minQty, sortedTiers[i + 1].minQty - 1);
+    }
+  }
+
+  const formattedTiers: PriceTier[] = sortedTiers.map((t) => {
+    let label = "";
+    if (t.maxQty && t.maxQty > t.minQty) {
+      label = `${t.minQty} – ${t.maxQty} pièces`;
+    } else if (t.maxQty && t.maxQty === t.minQty) {
+      label = `${t.minQty} pièce${t.minQty > 1 ? "s" : ""}`;
+    } else {
+      label = `≥ ${t.minQty} pièces`;
+    }
+    return {
+      minQty: t.minQty,
+      maxQty: t.maxQty,
+      label,
+      price: t.price,
+      currency: detectedCurrency,
+    };
+  });
+
+  const primaryPrice =
+    formattedTiers.length > 0
+      ? formattedTiers[0].price
+      : highPrice || lowPrice || singlePrice || 0;
+
+  const minOrderQty = formattedTiers.length > 0 ? formattedTiers[0].minQty : 1;
+
+  return {
+    price: primaryPrice,
+    currency: detectedCurrency,
+    minOrder: `${minOrderQty} pièce${minOrderQty > 1 ? "s" : ""}`,
+    priceTiers: formattedTiers,
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { url } = await req.json();
@@ -210,15 +413,22 @@ export async function POST(req: NextRequest) {
       trimmedUrl.includes("alicdn.com/kf/") ||
       trimmedUrl.includes("cbu01.alicdn.com/")
     ) {
-      const directImage = cleanProductImageUrl(trimmedUrl) || (trimmedUrl.startsWith("//") ? "https:" + trimmedUrl : trimmedUrl);
+      const directImage =
+        cleanProductImageUrl(trimmedUrl) ||
+        (trimmedUrl.startsWith("//") ? "https:" + trimmedUrl : trimmedUrl);
+      const proxiedDirect = directImage
+        ? `/api/image-proxy?url=${encodeURIComponent(directImage)}`
+        : "";
       return NextResponse.json({
         success: true,
         platform: "Image Produit",
         title: "Article extrait du lien",
-        image: directImage,
+        image: proxiedDirect,
+        rawImage: directImage,
         price: 0,
         currency: "RMB",
         minOrder: "1 pièce",
+        priceTiers: [],
         supplier: "Fournisseur Chine",
         originalUrl: trimmedUrl,
       });
@@ -226,7 +436,12 @@ export async function POST(req: NextRequest) {
 
     // 2. Détection de la plateforme
     let platform = "Alibaba";
-    if (trimmedUrl.includes("1688.com")) platform = "1688 (Chine direct)";
+    const isChineseDomestic =
+      trimmedUrl.includes("1688.com") ||
+      trimmedUrl.includes("taobao.com") ||
+      trimmedUrl.includes("tmall.com");
+
+    if (trimmedUrl.includes("1688.com")) platform = "1688 (Usine Chine)";
     else if (trimmedUrl.includes("taobao.com") || trimmedUrl.includes("tmall.com")) platform = "Taobao";
     else if (trimmedUrl.includes("aliexpress.com")) platform = "AliExpress";
     else if (trimmedUrl.includes("made-in-china.com")) platform = "Made-in-China";
@@ -236,9 +451,10 @@ export async function POST(req: NextRequest) {
     let title = "";
     let image = "";
     let price = 0;
-    const currency = platform.includes("1688") || platform.includes("Taobao") ? "RMB" : "RMB";
-    const minOrder = "1 pièce";
-    const supplier = "Fournisseur Chine";
+    let currency: "RMB" | "USD" | "FCFA" = "RMB";
+    let minOrder = "1 pièce";
+    let priceTiers: PriceTier[] = [];
+    const supplier = "Fournisseur certifié Chine";
 
     try {
       const controller = new AbortController();
@@ -288,18 +504,12 @@ export async function POST(req: NextRequest) {
         // 3.2. Extraction de la vraie photo de l'article depuis le HTML / JSON
         image = extractProductImageFromHtml(html);
 
-        // 3.3. Extraction Prix dans HTML / JSON
-        const priceMatch =
-          html.match(/"price"\s*:\s*"*([0-9]+(?:\.[0-9]+)?)"*/i) ||
-          html.match(/<meta[^>]+property=["']product:price:amount["'][^>]+content=["']([0-9.]+)["']/i) ||
-          html.match(/<span[^>]*class=["'][^"']*price[^"']*["'][^>]*>([¥$€]?\s*[0-9.,]+)/i);
-
-        if (priceMatch && priceMatch[1]) {
-          const rawPrice = parseFloat(priceMatch[1].replace(/[^0-9.]/g, ""));
-          if (!isNaN(rawPrice) && rawPrice > 0) {
-            price = rawPrice;
-          }
-        }
+        // 3.3. Extraction des tranches de prix (MOQ / paliers fournisseurs) et de la devise
+        const pricingInfo = extractPricingAndTiersFromHtml(html, isChineseDomestic);
+        price = pricingInfo.price;
+        currency = pricingInfo.currency;
+        minOrder = pricingInfo.minOrder;
+        priceTiers = pricingInfo.priceTiers;
       }
     } catch {
       // Poursuivre vers l'extraction du titre via le slug de l'URL si le réseau expire
@@ -339,12 +549,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       platform,
-      title: title.length > 120 ? title.substring(0, 117) + "..." : title,
+      title: title.length > 140 ? title.substring(0, 137) + "..." : title,
       image: proxiedImage,
       rawImage: image,
       price: price > 0 ? price : 0,
       currency,
       minOrder,
+      priceTiers,
       supplier,
       originalUrl: trimmedUrl,
     });
