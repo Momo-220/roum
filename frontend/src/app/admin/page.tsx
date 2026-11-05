@@ -3025,7 +3025,7 @@ export default function AdminPage() {
               d.shipments.forEach((serverS: any) => {
                 const idx = merged.findIndex((m) => (m.id && m.id === serverS.id) || (m.tracking_number && m.tracking_number === serverS.tracking_number));
                 if (idx >= 0) {
-                  merged[idx] = { ...serverS, ...merged[idx] };
+                  merged[idx] = { ...merged[idx], ...serverS };
                 } else {
                   merged.push(serverS);
                 }
@@ -3098,6 +3098,9 @@ export default function AdminPage() {
         .then((d) => {
           if (d.clients && d.clients.length > 0) {
             setClientsList(d.clients);
+            try {
+              localStorage.setItem("roum_clients_data", JSON.stringify(d.clients));
+            } catch {}
           } else {
             setClientsList(DEFAULT_CLIENTS);
           }
@@ -3162,6 +3165,9 @@ export default function AdminPage() {
         .then((d) => {
           if (d.payments && d.payments.length > 0) {
             setPaymentsList(d.payments);
+            try {
+              localStorage.setItem("roum_payments_data", JSON.stringify(d.payments));
+            } catch {}
           } else {
             setPaymentsList(DEFAULT_PAYMENTS);
           }
@@ -3173,6 +3179,9 @@ export default function AdminPage() {
         .then((d) => {
           if (d.tasks && d.tasks.length > 0) {
             setTasksList(d.tasks);
+            try {
+              localStorage.setItem("roum_tasks_data", JSON.stringify(d.tasks));
+            } catch {}
           } else {
             setTasksList(DEFAULT_TASKS);
           }

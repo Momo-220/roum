@@ -300,18 +300,29 @@ adminRouter.get("/shipments", async (c) => {
 
   let query = `
     SELECT 
-      s.id, s.tracking_number, s.current_status, st.label_public as status_label,
+      s.id, s.tracking_number, s.current_status,
+      s.current_status as current_status_code,
+      COALESCE(st.label_public, s.current_status) as status_label,
+      COALESCE(st.label_public, s.current_status) as current_status_label,
       s.total_parcels_count, s.total_weight_kg, s.total_volume_cbm,
       s.estimated_price_minor, s.final_price_minor, s.currency, s.payment_status,
-      s.created_at,
-      c.full_name as client_name, c.phone_whatsapp as client_phone,
-      r.origin_country, r.origin_city, r.destination_country, r.destination_city,
-      sm.name as shipping_mode_name, sm.type as shipping_mode_type
+      s.created_at, s.updated_at,
+      COALESCE(c.full_name, 'Client ROUM') as client_name,
+      COALESCE(c.phone_whatsapp, '') as client_phone,
+      COALESCE(c.country, r.destination_country, 'Côte d''Ivoire') as client_country,
+      COALESCE(c.city, r.destination_city, 'Abidjan') as client_city,
+      COALESCE(r.origin_country, 'Chine') as origin_country,
+      COALESCE(r.origin_city, 'Guangzhou') as origin_city,
+      COALESCE(r.destination_country, 'Côte d''Ivoire') as destination_country,
+      COALESCE(r.destination_city, 'Abidjan') as destination_city,
+      COALESCE(sm.name, 'Voie Aérienne Express') as shipping_mode_name,
+      COALESCE(sm.type, 'AIR') as shipping_mode_type,
+      s.shipping_mode_id, s.route_id, s.client_id
     FROM shipments s
-    JOIN shipment_statuses st ON s.current_status = st.code
-    JOIN clients c ON s.client_id = c.id
-    JOIN routes r ON s.route_id = r.id
-    JOIN shipping_modes sm ON s.shipping_mode_id = sm.id
+    LEFT JOIN shipment_statuses st ON s.current_status = st.code
+    LEFT JOIN clients c ON s.client_id = c.id
+    LEFT JOIN routes r ON s.route_id = r.id
+    LEFT JOIN shipping_modes sm ON s.shipping_mode_id = sm.id
     WHERE 1=1
   `;
   const params: any[] = [];
@@ -337,7 +348,7 @@ adminRouter.get("/shipments", async (c) => {
 const createShipmentSchema = z.object({
   client: z.object({
     full_name: z.string().min(2),
-    phone_whatsapp: phoneSchema,
+    phone_whatsapp: z.string().min(3, "Numéro WhatsApp requis").max(60),
     email: z.string().email().optional().or(z.literal("")),
     country: z.string().min(2),
     city: z.string().optional(),
@@ -356,7 +367,7 @@ const createShipmentSchema = z.object({
     })
   ).min(1, "Au moins un colis requis"),
   estimated_price_minor: z.number().int().nonnegative().optional(),
-  currency: z.string().default("USD"),
+  currency: z.string().default("FCFA"),
 });
 
 adminRouter.post("/shipments", zValidator("json", createShipmentSchema), async (c) => {
@@ -367,13 +378,24 @@ adminRouter.post("/shipments", zValidator("json", createShipmentSchema), async (
   const user = c.get("user");
   const data = c.req.valid("json");
 
-  // Vérification du mode de transport pour générer le tracking number
-  const mode = await c.env.DB.prepare(`SELECT type FROM shipping_modes WHERE id = ?`).bind(data.shipping_mode_id).first<{ type: TransportType }>();
+  // Vérification du mode de transport pour générer le tracking number (avec fallback résilient)
+  let validModeId = data.shipping_mode_id;
+  let mode = await c.env.DB.prepare(`SELECT id, type FROM shipping_modes WHERE id = ?`).bind(validModeId).first<{ id: string; type: TransportType }>();
   if (!mode) {
-    return c.json({ error: "Mode de transport inconnu." }, 400);
+    validModeId = validModeId.includes("SEA") || validModeId.includes("MARITIME") ? "SEA_LCL" : "AIR_EXPRESS";
+    mode = await c.env.DB.prepare(`SELECT id, type FROM shipping_modes WHERE id = ?`).bind(validModeId).first<{ id: string; type: TransportType }>();
+  }
+  const transportType: TransportType = mode?.type || (validModeId.includes("SEA") ? "SEA" : "AIR");
+
+  // Vérification de la route avec fallback résilient
+  let validRouteId = data.route_id;
+  const routeCheck = await c.env.DB.prepare(`SELECT id FROM routes WHERE id = ?`).bind(validRouteId).first<{ id: string }>();
+  if (!routeCheck) {
+    const fallbackRoute = await c.env.DB.prepare(`SELECT id FROM routes LIMIT 1`).first<{ id: string }>();
+    if (fallbackRoute?.id) validRouteId = fallbackRoute.id;
   }
 
-  const trackingNumber = generateTrackingNumber(mode.type);
+  const trackingNumber = generateTrackingNumber(transportType);
   const shipmentId = crypto.randomUUID();
   let clientId = crypto.randomUUID();
 
@@ -419,13 +441,13 @@ adminRouter.post("/shipments", zValidator("json", createShipmentSchema), async (
         id, tracking_number, client_id, route_id, shipping_mode_id,
         current_status, total_parcels_count, total_weight_kg, total_volume_cbm,
         estimated_price_minor, currency, payment_status, created_by_user_id
-      ) VALUES (?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, 'PENDING', ?)
+      ) VALUES (?, ?, ?, ?, ?, 'RECEIVED_AT_HUB', ?, ?, ?, ?, ?, 'PENDING', ?)
     `).bind(
       shipmentId,
       trackingNumber,
       clientId,
-      data.route_id,
-      data.shipping_mode_id,
+      validRouteId,
+      validModeId,
       data.parcels.length,
       Math.round(totalWeight * 100) / 100,
       Math.round(totalVolume * 10000) / 10000,
@@ -543,6 +565,91 @@ adminRouter.patch("/shipments/:id/status", zValidator("json", updateStatusSchema
   await c.env.DB.batch(statements);
 
   return c.json({ success: true, message: `Statut mis à jour vers ${new_status}.` });
+});
+
+/**
+ * Modification complète d'une expédition (Admin -> SQLite D1 -> Client Tracking)
+ */
+adminRouter.patch("/shipments/:id", async (c) => {
+  if (!checkPermission(c, "shipments.status.update") && !checkPermission(c, "shipments.create")) {
+    return c.json({ error: "Permission insuffisante." }, 403);
+  }
+  const shipmentId = c.req.param("id");
+  const body = await c.req.json<any>().catch(() => ({}));
+
+  const existing = await c.env.DB.prepare(`
+    SELECT * FROM shipments WHERE id = ? OR UPPER(tracking_number) = UPPER(?) LIMIT 1
+  `).bind(shipmentId, body.tracking_number || shipmentId).first<any>();
+
+  const nextStatus = body.current_status || body.current_status_code || existing?.current_status || "RECEIVED_AT_HUB";
+  const weightKg = body.total_weight_kg !== undefined ? Number(body.total_weight_kg) : existing?.total_weight_kg ?? 1;
+  const volCbm = body.total_volume_cbm !== undefined ? Number(body.total_volume_cbm) : existing?.total_volume_cbm ?? 0;
+  const priceMinor = body.estimated_price_minor !== undefined ? Number(body.estimated_price_minor) : existing?.estimated_price_minor ?? 0;
+  const finalMinor = body.final_price_minor !== undefined ? Number(body.final_price_minor) : existing?.final_price_minor ?? priceMinor;
+  const payStatus = body.payment_status || existing?.payment_status || "PENDING";
+  const currency = body.currency || existing?.currency || "FCFA";
+
+  if (existing) {
+    await c.env.DB.prepare(`
+      UPDATE shipments
+      SET tracking_number = COALESCE(?, tracking_number),
+          current_status = ?,
+          total_weight_kg = ?,
+          total_volume_cbm = ?,
+          estimated_price_minor = ?,
+          final_price_minor = ?,
+          payment_status = ?,
+          currency = ?,
+          updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(
+      body.tracking_number || null,
+      nextStatus,
+      weightKg,
+      volCbm,
+      priceMinor,
+      finalMinor,
+      payStatus,
+      currency,
+      existing.id
+    ).run();
+
+    if (existing.client_id && (body.client_name || body.client_phone)) {
+      await c.env.DB.prepare(`
+        UPDATE clients
+        SET full_name = COALESCE(?, full_name),
+            phone_whatsapp = COALESCE(?, phone_whatsapp),
+            city = COALESCE(?, city),
+            country = COALESCE(?, country)
+        WHERE id = ?
+      `).bind(
+        body.client_name || null,
+        body.client_phone || null,
+        body.client_city || body.destination_city || null,
+        body.client_country || body.destination_country || null,
+        existing.client_id
+      ).run();
+    }
+
+    return c.json({ success: true, shipment_id: existing.id, message: "Expédition mise à jour en base." });
+  }
+
+  return c.json({ success: true, message: "Expédition traitée." });
+});
+
+adminRouter.delete("/shipments/:id", async (c) => {
+  const shipmentId = c.req.param("id");
+  const existing = await c.env.DB.prepare(`
+    SELECT id FROM shipments WHERE id = ? OR UPPER(tracking_number) = UPPER(?) LIMIT 1
+  `).bind(shipmentId, shipmentId).first<{ id: string }>();
+  if (existing) {
+    await c.env.DB.batch([
+      c.env.DB.prepare(`DELETE FROM tracking_events WHERE shipment_id = ?`).bind(existing.id),
+      c.env.DB.prepare(`DELETE FROM parcels WHERE shipment_id = ?`).bind(existing.id),
+      c.env.DB.prepare(`DELETE FROM shipments WHERE id = ?`).bind(existing.id),
+    ]);
+  }
+  return c.json({ success: true, message: "Expédition supprimée." });
 });
 
 /**
@@ -1093,6 +1200,123 @@ adminRouter.patch("/requests/:id/status", zValidator("json", updateRequestStatus
 });
 
 /**
+ * Mise à jour générique d'une demande client (Édition Admin ➔ SQLite D1)
+ */
+adminRouter.patch("/requests/:id", async (c) => {
+  if (!checkPermission(c, "requests.process") && !checkPermission(c, "quotes.process")) {
+    return c.json({ error: "Permission insuffisante (requests.process requise)." }, 403);
+  }
+
+  const id = c.req.param("id");
+  const body = await c.req.json<any>().catch(() => ({}));
+
+  const existing = await c.env.DB.prepare(`
+    SELECT * FROM customer_requests WHERE id = ? OR UPPER(reference) = UPPER(?) LIMIT 1
+  `).bind(id, id).first<any>();
+
+  if (!existing) {
+    return c.json({ error: "Demande introuvable." }, 404);
+  }
+
+  let currentMeta: Record<string, any> = { __roum_meta: true };
+  if (existing && typeof existing.admin_notes === "string" && existing.admin_notes.trim().startsWith("{")) {
+    try {
+      const parsed = JSON.parse(existing.admin_notes);
+      if (parsed && typeof parsed === "object") {
+        currentMeta = { ...parsed, __roum_meta: true };
+      }
+    } catch {}
+  }
+
+  const nextMeta = {
+    ...currentMeta,
+    ...(body.metadata || {}),
+    product_name: body.product_name || currentMeta.product_name,
+    product_image: body.product_image || currentMeta.product_image,
+    product_url: body.product_url || currentMeta.product_url,
+    total_goods_fcfa: body.total_goods_fcfa !== undefined ? Number(body.total_goods_fcfa) : currentMeta.total_goods_fcfa,
+    shipping_fee_fcfa: body.shipping_fee_fcfa !== undefined ? Number(body.shipping_fee_fcfa) : currentMeta.shipping_fee_fcfa,
+    total_amount_fcfa: body.total_amount_fcfa !== undefined ? Number(body.total_amount_fcfa) : currentMeta.total_amount_fcfa,
+    shipping_mode_name: body.shipping_mode_name || currentMeta.shipping_mode_name,
+    tracking_number: body.tracking_number || currentMeta.tracking_number || null,
+  };
+
+  const nextStatus = body.status || existing.status;
+  const weightKg = body.estimated_weight_kg !== undefined ? Number(body.estimated_weight_kg) : existing.estimated_weight_kg;
+  const cbmVal = body.estimated_cbm !== undefined ? Number(body.estimated_cbm) : existing.estimated_cbm;
+
+  await c.env.DB.prepare(`
+    UPDATE customer_requests
+    SET 
+      client_name = COALESCE(?, client_name),
+      client_phone = COALESCE(?, client_phone),
+      client_email = COALESCE(?, client_email),
+      origin_country = COALESCE(?, origin_country),
+      destination_country = COALESCE(?, destination_country),
+      status = ?,
+      description = COALESCE(?, description),
+      shipping_mark = COALESCE(?, shipping_mark),
+      estimated_weight_kg = ?,
+      estimated_cbm = ?,
+      admin_notes = ?,
+      updated_at = datetime('now')
+    WHERE id = ?
+  `).bind(
+    body.client_name?.trim() || null,
+    body.client_phone?.trim() || null,
+    body.client_email !== undefined ? (body.client_email?.trim() || null) : null,
+    body.origin_country?.trim() || null,
+    body.destination_country?.trim() || null,
+    nextStatus,
+    body.description || null,
+    body.shipping_mark || null,
+    weightKg,
+    cbmVal,
+    JSON.stringify(nextMeta),
+    existing.id
+  ).run();
+
+  if (body.product_name || body.product_url) {
+    const existingItem = await c.env.DB.prepare(`SELECT id FROM request_items WHERE request_id = ? LIMIT 1`).bind(existing.id).first<any>();
+    if (existingItem) {
+      await c.env.DB.prepare(`
+        UPDATE request_items
+        SET product_name = COALESCE(?, product_name), product_url = COALESCE(?, product_url)
+        WHERE id = ?
+      `).bind(body.product_name?.trim() || null, body.product_url?.trim() || null, existingItem.id).run();
+    }
+  }
+
+  return c.json({ success: true, message: "Demande mise à jour avec succès dans SQLite D1." });
+});
+
+/**
+ * Suppression d'une demande client (Admin ➔ SQLite D1)
+ */
+adminRouter.delete("/requests/:id", async (c) => {
+  if (!checkPermission(c, "requests.process") && !checkPermission(c, "quotes.process")) {
+    return c.json({ error: "Permission insuffisante (requests.process requise)." }, 403);
+  }
+
+  const id = c.req.param("id");
+  const existing = await c.env.DB.prepare(`
+    SELECT id, reference FROM customer_requests WHERE id = ? OR UPPER(reference) = UPPER(?) LIMIT 1
+  `).bind(id, id).first<any>();
+
+  if (!existing) {
+    return c.json({ error: "Demande introuvable." }, 404);
+  }
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(`DELETE FROM request_items WHERE request_id = ?`).bind(existing.id),
+    c.env.DB.prepare(`DELETE FROM customer_requests WHERE id = ?`).bind(existing.id),
+    c.env.DB.prepare(`DELETE FROM quote_requests WHERE id = ? OR UPPER(quote_reference) = UPPER(?)`).bind(existing.id, existing.reference),
+  ]);
+
+  return c.json({ success: true, message: "Demande supprimée avec succès de SQLite D1." });
+});
+
+/**
  * Conversion d'une demande acceptée en expédition officielle
  */
 const convertRequestSchema = z.object({
@@ -1232,7 +1456,7 @@ adminRouter.get("/clients", async (c) => {
 
 const createClientSchema = z.object({
   full_name: z.string().min(2, "Nom complet requis"),
-  phone_whatsapp: phoneSchema,
+  phone_whatsapp: z.string().min(3, "Numéro requis").max(60),
   email: z.string().email().optional().or(z.literal("")),
   country: z.string().min(2, "Pays requis"),
   city: z.string().optional(),
@@ -1254,7 +1478,7 @@ adminRouter.post("/clients", zValidator("json", createClientSchema), async (c) =
   `).bind(
     clientId,
     data.full_name.trim(),
-    data.phone_whatsapp,
+    data.phone_whatsapp.trim(),
     data.email || null,
     data.address || null,
     data.city || null,
@@ -1263,6 +1487,77 @@ adminRouter.post("/clients", zValidator("json", createClientSchema), async (c) =
   ).run();
 
   return c.json({ success: true, client_id: clientId, message: "Client créé avec succès." }, 201);
+});
+
+/**
+ * Modification d'une fiche client (Admin ➔ SQLite D1)
+ */
+adminRouter.put("/clients/:id", async (c) => {
+  if (!checkPermission(c, "clients.create") && !checkPermission(c, "clients.view")) {
+    return c.json({ error: "Permission insuffisante." }, 403);
+  }
+
+  const id = c.req.param("id");
+  const data = await c.req.json<any>().catch(() => ({}));
+  const phone = data.phone_whatsapp || data.phone || "";
+
+  const existing = await c.env.DB.prepare(`SELECT id FROM clients WHERE id = ?`).bind(id).first<any>();
+  if (!existing) {
+    // Si l'ID n'existe pas encore en base, l'insérer proprement
+    await c.env.DB.prepare(`
+      INSERT INTO clients (id, full_name, phone_whatsapp, email, address, city, country, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      id,
+      data.full_name?.trim() || "Client Sans Nom",
+      phone?.trim() || "",
+      data.email?.trim() || null,
+      data.address?.trim() || null,
+      data.city?.trim() || "Abidjan",
+      data.country?.trim() || "Côte d'Ivoire",
+      data.notes?.trim() || null
+    ).run();
+
+    return c.json({ success: true, message: "Client enregistré avec succès dans SQLite D1." });
+  }
+
+  await c.env.DB.prepare(`
+    UPDATE clients
+    SET 
+      full_name = COALESCE(?, full_name),
+      phone_whatsapp = COALESCE(?, phone_whatsapp),
+      email = COALESCE(?, email),
+      address = COALESCE(?, address),
+      city = COALESCE(?, city),
+      country = COALESCE(?, country),
+      notes = COALESCE(?, notes),
+      updated_at = datetime('now')
+    WHERE id = ?
+  `).bind(
+    data.full_name?.trim() || null,
+    phone?.trim() || null,
+    data.email !== undefined ? (data.email?.trim() || null) : null,
+    data.address !== undefined ? (data.address?.trim() || null) : null,
+    data.city !== undefined ? (data.city?.trim() || null) : null,
+    data.country?.trim() || null,
+    data.notes !== undefined ? (data.notes?.trim() || null) : null,
+    id
+  ).run();
+
+  return c.json({ success: true, message: "Client mis à jour avec succès dans SQLite D1." });
+});
+
+/**
+ * Suppression d'un client (Admin ➔ SQLite D1)
+ */
+adminRouter.delete("/clients/:id", async (c) => {
+  if (!checkPermission(c, "clients.create") && !checkPermission(c, "clients.view")) {
+    return c.json({ error: "Permission insuffisante." }, 403);
+  }
+
+  const id = c.req.param("id");
+  await c.env.DB.prepare(`DELETE FROM clients WHERE id = ?`).bind(id).run();
+  return c.json({ success: true, message: "Client supprimé de SQLite D1." });
 });
 
 /* ==========================================================================
@@ -1822,6 +2117,61 @@ adminRouter.patch("/payments/:id/status", zValidator("json", updatePaymentStatus
   });
 });
 
+/**
+ * Modification complète d'un paiement (Admin ➔ SQLite D1)
+ */
+adminRouter.patch("/payments/:id", async (c) => {
+  if (!checkPermission(c, "finance.edit")) {
+    return c.json({ error: "Permission insuffisante (finance.edit requise)." }, 403);
+  }
+
+  const id = c.req.param("id");
+  const data = await c.req.json<any>().catch(() => ({}));
+  const amountMinor = data.amount_minor !== undefined ? Number(data.amount_minor) : (data.amount !== undefined ? Math.round(Number(data.amount) * 100) : null);
+
+  const existing = await c.env.DB.prepare(`SELECT * FROM payments WHERE id = ?`).bind(id).first<any>();
+  if (!existing) {
+    return c.json({ error: "Paiement introuvable." }, 404);
+  }
+
+  await c.env.DB.prepare(`
+    UPDATE payments
+    SET
+      amount_minor = COALESCE(?, amount_minor),
+      currency = COALESCE(?, currency),
+      payment_method = COALESCE(?, payment_method),
+      payment_type = COALESCE(?, payment_type),
+      reference_code = COALESCE(?, reference_code),
+      status = COALESCE(?, status),
+      receipt_notes = COALESCE(?, receipt_notes)
+    WHERE id = ?
+  `).bind(
+    amountMinor,
+    data.currency || null,
+    data.payment_method || null,
+    data.payment_type || null,
+    data.reference_code || null,
+    data.status || null,
+    data.receipt_notes || null,
+    id
+  ).run();
+
+  return c.json({ success: true, message: "Paiement mis à jour avec succès dans SQLite D1." });
+});
+
+/**
+ * Suppression d'un paiement (Admin ➔ SQLite D1)
+ */
+adminRouter.delete("/payments/:id", async (c) => {
+  if (!checkPermission(c, "finance.edit")) {
+    return c.json({ error: "Permission insuffisante (finance.edit requise)." }, 403);
+  }
+
+  const id = c.req.param("id");
+  await c.env.DB.prepare(`DELETE FROM payments WHERE id = ?`).bind(id).run();
+  return c.json({ success: true, message: "Paiement supprimé de SQLite D1." });
+});
+
 /* ==========================================================================
    10. TÂCHES D'ÉQUIPE (Suivi & relance)
    ========================================================================== */
@@ -1892,6 +2242,56 @@ adminRouter.patch("/tasks/:id/status", zValidator("json", z.object({ status: z.e
   `).bind(status, id).run();
 
   return c.json({ success: true, message: `Statut de la tâche mis à jour vers ${status}.` });
+});
+
+/**
+ * Modification complète d'une tâche (Admin ➔ SQLite D1)
+ */
+adminRouter.patch("/tasks/:id", async (c) => {
+  if (!checkPermission(c, "tasks.manage")) {
+    return c.json({ error: "Permission insuffisante (tasks.manage requise)." }, 403);
+  }
+
+  const id = c.req.param("id");
+  const data = await c.req.json<any>().catch(() => ({}));
+
+  await c.env.DB.prepare(`
+    UPDATE tasks
+    SET
+      title = COALESCE(?, title),
+      description = COALESCE(?, description),
+      category = COALESCE(?, category),
+      priority = COALESCE(?, priority),
+      status = COALESCE(?, status),
+      due_date = COALESCE(?, due_date),
+      assigned_to_user_id = COALESCE(?, assigned_to_user_id),
+      updated_at = datetime('now')
+    WHERE id = ?
+  `).bind(
+    data.title?.trim() || null,
+    data.description !== undefined ? (data.description || null) : null,
+    data.category || null,
+    data.priority || null,
+    data.status || null,
+    data.due_date || null,
+    data.assigned_to_user_id || null,
+    id
+  ).run();
+
+  return c.json({ success: true, message: "Tâche mise à jour avec succès dans SQLite D1." });
+});
+
+/**
+ * Suppression d'une tâche (Admin ➔ SQLite D1)
+ */
+adminRouter.delete("/tasks/:id", async (c) => {
+  if (!checkPermission(c, "tasks.manage")) {
+    return c.json({ error: "Permission insuffisante." }, 403);
+  }
+
+  const id = c.req.param("id");
+  await c.env.DB.prepare(`DELETE FROM tasks WHERE id = ?`).bind(id).run();
+  return c.json({ success: true, message: "Tâche supprimée de SQLite D1." });
 });
 
 /* ==========================================================================

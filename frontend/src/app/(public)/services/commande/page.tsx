@@ -20,6 +20,7 @@ import {
   Printer,
   ZoomIn,
   X,
+  RotateCcw,
 } from "lucide-react";
 import {
   saveClientRequest,
@@ -82,7 +83,15 @@ function CommandeFormContent() {
 
   const [option, setOption] = useState<"sans_fournisseur" | "avec_fournisseur">("sans_fournisseur");
 
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const savedRes = sessionStorage.getItem("roum_active_submitted_result");
+        if (savedRes) return true;
+      } catch {}
+    }
+    return false;
+  });
   const [submitting, setSubmitting] = useState(false);
   const [zoomImageUrl, setZoomImageUrl] = useState<string | null>(null);
   const [orderResult, setOrderResult] = useState<{
@@ -97,7 +106,15 @@ function CommandeFormContent() {
     shippingModeDesc: string;
     receiptData: RoumReceiptData;
     isPaymentStep?: boolean;
-  } | null>(null);
+  } | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const savedRes = sessionStorage.getItem("roum_active_submitted_result");
+        if (savedRes) return JSON.parse(savedRes);
+      } catch {}
+    }
+    return null;
+  });
 
   const [copiedTracking, setCopiedTracking] = useState(false);
   const [copiedMark, setCopiedMark] = useState(false);
@@ -736,7 +753,7 @@ function CommandeFormContent() {
       const agencyWaPhone = settings.whatsapp_number?.trim() || "2250787994412";
       const customWaUrl = buildClientReceiptWhatsAppUrl(receiptData, agencyWaPhone);
 
-      setOrderResult({
+      const payResultObj = {
         reference: payDossier.reference,
         trackingNumber: "",
         shippingMark: payDossier.shippingMark,
@@ -748,7 +765,15 @@ function CommandeFormContent() {
         shippingModeDesc: payDossier.transportMode,
         receiptData,
         isPaymentStep: true,
-      });
+      };
+
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("roum_active_submitted_result", JSON.stringify(payResultObj));
+        } catch {}
+      }
+
+      setOrderResult(payResultObj);
       setSubmitted(true);
     } catch (err) {
       console.error("Erreur envoi preuve de paiement:", err);
@@ -865,7 +890,7 @@ function CommandeFormContent() {
       const agencyWaPhone = settings.whatsapp_number?.trim() || "2250787994412";
       const customWaUrl = buildClientReceiptWhatsAppUrl(receiptData, agencyWaPhone);
 
-      setOrderResult({
+      const orderResultObj = {
         reference: res.reference,
         trackingNumber: "",
         shippingMark: res.shippingMark,
@@ -877,7 +902,17 @@ function CommandeFormContent() {
         shippingModeDesc: transportModeLabel,
         receiptData,
         isPaymentStep: false,
-      });
+      };
+
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("roum_active_submitted_result", JSON.stringify(orderResultObj));
+          const newUrl = `${window.location.pathname}?pay=${encodeURIComponent(res.reference)}`;
+          window.history.replaceState({ path: newUrl }, "", newUrl);
+        } catch {}
+      }
+
+      setOrderResult(orderResultObj);
       setSubmitted(true);
     } catch (err) {
       console.error("Erreur enregistrement commande:", err);
@@ -1071,6 +1106,41 @@ function CommandeFormContent() {
                     : "Envoyer ma commande sur WhatsApp à l'agence"}
                 </span>
               </a>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    try {
+                      sessionStorage.removeItem("roum_active_submitted_result");
+                      window.history.replaceState({}, "", window.location.pathname);
+                    } catch {}
+                  }
+                  setSubmitted(false);
+                  setOrderResult(null);
+                  setDbPayDossier(null);
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  width: "100%",
+                  height: "44px",
+                  borderRadius: "12px",
+                  border: "1px solid #E5E0D8",
+                  background: "#FAF8F5",
+                  color: "#181512",
+                  fontSize: "0.84rem",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                  marginTop: "8px",
+                  transition: "background 0.15s ease",
+                }}
+              >
+                <RotateCcw size={15} />
+                <span>Passer une autre commande</span>
+              </button>
             </div>
           </div>
         ) : payDossier ? (
@@ -1098,7 +1168,10 @@ function CommandeFormContent() {
                         </span>
                       </div>
                       <div className="ios-product-preview-body">
-                        <span className="ios-product-preview-badge">✓ Dossier vérifié par ROUM TRANSIT</span>
+                        <span className="ios-product-preview-badge">
+                          <Check size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "3px" }} />
+                          Dossier vérifié par ROUM TRANSIT
+                        </span>
                         <div className="ios-product-preview-title">{payDossier.productTitle}</div>
                         <div style={{ fontSize: "0.8rem", color: "#524B43", fontWeight: 600 }}>
                           Quantité : {payDossier.quantity} pcs · Destination : {payDossier.destination}
@@ -1244,7 +1317,8 @@ function CommandeFormContent() {
                     <div className="ios-receipt-attached" style={{ flexDirection: "column", alignItems: "stretch", gap: "8px", borderRadius: "16px", padding: "12px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span className="ios-receipt-name">
-                          ✓ Preuve jointe : {receiptFileName}
+                          <Check size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "3px" }} />
+                          Preuve jointe : {receiptFileName}
                         </span>
                         <button type="button" onClick={handleRemoveReceipt} className="ios-receipt-remove" title="Supprimer">
                           <Trash2 size={14} />
@@ -1375,7 +1449,8 @@ function CommandeFormContent() {
                     </option>
                   </select>
                   <p className="ios-note-subtle" style={{ marginTop: "4px", color: "#524B43" }}>
-                    ✓ Vous n&apos;avez pas besoin de connaître le poids de votre article :{" "}
+                    <Check size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "3px" }} />
+                    Vous n&apos;avez pas besoin de connaître le poids de votre article :{" "}
                     <strong>ROUM TRANSIT l&apos;estimera pour vous</strong> ({transportUnitRateFormatted}) avant de vous envoyer votre lien de règlement.
                   </p>
                 </div>
@@ -1484,7 +1559,8 @@ function CommandeFormContent() {
                                   {extractedProduct?.platform || "ALIBABA"}
                                 </span>
                                 <span className="ios-product-preview-badge">
-                                  ✓ Article &amp; Photo détectés
+                                  <Check size={11} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "3px" }} />
+                                  Article &amp; Photo détectés
                                 </span>
                               </div>
                               <div className="ios-preview-top-actions">
@@ -1671,7 +1747,8 @@ function CommandeFormContent() {
                                   {extractedProduct?.platform || "ALIBABA"}
                                 </span>
                                 <span className="ios-product-preview-badge">
-                                  ✓ Article &amp; Photo détectés
+                                  <Check size={11} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "3px" }} />
+                                  Article &amp; Photo détectés
                                 </span>
                               </div>
                               <div className="ios-preview-top-actions">

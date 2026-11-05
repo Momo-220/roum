@@ -528,15 +528,16 @@ export default function TariffsPage() {
     <div className="tariffs-minimal-root">
       <div className="tariffs-minimal-container">
         <ScrollReveal>
-          {/* EN-TÊTE MINIMALISTE SOBRE */}
+          {/* EN-TÊTE ÉDITORIAL LUXE (STYLE PAGE SERVICES) */}
           <header className="tariffs-minimal-header">
-            <div className="tariffs-minimal-eyebrow">
-              <span>SIMULATEUR &amp; GRILLE TARIFAIRE OFFICIELLE</span>
+            <div className="services-badge-category">
+              <span className="dot" style={{ color: "#181512" }}>●</span>
+              <span>02 / GRILLE TARIFAIRE OFFICIELLE &amp; SIMULATEUR</span>
             </div>
-            <h1 className="tariffs-minimal-title">Tarifs de Transit &amp; Dédouanement</h1>
-            <p className="tariffs-minimal-subtitle">
-              Calculez le coût exact de votre expédition ou consultez la grille officielle synchronisée avec l&apos;agence.
-              Dédouanement 100 % inclus, sans frais cachés.
+            <h1 className="services-title">Tarifs de Transit &amp; Dédouanement.</h1>
+            <p className="services-desc">
+              Calculez le coût exact de votre expédition ou consultez la grille officielle synchronisée en direct avec l&apos;agence.
+              <strong> Dédouanement 100 % inclus</strong>, sans frais cachés.
             </p>
           </header>
 
@@ -949,39 +950,45 @@ export default function TariffsPage() {
 
         .tariffs-minimal-header {
           text-align: center;
-          margin-bottom: 36px;
+          margin-bottom: 38px;
         }
 
-        .tariffs-minimal-eyebrow {
-          display: inline-block;
+        .services-badge-category {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
           font-family: var(--c-font-mono);
-          font-size: 0.72rem;
+          font-size: 0.74rem;
           font-weight: 700;
-          letter-spacing: 0.1em;
+          letter-spacing: 0.12em;
           text-transform: uppercase;
           color: #6E675F;
           background: #F2EFE9;
           border: 1px solid #E5E0D8;
-          padding: 5px 12px;
+          padding: 5px 14px;
           border-radius: 9999px;
           margin-bottom: 14px;
         }
 
-        .tariffs-minimal-title {
-          font-family: var(--c-font-display);
-          font-size: clamp(1.75rem, 3.6vw, 2.45rem);
-          font-weight: 800;
-          letter-spacing: -0.03em;
-          line-height: 1.15;
+        .services-badge-category .dot {
           color: #181512;
-          margin: 0 auto 10px auto;
-          max-width: 720px;
         }
 
-        .tariffs-minimal-subtitle {
-          font-size: 0.95rem;
+        .services-title {
+          font-family: var(--c-font-display);
+          font-size: clamp(1.85rem, 4vw, 2.75rem);
+          font-weight: 800;
+          letter-spacing: -0.035em;
+          line-height: 1.12;
+          color: #181512;
+          margin: 0 auto 12px auto;
+          max-width: 780px;
+        }
+
+        .services-desc {
+          font-size: 0.98rem;
           color: #6E675F;
-          max-width: 600px;
+          max-width: 640px;
           margin: 0 auto;
           line-height: 1.55;
         }
