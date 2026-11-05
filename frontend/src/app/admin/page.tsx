@@ -3506,20 +3506,29 @@ export default function AdminPage() {
     setShowRequestDetailModal(freshest);
     initAdminQuoteFormForRequest(freshest);
 
-    if (!token) return;
+    const activeToken =
+      token ||
+      (typeof window !== "undefined"
+        ? sessionStorage.getItem("roum_admin_token") || localStorage.getItem("roum_admin_token")
+        : null) ||
+      "";
+
+    if (!activeToken) return;
     try {
-      const res = await fetch(`/api/admin/requests/${reqItem.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch(`/api/admin/requests/${encodeURIComponent(reqItem.reference || reqItem.id)}`, {
+        headers: { Authorization: `Bearer ${activeToken}` },
       });
       if (res.ok) {
         const data = await res.json();
-        const merged = {
-          ...data.request,
-          ...freshest,
-          items: freshest.items?.length ? freshest.items : data.items || [],
-        };
-        setShowRequestDetailModal(merged);
-        initAdminQuoteFormForRequest(merged);
+        if (data.request) {
+          const merged = {
+            ...freshest,
+            ...data.request,
+            items: data.items?.length ? data.items : (freshest.items?.length ? freshest.items : data.request.items || []),
+          };
+          setShowRequestDetailModal(merged);
+          initAdminQuoteFormForRequest(merged);
+        }
       }
     } catch {
       // keep initial
@@ -3527,11 +3536,18 @@ export default function AdminPage() {
   };
 
   // ÉTAPE 2 (Admin) : Enregistrer l'estimation du poids + devis et ouvrir WhatsApp avec le lien de paiement cliquable
-  const handleSaveQuoteAndSendPaymentWhatsApp = (reqObj: any, openWhatsApp = true) => {
+  const handleSaveQuoteAndSendPaymentWhatsApp = async (reqObj: any, openWhatsApp = true) => {
     if (!reqObj) return;
     const isSea =
       reqObj.shipping_mode_type === "SEA" ||
       String(reqObj.shipping_mode_name || "").toLowerCase().includes("maritime");
+
+    const activeToken =
+      token ||
+      (typeof window !== "undefined"
+        ? sessionStorage.getItem("roum_admin_token") || localStorage.getItem("roum_admin_token")
+        : null) ||
+      "";
 
     const updatedFields = {
       estimated_weight_kg: isSea ? null : Number(adminQuoteForm.weight_kg) || 1,
@@ -3553,11 +3569,40 @@ export default function AdminPage() {
 
     const updatedReq = { ...reqObj, ...updatedFields };
     setShowRequestDetailModal(updatedReq);
-    setRequestsList((prev) =>
-      prev.map((r) =>
+    setRequestsList((prev) => {
+      const next = prev.map((r) =>
         r.id === reqObj.id || r.reference === reqObj.reference ? { ...r, ...updatedFields } : r
-      )
-    );
+      );
+      try {
+        localStorage.setItem("roum_requests_data", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    // Synchronisation directe dans la base de données SQLite D1
+    if (activeToken) {
+      try {
+        await fetch(`/api/admin/requests/${encodeURIComponent(reqObj.reference || reqObj.id)}/quote`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${activeToken}`,
+          },
+          body: JSON.stringify({
+            estimatedWeightKg: updatedFields.estimated_weight_kg,
+            estimatedCbm: updatedFields.estimated_cbm,
+            goodsTotalFcfa: updatedFields.total_goods_fcfa,
+            shippingFeeFcfa: updatedFields.shipping_fee_fcfa,
+            totalAmountFcfa: updatedFields.total_amount_fcfa,
+            status: updatedFields.status,
+            shippingModeName: reqObj.shipping_mode_name,
+          }),
+        });
+        loadDashboardData(activeToken);
+      } catch (err) {
+        console.error("Erreur enregistrement devis D1:", err);
+      }
+    }
 
     const waUrl = buildAdminQuotePaymentWhatsAppUrl({
       clientPhone: updatedReq.client_phone || "",
@@ -3582,8 +3627,8 @@ export default function AdminPage() {
     });
 
     triggerToast(
-      `Devis enregistré (${Number(adminQuoteForm.total_fcfa).toLocaleString("fr-FR")} FCFA) !`,
-      "Devis & Lien de Paiement"
+      `Devis enregistré & synchronisé (${Number(adminQuoteForm.total_fcfa).toLocaleString("fr-FR")} FCFA) !`,
+      "Devis Enregistré en Base"
     );
 
     if (openWhatsApp && typeof window !== "undefined") {
@@ -3592,7 +3637,7 @@ export default function AdminPage() {
   };
 
   // ÉTAPE 3 (Admin) : Confirmer l'encaissement, générer le N° de Suivi Officiel (Tracking Number) et créer l'expédition active
-  const handleConfirmEncashmentAndGenerateTracking = (reqObj: any, openWhatsApp = true) => {
+  const handleConfirmEncashmentAndGenerateTracking = async (reqObj: any, openWhatsApp = true) => {
     if (!reqObj) return;
     const isSea =
       reqObj.shipping_mode_type === "SEA" ||
@@ -3631,34 +3676,50 @@ export default function AdminPage() {
       status: "CONVERTED",
     });
 
+    const activeToken =
+      token ||
+      (typeof window !== "undefined"
+        ? sessionStorage.getItem("roum_admin_token") || localStorage.getItem("roum_admin_token")
+        : null) ||
+      "";
+
     // Connexion directe Admin -> Base de données SQLite D1 -> Client (création du suivi actif en BDD)
-    try {
-      fetch(`/api/v1/admin/requests/${encodeURIComponent(reqObj.reference || reqObj.id)}/confirm-tracking`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          trackingNumber: officialTracking,
-          estimatedWeightKg: finalWeight,
-          estimatedCbm: finalVolume,
-          goodsTotalFcfa: updatedFields.total_goods_fcfa,
-          shippingFeeFcfa: updatedFields.shipping_fee_fcfa,
-          totalAmountFcfa: finalTotal,
-          shippingModeType: isSea ? "SEA" : "AIR",
-          shippingModeName: reqObj.shipping_mode_name || (isSea ? "Voie Maritime Groupage" : "Voie Aérienne Express"),
-        }),
-      }).catch(() => {});
-    } catch {}
+    if (activeToken) {
+      try {
+        await fetch(`/api/v1/admin/requests/${encodeURIComponent(reqObj.reference || reqObj.id)}/confirm-tracking`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${activeToken}`,
+          },
+          body: JSON.stringify({
+            trackingNumber: officialTracking,
+            estimatedWeightKg: finalWeight,
+            estimatedCbm: finalVolume,
+            goodsTotalFcfa: updatedFields.total_goods_fcfa,
+            shippingFeeFcfa: updatedFields.shipping_fee_fcfa,
+            totalAmountFcfa: finalTotal,
+            shippingModeType: isSea ? "SEA" : "AIR",
+            shippingModeName: reqObj.shipping_mode_name || (isSea ? "Voie Maritime Groupage" : "Voie Aérienne Express"),
+          }),
+        });
+        loadDashboardData(activeToken);
+      } catch (err) {
+        console.error("Erreur confirmation suivi D1:", err);
+      }
+    }
 
     const updatedReq = { ...reqObj, ...updatedFields };
     setShowRequestDetailModal(updatedReq);
-    setRequestsList((prev) =>
-      prev.map((r) =>
+    setRequestsList((prev) => {
+      const next = prev.map((r) =>
         r.id === reqObj.id || r.reference === reqObj.reference ? { ...r, ...updatedFields } : r
-      )
-    );
+      );
+      try {
+        localStorage.setItem("roum_requests_data", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
 
     // Création automatique de l'expédition active pour que le lien /tracking/RM-... fonctionne immédiatement
     const destParts = String(updatedReq.destination_country || "Côte d'Ivoire — Abidjan").split("—");
@@ -3797,14 +3858,22 @@ export default function AdminPage() {
 
   const handleConvertRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token || !showConvertRequestModal) return;
+    if (!showConvertRequestModal) return;
+
+    const activeToken =
+      token ||
+      (typeof window !== "undefined"
+        ? sessionStorage.getItem("roum_admin_token") || localStorage.getItem("roum_admin_token")
+        : null) ||
+      "";
 
     try {
-      const res = await fetch(`/api/admin/requests/${showConvertRequestModal.id}/convert`, {
+      const targetIdentifier = showConvertRequestModal.reference || showConvertRequestModal.id;
+      const res = await fetch(`/api/admin/requests/${encodeURIComponent(targetIdentifier)}/convert`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...(activeToken ? { Authorization: `Bearer ${activeToken}` } : {}),
         },
         body: JSON.stringify({
           shipping_mode_id: convertForm.shipping_mode_id,
@@ -3820,12 +3889,28 @@ export default function AdminPage() {
 
       if (res.ok) {
         const data = await res.json();
-        triggerToast(`Dossier converti avec succès ! N° de suivi attribué : ${data.tracking_number}`, "Conversion réussie");
+        const trkNum = data.tracking_number;
+        triggerToast(`Dossier converti avec succès ! N° de suivi attribué : ${trkNum}`, "Conversion réussie");
+
+        setRequestsList((prev) => {
+          const next = prev.map((r) =>
+            (r.id && r.id === showConvertRequestModal.id) || (r.reference && r.reference === showConvertRequestModal.reference)
+              ? { ...r, status: "CONVERTED", tracking_number: trkNum }
+              : r
+          );
+          try {
+            localStorage.setItem("roum_requests_data", JSON.stringify(next));
+          } catch {}
+          return next;
+        });
+
         setShowConvertRequestModal(null);
-        if (showRequestDetailModal?.id === showConvertRequestModal.id) {
-          setShowRequestDetailModal(null);
+        if (showRequestDetailModal && ((showRequestDetailModal.id && showRequestDetailModal.id === showConvertRequestModal.id) || (showRequestDetailModal.reference && showRequestDetailModal.reference === showConvertRequestModal.reference))) {
+          setShowRequestDetailModal((prev: any) => prev ? { ...prev, status: "CONVERTED", tracking_number: trkNum } : null);
         }
-        loadDashboardData(token);
+        if (activeToken) {
+          loadDashboardData(activeToken);
+        }
         return;
       }
     } catch {
@@ -3833,9 +3918,20 @@ export default function AdminPage() {
     }
     const newNum = `RT-${Math.floor(100000 + Math.random() * 900000)}`;
     triggerToast(`Dossier converti avec succès ! N° de suivi attribué : ${newNum}`, "Conversion réussie");
+    setRequestsList((prev) => {
+      const next = prev.map((r) =>
+        (r.id && r.id === showConvertRequestModal.id) || (r.reference && r.reference === showConvertRequestModal.reference)
+          ? { ...r, status: "CONVERTED", tracking_number: newNum }
+          : r
+      );
+      try {
+        localStorage.setItem("roum_requests_data", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
     setShowConvertRequestModal(null);
-    if (showRequestDetailModal?.id === showConvertRequestModal.id) {
-      setShowRequestDetailModal(null);
+    if (showRequestDetailModal && ((showRequestDetailModal.id && showRequestDetailModal.id === showConvertRequestModal.id) || (showRequestDetailModal.reference && showRequestDetailModal.reference === showConvertRequestModal.reference))) {
+      setShowRequestDetailModal((prev: any) => prev ? { ...prev, status: "CONVERTED", tracking_number: newNum } : null);
     }
   };
 
@@ -4330,26 +4426,68 @@ export default function AdminPage() {
   };
 
   const handleUpdateRequestStatus = async (requestId: string, newStatus: string) => {
-    if (!token) return;
-    setRequestsList((prev) =>
-      prev.map((r) => (r.id === requestId ? { ...r, status: newStatus } : r))
-    );
-    triggerToast("Statut de la commande mis à jour.", "Commandes Clients");
+    const activeToken =
+      token ||
+      (typeof window !== "undefined"
+        ? sessionStorage.getItem("roum_admin_token") || localStorage.getItem("roum_admin_token")
+        : null) ||
+      "";
 
-    try {
-      const res = await fetch(`/api/admin/requests/${requestId}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (res.ok) {
-        loadDashboardData(token);
+    // 1. Mise à jour synchrone de la liste et persistance immédiate dans localStorage
+    setRequestsList((prev) => {
+      const next = prev.map((r) =>
+        (r.id && r.id === requestId) || (r.reference && r.reference === requestId)
+          ? { ...r, status: newStatus }
+          : r
+      );
+      try {
+        localStorage.setItem("roum_requests_data", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    // 2. Mise à jour de la modale ouverte si elle correspond à cette requête
+    setShowRequestDetailModal((prev: any) => {
+      if (prev && ((prev.id && prev.id === requestId) || (prev.reference && prev.reference === requestId))) {
+        return { ...prev, status: newStatus };
       }
-    } catch {
-      // Cache local déjà à jour
+      return prev;
+    });
+
+    const label =
+      newStatus === "NEW"
+        ? "NOUVEAU"
+        : newStatus === "IN_REVIEW"
+        ? "EN ANALYSE"
+        : newStatus === "QUOTE_SENT"
+        ? "DEVIS ENVOYÉ"
+        : newStatus === "CONVERTED"
+        ? "PAYÉ & SUIVI ACTIF"
+        : newStatus === "CLOSED"
+        ? "CLÔTURÉ"
+        : newStatus === "CANCELLED"
+        ? "ANNULÉ"
+        : newStatus;
+
+    triggerToast(`Statut mis à jour : ${label}`, "Commandes Clients");
+
+    // 3. Persistance dans SQLite D1 via Hono backend
+    if (activeToken) {
+      try {
+        const res = await fetch(`/api/admin/requests/${encodeURIComponent(requestId)}/status`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${activeToken}`,
+          },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        if (res.ok) {
+          loadDashboardData(activeToken);
+        }
+      } catch (err) {
+        console.error("Erreur mise à jour statut D1:", err);
+      }
     }
   };
 
@@ -7381,7 +7519,7 @@ export default function AdminPage() {
                             return (
                               <select
                                 value={r.status}
-                                onChange={(e) => handleUpdateRequestStatus(r.id, e.target.value)}
+                                onChange={(e) => handleUpdateRequestStatus(r.reference || r.id, e.target.value)}
                                 className="status-select-pill"
                                 style={{
                                   backgroundColor: badgeStyle.bg,
@@ -7938,7 +8076,7 @@ export default function AdminPage() {
                             <td>
                               <select
                                 value={r.status}
-                                onChange={(e) => handleUpdateRequestStatus(r.id, e.target.value)}
+                                onChange={(e) => handleUpdateRequestStatus(r.reference || r.id, e.target.value)}
                                 className="status-select-pill"
                                 style={{
                                   fontSize: "0.74rem",
@@ -7995,7 +8133,7 @@ export default function AdminPage() {
                                 {r.status !== "CONVERTED" && (
                                   <button
                                     type="button"
-                                    onClick={() => handleUpdateRequestStatus(r.id, "CONVERTED")}
+                                    onClick={() => handleUpdateRequestStatus(r.reference || r.id, "CONVERTED")}
                                     className="btn btn-primary"
                                     style={{ padding: "5px 10px", fontSize: "0.72rem", borderRadius: "9999px" }}
                                     title="Confirmer que le virement a été fait en Chine"
@@ -11434,6 +11572,35 @@ export default function AdminPage() {
                   <span className="badge-clean badge-draft">
                     {formatRequestType(showRequestDetailModal.request_type)}
                   </span>
+
+                  {/* SÉLECTEUR DE STATUT DIRECT & SYNCHRONISÉ EN TEMPS RÉEL DANS LA MODALE */}
+                  <select
+                    value={showRequestDetailModal.status || "NEW"}
+                    onChange={(e) =>
+                      handleUpdateRequestStatus(
+                        showRequestDetailModal.reference || showRequestDetailModal.id,
+                        e.target.value
+                      )
+                    }
+                    className="status-select-pill"
+                    style={{
+                      fontSize: "0.74rem",
+                      fontWeight: 800,
+                      padding: "4px 26px 4px 10px",
+                      borderRadius: "9999px",
+                      border: "1.5px solid var(--border-light)",
+                      cursor: "pointer",
+                    }}
+                    title="Modifier le statut du dossier"
+                  >
+                    <option value="NEW">NOUVEAU</option>
+                    <option value="IN_REVIEW">EN ANALYSE</option>
+                    <option value="QUOTE_SENT">DEVIS ENVOYÉ</option>
+                    <option value="CONVERTED">PAYÉ &amp; SUIVI ACTIF</option>
+                    <option value="CLOSED">CLÔTURÉ</option>
+                    <option value="CANCELLED">ANNULÉ</option>
+                  </select>
+
                   {showRequestDetailModal.tracking_number ? (
                     <Link
                       href={`/tracking/${showRequestDetailModal.tracking_number}`}
@@ -11461,7 +11628,7 @@ export default function AdminPage() {
                         fontWeight: 700,
                       }}
                     >
-                      En attente d&apos;encaissement (Sans N° de suivi actif)
+                      Sans N° de suivi actif
                     </span>
                   )}
                 </div>

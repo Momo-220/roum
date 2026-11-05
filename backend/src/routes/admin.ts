@@ -1147,14 +1147,13 @@ adminRouter.post("/requests/:reference/confirm-tracking", async (c) => {
         user?.userId || "user-superadmin-01"
       ),
       c.env.DB.prepare(`
-        INSERT INTO parcels (id, shipment_id, parcel_index, package_label, weight_kg, volume_cbm, description)
-        VALUES (?, ?, 1, ?, ?, ?, ?)
+        INSERT INTO parcels (id, shipment_id, parcel_index, package_label, weight_kg, length_cm, width_cm, height_cm, description)
+        VALUES (?, ?, 1, ?, ?, null, null, null, ?)
       `).bind(
         crypto.randomUUID(),
         shipmentId,
         body.productName || `Colis ${ref}`,
         weightVal,
-        volVal,
         body.description || body.productName || "Marchandise commandée"
       ),
       c.env.DB.prepare(`
@@ -1178,7 +1177,7 @@ adminRouter.post("/requests/:reference/confirm-tracking", async (c) => {
 });
 
 const updateRequestStatusSchema = z.object({
-  status: z.enum(["NEW", "IN_REVIEW", "QUOTE_SENT", "CONVERTED", "CLOSED", "CANCELLED"]),
+  status: z.string().min(1, "Statut requis").max(60),
   admin_notes: z.string().optional(),
 });
 
@@ -1190,13 +1189,40 @@ adminRouter.patch("/requests/:id/status", zValidator("json", updateRequestStatus
   const id = c.req.param("id");
   const data = c.req.valid("json");
 
+  const existing = await c.env.DB.prepare(`
+    SELECT id, reference, status, admin_notes FROM customer_requests WHERE id = ? OR UPPER(reference) = UPPER(?) LIMIT 1
+  `).bind(id, id).first<any>();
+
+  if (!existing) {
+    return c.json({ error: "Demande introuvable." }, 404);
+  }
+
+  let updatedNotes = existing.admin_notes;
+  if (data.admin_notes) {
+    updatedNotes = data.admin_notes;
+  } else if (typeof existing.admin_notes === "string" && existing.admin_notes.trim().startsWith("{")) {
+    try {
+      const parsed = JSON.parse(existing.admin_notes);
+      if (parsed && typeof parsed === "object") {
+        parsed.status = data.status;
+        updatedNotes = JSON.stringify(parsed);
+      }
+    } catch {}
+  }
+
   await c.env.DB.prepare(`
     UPDATE customer_requests
-    SET status = ?, admin_notes = COALESCE(?, admin_notes), updated_at = datetime('now')
+    SET status = ?, admin_notes = ?, updated_at = datetime('now')
     WHERE id = ?
-  `).bind(data.status, data.admin_notes || null, id).run();
+  `).bind(data.status, updatedNotes, existing.id).run();
 
-  return c.json({ success: true, message: `Demande mise à jour vers le statut ${data.status}.` });
+  await c.env.DB.prepare(`
+    UPDATE quote_requests
+    SET status = ?, updated_at = datetime('now')
+    WHERE UPPER(quote_reference) = UPPER(?) OR id = ?
+  `).bind(data.status, existing.reference, existing.id).run().catch(() => {});
+
+  return c.json({ success: true, message: `Demande ${existing.reference} mise à jour vers le statut ${data.status}.` });
 });
 
 /**
@@ -1339,7 +1365,9 @@ adminRouter.post("/requests/:id/convert", zValidator("json", convertRequestSchem
   const requestId = c.req.param("id");
   const data = c.req.valid("json");
 
-  const reqRow = await c.env.DB.prepare(`SELECT * FROM customer_requests WHERE id = ?`).bind(requestId).first<any>();
+  const reqRow = await c.env.DB.prepare(`
+    SELECT * FROM customer_requests WHERE id = ? OR UPPER(reference) = UPPER(?) LIMIT 1
+  `).bind(requestId, requestId).first<any>();
   if (!reqRow) {
     return c.json({ error: "Demande introuvable." }, 404);
   }
@@ -1409,7 +1437,12 @@ adminRouter.post("/requests/:id/convert", zValidator("json", convertRequestSchem
       UPDATE customer_requests
       SET status = 'CONVERTED', admin_notes = COALESCE(admin_notes || ' | ', '') || 'Converti en expédition ' || ?, updated_at = datetime('now')
       WHERE id = ?
-    `).bind(trackingNumber, requestId),
+    `).bind(trackingNumber, reqRow.id),
+    c.env.DB.prepare(`
+      UPDATE quote_requests
+      SET status = 'CONVERTED', updated_at = datetime('now')
+      WHERE UPPER(quote_reference) = UPPER(?) OR id = ?
+    `).bind(reqRow.reference, reqRow.id),
   ];
 
   await c.env.DB.batch(statements);
