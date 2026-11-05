@@ -98,6 +98,7 @@ import {
   getPaymentPageUrl,
   getTrackingPageUrl,
   updateClientRequestAdminQuote,
+  decodeHtmlEntitiesText,
 } from "@/shared";
 import {
   downloadOfficialReceiptPdf,
@@ -2559,7 +2560,7 @@ export default function AdminPage() {
     destination_country: "Côte d'Ivoire",
     destination_city: "Abidjan",
     service_name: "Liaison Aérienne Bilatérale (Paris ↔ Abidjan)",
-    category_tag: "Liaison Aérienne ✈️",
+    category_tag: "Liaison Aérienne",
     pricing_basis: "PER_KG",
     currency: "FCFA",
     price_per_unit: 8500,
@@ -2929,9 +2930,26 @@ export default function AdminPage() {
               d.requests.forEach((sReq: any) => {
                 const idx = merged.findIndex((m) => (m.id && m.id === sReq.id) || (m.reference && m.reference === sReq.reference));
                 if (idx >= 0) {
-                  merged[idx] = { ...sReq, ...merged[idx] };
+                  const localItem = merged[idx];
+                  merged[idx] = {
+                    ...localItem,
+                    ...sReq,
+                    product_image: sReq.product_image || localItem.product_image,
+                    product_name: sReq.product_name || localItem.product_name,
+                    product_url: sReq.product_url || localItem.product_url,
+                    payment_receipt_url: sReq.payment_receipt_url || localItem.payment_receipt_url,
+                    payment_receipt_name: sReq.payment_receipt_name || localItem.payment_receipt_name,
+                    payment_method_selected: sReq.payment_method_selected || localItem.payment_method_selected,
+                    tracking_number: sReq.tracking_number || localItem.tracking_number,
+                    estimated_weight_kg: sReq.estimated_weight_kg ?? localItem.estimated_weight_kg,
+                    estimated_cbm: sReq.estimated_cbm ?? localItem.estimated_cbm,
+                    total_goods_fcfa: sReq.total_goods_fcfa || localItem.total_goods_fcfa,
+                    shipping_fee_fcfa: sReq.shipping_fee_fcfa || localItem.shipping_fee_fcfa,
+                    total_amount_fcfa: sReq.total_amount_fcfa || localItem.total_amount_fcfa,
+                    items: sReq.items?.length ? sReq.items : localItem.items,
+                  };
                 } else {
-                  merged.push(sReq);
+                  merged.unshift(sReq);
                 }
               });
               try {
@@ -3459,6 +3477,27 @@ export default function AdminPage() {
       status: "CONVERTED",
     });
 
+    // Connexion directe Admin -> Base de données SQLite D1 -> Client (création du suivi actif en BDD)
+    try {
+      fetch(`/api/v1/admin/requests/${encodeURIComponent(reqObj.reference || reqObj.id)}/confirm-tracking`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          trackingNumber: officialTracking,
+          estimatedWeightKg: finalWeight,
+          estimatedCbm: finalVolume,
+          goodsTotalFcfa: updatedFields.total_goods_fcfa,
+          shippingFeeFcfa: updatedFields.shipping_fee_fcfa,
+          totalAmountFcfa: finalTotal,
+          shippingModeType: isSea ? "SEA" : "AIR",
+          shippingModeName: reqObj.shipping_mode_name || (isSea ? "Voie Maritime Groupage" : "Voie Aérienne Express"),
+        }),
+      }).catch(() => {});
+    } catch {}
+
     const updatedReq = { ...reqObj, ...updatedFields };
     setShowRequestDetailModal(updatedReq);
     setRequestsList((prev) =>
@@ -3913,7 +3952,7 @@ export default function AdminPage() {
       destination_city: airRouteForm.destination_city.trim() || null,
       shipping_mode_name: airRouteForm.service_name.trim() || "Liaison Aérienne Directe",
       shipping_mode_type: "AIR",
-      category_tag: airRouteForm.category_tag.trim() || "Liaison Aérienne ✈️",
+      category_tag: airRouteForm.category_tag.trim() || "Liaison Aérienne",
       pricing_basis: airRouteForm.pricing_basis,
       currency: airRouteForm.currency,
       price_per_unit_minor: priceMinor,
@@ -3935,7 +3974,7 @@ export default function AdminPage() {
         destination_city: airRouteForm.origin_city.trim() || null,
         shipping_mode_name: (airRouteForm.service_name.trim() || "Liaison Aérienne") + " (Sens Retour)",
         shipping_mode_type: "AIR",
-        category_tag: airRouteForm.category_tag.trim() || "Liaison Aérienne ✈️",
+        category_tag: airRouteForm.category_tag.trim() || "Liaison Aérienne",
         pricing_basis: airRouteForm.pricing_basis,
         currency: airRouteForm.currency,
         price_per_unit_minor: priceMinor,
@@ -7038,10 +7077,14 @@ export default function AdminPage() {
                                       borderRadius: "9999px",
                                       fontWeight: 800,
                                       textDecoration: "none",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "3px",
                                     }}
                                     title="N° de suivi actif (cliquable)"
                                   >
-                                    📦 {r.tracking_number}
+                                    <Package size={11} />
+                                    <span>{r.tracking_number}</span>
                                   </Link>
                                 )}
                                 {r.payment_receipt_url && (
@@ -7053,11 +7096,17 @@ export default function AdminPage() {
                                       padding: "1px 6px",
                                       borderRadius: "9999px",
                                       fontWeight: 700,
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "3px",
                                     }}
                                   >
-                                    {r.payment_receipt_url.startsWith("data:video") || /\.(mp4|mov|webm)$/i.test(r.payment_receipt_url)
-                                      ? "📹 Preuve vidéo"
-                                      : "🖼️ Preuve reçue"}
+                                    <CheckCircle2 size={11} />
+                                    <span>
+                                      {r.payment_receipt_url.startsWith("data:video") || /\.(mp4|mov|webm)$/i.test(r.payment_receipt_url)
+                                        ? "Preuve vidéo"
+                                        : "Preuve reçue"}
+                                    </span>
                                   </span>
                                 )}
                               </div>
@@ -7072,9 +7121,9 @@ export default function AdminPage() {
                                   textOverflow: "ellipsis",
                                   marginTop: "2px",
                                 }}
-                                title={r.product_name || r.items?.[0]?.product_name || r.description}
+                                title={decodeHtmlEntitiesText(r.product_name || r.items?.[0]?.product_name || r.description || "")}
                               >
-                                {r.product_name || r.items?.[0]?.product_name || "Article commandé"}
+                                {decodeHtmlEntitiesText(r.product_name || r.items?.[0]?.product_name || "Article commandé")}
                               </div>
                               <div style={{ fontSize: "0.69rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
                                 <span>Qté: {r.product_quantity || r.items?.[0]?.quantity || 1} pcs</span>
@@ -7146,10 +7195,14 @@ export default function AdminPage() {
                                 fontWeight: 700,
                                 cursor: "pointer",
                                 whiteSpace: "nowrap",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
                               }}
                               title="Cliquez pour estimer le poids et envoyer le lien de paiement au client"
                             >
-                              ⚖️ Estimer poids &amp; devis
+                              <Scale size={11} />
+                              <span>Estimer poids &amp; devis</span>
                             </button>
                           )}
                         </td>
@@ -8148,7 +8201,7 @@ export default function AdminPage() {
                             </button>
                             <a
                               href={`https://wa.me/${(c.phone_whatsapp || c.phone || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-                                `Bonjour ${c.full_name} 👋,\n\nIci la Direction de *ROUM TRANSIT INTERNATIONAL*.\nNous prenons contact avec vous concernant vos opérations d'achat et de transit Chine ➔ ${c.country || "Afrique"}.\n\nVous pouvez consulter vos expéditions en direct sur :\n${getTrackingPageUrl("")}\n\nCordialement,\n*Service Clientèle ROUM TRANSIT*`
+                                `Bonjour ${c.full_name},\n\nIci la Direction de *ROUM TRANSIT INTERNATIONAL*.\nNous prenons contact avec vous concernant vos opérations d'achat et de transit Chine ➔ ${c.country || "Afrique"}.\n\nVous pouvez consulter vos expéditions en direct sur :\n${getTrackingPageUrl("")}\n\nCordialement,\n*Service Clientèle ROUM TRANSIT*`
                               )}`}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -11218,10 +11271,10 @@ export default function AdminPage() {
 
       {/* MODALE : DÉTAIL COMPLET D'UNE COMMANDE CLIENT + ÉTAPE 2 (POIDS & LIEN DE PAIEMENT) + ÉTAPE 3 (ENCAISSEMENT & TRACKING) */}
       {showRequestDetailModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
-          <div className="card-clean" style={{ maxWidth: "760px", width: "100%", padding: "26px", maxHeight: "92vh", overflowY: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-              <div>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px", boxSizing: "border-box" }}>
+          <div className="card-clean" style={{ maxWidth: "760px", width: "100%", padding: "26px", maxHeight: "92vh", overflowY: "auto", overflowX: "hidden", boxSizing: "border-box", overflowWrap: "anywhere", wordBreak: "break-word" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", gap: "12px" }}>
+              <div style={{ minWidth: 0 }}>
                 <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
                   <h3 style={{ fontSize: "1.2rem", margin: 0 }}>Dossier {showRequestDetailModal.reference}</h3>
                   <span className="badge-clean badge-draft">
@@ -11266,13 +11319,13 @@ export default function AdminPage() {
               <button
                 type="button"
                 onClick={() => setShowRequestDetailModal(null)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", flexShrink: 0 }}
               >
                 <X size={20} />
               </button>
             </div>
 
-            {/* SECTION A : TOUT CE QUE LE CLIENT A ENVOYÉ (PRODUIT, PHOTO, LIEN, QUANTITÉ, PRIX, TRANSPORT) */}
+            {/* SECTION A : TOUT CE QUE LE CLIENT A ENVOYÉ (PRODUIT, PHOTO, LIEN, QUANTITÉ, TRANSPORT) */}
             <div
               style={{
                 background: "#FAF8F5",
@@ -11280,6 +11333,9 @@ export default function AdminPage() {
                 borderRadius: "16px",
                 padding: "16px",
                 marginBottom: "18px",
+                minWidth: 0,
+                maxWidth: "100%",
+                boxSizing: "border-box",
               }}
             >
               <div
@@ -11293,9 +11349,14 @@ export default function AdminPage() {
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "6px",
                 }}
               >
-                <span>📦 1. Informations complètes envoyées par le client</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <Package size={14} />
+                  <span>1. Informations complètes envoyées par le client</span>
+                </span>
                 <span>{showRequestDetailModal.created_at?.substring(0, 16) || "Aujourd'hui"}</span>
               </div>
 
@@ -11319,7 +11380,7 @@ export default function AdminPage() {
                   >
                     <img
                       src={showRequestDetailModal.product_image}
-                      alt={showRequestDetailModal.product_name || "Produit"}
+                      alt={decodeHtmlEntitiesText(showRequestDetailModal.product_name || "Produit")}
                       style={{ width: "100%", height: "100%", objectFit: "contain", padding: "4px" }}
                     />
                     <span
@@ -11360,11 +11421,13 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                <div style={{ flex: 1, minWidth: "240px" }}>
-                  <div style={{ fontWeight: 800, fontSize: "0.98rem", color: "#1C1815", lineHeight: 1.35, marginBottom: "6px" }}>
-                    {showRequestDetailModal.product_name ||
-                      showRequestDetailModal.items?.[0]?.product_name ||
-                      "Article commandé"}
+                <div style={{ flex: 1, minWidth: "200px", maxWidth: "100%" }}>
+                  <div style={{ fontWeight: 800, fontSize: "0.98rem", color: "#1C1815", lineHeight: 1.35, marginBottom: "6px", overflowWrap: "anywhere", wordBreak: "break-word" }}>
+                    {decodeHtmlEntitiesText(
+                      showRequestDetailModal.product_name ||
+                        showRequestDetailModal.items?.[0]?.product_name ||
+                        "Article commandé"
+                    )}
                   </div>
 
                   {showRequestDetailModal.product_url ? (
@@ -11418,7 +11481,7 @@ export default function AdminPage() {
                       <strong style={{ color: "#C2410C", fontSize: "0.86rem" }}>
                         {showRequestDetailModal.unit_price
                           ? `${Number(showRequestDetailModal.unit_price).toLocaleString("fr-FR")} ${showRequestDetailModal.unit_price_currency || "USD"}`
-                          : "Sur devis"}
+                          : "Chiffré par ROUM"}
                       </strong>
                     </div>
                     <div>
@@ -11426,7 +11489,7 @@ export default function AdminPage() {
                       <strong style={{ color: "#166534", fontSize: "0.86rem" }}>
                         {showRequestDetailModal.total_goods_fcfa
                           ? `${Number(showRequestDetailModal.total_goods_fcfa).toLocaleString("fr-FR")} FCFA`
-                          : showRequestDetailModal.paid_to_supplier || "À chiffrer"}
+                          : showRequestDetailModal.paid_to_supplier || "À chiffrer à l'Étape 2"}
                       </strong>
                     </div>
                   </div>
@@ -11447,7 +11510,7 @@ export default function AdminPage() {
               >
                 <div>
                   <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.7rem" }}>Destination choisie</span>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontWeight: 700 }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontWeight: 700, flexWrap: "wrap" }}>
                     <CircularFlag countryName={showRequestDetailModal.origin_country || "Chine"} size={13} />
                     <span>{showRequestDetailModal.origin_country || "Chine"}</span>
                     <span>➔</span>
@@ -11460,9 +11523,9 @@ export default function AdminPage() {
                   <strong>{showRequestDetailModal.shipping_mode_name || showRequestDetailModal.shipping_mode_type || "Voie Aérienne"}</strong>
                 </div>
                 {showRequestDetailModal.shipping_mark && (
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.7rem" }}>Shipping Mark</span>
-                    <strong style={{ fontFamily: "monospace", color: "var(--brown-dark)" }}>{showRequestDetailModal.shipping_mark}</strong>
+                    <strong style={{ fontFamily: "monospace", color: "var(--brown-dark)", overflowWrap: "anywhere", wordBreak: "break-word" }}>{showRequestDetailModal.shipping_mark}</strong>
                   </div>
                 )}
                 {(showRequestDetailModal.supplier_name || showRequestDetailModal.paid_to_supplier) && (
@@ -11477,8 +11540,25 @@ export default function AdminPage() {
               </div>
 
               {showRequestDetailModal.description && (
-                <div style={{ marginTop: "10px", fontSize: "0.78rem", color: "var(--text-secondary)", background: "#FFFFFF", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-light)" }}>
-                  <strong>Note / Récapitulatif :</strong> {showRequestDetailModal.description}
+                <div
+                  style={{
+                    marginTop: "10px",
+                    fontSize: "0.78rem",
+                    color: "var(--text-secondary)",
+                    background: "#FFFFFF",
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-light)",
+                    overflowWrap: "anywhere",
+                    wordBreak: "break-word",
+                    maxWidth: "100%",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <strong>Note / Récapitulatif :</strong>{" "}
+                  {decodeHtmlEntitiesText(
+                    String(showRequestDetailModal.description).replace(/\s*\|\s*Lien\s*:\s*https?:\/\/\S+/gi, "")
+                  )}
                 </div>
               )}
             </div>
@@ -11490,8 +11570,8 @@ export default function AdminPage() {
                   <span style={{ fontSize: "0.86rem", fontWeight: "800", color: "#166534", display: "inline-flex", alignItems: "center", gap: "6px" }}>
                     <CheckCircle2 size={18} />
                     {showRequestDetailModal.payment_receipt_url.startsWith("data:video") || /\.(mp4|mov|webm|ogg)$/i.test(showRequestDetailModal.payment_receipt_url)
-                      ? "📹 Preuve Vidéo de Paiement reçue du client"
-                      : "🖼️ Preuve de Paiement reçue du client"}{" "}
+                      ? "Preuve Vidéo de Paiement reçue du client"
+                      : "Preuve de Paiement reçue du client"}{" "}
                     ({showRequestDetailModal.payment_method_selected?.toUpperCase() || "MOBILE MONEY"})
                   </span>
                   <a
@@ -11521,14 +11601,18 @@ export default function AdminPage() {
                     style={{ maxHeight: "220px", borderRadius: "10px", border: "1px solid #BBF7D0", display: "block", objectFit: "contain", cursor: "zoom-in", background: "#FFFFFF" }}
                   />
                 ) : (
-                  <div style={{ fontSize: "0.82rem", color: "#15803D" }}>
-                    📄 Fichier joint : <strong>{showRequestDetailModal.payment_receipt_name || "recu_paiement.pdf"}</strong>
+                  <div style={{ fontSize: "0.82rem", color: "#15803D", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    <FileText size={14} />
+                    <span>Fichier joint : <strong>{showRequestDetailModal.payment_receipt_name || "recu_paiement.pdf"}</strong></span>
                   </div>
                 )}
               </div>
             ) : (
-              <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", padding: "12px 14px", borderRadius: "12px", marginBottom: "18px", fontSize: "0.8rem", color: "#92400E" }}>
-                ⏳ <strong>Aucune preuve de paiement jointe pour le moment.</strong> Estimez le poids ci-dessous et envoyez le lien de paiement sur WhatsApp au client pour qu&apos;il règle et téléverse son reçu.
+              <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", padding: "12px 14px", borderRadius: "12px", marginBottom: "18px", fontSize: "0.8rem", color: "#92400E", display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                <Clock size={16} style={{ flexShrink: 0, marginTop: "2px" }} />
+                <div>
+                  <strong>Aucune preuve de paiement jointe pour le moment.</strong> Estimez le poids ci-dessous et envoyez le lien de paiement sur WhatsApp au client pour qu&apos;il règle et téléverse son reçu.
+                </div>
               </div>
             )}
 
@@ -11543,8 +11627,9 @@ export default function AdminPage() {
                 boxShadow: "0 4px 14px rgba(0,0,0,0.03)",
               }}
             >
-              <div style={{ fontSize: "0.76rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#1C1815", marginBottom: "10px" }}>
-                ⚖️ 2. Étape Admin : Estimer le Poids, Calculer le Devis &amp; Envoyer le Lien de Paiement
+              <div style={{ fontSize: "0.76rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#1C1815", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <Scale size={15} />
+                <span>2. Étape Admin : Estimer le Poids, Calculer le Devis &amp; Envoyer le Lien de Paiement</span>
               </div>
 
               {(() => {
@@ -11560,10 +11645,12 @@ export default function AdminPage() {
                       <input
                         type="number"
                         step={isSea ? "0.01" : "0.5"}
-                        min="0.01"
-                        value={isSea ? adminQuoteForm.volume_cbm : adminQuoteForm.weight_kg}
+                        min="0"
+                        placeholder={isSea ? "0.1" : "1"}
+                        value={(isSea ? adminQuoteForm.volume_cbm : adminQuoteForm.weight_kg) || ""}
                         onChange={(e) => {
-                          const val = parseFloat(e.target.value) || 0;
+                          const cleaned = e.target.value.replace(/^0+(?=\d)/, "");
+                          const val = cleaned === "" ? 0 : parseFloat(cleaned) || 0;
                           const newShip = Math.round(val * (adminQuoteForm.rate_per_unit || 12000));
                           setAdminQuoteForm((prev) => ({
                             ...prev,
@@ -11585,9 +11672,11 @@ export default function AdminPage() {
                         type="number"
                         step="500"
                         min="0"
-                        value={adminQuoteForm.rate_per_unit}
+                        placeholder="12000"
+                        value={adminQuoteForm.rate_per_unit || ""}
                         onChange={(e) => {
-                          const rate = parseFloat(e.target.value) || 0;
+                          const cleaned = e.target.value.replace(/^0+(?=\d)/, "");
+                          const rate = cleaned === "" ? 0 : parseFloat(cleaned) || 0;
                           const qtyUnit = isSea ? adminQuoteForm.volume_cbm : adminQuoteForm.weight_kg;
                           const newShip = Math.round((qtyUnit || 1) * rate);
                           setAdminQuoteForm((prev) => ({
@@ -11610,9 +11699,11 @@ export default function AdminPage() {
                         type="number"
                         step="500"
                         min="0"
-                        value={adminQuoteForm.goods_fcfa}
+                        placeholder="0"
+                        value={adminQuoteForm.goods_fcfa === 0 ? "" : adminQuoteForm.goods_fcfa}
                         onChange={(e) => {
-                          const g = parseFloat(e.target.value) || 0;
+                          const cleaned = e.target.value.replace(/^0+(?=\d)/, "");
+                          const g = cleaned === "" ? 0 : parseFloat(cleaned) || 0;
                           setAdminQuoteForm((prev) => ({
                             ...prev,
                             goods_fcfa: g,
@@ -11632,9 +11723,11 @@ export default function AdminPage() {
                         type="number"
                         step="500"
                         min="0"
-                        value={adminQuoteForm.total_fcfa}
+                        placeholder="0"
+                        value={adminQuoteForm.total_fcfa || ""}
                         onChange={(e) => {
-                          const tot = parseFloat(e.target.value) || 0;
+                          const cleaned = e.target.value.replace(/^0+(?=\d)/, "");
+                          const tot = cleaned === "" ? 0 : parseFloat(cleaned) || 0;
                           setAdminQuoteForm((prev) => ({
                             ...prev,
                             total_fcfa: tot,
@@ -11719,8 +11812,9 @@ export default function AdminPage() {
                 marginBottom: "18px",
               }}
             >
-              <div style={{ fontSize: "0.76rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#166534", marginBottom: "6px" }}>
-                ✅ 3. Étape Finale Admin : Confirmer l&apos;Encaissement &amp; Envoyer le N° de Suivi Officiel
+              <div style={{ fontSize: "0.76rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#166534", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <CheckCircle2 size={15} />
+                <span>3. Étape Finale Admin : Confirmer l&apos;Encaissement &amp; Envoyer le N° de Suivi Officiel</span>
               </div>
               <p style={{ fontSize: "0.78rem", color: "#15803D", margin: "0 0 12px 0" }}>
                 Une fois le paiement vérifié, cliquez ci-dessous pour générer le <strong>Tracking Number officiel</strong>, activer le suivi en direct et l&apos;envoyer au client sur WhatsApp.

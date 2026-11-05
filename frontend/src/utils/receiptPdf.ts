@@ -790,7 +790,7 @@ export function buildClientReceiptWhatsAppUrl(
     ...(hasActiveTracking
       ? [
           ``,
-          `👉 *Lien direct de suivi du colis (${trackingCode}) :*`,
+          `*Lien direct de suivi du colis (${trackingCode}) :*`,
           `${trackingUrl}`,
         ]
       : []),

@@ -31,6 +31,7 @@ import {
   findTariff,
   OfficialTariff,
   getTrackingPageUrl,
+  decodeHtmlEntitiesText,
 } from "@/shared";
 import {
   WaveLogo,
@@ -593,10 +594,24 @@ function CommandeFormContent() {
     return totalArticlesFCFA + shippingQuote;
   }, [totalArticlesFCFA, shippingQuote]);
 
+  // Synchronisation directe Base de Données ➔ Client pour l'Étape 2 Bis (?pay=RM-...)
+  const [dbPayDossier, setDbPayDossier] = useState<any | null>(null);
+  useEffect(() => {
+    if (!payRefParam) return;
+    fetch(`/api/v1/public/requests/${encodeURIComponent(payRefParam)}?_t=${Date.now()}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.request) {
+          setDbPayDossier(d.request);
+        }
+      })
+      .catch(() => {});
+  }, [payRefParam]);
+
   // Données du dossier pour l'Étape 2 Bis (quand le client clique sur le lien ?pay=RM-...)
   const payDossier = useMemo(() => {
     if (!payRefParam) return null;
-    const saved = getClientRequestByReference(payRefParam);
+    const saved = dbPayDossier || getClientRequestByReference(payRefParam);
     const savedItem = saved?.items && saved.items[0] ? saved.items[0] : {};
     const cName = searchParams.get("name") || searchParams.get("client") || saved?.client_name || "Client ROUM";
     const cPhone = searchParams.get("phone") || saved?.client_phone || "";
@@ -617,11 +632,12 @@ function CommandeFormContent() {
     const shipFcfa = Number(searchParams.get("ship") || saved?.shipping_fee_fcfa || 0);
     const totalFcfa =
       Number(searchParams.get("total") || saved?.total_amount_fcfa || 0) || goodsFcfa + shipFcfa;
-    const title =
+    const title = decodeHtmlEntitiesText(
       searchParams.get("title") ||
-      saved?.product_name ||
-      savedItem?.product_name ||
-      "Article commandé";
+        saved?.product_name ||
+        savedItem?.product_name ||
+        "Article commandé"
+    );
     const qty = Number(searchParams.get("qty") || saved?.product_quantity || savedItem?.quantity || 1);
     const img =
       searchParams.get("img") ||
@@ -652,7 +668,7 @@ function CommandeFormContent() {
       optionType: optType,
       shippingMark: sMark,
     };
-  }, [payRefParam, searchParams]);
+  }, [payRefParam, searchParams, dbPayDossier]);
 
   // Validation Étape 2 Bis : Envoi de la preuve de paiement par le client
   const handlePaymentProofSubmit = async (e: React.FormEvent) => {
@@ -668,7 +684,7 @@ function CommandeFormContent() {
       const selectedMethodLabel =
         activePaymentMethods.find((m) => m.id === selectedPayMethod)?.label || selectedPayMethod.toUpperCase();
 
-      // Mise à jour ou création dans localStorage / API
+      // Mise à jour ou création dans localStorage & Base de Données SQLite D1
       submitClientPaymentProof(payDossier.reference, {
         paymentMethod: selectedPayMethod,
         receiptUrl: receiptDataUrl,
@@ -742,7 +758,7 @@ function CommandeFormContent() {
     }
   };
 
-  // Validation Étape 1 : Demande de commande initiale (SANS poids estimé ni paiement immédiat)
+  // Validation Étape 1 : Demande de commande initiale (SANS prix client, SANS poids estimé, SANS paiement immédiat)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientName.trim() || !clientPhone.trim()) {
@@ -768,11 +784,17 @@ function CommandeFormContent() {
 
     setSubmitting(true);
     try {
+      const cleanTitle = decodeHtmlEntitiesText(
+        productQuery.trim() ||
+          extractedProduct?.title ||
+          (option === "avec_fournisseur" ? goodsDescription.trim() : "Article Alibaba")
+      );
+
       let cargoDescription = "";
       if (option === "sans_fournisseur") {
-        cargoDescription = `[SOURCING SANS FOURNISSEUR] Produit: ${productQuery.trim() || extractedProduct?.title || "Article Alibaba"} | Qté: ${productQuantity} | P.U: ${productUnitPrice} ${productCurrency} (≈ ${unitPriceFCFA.toLocaleString("fr-FR")} FCFA) | Sous-total Marchandises: ${totalArticlesFCFA.toLocaleString("fr-FR")} FCFA | Transport choisi: ${transportModeLabel} (${transportUnitRateFormatted}) — Poids en attente d'estimation ROUM`;
+        cargoDescription = `Achat Alibaba | Produit : ${cleanTitle} | Quantité souhaitée : ${productQuantity} pcs | Transport choisi : ${transportModeLabel} (${transportUnitRateFormatted}) — Prix & Poids à estimer par ROUM`;
       } else {
-        cargoDescription = `[EXPÉDITION AVEC FOURNISSEUR] Shipping Mark: ${clientShippingMark.trim()} | Usine: ${paidToSupplier.trim() || "Déjà réglé"} (${supplierContact.trim() || "Contact usine"}) | Colis: ${goodsDescription.trim() || extractedProduct?.title || "Marchandises"} | Transport choisi: ${transportModeLabel} (${transportUnitRateFormatted}) — Poids en attente d'estimation ROUM`;
+        cargoDescription = `Expédition Avec Fournisseur | Shipping Mark : ${clientShippingMark.trim()} | Usine : ${paidToSupplier.trim() || "Déjà réglé"} (${supplierContact.trim() || "Contact usine"}) | Colis : ${cleanTitle} | Transport choisi : ${transportModeLabel} (${transportUnitRateFormatted}) — Poids à estimer par ROUM`;
       }
 
       const res = await saveClientRequest({
@@ -788,21 +810,18 @@ function CommandeFormContent() {
         destination_country: destinationCity.trim(),
         product_url: productLink.trim(),
         product_image: userProductImage || extractedProduct?.image || undefined,
-        product_name:
-          productQuery.trim() ||
-          extractedProduct?.title ||
-          (option === "avec_fournisseur" ? goodsDescription.trim() : "Article Alibaba"),
-        unit_price: option === "sans_fournisseur" ? productUnitPrice : (extractedProduct?.price || undefined),
-        unit_price_currency: option === "sans_fournisseur" ? productCurrency : (extractedProduct?.currency || undefined),
-        total_goods_fcfa: option === "sans_fournisseur" ? totalArticlesFCFA : 0,
+        product_name: cleanTitle,
+        unit_price: undefined,
+        unit_price_currency: undefined,
+        total_goods_fcfa: 0,
         shipping_fee_fcfa: 0,
-        total_amount_fcfa: option === "sans_fournisseur" ? totalArticlesFCFA : 0,
+        total_amount_fcfa: 0,
         payment_method_selected: "EN_ATTENTE_DEVIS_ROUM",
         product_quantity: String(productQuantity || 1),
         product_specs:
           option === "sans_fournisseur"
-            ? `Mode: ${transportModeLabel} (${transportUnitRateFormatted}) | Qté: ${productQuantity} pcs | Marchandises: ${totalArticlesFCFA.toLocaleString("fr-FR")} FCFA | Poids: à estimer par ROUM`
-            : `Shipping Mark: ${clientShippingMark.trim()} | Payé usine: ${paidToSupplier.trim()} | Mode: ${transportModeLabel} (${transportUnitRateFormatted}) | Poids: à estimer par ROUM`,
+            ? `Mode : ${transportModeLabel} (${transportUnitRateFormatted}) | Quantité : ${productQuantity} pcs | Prix & Poids : à estimer par ROUM`
+            : `Shipping Mark : ${clientShippingMark.trim()} | Payé usine : ${paidToSupplier.trim()} | Mode : ${transportModeLabel} (${transportUnitRateFormatted}) | Poids : à estimer par ROUM`,
         shipping_mode_type: selectedTransportMode === "SEA" ? "SEA" : "AIR",
         shipping_mode_name: transportModeLabel,
         cargo_type: cargoDescription,
@@ -830,23 +849,17 @@ function CommandeFormContent() {
         optionType: option,
         transportMode: `${transportModeLabel} (${transportUnitRateFormatted})`,
         weightOrVolume: "En attente d'estimation par ROUM TRANSIT",
-        productTitle:
-          productQuery.trim() ||
-          extractedProduct?.title ||
-          (option === "avec_fournisseur" ? goodsDescription.trim() : "Article Alibaba"),
+        productTitle: cleanTitle,
         productUrl: productLink.trim() || undefined,
         productImage: userProductImage || extractedProduct?.image || undefined,
         quantity: option === "sans_fournisseur" ? productQuantity : undefined,
-        unitPriceLabel:
-          option === "sans_fournisseur"
-            ? `${productUnitPrice.toLocaleString("fr-FR")} ${productCurrency} (≈ ${unitPriceFCFA.toLocaleString("fr-FR")} FCFA)`
-            : undefined,
-        goodsTotalFcfa: option === "sans_fournisseur" ? totalArticlesFCFA : undefined,
+        unitPriceLabel: undefined,
+        goodsTotalFcfa: undefined,
         paidToSupplierLabel: option === "avec_fournisseur" ? paidToSupplier.trim() || undefined : undefined,
         supplierContact: option === "avec_fournisseur" ? supplierContact.trim() || undefined : undefined,
         shippingFeeFcfa: 0,
-        grandTotalFcfa: option === "sans_fournisseur" ? totalArticlesFCFA : 0,
-        paymentMethodLabel: "Règlement à l'Étape 2 après estimation du poids & envoi du lien par ROUM",
+        grandTotalFcfa: 0,
+        paymentMethodLabel: "Devis complet (article + poids + transport) envoyé par ROUM sur WhatsApp à l'Étape 2",
       };
 
       const agencyWaPhone = settings.whatsapp_number?.trim() || "2250787994412";
@@ -857,7 +870,7 @@ function CommandeFormContent() {
         trackingNumber: "",
         shippingMark: res.shippingMark,
         whatsappUrl: customWaUrl,
-        totalAmount: option === "sans_fournisseur" ? totalArticlesFCFA : 0,
+        totalAmount: 0,
         receiptName: "",
         option,
         destination: destinationCity,
@@ -1495,67 +1508,17 @@ function CommandeFormContent() {
                               </div>
                             </div>
 
-                            <div className="ios-product-preview-title" title={extractedProduct?.title || productQuery}>
-                              {extractedProduct?.title || productQuery || "Article sélectionné"}
+                            <div className="ios-product-preview-title" title={decodeHtmlEntitiesText(extractedProduct?.title || productQuery)}>
+                              {decodeHtmlEntitiesText(extractedProduct?.title || productQuery || "Article sélectionné")}
                             </div>
 
                             <div className="ios-product-preview-price-row">
-                              {productUnitPrice > 0 ? (
-                                <>
-                                  <span className="ios-product-preview-price-cny">
-                                    {productUnitPrice.toLocaleString("fr-FR")} {productCurrency}
-                                  </span>
-                                  <span className="ios-product-preview-price-cfa">
-                                    / unité (≈ {unitPriceFCFA.toLocaleString("fr-FR")} FCFA)
-                                  </span>
-                                </>
-                              ) : (
-                                <span style={{ fontSize: "0.76rem", color: "#8E877E" }}>
-                                  Prix fournisseur sur devis
-                                </span>
-                              )}
+                              <span style={{ fontSize: "0.78rem", color: "#524B43", fontWeight: 600 }}>
+                                Indiquez votre quantité ci-dessous · ROUM TRANSIT s&apos;occupe du tarif usine &amp; du poids
+                              </span>
                             </div>
                           </div>
                         </div>
-
-                        {/* Grille des prix par tranches fournisseur (Alibaba / 1688 MOQ) */}
-                        {extractedProduct?.priceTiers && extractedProduct.priceTiers.length > 0 && (
-                          <div className="ios-tiers-box">
-                            <div className="ios-tiers-header">
-                              <span>Vrais prix fournisseur par tranche (cliquez pour choisir)</span>
-                              {extractedProduct.minOrder && extractedProduct.minOrder > 1 && (
-                                <span className="ios-moq-tag">MOQ : {extractedProduct.minOrder} pcs</span>
-                              )}
-                            </div>
-                            <div className="ios-tiers-grid">
-                              {extractedProduct.priceTiers.map((tier, idx) => {
-                                const qty = Math.max(1, productQuantity || 1);
-                                const isActive =
-                                  (qty >= tier.minQty && (tier.maxQty === null || qty <= tier.maxQty)) ||
-                                  (idx === 0 && qty < tier.minQty);
-                                const tierFcfa = convertToFcfa(tier.price, tier.currency);
-                                return (
-                                  <button
-                                    key={`${tier.label}-${idx}`}
-                                    type="button"
-                                    onClick={() => {
-                                      setProductQuantity(tier.minQty);
-                                      setProductUnitPrice(tier.price);
-                                      setProductCurrency(tier.currency);
-                                    }}
-                                    className={`ios-tier-pill ${isActive ? "active" : ""}`}
-                                  >
-                                    <span className="ios-tier-qty">{tier.label}</span>
-                                    <span className="ios-tier-price">
-                                      {tier.price.toLocaleString("fr-FR")} {tier.currency}
-                                    </span>
-                                    <span className="ios-tier-fcfa">≈ {tierFcfa.toLocaleString("fr-FR")} F</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     ) : (
                       <button
@@ -1571,72 +1534,44 @@ function CommandeFormContent() {
                     )}
 
                     <div className="ios-field">
-                      <label htmlFor="productQuery">Description de l&apos;article</label>
+                      <label htmlFor="productQuery">Description de l&apos;article (modèle, couleur, taille)</label>
                       <input
                         id="productQuery"
                         type="text"
                         required
-                        placeholder="Ex: Écrans iPhone, Vêtements, Pièces auto..."
-                        value={productQuery}
+                        placeholder="Ex: Écrans iPhone, Vêtements taille L, Pièces auto..."
+                        value={decodeHtmlEntitiesText(productQuery)}
                         onChange={(e) => setProductQuery(e.target.value)}
                         className="ios-input"
                       />
                     </div>
 
-                    <div className="ios-grid-2">
-                      <div className="ios-field">
-                        <label htmlFor="productQuantity">Quantité</label>
-                        <div className="ios-stepper">
-                          <button
-                            type="button"
-                            onClick={() => setProductQuantity((q) => Math.max(1, q - 1))}
-                            className="ios-stepper-btn"
-                          >
-                            –
-                          </button>
-                          <input
-                            id="productQuantity"
-                            type="number"
-                            min="1"
-                            required
-                            value={productQuantity}
-                            onChange={(e) => setProductQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                            className="ios-stepper-input"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setProductQuantity((q) => q + 1)}
-                            className="ios-stepper-btn"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="ios-field">
-                        <label htmlFor="productUnitPrice">Prix unitaire usine</label>
-                        <div className="ios-currency-row">
-                          <input
-                            id="productUnitPrice"
-                            type="number"
-                            step="any"
-                            min="0.01"
-                            required
-                            value={productUnitPrice}
-                            onChange={(e) => setProductUnitPrice(parseFloat(e.target.value) || 0)}
-                            className="ios-input"
-                          />
-                          <select
-                            value={productCurrency}
-                            onChange={(e) => setProductCurrency(e.target.value as any)}
-                            className="ios-select-compact"
-                          >
-                            <option value="USD">$ USD</option>
-                            <option value="EUR">€ EUR</option>
-                            <option value="RMB">¥ RMB</option>
-                            <option value="FCFA">FCFA</option>
-                          </select>
-                        </div>
+                    <div className="ios-field">
+                      <label htmlFor="productQuantity">Quantité souhaitée</label>
+                      <div className="ios-stepper" style={{ maxWidth: "240px" }}>
+                        <button
+                          type="button"
+                          onClick={() => setProductQuantity((q) => Math.max(1, q - 1))}
+                          className="ios-stepper-btn"
+                        >
+                          –
+                        </button>
+                        <input
+                          id="productQuantity"
+                          type="number"
+                          min="1"
+                          required
+                          value={productQuantity === 0 ? "" : productQuantity}
+                          onChange={(e) => setProductQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                          className="ios-stepper-input"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setProductQuantity((q) => q + 1)}
+                          className="ios-stepper-btn"
+                        >
+                          +
+                        </button>
                       </div>
                     </div>
                   </>
@@ -1667,7 +1602,7 @@ function CommandeFormContent() {
                       {extractError && <span className="ios-error-msg">{extractError}</span>}
                     </div>
 
-                    {/* Aperçu instantané et photo agrandie du produit détecté depuis le lien + Tranches de prix */}
+                    {/* Aperçu instantané et photo agrandie du produit détecté depuis le lien */}
                     {(userProductImage || (extractedProduct && (extractedProduct.image || extractedProduct.title))) ? (
                       <div className="ios-product-preview-card">
                         <div className="ios-product-preview-main">
@@ -1683,7 +1618,7 @@ function CommandeFormContent() {
                               <>
                                 <img
                                   src={userProductImage || extractedProduct?.image || ""}
-                                  alt={extractedProduct?.title || "Article"}
+                                  alt={decodeHtmlEntitiesText(extractedProduct?.title || "Article")}
                                   className="ios-product-preview-thumb"
                                   onError={(e) => {
                                     const currentSrc = e.currentTarget.getAttribute("src") || "";
@@ -1760,60 +1695,17 @@ function CommandeFormContent() {
                               </div>
                             </div>
 
-                            <div className="ios-product-preview-title" title={extractedProduct?.title || goodsDescription}>
-                              {extractedProduct?.title || goodsDescription || "Article sélectionné"}
+                            <div className="ios-product-preview-title" title={decodeHtmlEntitiesText(extractedProduct?.title || goodsDescription)}>
+                              {decodeHtmlEntitiesText(extractedProduct?.title || goodsDescription || "Article sélectionné")}
                             </div>
 
                             <div className="ios-product-preview-price-row">
-                              {extractedProduct?.price && extractedProduct.price > 0 ? (
-                                <>
-                                  <span className="ios-product-preview-price-cny">
-                                    {extractedProduct.price.toLocaleString("fr-FR")} {extractedProduct.currency || "USD"}
-                                  </span>
-                                  <span className="ios-product-preview-price-cfa">
-                                    / unité (≈ {convertToFcfa(extractedProduct.price, extractedProduct.currency || "USD").toLocaleString("fr-FR")} FCFA)
-                                  </span>
-                                </>
-                              ) : (
-                                <span style={{ fontSize: "0.76rem", color: "#8E877E" }}>
-                                  Prix usine vérifié par nos équipes
-                                </span>
-                              )}
+                              <span style={{ fontSize: "0.78rem", color: "#524B43", fontWeight: 600 }}>
+                                Expédition &amp; poids calculés par ROUM TRANSIT
+                              </span>
                             </div>
                           </div>
                         </div>
-
-                        {extractedProduct?.priceTiers && extractedProduct.priceTiers.length > 0 && (
-                          <div className="ios-tiers-box">
-                            <div className="ios-tiers-header">
-                              <span>Grille fournisseur par tranche de quantité</span>
-                              {extractedProduct.minOrder && extractedProduct.minOrder > 1 && (
-                                <span className="ios-moq-tag">MOQ : {extractedProduct.minOrder} pcs</span>
-                              )}
-                            </div>
-                            <div className="ios-tiers-grid">
-                              {extractedProduct.priceTiers.map((tier, idx) => {
-                                const tierFcfa = convertToFcfa(tier.price, tier.currency);
-                                return (
-                                  <button
-                                    key={`${tier.label}-${idx}`}
-                                    type="button"
-                                    onClick={() => {
-                                      setPaidToSupplier(`${(tier.price * tier.minQty).toLocaleString("fr-FR")} ${tier.currency}`);
-                                    }}
-                                    className="ios-tier-pill"
-                                  >
-                                    <span className="ios-tier-qty">{tier.label}</span>
-                                    <span className="ios-tier-price">
-                                      {tier.price.toLocaleString("fr-FR")} {tier.currency}
-                                    </span>
-                                    <span className="ios-tier-fcfa">≈ {tierFcfa.toLocaleString("fr-FR")} F</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     ) : (
                       <button
@@ -1835,7 +1727,7 @@ function CommandeFormContent() {
                         type="text"
                         required
                         placeholder="Ex : 4 cartons pièces détachées, vêtements, écrans..."
-                        value={goodsDescription}
+                        value={decodeHtmlEntitiesText(goodsDescription)}
                         onChange={(e) => setGoodsDescription(e.target.value)}
                         className="ios-input"
                       />
@@ -1893,11 +1785,9 @@ function CommandeFormContent() {
                 <div className="ios-receipt">
                   {option === "sans_fournisseur" ? (
                     <div className="ios-receipt-row">
-                      <span>
-                        Marchandises ({productQuantity} pcs × {productUnitPrice.toLocaleString("fr-FR")} {productCurrency})
-                      </span>
+                      <span>Quantité souhaitée</span>
                       <span className="mono" style={{ fontWeight: 700, color: "#1C1815" }}>
-                        {totalArticlesFCFA.toLocaleString("fr-FR")} FCFA
+                        {productQuantity} unité(s)
                       </span>
                     </div>
                   ) : (
@@ -1918,7 +1808,7 @@ function CommandeFormContent() {
                   </div>
 
                   <div className="ios-receipt-row">
-                    <span>Poids / Volume du colis</span>
+                    <span>Prix article &amp; Poids du colis</span>
                     <span
                       style={{
                         fontSize: "0.75rem",
@@ -1929,28 +1819,18 @@ function CommandeFormContent() {
                         borderRadius: "9999px",
                       }}
                     >
-                      Estimé par ROUM TRANSIT
+                      Calculés par ROUM TRANSIT
                     </span>
                   </div>
 
                   <div className="ios-receipt-divider" />
 
                   <div className="ios-receipt-row total">
-                    <span>
-                      {option === "sans_fournisseur"
-                        ? "Sous-total Marchandises (Hors transport)"
-                        : "Frais de transport"}
-                    </span>
+                    <span>Montant total à régler</span>
                     <span className="bold">
-                      {option === "sans_fournisseur" ? (
-                        <>
-                          {totalArticlesFCFA.toLocaleString("fr-FR")} <small>FCFA</small>
-                        </>
-                      ) : (
-                        <small style={{ fontSize: "0.86rem", fontWeight: 700, color: "#166534" }}>
-                          Calculés après pesée par ROUM
-                        </small>
-                      )}
+                      <small style={{ fontSize: "0.84rem", fontWeight: 700, color: "#166534" }}>
+                        Devis complet envoyé par ROUM sur WhatsApp
+                      </small>
                     </span>
                   </div>
                 </div>

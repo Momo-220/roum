@@ -219,6 +219,7 @@ publicRouter.get("/settings", async (c) => {
 });
 
 const quoteRequestSchema = z.object({
+  reference: z.string().max(80).optional(),
   service_type: z.enum(["ALIBABA", "FORWARDING", "GENERAL"]).optional().default("GENERAL"),
   client_name: z.string().min(2, "Le nom est requis").max(120),
   client_phone: phoneSchema,
@@ -228,12 +229,47 @@ const quoteRequestSchema = z.object({
   shipping_mode_id: z.string().max(64).optional(),
   estimated_weight_kg: z.number().positive().max(1_000_000).optional(),
   estimated_cbm: z.number().positive().max(10_000).optional(),
-  cargo_type: z.string().max(1000).optional(),
-  product_url: z.string().max(1000).optional(),
+  cargo_type: z.string().max(2000).optional(),
+  product_url: z.string().max(2000).optional(),
   product_quantity: z.string().max(200).optional(),
-  product_specs: z.string().max(1000).optional(),
+  product_specs: z.string().max(2000).optional(),
   supplier_info: z.string().max(1000).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
+
+function unpackRequestRow(row: any, items: any[] = []) {
+  if (!row) return null;
+  let meta: Record<string, any> = {};
+  if (typeof row.admin_notes === "string" && row.admin_notes.trim().startsWith("{")) {
+    try {
+      const parsed = JSON.parse(row.admin_notes);
+      if (parsed && typeof parsed === "object" && parsed.__roum_meta) {
+        meta = parsed;
+      }
+    } catch {}
+  }
+  const firstItem = items[0] || {};
+  return {
+    ...row,
+    ...meta,
+    id: row.id,
+    reference: row.reference,
+    client_name: row.client_name,
+    client_phone: row.client_phone,
+    client_email: row.client_email,
+    origin_country: row.origin_country,
+    destination_country: row.destination_country,
+    estimated_weight_kg: row.estimated_weight_kg ?? meta.estimated_weight_kg ?? null,
+    estimated_cbm: row.estimated_cbm ?? meta.estimated_cbm ?? null,
+    status: row.status,
+    shipping_mark: row.shipping_mark || meta.shipping_mark || null,
+    product_name: meta.product_name || firstItem.product_name || null,
+    product_url: meta.product_url || firstItem.product_url || "",
+    product_quantity: meta.product_quantity || (firstItem.quantity ? String(firstItem.quantity) : "1"),
+    product_image: meta.product_image || null,
+    items: items.length > 0 ? items : meta.items || [],
+  };
+}
 
 /**
  * 3. Enregistrement d'une demande client (Commande Alibaba ou Fret Transitaire)
@@ -246,7 +282,7 @@ publicRouter.post(
       c.req.header("CF-Connecting-IP") ||
       c.req.header("X-Forwarded-For")?.split(",")[0]?.trim() ||
       "local-ip";
-    const rateCheck = checkRateLimit(`quotes:${clientIp}`, 15, 10 * 60 * 1000);
+    const rateCheck = checkRateLimit(`quotes:${clientIp}`, 30, 10 * 60 * 1000);
     if (!rateCheck.allowed) {
       c.header("Retry-After", String(rateCheck.retryAfterSec));
       return c.json(
@@ -257,26 +293,36 @@ publicRouter.post(
 
     const data = c.req.valid("json");
     
-    // Génération d'une référence explicite selon le service
-    let quoteRef = generateQuoteReference();
-    if (data.service_type === "ALIBABA") {
-      quoteRef = `RM-ALI-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    } else if (data.service_type === "FORWARDING") {
-      quoteRef = `RM-FWD-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    // Génération d'une référence explicite selon le service (ou utilisation de celle du client pour synchro 100%)
+    let quoteRef = data.reference?.trim() || generateQuoteReference();
+    if (!data.reference?.trim()) {
+      if (data.service_type === "ALIBABA") {
+        quoteRef = `RM-ALI-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      } else if (data.service_type === "FORWARDING") {
+        quoteRef = `RM-FWD-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      }
     }
 
     // Formatage descriptif complet dans cargo_type
     let formattedCargo = data.cargo_type || "";
-    if (data.service_type === "ALIBABA") {
-      formattedCargo = `[COMMANDE ALIBABA] Qté: ${data.product_quantity || "1"} | Spécifications: ${data.product_specs || "N/A"} | Lien: ${data.product_url || "Non fourni"}`;
-    } else if (data.service_type === "FORWARDING") {
-      formattedCargo = `[FRET TRANSITAIRE] Marchandises: ${data.cargo_type || "Colis divers"} | Fournisseur: ${data.supplier_info || "Non précisé"}`;
+    if (!formattedCargo) {
+      if (data.service_type === "ALIBABA") {
+        formattedCargo = `Achat Alibaba | Qté: ${data.product_quantity || "1"} | Spécifications: ${data.product_specs || "Standard"}`;
+      } else if (data.service_type === "FORWARDING") {
+        formattedCargo = `Transit Fournisseur | Marchandises: ${data.cargo_type || "Colis divers"} | Fournisseur: ${data.supplier_info || "Non précisé"}`;
+      }
     }
 
     const id = crypto.randomUUID();
+    const metaPayload = JSON.stringify({
+      __roum_meta: true,
+      ...(data.metadata || {}),
+      product_url: data.product_url || data.metadata?.product_url || "",
+      product_quantity: data.product_quantity || data.metadata?.product_quantity || "1",
+    });
 
     await c.env.DB.prepare(`
-      INSERT INTO quote_requests (
+      INSERT OR REPLACE INTO quote_requests (
         id, quote_reference, client_name, client_phone, client_email,
         origin_country, destination_country, shipping_mode_id,
         estimated_weight_kg, estimated_cbm, cargo_type, status
@@ -301,16 +347,18 @@ publicRouter.post(
       : data.service_type === "FORWARDING"
         ? "SUPPLIER_TRANSIT"
         : "PARCEL_SHIPPING";
-    const shippingMark = `ROUM / ${quoteRef} / ${data.client_name.toUpperCase()}`;
+    const shippingMark =
+      (typeof data.metadata?.shipping_mark === "string" && data.metadata.shipping_mark.trim()) ||
+      `ROUM / ${quoteRef} / ${data.client_name.toUpperCase()}`;
 
     try {
       await c.env.DB.prepare(`
-        INSERT INTO customer_requests (
+        INSERT OR REPLACE INTO customer_requests (
           id, reference, client_name, client_phone, client_email,
           request_type, origin_country, destination_country, shipping_mode_id,
           description, estimated_weight_kg, estimated_cbm, supplier_name,
-          shipping_mark, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'NEW')
+          shipping_mark, status, admin_notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'NEW', ?)
       `).bind(
         id,
         quoteRef,
@@ -324,11 +372,12 @@ publicRouter.post(
         formattedCargo,
         data.estimated_weight_kg || null,
         data.estimated_cbm || null,
-        data.supplier_info || null,
-        shippingMark
+        data.supplier_info || data.metadata?.supplier_contact || null,
+        shippingMark,
+        metaPayload
       ).run();
 
-      if (data.service_type === "ALIBABA" && (data.product_url || data.product_specs)) {
+      if (data.service_type === "ALIBABA" && (data.product_url || data.product_specs || data.metadata?.product_name)) {
         await c.env.DB.prepare(`
           INSERT INTO request_items (
             id, request_id, item_index, product_name, product_url,
@@ -337,7 +386,7 @@ publicRouter.post(
         `).bind(
           crypto.randomUUID(),
           id,
-          data.product_specs || "Article Alibaba",
+          data.metadata?.product_name || data.product_specs || "Article Alibaba",
           data.product_url || null,
           parseInt(data.product_quantity || "1", 10) || 1,
           data.product_specs || null
@@ -371,10 +420,105 @@ publicRouter.post(
         warehouse_china: {
           address: "Guangzhou Baiyun Logistics Center, District de Baiyun, Guangzhou, Guangdong, Chine",
           contact_phone: "+86 138 0000 0000",
-          shipping_mark: `ROUM / ${quoteRef} / ${data.client_name.toUpperCase()}`,
+          shipping_mark: shippingMark,
         },
       },
       201
     );
   }
 );
+
+/**
+ * 4. Consultation d'un dossier de commande par sa référence (Étape 2 Bis : Lien de paiement Client)
+ * Connexion Base de données ➔ Client
+ */
+publicRouter.get("/requests/:reference", async (c) => {
+  const ref = (c.req.param("reference") || "").trim();
+  if (!ref) {
+    return c.json({ error: "Référence requise." }, 400);
+  }
+
+  const row = await c.env.DB.prepare(`
+    SELECT * FROM customer_requests WHERE UPPER(reference) = UPPER(?) OR id = ? LIMIT 1
+  `).bind(ref, ref).first<any>();
+
+  if (!row) {
+    return c.json({ error: "Dossier introuvable." }, 404);
+  }
+
+  const { results: items } = await c.env.DB.prepare(`
+    SELECT * FROM request_items WHERE request_id = ? ORDER BY item_index ASC
+  `).bind(row.id).all();
+
+  return c.json({ request: unpackRequestRow(row, items as any[]) });
+});
+
+/**
+ * 5. Enregistrement de la preuve de paiement par le client (Étape 2 Bis)
+ * Connexion Client ➔ Base de données ➔ Admin
+ */
+publicRouter.post("/requests/:reference/payment-proof", async (c) => {
+  const ref = (c.req.param("reference") || "").trim();
+  if (!ref) {
+    return c.json({ error: "Référence requise." }, 400);
+  }
+
+  const body = await c.req.json<any>().catch(() => ({}));
+  const existing = await c.env.DB.prepare(`
+    SELECT * FROM customer_requests WHERE UPPER(reference) = UPPER(?) OR id = ? LIMIT 1
+  `).bind(ref, ref).first<any>();
+
+  let currentMeta: Record<string, any> = { __roum_meta: true };
+  if (existing && typeof existing.admin_notes === "string" && existing.admin_notes.trim().startsWith("{")) {
+    try {
+      const parsed = JSON.parse(existing.admin_notes);
+      if (parsed && typeof parsed === "object") {
+        currentMeta = { ...parsed, __roum_meta: true };
+      }
+    } catch {}
+  }
+
+  const nextMeta = {
+    ...currentMeta,
+    ...(body.fallbackData || {}),
+    payment_method_selected: body.paymentMethod || currentMeta.payment_method_selected || "WAVE",
+    payment_receipt_url: body.receiptUrl || currentMeta.payment_receipt_url || null,
+    payment_receipt_name: body.receiptName || currentMeta.payment_receipt_name || "Preuve de paiement",
+    payment_submitted_at: new Date().toISOString().replace("T", " ").substring(0, 19),
+  };
+
+  if (existing) {
+    const nextStatus = existing.status === "CONVERTED" ? "CONVERTED" : "IN_REVIEW";
+    await c.env.DB.prepare(`
+      UPDATE customer_requests
+      SET status = ?, admin_notes = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(nextStatus, JSON.stringify(nextMeta), existing.id).run();
+
+    const updated = await c.env.DB.prepare(`SELECT * FROM customer_requests WHERE id = ?`).bind(existing.id).first<any>();
+    return c.json({ success: true, request: unpackRequestRow(updated) });
+  } else {
+    const id = crypto.randomUUID();
+    const fb = body.fallbackData || {};
+    await c.env.DB.prepare(`
+      INSERT INTO customer_requests (
+        id, reference, client_name, client_phone, request_type,
+        origin_country, destination_country, description,
+        estimated_weight_kg, estimated_cbm, status, admin_notes
+      ) VALUES (?, ?, ?, ?, 'ALIBABA', 'Chine', ?, ?, ?, ?, 'IN_REVIEW', ?)
+    `).bind(
+      id,
+      ref,
+      fb.clientName || "Client ROUM",
+      fb.clientPhone || "+22500000000",
+      fb.destination || "Côte d'Ivoire",
+      fb.productName || "Commande client",
+      fb.weightKg || null,
+      fb.volumeCbm || null,
+      JSON.stringify(nextMeta)
+    ).run();
+
+    const created = await c.env.DB.prepare(`SELECT * FROM customer_requests WHERE id = ?`).bind(id).first<any>();
+    return c.json({ success: true, request: unpackRequestRow(created) }, 201);
+  }
+});

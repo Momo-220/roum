@@ -11,6 +11,12 @@ export interface PriceTier {
 function decodeHtmlEntities(str: string): string {
   if (!str) return "";
   return str
+    .replace(/&rsquo;/gi, "’")
+    .replace(/&lsquo;/gi, "‘")
+    .replace(/&ldquo;/gi, "“")
+    .replace(/&rdquo;/gi, "”")
+    .replace(/&ndash;/gi, "–")
+    .replace(/&mdash;/gi, "—")
     .replace(/&quot;/gi, '"')
     .replace(/&amp;/gi, "&")
     .replace(/&apos;/gi, "'")
@@ -22,6 +28,7 @@ function decodeHtmlEntities(str: string): string {
     .replace(/&egrave;/gi, "è")
     .replace(/&ecirc;/gi, "ê")
     .replace(/&agrave;/gi, "à")
+    .replace(/&acirc;/gi, "â")
     .replace(/&ccedil;/gi, "ç")
     .replace(/&ocirc;/gi, "ô")
     .replace(/&icirc;/gi, "î")
