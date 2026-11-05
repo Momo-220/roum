@@ -93,7 +93,11 @@ import {
 import {
   buildAdminShipmentWhatsAppUrl,
   buildAdminRequestWhatsAppUrl,
+  buildAdminQuotePaymentWhatsAppUrl,
+  buildAdminPaymentConfirmedTrackingWhatsAppUrl,
+  getPaymentPageUrl,
   getTrackingPageUrl,
+  updateClientRequestAdminQuote,
 } from "@/shared";
 import {
   downloadOfficialReceiptPdf,
@@ -2598,6 +2602,18 @@ export default function AdminPage() {
   const [showConvertRequestModal, setShowConvertRequestModal] = useState<any | null>(null);
   const [showIntakeModal, setShowIntakeModal] = useState<any | null>(null);
   const [showShipmentDetailModal, setShowShipmentDetailModal] = useState<any | null>(null);
+  const [zoomProductImage, setZoomProductImage] = useState<string | null>(null);
+  const [copiedPaymentLink, setCopiedPaymentLink] = useState(false);
+
+  // Devis Admin Étape 2 (Estimation du poids + Calcul du fret + Lien de paiement WhatsApp)
+  const [adminQuoteForm, setAdminQuoteForm] = useState({
+    weight_kg: 2,
+    volume_cbm: 0.1,
+    rate_per_unit: 12000,
+    goods_fcfa: 0,
+    shipping_fcfa: 24000,
+    total_fcfa: 24000,
+  });
 
   // Filtre des paiements
   const [paymentFilter, setPaymentFilter] = useState<"ALL" | "PENDING" | "CONFIRMED" | "CANCELLED">("ALL");
@@ -3264,8 +3280,60 @@ export default function AdminPage() {
     );
   };
 
+  const initAdminQuoteFormForRequest = (reqObj: any) => {
+    const isSea =
+      reqObj?.shipping_mode_type === "SEA" ||
+      String(reqObj?.shipping_mode_name || "").toLowerCase().includes("maritime") ||
+      String(reqObj?.shipping_mode_name || "").toLowerCase().includes("bateau");
+    const modeStr = String(reqObj?.shipping_mode_name || "").toLowerCase();
+    const defaultRate = isSea
+      ? 300000
+      : modeStr.includes("batterie") || modeStr.includes("spécial")
+      ? 14000
+      : modeStr.includes("normal") || modeStr.includes("standard")
+      ? 10000
+      : 12000;
+
+    const wKg = Number(reqObj?.estimated_weight_kg) || 2;
+    const vCbm = Number(reqObj?.estimated_cbm) || 0.1;
+    const goodsFcfa = Number(reqObj?.total_goods_fcfa) || 0;
+    const existingShip = Number(reqObj?.shipping_fee_fcfa) || 0;
+    const calcShip =
+      existingShip > 0
+        ? existingShip
+        : isSea
+        ? Math.round(vCbm * defaultRate)
+        : Math.round(wKg * defaultRate);
+    const totalFcfa = goodsFcfa + calcShip;
+
+    setAdminQuoteForm({
+      weight_kg: wKg,
+      volume_cbm: vCbm,
+      rate_per_unit: defaultRate,
+      goods_fcfa: goodsFcfa,
+      shipping_fcfa: calcShip,
+      total_fcfa: totalFcfa,
+    });
+  };
+
   const handleOpenRequestDetail = async (reqItem: any) => {
-    setShowRequestDetailModal({ ...reqItem, items: reqItem.items || [] });
+    let freshest = { ...reqItem, items: reqItem.items || [] };
+    try {
+      const savedStr = localStorage.getItem("roum_requests_data");
+      if (savedStr) {
+        const list = JSON.parse(savedStr);
+        const match = list.find(
+          (r: any) => (r.id && r.id === reqItem.id) || (r.reference && r.reference === reqItem.reference)
+        );
+        if (match) {
+          freshest = { ...freshest, ...match, items: match.items?.length ? match.items : freshest.items };
+        }
+      }
+    } catch {}
+
+    setShowRequestDetailModal(freshest);
+    initAdminQuoteFormForRequest(freshest);
+
     if (!token) return;
     try {
       const res = await fetch(`/api/admin/requests/${reqItem.id}`, {
@@ -3273,14 +3341,210 @@ export default function AdminPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setShowRequestDetailModal({
-          ...reqItem,
+        const merged = {
           ...data.request,
-          items: data.items || [],
-        });
+          ...freshest,
+          items: freshest.items?.length ? freshest.items : data.items || [],
+        };
+        setShowRequestDetailModal(merged);
+        initAdminQuoteFormForRequest(merged);
       }
     } catch {
       // keep initial
+    }
+  };
+
+  // ÉTAPE 2 (Admin) : Enregistrer l'estimation du poids + devis et ouvrir WhatsApp avec le lien de paiement cliquable
+  const handleSaveQuoteAndSendPaymentWhatsApp = (reqObj: any, openWhatsApp = true) => {
+    if (!reqObj) return;
+    const isSea =
+      reqObj.shipping_mode_type === "SEA" ||
+      String(reqObj.shipping_mode_name || "").toLowerCase().includes("maritime");
+
+    const updatedFields = {
+      estimated_weight_kg: isSea ? null : Number(adminQuoteForm.weight_kg) || 1,
+      estimated_cbm: isSea ? Number(adminQuoteForm.volume_cbm) || 0.1 : null,
+      total_goods_fcfa: Number(adminQuoteForm.goods_fcfa) || 0,
+      shipping_fee_fcfa: Number(adminQuoteForm.shipping_fcfa) || 0,
+      total_amount_fcfa: Number(adminQuoteForm.total_fcfa) || 0,
+      status: reqObj.status === "CONVERTED" ? "CONVERTED" : "QUOTE_SENT",
+    };
+
+    updateClientRequestAdminQuote(reqObj.reference || reqObj.id, {
+      estimatedWeightKg: updatedFields.estimated_weight_kg,
+      estimatedCbm: updatedFields.estimated_cbm,
+      goodsTotalFcfa: updatedFields.total_goods_fcfa,
+      shippingFeeFcfa: updatedFields.shipping_fee_fcfa,
+      totalAmountFcfa: updatedFields.total_amount_fcfa,
+      status: updatedFields.status,
+    });
+
+    const updatedReq = { ...reqObj, ...updatedFields };
+    setShowRequestDetailModal(updatedReq);
+    setRequestsList((prev) =>
+      prev.map((r) =>
+        r.id === reqObj.id || r.reference === reqObj.reference ? { ...r, ...updatedFields } : r
+      )
+    );
+
+    const waUrl = buildAdminQuotePaymentWhatsAppUrl({
+      clientPhone: updatedReq.client_phone || "",
+      clientName: updatedReq.client_name || "Client",
+      reference: updatedReq.reference || "DOSSIER",
+      destination: updatedReq.destination_country || "Côte d'Ivoire",
+      shippingMode: updatedReq.shipping_mode_name || (isSea ? "Voie Maritime" : "Voie Aérienne"),
+      estimatedWeightKg: isSea ? undefined : Number(adminQuoteForm.weight_kg) || 1,
+      estimatedCbm: isSea ? Number(adminQuoteForm.volume_cbm) || 0.1 : undefined,
+      productName: updatedReq.product_name || updatedReq.items?.[0]?.product_name || "Article commandé",
+      productImage:
+        updatedReq.product_image && !updatedReq.product_image.startsWith("data:")
+          ? updatedReq.product_image
+          : undefined,
+      productQuantity: Number(updatedReq.product_quantity || updatedReq.items?.[0]?.quantity || 1),
+      goodsTotalFcfa: Number(adminQuoteForm.goods_fcfa) || 0,
+      shippingFeeFcfa: Number(adminQuoteForm.shipping_fcfa) || 0,
+      totalAmountFcfa: Number(adminQuoteForm.total_fcfa) || 0,
+      waveNumber: companySettings.payment_wave_ci || "+225 07 87 99 44 12",
+      orangeNumber: companySettings.payment_orange_money_ci || "+225 07 00 00 00 00",
+      moroccoRib: `${companySettings.payment_morocco_bank || "CIH Bank"} (${companySettings.payment_morocco_rib || "230 780 0001234567890123 45"})`,
+    });
+
+    triggerToast(
+      `Devis enregistré (${Number(adminQuoteForm.total_fcfa).toLocaleString("fr-FR")} FCFA) !`,
+      "Devis & Lien de Paiement"
+    );
+
+    if (openWhatsApp && typeof window !== "undefined") {
+      window.open(waUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  // ÉTAPE 3 (Admin) : Confirmer l'encaissement, générer le N° de Suivi Officiel (Tracking Number) et créer l'expédition active
+  const handleConfirmEncashmentAndGenerateTracking = (reqObj: any, openWhatsApp = true) => {
+    if (!reqObj) return;
+    const isSea =
+      reqObj.shipping_mode_type === "SEA" ||
+      String(reqObj.shipping_mode_name || "").toLowerCase().includes("maritime");
+
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const officialTracking =
+      reqObj.tracking_number && String(reqObj.tracking_number).startsWith("RM-") && !String(reqObj.tracking_number).startsWith("RM-ALI-")
+        ? reqObj.tracking_number
+        : `RM-${isSea ? "SEA" : "AIR"}-${yy}${mm}-${rand}`;
+
+    const finalWeight = isSea ? null : Number(adminQuoteForm.weight_kg || reqObj.estimated_weight_kg || 2);
+    const finalVolume = isSea ? Number(adminQuoteForm.volume_cbm || reqObj.estimated_cbm || 0.1) : null;
+    const finalTotal = Number(adminQuoteForm.total_fcfa || reqObj.total_amount_fcfa || 0);
+
+    const updatedFields = {
+      tracking_number: officialTracking,
+      status: "CONVERTED",
+      estimated_weight_kg: finalWeight,
+      estimated_cbm: finalVolume,
+      total_goods_fcfa: Number(adminQuoteForm.goods_fcfa || reqObj.total_goods_fcfa || 0),
+      shipping_fee_fcfa: Number(adminQuoteForm.shipping_fcfa || reqObj.shipping_fee_fcfa || 0),
+      total_amount_fcfa: finalTotal,
+    };
+
+    updateClientRequestAdminQuote(reqObj.reference || reqObj.id, {
+      estimatedWeightKg: updatedFields.estimated_weight_kg,
+      estimatedCbm: updatedFields.estimated_cbm,
+      goodsTotalFcfa: updatedFields.total_goods_fcfa,
+      shippingFeeFcfa: updatedFields.shipping_fee_fcfa,
+      totalAmountFcfa: updatedFields.total_amount_fcfa,
+      trackingNumber: officialTracking,
+      status: "CONVERTED",
+    });
+
+    const updatedReq = { ...reqObj, ...updatedFields };
+    setShowRequestDetailModal(updatedReq);
+    setRequestsList((prev) =>
+      prev.map((r) =>
+        r.id === reqObj.id || r.reference === reqObj.reference ? { ...r, ...updatedFields } : r
+      )
+    );
+
+    // Création automatique de l'expédition active pour que le lien /tracking/RM-... fonctionne immédiatement
+    const destParts = String(updatedReq.destination_country || "Côte d'Ivoire — Abidjan").split("—");
+    const destCountryClean = destParts[0]?.trim() || "Côte d'Ivoire";
+    const destCityClean = destParts[1]?.trim() || "Abidjan";
+
+    const newActiveShipment = {
+      id: `ship-${Date.now()}`,
+      tracking_number: officialTracking,
+      reference: updatedReq.reference,
+      client_name: updatedReq.client_name || "Client ROUM",
+      client_phone: updatedReq.client_phone || "",
+      client_country: destCountryClean,
+      client_city: destCityClean,
+      origin_city: isSea ? "Yiwu" : "Guangzhou",
+      origin_country: updatedReq.origin_country || "Chine",
+      destination_city: destCityClean,
+      destination_country: destCountryClean,
+      shipping_mode_name: updatedReq.shipping_mode_name || (isSea ? "Voie Maritime Groupage" : "Voie Aérienne Express"),
+      shipping_mode_type: isSea ? "SEA" : "AIR",
+      current_status: "RECEIVED_AT_HUB",
+      current_status_code: "RECEIVED_AT_ORIGIN",
+      current_status_label: "Paiement confirmé · Colis pris en charge à l'entrepôt Chine",
+      status_label: "Paiement confirmé · Colis pris en charge à l'entrepôt Chine",
+      parcel_count: 1,
+      total_parcels_count: 1,
+      total_weight_kg: finalWeight || 2,
+      total_volume_cbm: finalVolume || 0.05,
+      estimated_price_minor: Math.round(finalTotal * 100),
+      final_price_minor: Math.round(finalTotal * 100),
+      currency: "FCFA",
+      payment_status: "PAID",
+      product_name: updatedReq.product_name,
+      product_image: updatedReq.product_image,
+      product_url: updatedReq.product_url,
+      shipping_mark: updatedReq.shipping_mark,
+      created_at: new Date().toISOString().replace("T", " ").substring(0, 19),
+      parcels: [
+        {
+          id: `p-${Date.now()}`,
+          package_label: updatedReq.product_name || `Dossier ${updatedReq.reference}`,
+          weight_kg: finalWeight || 2,
+          volume_cbm: finalVolume || 0.05,
+          description: updatedReq.description || updatedReq.product_name || "Marchandise commandée",
+        },
+      ],
+    };
+
+    setShipments((prev) => {
+      const existsIdx = prev.findIndex((s) => s.tracking_number === officialTracking);
+      const next =
+        existsIdx >= 0
+          ? prev.map((s, idx) => (idx === existsIdx ? { ...s, ...newActiveShipment } : s))
+          : [newActiveShipment, ...prev];
+      try {
+        localStorage.setItem("roum_shipments_data", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    triggerToast(
+      `Encaissement confirmé ! N° de Suivi officiel attribué : ${officialTracking}`,
+      "Suivi Colis Actif"
+    );
+
+    if (openWhatsApp && typeof window !== "undefined") {
+      const waUrl = buildAdminPaymentConfirmedTrackingWhatsAppUrl({
+        clientPhone: updatedReq.client_phone || "",
+        clientName: updatedReq.client_name || "Client",
+        reference: updatedReq.reference || "DOSSIER",
+        trackingNumber: officialTracking,
+        shippingMark: updatedReq.shipping_mark,
+        destination: updatedReq.destination_country || "Côte d'Ivoire",
+        shippingMode: updatedReq.shipping_mode_name || (isSea ? "Voie Maritime" : "Voie Aérienne"),
+        weightOrVolume: isSea ? `${finalVolume} m³` : `${finalWeight} kg`,
+        productName: updatedReq.product_name || "Article commandé",
+        totalAmountFcfa: finalTotal,
+      });
+      window.open(waUrl, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -6676,11 +6940,11 @@ export default function AdminPage() {
               <table className="table-clean">
                 <thead>
                   <tr>
-                    <th style={{ borderTopLeftRadius: "10px" }}>Référence</th>
+                    <th style={{ borderTopLeftRadius: "10px" }}>Dossier &amp; Article</th>
                     <th>Type</th>
                     <th>Client</th>
-                    <th>Trajet</th>
-                    <th>Poids / Vol.</th>
+                    <th>Trajet &amp; Mode</th>
+                    <th>Poids &amp; Devis ROUM</th>
                     <th>Statut</th>
                     <th className="col-right" style={{ borderTopRightRadius: "10px" }}>Action</th>
                   </tr>
@@ -6695,49 +6959,141 @@ export default function AdminPage() {
                         !searchTerm ||
                         r.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         r.client_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        r.client_phone?.includes(searchTerm)
+                        r.client_phone?.includes(searchTerm) ||
+                        r.product_name?.toLowerCase().includes(searchTerm.toLowerCase())
                       );
                     })
                     .map((r) => (
                       <tr key={r.id} className="table-row-clean">
                         <td>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            {r.product_image && (
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            {r.product_image ? (
                               <img
                                 src={r.product_image}
-                                alt="Produit"
-                                style={{ width: "26px", height: "26px", borderRadius: "5px", objectFit: "cover", flexShrink: 0, border: "1px solid var(--border-light)" }}
-                              />
-                            )}
-                            <div>
-                              <button
-                                type="button"
+                                alt={r.product_name || "Produit"}
                                 onClick={() => handleOpenRequestDetail(r)}
-                                className="tabular-nums"
                                 style={{
-                                  background: "none",
-                                  border: "none",
-                                  color: "var(--brown-dark)",
-                                  fontWeight: "800",
-                                  fontSize: "0.79rem",
+                                  width: "44px",
+                                  height: "44px",
+                                  borderRadius: "8px",
+                                  objectFit: "contain",
+                                  background: "#FFFFFF",
+                                  flexShrink: 0,
+                                  border: "1px solid var(--border-light)",
                                   cursor: "pointer",
-                                  padding: 0,
-                                  fontFamily: "inherit",
-                                  textAlign: "left",
-                                  whiteSpace: "nowrap",
-                                  display: "block",
                                 }}
-                                title="Voir les détails et articles"
+                                title="Cliquez pour voir la photo et tous les détails"
+                              />
+                            ) : (
+                              <div
+                                onClick={() => handleOpenRequestDetail(r)}
+                                style={{
+                                  width: "44px",
+                                  height: "44px",
+                                  borderRadius: "8px",
+                                  background: "var(--bg-app)",
+                                  border: "1px dashed var(--border-light)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flexShrink: 0,
+                                  cursor: "pointer",
+                                  color: "var(--text-muted)",
+                                }}
                               >
-                                {r.reference}
-                              </button>
-                              {r.payment_receipt_url && (
-                                <span style={{ fontSize: "0.68rem", color: "#166534", background: "#DCFCE7", padding: "2px 6px", borderRadius: "9999px", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "3px" }}>
-                                  {r.payment_receipt_url.startsWith("data:video") || /\.(mp4|mov|webm)$/i.test(r.payment_receipt_url)
-                                    ? "📹 Vidéo"
-                                    : "🖼️ Reçu"}
-                                </span>
-                              )}
+                                <Package size={18} />
+                              </div>
+                            )}
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenRequestDetail(r)}
+                                  className="tabular-nums"
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    color: "var(--brown-dark)",
+                                    fontWeight: "800",
+                                    fontSize: "0.8rem",
+                                    cursor: "pointer",
+                                    padding: 0,
+                                    fontFamily: "inherit",
+                                    textAlign: "left",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                  title="Ouvrir le dossier complet"
+                                >
+                                  {r.reference}
+                                </button>
+                                {r.tracking_number && (
+                                  <Link
+                                    href={`/tracking/${r.tracking_number}`}
+                                    target="_blank"
+                                    style={{
+                                      fontSize: "0.66rem",
+                                      color: "#0F766E",
+                                      background: "#CCFBF1",
+                                      padding: "1px 6px",
+                                      borderRadius: "9999px",
+                                      fontWeight: 800,
+                                      textDecoration: "none",
+                                    }}
+                                    title="N° de suivi actif (cliquable)"
+                                  >
+                                    📦 {r.tracking_number}
+                                  </Link>
+                                )}
+                                {r.payment_receipt_url && (
+                                  <span
+                                    style={{
+                                      fontSize: "0.66rem",
+                                      color: "#166534",
+                                      background: "#DCFCE7",
+                                      padding: "1px 6px",
+                                      borderRadius: "9999px",
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    {r.payment_receipt_url.startsWith("data:video") || /\.(mp4|mov|webm)$/i.test(r.payment_receipt_url)
+                                      ? "📹 Preuve vidéo"
+                                      : "🖼️ Preuve reçue"}
+                                  </span>
+                                )}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: "0.75rem",
+                                  color: "var(--text-main)",
+                                  fontWeight: 600,
+                                  maxWidth: "220px",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  marginTop: "2px",
+                                }}
+                                title={r.product_name || r.items?.[0]?.product_name || r.description}
+                              >
+                                {r.product_name || r.items?.[0]?.product_name || "Article commandé"}
+                              </div>
+                              <div style={{ fontSize: "0.69rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span>Qté: {r.product_quantity || r.items?.[0]?.quantity || 1} pcs</span>
+                                {r.unit_price ? (
+                                  <span>
+                                    · {r.unit_price} {r.unit_price_currency || "USD"}
+                                  </span>
+                                ) : null}
+                                {r.product_url && (
+                                  <a
+                                    href={r.product_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ color: "#2563EB", textDecoration: "underline", fontWeight: 700 }}
+                                  >
+                                    Lien ↗
+                                  </a>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -6758,16 +7114,44 @@ export default function AdminPage() {
                             <CircularFlag countryName={r.destination_country || "Afrique"} size={14} />
                             <strong style={{ color: "var(--brown-dark)" }}>{r.destination_country || "Afrique"}</strong>
                           </div>
+                          {r.shipping_mode_name && (
+                            <div style={{ fontSize: "0.69rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                              {r.shipping_mode_name}
+                            </div>
+                          )}
                         </td>
                         <td className="tabular-nums">
-                          <div style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "0.8rem" }}>
-                            {r.estimated_weight_kg ? `${r.estimated_weight_kg} kg` : "—"}
-                          </div>
-                          {r.estimated_cbm ? (
-                            <div style={{ fontSize: "0.71rem", color: "var(--text-muted)" }}>
-                              {r.estimated_cbm} m³
+                          {r.estimated_weight_kg || r.estimated_cbm ? (
+                            <div>
+                              <div style={{ fontWeight: "800", color: "#166534", fontSize: "0.8rem" }}>
+                                {r.estimated_weight_kg ? `${r.estimated_weight_kg} kg` : `${r.estimated_cbm} m³`}
+                              </div>
+                              {r.total_amount_fcfa ? (
+                                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--brown-dark)" }}>
+                                  {Number(r.total_amount_fcfa).toLocaleString("fr-FR")} FCFA
+                                </div>
+                              ) : null}
                             </div>
-                          ) : null}
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenRequestDetail(r)}
+                              style={{
+                                background: "#FEF3C7",
+                                color: "#92400E",
+                                border: "1px solid rgba(245, 158, 11, 0.35)",
+                                borderRadius: "9999px",
+                                padding: "3px 9px",
+                                fontSize: "0.7rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                              }}
+                              title="Cliquez pour estimer le poids et envoyer le lien de paiement au client"
+                            >
+                              ⚖️ Estimer poids &amp; devis
+                            </button>
+                          )}
                         </td>
                         <td>
                           {(() => {
@@ -6805,7 +7189,7 @@ export default function AdminPage() {
                                 <option value="NEW" style={{ background: "#FFFFFF", color: "#111827" }}>NOUVEAU</option>
                                 <option value="IN_REVIEW" style={{ background: "#FFFFFF", color: "#111827" }}>EN ANALYSE</option>
                                 <option value="QUOTE_SENT" style={{ background: "#FFFFFF", color: "#111827" }}>DEVIS ENVOYÉ</option>
-                                <option value="CONVERTED" style={{ background: "#FFFFFF", color: "#111827" }}>CONVERTI</option>
+                                <option value="CONVERTED" style={{ background: "#FFFFFF", color: "#111827" }}>PAYÉ &amp; SUIVI ACTIF</option>
                                 <option value="CLOSED" style={{ background: "#FFFFFF", color: "#111827" }}>CLÔTURÉ</option>
                                 <option value="CANCELLED" style={{ background: "#FFFFFF", color: "#111827" }}>ANNULÉ</option>
                               </select>
@@ -6816,52 +7200,62 @@ export default function AdminPage() {
                           <div style={{ display: "inline-flex", gap: "6px", alignItems: "center", justifyContent: "flex-end" }}>
                             <button
                               type="button"
+                              onClick={() => handleOpenRequestDetail(r)}
+                              className="btn btn-primary"
+                              style={{ padding: "4px 10px", fontSize: "0.73rem", height: "28px" }}
+                            >
+                              Voir tout &amp; Devis
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => setEditingRequest(r)}
                               className="btn-icon-clean"
                               title="Modifier la demande"
                             >
                               <Edit3 size={13} />
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenRequestDetail(r)}
-                              className="btn btn-secondary"
-                              style={{ padding: "4px 10px", fontSize: "0.73rem", height: "28px" }}
-                            >
-                              Articles
-                            </button>
-                            {r.status !== "CONVERTED" && r.status !== "CANCELLED" && (
-                              <button
-                                type="button"
-                                onClick={() => handleOpenConvertModal(r)}
-                                className="btn btn-primary"
-                                style={{ padding: "4px 10px", fontSize: "0.73rem", height: "28px" }}
-                              >
-                                Convertir
-                              </button>
-                            )}
                             <a
-                              href={buildAdminRequestWhatsAppUrl({
-                                clientPhone: r.client_phone || "",
-                                clientName: r.client_name || "Client",
-                                reference: r.reference || "",
-                                trackingNumber: r.tracking_number || r.reference || "",
-                                shippingMark: r.shipping_mark,
-                                destination: r.destination_country,
-                                productName: r.product_name || r.cargo_type,
-                                totalAmountFcfa: r.total_amount_fcfa,
-                                rmbAmount: r.rmb_amount || r.paid_to_supplier,
-                                statusLabel:
-                                  r.status === "CONVERTED"
-                                    ? "Converti en expédition active"
-                                    : r.status === "QUOTE_SENT"
-                                    ? "Devis validé & en cours"
-                                    : "Dossier pris en charge par notre équipe",
-                              })}
+                              href={
+                                r.tracking_number
+                                  ? buildAdminPaymentConfirmedTrackingWhatsAppUrl({
+                                      clientPhone: r.client_phone || "",
+                                      clientName: r.client_name || "Client",
+                                      reference: r.reference || "",
+                                      trackingNumber: r.tracking_number,
+                                      shippingMark: r.shipping_mark,
+                                      destination: r.destination_country || "Côte d'Ivoire",
+                                      shippingMode: r.shipping_mode_name || "Voie Aérienne",
+                                      weightOrVolume: r.estimated_weight_kg ? `${r.estimated_weight_kg} kg` : r.estimated_cbm ? `${r.estimated_cbm} m³` : "Estimé",
+                                      productName: r.product_name || "Article commandé",
+                                      totalAmountFcfa: Number(r.total_amount_fcfa || 0),
+                                    })
+                                  : buildAdminQuotePaymentWhatsAppUrl({
+                                      clientPhone: r.client_phone || "",
+                                      clientName: r.client_name || "Client",
+                                      reference: r.reference || "",
+                                      destination: r.destination_country || "Côte d'Ivoire",
+                                      shippingMode: r.shipping_mode_name || "Voie Aérienne",
+                                      estimatedWeightKg: r.estimated_weight_kg || 2,
+                                      estimatedCbm: r.estimated_cbm || undefined,
+                                      productName: r.product_name || "Article commandé",
+                                      productImage: r.product_image && !r.product_image.startsWith("data:") ? r.product_image : undefined,
+                                      productQuantity: Number(r.product_quantity || 1),
+                                      goodsTotalFcfa: Number(r.total_goods_fcfa || 0),
+                                      shippingFeeFcfa: Number(r.shipping_fee_fcfa || 0),
+                                      totalAmountFcfa: Number(r.total_amount_fcfa || 0),
+                                      waveNumber: companySettings.payment_wave_ci || "+225 07 87 99 44 12",
+                                      orangeNumber: companySettings.payment_orange_money_ci || "+225 07 00 00 00 00",
+                                      moroccoRib: `${companySettings.payment_morocco_bank || "CIH Bank"} (${companySettings.payment_morocco_rib || "230 780 0001234567890123 45"})`,
+                                    })
+                              }
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none", flexShrink: 0 }}
-                              title="Envoyer un message WhatsApp détaillé avec lien de suivi cliquable"
+                              title={
+                                r.tracking_number
+                                  ? "Envoyer le N° de Suivi cliquable sur WhatsApp"
+                                  : "Envoyer le Devis & Lien de Paiement sur WhatsApp"
+                              }
                             >
                               <WhatsAppLogo size={28} />
                             </a>
@@ -10822,20 +11216,51 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* MODALE : DÉTAIL D'UNE COMMANDE & ARTICLES COMMANDÉS */}
+      {/* MODALE : DÉTAIL COMPLET D'UNE COMMANDE CLIENT + ÉTAPE 2 (POIDS & LIEN DE PAIEMENT) + ÉTAPE 3 (ENCAISSEMENT & TRACKING) */}
       {showRequestDetailModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
-          <div className="card-clean" style={{ maxWidth: "680px", width: "100%", padding: "28px", maxHeight: "90vh", overflowY: "auto" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+          <div className="card-clean" style={{ maxWidth: "760px", width: "100%", padding: "26px", maxHeight: "92vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
               <div>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <h3 style={{ fontSize: "1.2rem", margin: 0 }}>Commande {showRequestDetailModal.reference}</h3>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                  <h3 style={{ fontSize: "1.2rem", margin: 0 }}>Dossier {showRequestDetailModal.reference}</h3>
                   <span className="badge-clean badge-draft">
                     {formatRequestType(showRequestDetailModal.request_type)}
                   </span>
+                  {showRequestDetailModal.tracking_number ? (
+                    <Link
+                      href={`/tracking/${showRequestDetailModal.tracking_number}`}
+                      target="_blank"
+                      style={{
+                        background: "#CCFBF1",
+                        color: "#0F766E",
+                        padding: "3px 10px",
+                        borderRadius: "9999px",
+                        fontSize: "0.74rem",
+                        fontWeight: 800,
+                        textDecoration: "none",
+                      }}
+                    >
+                      ✓ Suivi actif : {showRequestDetailModal.tracking_number} ↗
+                    </Link>
+                  ) : (
+                    <span
+                      style={{
+                        background: "#FEF3C7",
+                        color: "#92400E",
+                        padding: "3px 10px",
+                        borderRadius: "9999px",
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                      }}
+                    >
+                      En attente d&apos;encaissement (Sans N° de suivi actif)
+                    </span>
+                  )}
                 </div>
-                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "4px" }}>
-                  Client : <strong>{showRequestDetailModal.client_name}</strong> ({showRequestDetailModal.client_phone})
+                <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginTop: "4px" }}>
+                  Client : <strong style={{ color: "var(--text-main)" }}>{showRequestDetailModal.client_name}</strong> · WhatsApp :{" "}
+                  <strong style={{ color: "var(--brown-dark)" }}>{showRequestDetailModal.client_phone}</strong>
                 </div>
               </div>
               <button
@@ -10847,95 +11272,226 @@ export default function AdminPage() {
               </button>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "var(--bg-app)", padding: "14px", borderRadius: "10px", marginBottom: "16px", fontSize: "0.82rem" }}>
-              <div>
-                <span style={{ color: "var(--text-muted)", display: "block", marginBottom: "3px" }}>Liaison souhaitée :</span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                  <CircularFlag countryName={showRequestDetailModal.origin_country || "Chine"} size={14} />
-                  <strong>{showRequestDetailModal.origin_country || "Chine"}</strong>
-                  <span style={{ color: "var(--brown-light)", fontSize: "0.7rem" }}>➔</span>
-                  <CircularFlag countryName={showRequestDetailModal.destination_country || "Mali"} size={14} />
-                  <strong>{showRequestDetailModal.destination_country || "Mali"}</strong>
-                </span>
+            {/* SECTION A : TOUT CE QUE LE CLIENT A ENVOYÉ (PRODUIT, PHOTO, LIEN, QUANTITÉ, PRIX, TRANSPORT) */}
+            <div
+              style={{
+                background: "#FAF8F5",
+                border: "1.5px solid rgba(197, 162, 101, 0.4)",
+                borderRadius: "16px",
+                padding: "16px",
+                marginBottom: "18px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.72rem",
+                  fontWeight: 800,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  color: "var(--brown-dark)",
+                  marginBottom: "12px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span>📦 1. Informations complètes envoyées par le client</span>
+                <span>{showRequestDetailModal.created_at?.substring(0, 16) || "Aujourd'hui"}</span>
               </div>
-              <div>
-                <span style={{ color: "var(--text-muted)", display: "block" }}>Poids / Volume estimé :</span>
-                <strong>
-                  {showRequestDetailModal.estimated_weight_kg ? `${showRequestDetailModal.estimated_weight_kg} kg` : "Non spécifié"}
-                  {showRequestDetailModal.estimated_cbm ? ` · ${showRequestDetailModal.estimated_cbm} m³` : ""}
-                </strong>
-              </div>
-            </div>
 
-            {(showRequestDetailModal.supplier_name || showRequestDetailModal.shipping_mark || showRequestDetailModal.paid_to_supplier || showRequestDetailModal.tracking_number) && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "var(--bg-app)", padding: "14px", borderRadius: "10px", marginBottom: "16px", fontSize: "0.82rem", border: "1px dashed var(--border-light)" }}>
-                {showRequestDetailModal.supplier_name && (
-                  <div>
-                    <span style={{ color: "var(--text-muted)", display: "block" }}>Fournisseur déclaré :</span>
-                    <strong style={{ color: "var(--text-main)" }}>{showRequestDetailModal.supplier_name}</strong>
-                  </div>
-                )}
-                {showRequestDetailModal.paid_to_supplier && (
-                  <div>
-                    <span style={{ color: "var(--text-muted)", display: "block" }}>Montant payé au fournisseur :</span>
-                    <strong style={{ color: "#16A34A" }}>{showRequestDetailModal.paid_to_supplier}</strong>
-                  </div>
-                )}
-                {showRequestDetailModal.shipping_mark && (
-                  <div>
-                    <span style={{ color: "var(--text-muted)", display: "block" }}>Code client (Shipping Mark) :</span>
-                    <strong style={{ color: "var(--brown-dark)", fontFamily: "monospace" }}>{showRequestDetailModal.shipping_mark}</strong>
-                  </div>
-                )}
-                {showRequestDetailModal.tracking_number && (
-                  <div>
-                    <span style={{ color: "var(--text-muted)", display: "block" }}>N° de Suivi attribué :</span>
-                    <strong style={{ color: "#2563EB", fontFamily: "monospace" }}>{showRequestDetailModal.tracking_number}</strong>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Fiche visuelle produit Alibaba détecté */}
-            {showRequestDetailModal.product_image && (
-              <div style={{ display: "flex", gap: "14px", alignItems: "center", background: "#FAF8F5", padding: "12px 14px", borderRadius: "12px", marginBottom: "16px", border: "1px solid var(--border-light)" }}>
-                <img
-                  src={showRequestDetailModal.product_image}
-                  alt={showRequestDetailModal.product_name || "Produit"}
-                  style={{ width: "64px", height: "64px", objectFit: "cover", borderRadius: "8px", border: "1px solid var(--border-light)" }}
-                />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: "0.9rem", color: "var(--brown-dark)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {showRequestDetailModal.product_name || "Article commandé"}
-                  </div>
-                  {showRequestDetailModal.total_amount_fcfa && (
-                    <div style={{ fontSize: "0.82rem", color: "#CC4E16", fontWeight: 700, marginTop: "2px" }}>
-                      Montant calculé : {showRequestDetailModal.total_amount_fcfa.toLocaleString("fr-FR")} FCFA
-                    </div>
-                  )}
-                  {showRequestDetailModal.product_url && (
-                    <a
-                      href={showRequestDetailModal.product_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ fontSize: "0.74rem", color: "#2563EB", textDecoration: "underline", display: "inline-block", marginTop: "2px" }}
+              <div style={{ display: "flex", gap: "16px", alignItems: "flex-start", flexWrap: "wrap", marginBottom: "14px" }}>
+                {showRequestDetailModal.product_image ? (
+                  <div
+                    onClick={() => setZoomProductImage(showRequestDetailModal.product_image)}
+                    style={{
+                      width: "110px",
+                      height: "110px",
+                      borderRadius: "14px",
+                      overflow: "hidden",
+                      border: "1px solid var(--border-light)",
+                      background: "#FFFFFF",
+                      flexShrink: 0,
+                      cursor: "zoom-in",
+                      position: "relative",
+                      boxShadow: "0 3px 10px rgba(0,0,0,0.06)",
+                    }}
+                    title="Cliquez pour agrandir la photo du produit en plein écran"
+                  >
+                    <img
+                      src={showRequestDetailModal.product_image}
+                      alt={showRequestDetailModal.product_name || "Produit"}
+                      style={{ width: "100%", height: "100%", objectFit: "contain", padding: "4px" }}
+                    />
+                    <span
+                      style={{
+                        position: "absolute",
+                        bottom: "4px",
+                        right: "4px",
+                        background: "rgba(28,24,21,0.75)",
+                        color: "#FFF",
+                        fontSize: "0.62rem",
+                        padding: "2px 6px",
+                        borderRadius: "9999px",
+                        fontWeight: 700,
+                      }}
                     >
-                      Voir l&apos;article sur la plateforme fournisseur ↗
-                    </a>
-                  )}
+                      Agrandir
+                    </span>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      width: "110px",
+                      height: "110px",
+                      borderRadius: "14px",
+                      border: "1px dashed var(--border-light)",
+                      background: "#FFFFFF",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--text-muted)",
+                      fontSize: "0.72rem",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Package size={24} />
+                    <span>Aucune photo</span>
+                  </div>
+                )}
+
+                <div style={{ flex: 1, minWidth: "240px" }}>
+                  <div style={{ fontWeight: 800, fontSize: "0.98rem", color: "#1C1815", lineHeight: 1.35, marginBottom: "6px" }}>
+                    {showRequestDetailModal.product_name ||
+                      showRequestDetailModal.items?.[0]?.product_name ||
+                      "Article commandé"}
+                  </div>
+
+                  {showRequestDetailModal.product_url ? (
+                    <div style={{ marginBottom: "8px" }}>
+                      <a
+                        href={showRequestDetailModal.product_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          fontSize: "0.78rem",
+                          fontWeight: 700,
+                          color: "#2563EB",
+                          background: "#EFF6FF",
+                          padding: "4px 10px",
+                          borderRadius: "9999px",
+                          textDecoration: "none",
+                        }}
+                      >
+                        <ExternalLink size={12} />
+                        <span>Ouvrir le lien exact de l&apos;article (Alibaba / 1688)</span>
+                      </a>
+                    </div>
+                  ) : null}
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                      gap: "8px",
+                      background: "#FFFFFF",
+                      padding: "10px 12px",
+                      borderRadius: "10px",
+                      border: "1px solid var(--border-light)",
+                      fontSize: "0.78rem",
+                    }}
+                  >
+                    <div>
+                      <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.7rem" }}>Quantité souhaitée</span>
+                      <strong style={{ color: "#1C1815", fontSize: "0.86rem" }}>
+                        {showRequestDetailModal.product_quantity ||
+                          showRequestDetailModal.items?.[0]?.quantity ||
+                          1}{" "}
+                        pcs
+                      </strong>
+                    </div>
+                    <div>
+                      <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.7rem" }}>Prix unitaire usine</span>
+                      <strong style={{ color: "#C2410C", fontSize: "0.86rem" }}>
+                        {showRequestDetailModal.unit_price
+                          ? `${Number(showRequestDetailModal.unit_price).toLocaleString("fr-FR")} ${showRequestDetailModal.unit_price_currency || "USD"}`
+                          : "Sur devis"}
+                      </strong>
+                    </div>
+                    <div>
+                      <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.7rem" }}>Sous-total Marchandises</span>
+                      <strong style={{ color: "#166534", fontSize: "0.86rem" }}>
+                        {showRequestDetailModal.total_goods_fcfa
+                          ? `${Number(showRequestDetailModal.total_goods_fcfa).toLocaleString("fr-FR")} FCFA`
+                          : showRequestDetailModal.paid_to_supplier || "À chiffrer"}
+                      </strong>
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
 
-            {/* Preuve de paiement client téléversée (Image ou Vidéo) */}
-            {showRequestDetailModal.payment_receipt_url && (
-              <div style={{ background: "#F0FDF4", border: "1.5px solid #86EFAC", padding: "16px", borderRadius: "14px", marginBottom: "18px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                  <span style={{ fontSize: "0.84rem", fontWeight: "800", color: "#166534", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                    <CheckCircle2 size={16} />
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                  gap: "10px",
+                  background: "#FFFFFF",
+                  padding: "10px 12px",
+                  borderRadius: "10px",
+                  border: "1px solid var(--border-light)",
+                  fontSize: "0.8rem",
+                }}
+              >
+                <div>
+                  <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.7rem" }}>Destination choisie</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontWeight: 700 }}>
+                    <CircularFlag countryName={showRequestDetailModal.origin_country || "Chine"} size={13} />
+                    <span>{showRequestDetailModal.origin_country || "Chine"}</span>
+                    <span>➔</span>
+                    <CircularFlag countryName={showRequestDetailModal.destination_country || "Côte d'Ivoire"} size={13} />
+                    <span>{showRequestDetailModal.destination_country || "Côte d'Ivoire"}</span>
+                  </span>
+                </div>
+                <div>
+                  <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.7rem" }}>Moyen de transport souhaité</span>
+                  <strong>{showRequestDetailModal.shipping_mode_name || showRequestDetailModal.shipping_mode_type || "Voie Aérienne"}</strong>
+                </div>
+                {showRequestDetailModal.shipping_mark && (
+                  <div>
+                    <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.7rem" }}>Shipping Mark</span>
+                    <strong style={{ fontFamily: "monospace", color: "var(--brown-dark)" }}>{showRequestDetailModal.shipping_mark}</strong>
+                  </div>
+                )}
+                {(showRequestDetailModal.supplier_name || showRequestDetailModal.paid_to_supplier) && (
+                  <div>
+                    <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.7rem" }}>Infos Fournisseur (Option 2)</span>
+                    <strong>
+                      {showRequestDetailModal.paid_to_supplier ? `Payé: ${showRequestDetailModal.paid_to_supplier} ` : ""}
+                      {showRequestDetailModal.supplier_name ? `(${showRequestDetailModal.supplier_name})` : ""}
+                    </strong>
+                  </div>
+                )}
+              </div>
+
+              {showRequestDetailModal.description && (
+                <div style={{ marginTop: "10px", fontSize: "0.78rem", color: "var(--text-secondary)", background: "#FFFFFF", padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-light)" }}>
+                  <strong>Note / Récapitulatif :</strong> {showRequestDetailModal.description}
+                </div>
+              )}
+            </div>
+
+            {/* SECTION B : PREUVE DE PAIEMENT DU CLIENT (SI DÉJÀ TÉLÉVERSÉE) */}
+            {showRequestDetailModal.payment_receipt_url ? (
+              <div style={{ background: "#F0FDF4", border: "2px solid #22C55E", padding: "16px", borderRadius: "16px", marginBottom: "18px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "8px" }}>
+                  <span style={{ fontSize: "0.86rem", fontWeight: "800", color: "#166534", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    <CheckCircle2 size={18} />
                     {showRequestDetailModal.payment_receipt_url.startsWith("data:video") || /\.(mp4|mov|webm|ogg)$/i.test(showRequestDetailModal.payment_receipt_url)
-                      ? "📹 Preuve Vidéo de Paiement"
-                      : "🖼️ Preuve Reçu de Paiement"}{" "}
+                      ? "📹 Preuve Vidéo de Paiement reçue du client"
+                      : "🖼️ Preuve de Paiement reçue du client"}{" "}
                     ({showRequestDetailModal.payment_method_selected?.toUpperCase() || "MOBILE MONEY"})
                   </span>
                   <a
@@ -10946,7 +11502,7 @@ export default function AdminPage() {
                     className="btn btn-secondary"
                     style={{ padding: "4px 10px", fontSize: "0.74rem", background: "#FFFFFF" }}
                   >
-                    Ouvrir / Agrandir ↗
+                    Télécharger / Ouvrir ↗
                   </a>
                 </div>
 
@@ -10955,13 +11511,14 @@ export default function AdminPage() {
                     src={showRequestDetailModal.payment_receipt_url}
                     controls
                     playsInline
-                    style={{ width: "100%", maxHeight: "280px", borderRadius: "10px", border: "1px solid #BBF7D0", background: "#000", display: "block" }}
+                    style={{ width: "100%", maxHeight: "260px", borderRadius: "10px", border: "1px solid #BBF7D0", background: "#000", display: "block" }}
                   />
                 ) : showRequestDetailModal.payment_receipt_url.startsWith("data:image") || /\.(png|jpg|jpeg|webp|gif)$/i.test(showRequestDetailModal.payment_receipt_url) ? (
                   <img
                     src={showRequestDetailModal.payment_receipt_url}
                     alt="Reçu de paiement"
-                    style={{ maxHeight: "240px", borderRadius: "10px", border: "1px solid #BBF7D0", display: "block", objectFit: "contain" }}
+                    onClick={() => setZoomProductImage(showRequestDetailModal.payment_receipt_url)}
+                    style={{ maxHeight: "220px", borderRadius: "10px", border: "1px solid #BBF7D0", display: "block", objectFit: "contain", cursor: "zoom-in", background: "#FFFFFF" }}
                   />
                 ) : (
                   <div style={{ fontSize: "0.82rem", color: "#15803D" }}>
@@ -10969,83 +11526,248 @@ export default function AdminPage() {
                   </div>
                 )}
               </div>
-            )}
-
-            {showRequestDetailModal.description && (
-              <div style={{ marginBottom: "16px" }}>
-                <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", fontWeight: "700", marginBottom: "4px" }}>Description du besoin :</div>
-                <div style={{ fontSize: "0.84rem", background: "var(--bg-app)", padding: "12px", borderRadius: "8px", color: "var(--text-main)", lineHeight: 1.5 }}>
-                  {showRequestDetailModal.description}
-                </div>
+            ) : (
+              <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", padding: "12px 14px", borderRadius: "12px", marginBottom: "18px", fontSize: "0.8rem", color: "#92400E" }}>
+                ⏳ <strong>Aucune preuve de paiement jointe pour le moment.</strong> Estimez le poids ci-dessous et envoyez le lien de paiement sur WhatsApp au client pour qu&apos;il règle et téléverse son reçu.
               </div>
             )}
 
-            {/* Articles & Marchandises commandés */}
-            <div style={{ marginBottom: "20px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                <h4 style={{ fontSize: "0.92rem", fontWeight: "700", margin: 0 }}>Articles demandés ({showRequestDetailModal.items?.length || 0})</h4>
+            {/* SECTION C : ÉTAPE 2 (ADMIN) — ESTIMER LE POIDS, FAIRE LE DEVIS & ENVOYER LE LIEN DE PAIEMENT PAR WHATSAPP */}
+            <div
+              style={{
+                background: "#FFFFFF",
+                border: "1.5px solid var(--border-light)",
+                borderRadius: "16px",
+                padding: "16px",
+                marginBottom: "18px",
+                boxShadow: "0 4px 14px rgba(0,0,0,0.03)",
+              }}
+            >
+              <div style={{ fontSize: "0.76rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#1C1815", marginBottom: "10px" }}>
+                ⚖️ 2. Étape Admin : Estimer le Poids, Calculer le Devis &amp; Envoyer le Lien de Paiement
               </div>
 
-              {showRequestDetailModal.items && showRequestDetailModal.items.length > 0 ? (
-                <div style={{ overflowX: "auto", border: "1px solid var(--border-light)", borderRadius: "12px" }}>
-                  <table className="table-clean">
-                    <thead>
-                      <tr>
-                        <th>Article</th>
-                        <th>Quantité</th>
-                        <th>Variantes</th>
-                        <th className="col-right">Lien Fournisseur</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {showRequestDetailModal.items.map((it: any, idx: number) => (
-                        <tr key={it.id || idx} className="table-row-clean">
-                          <td style={{ fontWeight: "700", color: "var(--text-main)" }}>
-                            {it.product_name}
-                          </td>
-                          <td className="tabular-nums" style={{ fontWeight: "600" }}>
-                            {it.quantity} pcs
-                          </td>
-                          <td style={{ color: "var(--text-secondary)", maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {it.variants_description || "—"}
-                          </td>
-                          <td className="col-right">
-                            {it.product_url ? (
-                              <a
-                                href={it.product_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ color: "var(--brown-dark)", fontWeight: "700", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                              >
-                                Ouvrir <ExternalLink size={11} />
-                              </a>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", padding: "14px", background: "var(--bg-app)", borderRadius: "8px", textAlign: "center" }}>
-                  Aucun article détaillé consigné. Se référer à la description générale.
-                </div>
-              )}
+              {(() => {
+                const isSea =
+                  showRequestDetailModal.shipping_mode_type === "SEA" ||
+                  String(showRequestDetailModal.shipping_mode_name || "").toLowerCase().includes("maritime");
+                return (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))", gap: "10px", marginBottom: "12px" }}>
+                    <div>
+                      <label style={{ fontSize: "0.73rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                        {isSea ? "Volume estimé par ROUM (m³)" : "Poids estimé par ROUM (kg)"}
+                      </label>
+                      <input
+                        type="number"
+                        step={isSea ? "0.01" : "0.5"}
+                        min="0.01"
+                        value={isSea ? adminQuoteForm.volume_cbm : adminQuoteForm.weight_kg}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          const newShip = Math.round(val * (adminQuoteForm.rate_per_unit || 12000));
+                          setAdminQuoteForm((prev) => ({
+                            ...prev,
+                            ...(isSea ? { volume_cbm: val } : { weight_kg: val }),
+                            shipping_fcfa: newShip,
+                            total_fcfa: (prev.goods_fcfa || 0) + newShip,
+                          }));
+                        }}
+                        className="input-clean"
+                        style={{ height: "38px", fontWeight: 800 }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: "0.73rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                        Tarif Fret ({isSea ? "FCFA/m³" : "FCFA/kg"})
+                      </label>
+                      <input
+                        type="number"
+                        step="500"
+                        min="0"
+                        value={adminQuoteForm.rate_per_unit}
+                        onChange={(e) => {
+                          const rate = parseFloat(e.target.value) || 0;
+                          const qtyUnit = isSea ? adminQuoteForm.volume_cbm : adminQuoteForm.weight_kg;
+                          const newShip = Math.round((qtyUnit || 1) * rate);
+                          setAdminQuoteForm((prev) => ({
+                            ...prev,
+                            rate_per_unit: rate,
+                            shipping_fcfa: newShip,
+                            total_fcfa: (prev.goods_fcfa || 0) + newShip,
+                          }));
+                        }}
+                        className="input-clean"
+                        style={{ height: "38px", fontWeight: 700 }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: "0.73rem", fontWeight: 700, color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>
+                        Marchandises (FCFA)
+                      </label>
+                      <input
+                        type="number"
+                        step="500"
+                        min="0"
+                        value={adminQuoteForm.goods_fcfa}
+                        onChange={(e) => {
+                          const g = parseFloat(e.target.value) || 0;
+                          setAdminQuoteForm((prev) => ({
+                            ...prev,
+                            goods_fcfa: g,
+                            total_fcfa: g + (prev.shipping_fcfa || 0),
+                          }));
+                        }}
+                        className="input-clean"
+                        style={{ height: "38px", fontWeight: 700 }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: "0.73rem", fontWeight: 700, color: "#166534", display: "block", marginBottom: "4px" }}>
+                        Total Devis à Payer (FCFA)
+                      </label>
+                      <input
+                        type="number"
+                        step="500"
+                        min="0"
+                        value={adminQuoteForm.total_fcfa}
+                        onChange={(e) => {
+                          const tot = parseFloat(e.target.value) || 0;
+                          setAdminQuoteForm((prev) => ({
+                            ...prev,
+                            total_fcfa: tot,
+                          }));
+                        }}
+                        className="input-clean"
+                        style={{ height: "38px", fontWeight: 800, color: "#166534", background: "#ECFDF5", borderColor: "#86EFAC" }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => handleSaveQuoteAndSendPaymentWhatsApp(showRequestDetailModal, true)}
+                  style={{
+                    background: "#16A34A",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "9999px",
+                    padding: "9px 16px",
+                    fontSize: "0.8rem",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    boxShadow: "0 3px 10px rgba(22, 163, 74, 0.25)",
+                  }}
+                >
+                  <WhatsAppLogo size={18} />
+                  <span>Enregistrer le Devis &amp; Envoyer le Lien de Paiement sur WhatsApp</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const isSea =
+                      showRequestDetailModal.shipping_mode_type === "SEA" ||
+                      String(showRequestDetailModal.shipping_mode_name || "").toLowerCase().includes("maritime");
+                    handleSaveQuoteAndSendPaymentWhatsApp(showRequestDetailModal, false);
+                    const link = getPaymentPageUrl({
+                      reference: showRequestDetailModal.reference || "DOSSIER",
+                      clientName: showRequestDetailModal.client_name,
+                      clientPhone: showRequestDetailModal.client_phone,
+                      destination: showRequestDetailModal.destination_country,
+                      shippingMode: showRequestDetailModal.shipping_mode_name || (isSea ? "Voie Maritime" : "Voie Aérienne"),
+                      weightKg: isSea ? undefined : adminQuoteForm.weight_kg,
+                      volumeCbm: isSea ? adminQuoteForm.volume_cbm : undefined,
+                      goodsTotalFcfa: adminQuoteForm.goods_fcfa,
+                      shippingFeeFcfa: adminQuoteForm.shipping_fcfa,
+                      totalAmountFcfa: adminQuoteForm.total_fcfa,
+                      productName: showRequestDetailModal.product_name,
+                      productImage:
+                        showRequestDetailModal.product_image && !showRequestDetailModal.product_image.startsWith("data:")
+                          ? showRequestDetailModal.product_image
+                          : undefined,
+                      productQuantity: Number(showRequestDetailModal.product_quantity || 1),
+                    });
+                    navigator.clipboard?.writeText(link);
+                    setCopiedPaymentLink(true);
+                    setTimeout(() => setCopiedPaymentLink(false), 2500);
+                  }}
+                  className="btn btn-secondary"
+                  style={{ borderRadius: "9999px", padding: "8px 14px", fontSize: "0.76rem", display: "inline-flex", alignItems: "center", gap: "5px" }}
+                >
+                  {copiedPaymentLink ? <Check size={13} color="#16A34A" /> : <Copy size={13} />}
+                  <span>{copiedPaymentLink ? "Lien de paiement copié !" : "Copier le lien de paiement"}</span>
+                </button>
+              </div>
             </div>
 
-            {/* Actions : Reçu PDF, WhatsApp Client avec lien de suivi cliquable, Conversion & Clôture */}
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border-light)", paddingTop: "16px" }}>
+            {/* SECTION D : ÉTAPE 3 (ADMIN) — CONFIRMER L'ENCAISSEMENT & GÉNÉRER + ENVOYER LE TRACKING NUMBER OFFICIEL */}
+            <div
+              style={{
+                background: "#F0FDF4",
+                border: "1.5px solid #86EFAC",
+                borderRadius: "16px",
+                padding: "16px",
+                marginBottom: "18px",
+              }}
+            >
+              <div style={{ fontSize: "0.76rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#166534", marginBottom: "6px" }}>
+                ✅ 3. Étape Finale Admin : Confirmer l&apos;Encaissement &amp; Envoyer le N° de Suivi Officiel
+              </div>
+              <p style={{ fontSize: "0.78rem", color: "#15803D", margin: "0 0 12px 0" }}>
+                Une fois le paiement vérifié, cliquez ci-dessous pour générer le <strong>Tracking Number officiel</strong>, activer le suivi en direct et l&apos;envoyer au client sur WhatsApp.
+              </p>
+
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => handleConfirmEncashmentAndGenerateTracking(showRequestDetailModal, true)}
+                  style={{
+                    background: "#1C1815",
+                    color: "#FAF8F5",
+                    border: "none",
+                    borderRadius: "9999px",
+                    padding: "10px 18px",
+                    fontSize: "0.82rem",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    boxShadow: "0 4px 12px rgba(28, 24, 21, 0.2)",
+                  }}
+                >
+                  <CheckCircle2 size={16} color="#4ADE80" />
+                  <span>
+                    {showRequestDetailModal.tracking_number
+                      ? `Renvoyer le N° de Suivi (${showRequestDetailModal.tracking_number}) sur WhatsApp`
+                      : "Confirmer l'Encaissement & Générer + Envoyer le N° de Suivi sur WhatsApp"}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Pied de modale : Reçu PDF, Imprimer & Fermer */}
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border-light)", paddingTop: "14px" }}>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 <button
                   type="button"
                   onClick={() => {
                     const r = showRequestDetailModal;
                     const receipt: RoumReceiptData = {
-                      receiptTitle: "BON OFFICIEL DE COMMANDE & TRANSIT",
+                      receiptTitle: r.tracking_number
+                        ? "REÇU OFFICIEL DE COMMANDE & SUIVI ACTIF"
+                        : "DEVIS & FICHE DE COMMANDE ROUM TRANSIT",
                       reference: r.reference || "DOSSIER",
-                      trackingNumber: r.tracking_number || r.reference,
+                      trackingNumber: r.tracking_number || undefined,
                       shippingMark: r.shipping_mark,
                       date: r.created_at?.substring(0, 10) || new Date().toLocaleDateString("fr-FR"),
                       clientName: r.client_name || "Client",
@@ -11054,14 +11776,19 @@ export default function AdminPage() {
                       destination: r.destination_country || "Côte d'Ivoire",
                       optionType: r.option_type === "AVEC_FOURNISSEUR" ? "avec_fournisseur" : "sans_fournisseur",
                       transportMode: r.shipping_mode_name || r.shipping_mode_type || "Fret International",
-                      weightOrVolume: r.estimated_cbm ? `${r.estimated_cbm} m³` : `${r.estimated_weight_kg || 1} kg`,
+                      weightOrVolume: r.estimated_cbm
+                        ? `${r.estimated_cbm} m³`
+                        : r.estimated_weight_kg
+                        ? `${r.estimated_weight_kg} kg`
+                        : `${adminQuoteForm.weight_kg} kg (estimé)`,
                       productTitle: r.product_name || r.cargo_type || "Marchandises",
                       productUrl: r.product_url,
                       productImage: r.product_image,
-                      goodsTotalFcfa: r.total_goods_fcfa,
+                      quantity: Number(r.product_quantity || 1),
+                      goodsTotalFcfa: Number(r.total_goods_fcfa ?? adminQuoteForm.goods_fcfa),
                       paidToSupplierLabel: r.paid_to_supplier || r.rmb_amount,
-                      shippingFeeFcfa: r.shipping_fee_fcfa,
-                      grandTotalFcfa: r.total_amount_fcfa || r.shipping_fee_fcfa || 0,
+                      shippingFeeFcfa: Number(r.shipping_fee_fcfa ?? adminQuoteForm.shipping_fcfa),
+                      grandTotalFcfa: Number(r.total_amount_fcfa ?? adminQuoteForm.total_fcfa),
                       paymentMethodLabel: r.payment_method_selected,
                     };
                     downloadOfficialReceiptPdf(receipt);
@@ -11070,16 +11797,18 @@ export default function AdminPage() {
                   style={{ display: "inline-flex", alignItems: "center", gap: "6px", borderRadius: "9999px" }}
                 >
                   <Download size={14} />
-                  <span>Reçu PDF</span>
+                  <span>Télécharger PDF</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     const r = showRequestDetailModal;
                     const receipt: RoumReceiptData = {
-                      receiptTitle: "BON OFFICIEL DE COMMANDE & TRANSIT",
+                      receiptTitle: r.tracking_number
+                        ? "REÇU OFFICIEL DE COMMANDE & SUIVI ACTIF"
+                        : "DEVIS & FICHE DE COMMANDE ROUM TRANSIT",
                       reference: r.reference || "DOSSIER",
-                      trackingNumber: r.tracking_number || r.reference,
+                      trackingNumber: r.tracking_number || undefined,
                       shippingMark: r.shipping_mark,
                       date: r.created_at?.substring(0, 10) || new Date().toLocaleDateString("fr-FR"),
                       clientName: r.client_name || "Client",
@@ -11088,14 +11817,19 @@ export default function AdminPage() {
                       destination: r.destination_country || "Côte d'Ivoire",
                       optionType: r.option_type === "AVEC_FOURNISSEUR" ? "avec_fournisseur" : "sans_fournisseur",
                       transportMode: r.shipping_mode_name || r.shipping_mode_type || "Fret International",
-                      weightOrVolume: r.estimated_cbm ? `${r.estimated_cbm} m³` : `${r.estimated_weight_kg || 1} kg`,
+                      weightOrVolume: r.estimated_cbm
+                        ? `${r.estimated_cbm} m³`
+                        : r.estimated_weight_kg
+                        ? `${r.estimated_weight_kg} kg`
+                        : `${adminQuoteForm.weight_kg} kg (estimé)`,
                       productTitle: r.product_name || r.cargo_type || "Marchandises",
                       productUrl: r.product_url,
                       productImage: r.product_image,
-                      goodsTotalFcfa: r.total_goods_fcfa,
+                      quantity: Number(r.product_quantity || 1),
+                      goodsTotalFcfa: Number(r.total_goods_fcfa ?? adminQuoteForm.goods_fcfa),
                       paidToSupplierLabel: r.paid_to_supplier || r.rmb_amount,
-                      shippingFeeFcfa: r.shipping_fee_fcfa,
-                      grandTotalFcfa: r.total_amount_fcfa || r.shipping_fee_fcfa || 0,
+                      shippingFeeFcfa: Number(r.shipping_fee_fcfa ?? adminQuoteForm.shipping_fcfa),
+                      grandTotalFcfa: Number(r.total_amount_fcfa ?? adminQuoteForm.total_fcfa),
                       paymentMethodLabel: r.payment_method_selected,
                     };
                     printOfficialReceipt(receipt);
@@ -11106,53 +11840,73 @@ export default function AdminPage() {
                   <Printer size={14} />
                   <span>Imprimer</span>
                 </button>
-                <a
-                  href={buildAdminRequestWhatsAppUrl({
-                    clientPhone: showRequestDetailModal.client_phone || "",
-                    clientName: showRequestDetailModal.client_name || "Client",
-                    reference: showRequestDetailModal.reference || "",
-                    trackingNumber: showRequestDetailModal.tracking_number || showRequestDetailModal.reference || "",
-                    shippingMark: showRequestDetailModal.shipping_mark,
-                    destination: showRequestDetailModal.destination_country,
-                    productName: showRequestDetailModal.product_name || showRequestDetailModal.cargo_type,
-                    totalAmountFcfa: showRequestDetailModal.total_amount_fcfa,
-                    rmbAmount: showRequestDetailModal.rmb_amount || showRequestDetailModal.paid_to_supplier,
-                    statusLabel:
-                      showRequestDetailModal.status === "CONVERTED"
-                        ? "Expédition active en transit"
-                        : "Dossier validé par la Direction",
-                  })}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-secondary"
-                  style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "#15803D", borderColor: "#BBF7D0", background: "#F0FDF4", borderRadius: "9999px" }}
-                >
-                  <WhatsAppLogo size={18} />
-                  <span>Envoyer suivi cliquable sur WhatsApp</span>
-                </a>
               </div>
 
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowRequestDetailModal(null)}
-                  className="btn btn-secondary"
-                >
-                  Fermer
-                </button>
-                {showRequestDetailModal.status !== "CONVERTED" && showRequestDetailModal.status !== "CANCELLED" && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleOpenConvertModal(showRequestDetailModal);
-                    }}
-                    className="btn btn-primary"
-                  >
-                    Convertir en Dossier d&apos;Expédition
-                  </button>
-                )}
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowRequestDetailModal(null)}
+                className="btn btn-secondary"
+                style={{ borderRadius: "9999px" }}
+              >
+                Fermer
+              </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* LIGHTBOX PLEIN ÉCRAN POUR AGRANDIR LA PHOTO DU PRODUIT OU LE REÇU DE PAIEMENT CÔTÉ ADMIN */}
+      {zoomProductImage && (
+        <div
+          onClick={() => setZoomProductImage(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(28, 24, 21, 0.85)",
+            zIndex: 2000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "relative",
+              background: "#FFFFFF",
+              padding: "14px",
+              borderRadius: "20px",
+              maxWidth: "90vw",
+              maxHeight: "88vh",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setZoomProductImage(null)}
+              style={{
+                position: "absolute",
+                top: "10px",
+                right: "10px",
+                width: "34px",
+                height: "34px",
+                borderRadius: "50%",
+                border: "none",
+                background: "#1C1815",
+                color: "#FFFFFF",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <X size={18} />
+            </button>
+            <img
+              src={zoomProductImage}
+              alt="Aperçu grand format"
+              style={{ maxWidth: "85vw", maxHeight: "80vh", objectFit: "contain", display: "block", borderRadius: "12px" }}
+            />
           </div>
         </div>
       )}

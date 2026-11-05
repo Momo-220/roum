@@ -73,19 +73,166 @@ export default function TrackingResultPage() {
   useEffect(() => {
     if (!trackingNumber) return;
 
+    function findInLocalStorage(num: string): TrackingData | null {
+      if (typeof window === "undefined") return null;
+      const clean = decodeURIComponent(num).trim().toUpperCase();
+      try {
+        const shipsStr = localStorage.getItem("roum_shipments_data");
+        if (shipsStr) {
+          const ships = JSON.parse(shipsStr);
+          const foundShip = Array.isArray(ships)
+            ? ships.find(
+                (s: any) =>
+                  String(s.tracking_number || "").toUpperCase() === clean ||
+                  String(s.reference || "").toUpperCase() === clean
+              )
+            : null;
+          if (foundShip) {
+            return {
+              tracking_number: foundShip.tracking_number || clean,
+              status: {
+                code: foundShip.current_status || foundShip.current_status_code || "RECEIVED_AT_HUB",
+                label:
+                  foundShip.current_status_label ||
+                  foundShip.status_label ||
+                  "Paiement confirmé · Colis pris en charge à l'entrepôt",
+                description:
+                  foundShip.description ||
+                  foundShip.product_name ||
+                  "Expédition enregistrée et suivie par ROUM TRANSIT.",
+              },
+              route: {
+                origin: foundShip.origin_country || "Chine",
+                destination: foundShip.destination_country || "Côte d'Ivoire",
+              },
+              shipping_mode: foundShip.shipping_mode_name || "Voie Aérienne Express",
+              summary: {
+                total_parcels: Number(foundShip.parcel_count || foundShip.total_parcels_count || 1),
+                total_weight_kg: Number(foundShip.total_weight_kg || 2),
+                total_volume_cbm: Number(foundShip.total_volume_cbm || 0),
+                created_at: foundShip.created_at || new Date().toISOString().substring(0, 10),
+                updated_at: new Date().toISOString().substring(0, 10),
+              },
+              parcels:
+                Array.isArray(foundShip.parcels) && foundShip.parcels.length > 0
+                  ? foundShip.parcels.map((p: any, idx: number) => ({
+                      parcel_index: idx + 1,
+                      package_label: p.package_label || foundShip.product_name || `Colis #${idx + 1}`,
+                      weight_kg: Number(p.weight_kg || foundShip.total_weight_kg || 2),
+                      volume_cbm: Number(p.volume_cbm || foundShip.total_volume_cbm || 0),
+                      description: p.description || foundShip.product_name || null,
+                    }))
+                  : [
+                      {
+                        parcel_index: 1,
+                        package_label: foundShip.product_name || `Dossier ${foundShip.reference || clean}`,
+                        weight_kg: Number(foundShip.total_weight_kg || 2),
+                        volume_cbm: Number(foundShip.total_volume_cbm || 0),
+                        description: foundShip.description || foundShip.product_name || null,
+                      },
+                    ],
+              timeline: [
+                {
+                  status: foundShip.current_status || "RECEIVED_AT_HUB",
+                  status_label:
+                    foundShip.current_status_label ||
+                    "Paiement confirmé · Prise en charge à l'entrepôt de départ",
+                  location: `Entrepôt ${foundShip.origin_city || "Guangzhou"} (${foundShip.origin_country || "Chine"})`,
+                  comment: `Client : ${foundShip.client_name || "Client ROUM"} · Destination : ${foundShip.destination_country || "Afrique"}`,
+                  event_timestamp: foundShip.created_at || new Date().toLocaleDateString("fr-FR"),
+                },
+              ],
+              whatsapp_support_url: `https://wa.me/2250787994412?text=${encodeURIComponent(`Bonjour ROUM TRANSIT, je souhaite avoir des informations sur mon suivi N° ${foundShip.tracking_number || clean}`)}`,
+            };
+          }
+        }
+
+        const reqsStr = localStorage.getItem("roum_requests_data");
+        if (reqsStr) {
+          const reqs = JSON.parse(reqsStr);
+          const foundReq = Array.isArray(reqs)
+            ? reqs.find(
+                (r: any) =>
+                  String(r.tracking_number || "").toUpperCase() === clean ||
+                  String(r.reference || "").toUpperCase() === clean
+              )
+            : null;
+          if (foundReq) {
+            return {
+              tracking_number: foundReq.tracking_number || foundReq.reference || clean,
+              status: {
+                code: foundReq.status === "CONVERTED" ? "IN_TRANSIT" : "RECEIVED_AT_HUB",
+                label:
+                  foundReq.status === "CONVERTED"
+                    ? "Paiement confirmé · Colis en préparation d'expédition"
+                    : "Dossier enregistré chez ROUM TRANSIT",
+                description: foundReq.product_name || foundReq.description || "Dossier client ROUM TRANSIT",
+              },
+              route: {
+                origin: foundReq.origin_country || "Chine",
+                destination: foundReq.destination_country || "Côte d'Ivoire",
+              },
+              shipping_mode: foundReq.shipping_mode_name || "Voie Aérienne",
+              summary: {
+                total_parcels: 1,
+                total_weight_kg: Number(foundReq.estimated_weight_kg || 1),
+                total_volume_cbm: Number(foundReq.estimated_cbm || 0),
+                created_at: foundReq.created_at?.substring(0, 10) || new Date().toISOString().substring(0, 10),
+                updated_at: new Date().toISOString().substring(0, 10),
+              },
+              parcels: [
+                {
+                  parcel_index: 1,
+                  package_label: foundReq.product_name || `Dossier ${foundReq.reference}`,
+                  weight_kg: Number(foundReq.estimated_weight_kg || 1),
+                  volume_cbm: Number(foundReq.estimated_cbm || 0),
+                  description: foundReq.description || foundReq.product_name || null,
+                },
+              ],
+              timeline: [
+                {
+                  status: "RECEIVED_AT_HUB",
+                  status_label:
+                    foundReq.status === "CONVERTED"
+                      ? "Encaissement confirmé & Numéro de suivi officiel attribué"
+                      : "Demande enregistrée par ROUM TRANSIT",
+                  location: `Entrepôt ${foundReq.origin_country || "Chine"}`,
+                  comment: `Article : ${foundReq.product_name || "Marchandise"} · Client : ${foundReq.client_name || ""}`,
+                  event_timestamp: foundReq.created_at?.substring(0, 16) || new Date().toLocaleDateString("fr-FR"),
+                },
+              ],
+              whatsapp_support_url: `https://wa.me/2250787994412?text=${encodeURIComponent(`Bonjour ROUM TRANSIT, je consulte mon dossier N° ${foundReq.tracking_number || foundReq.reference || clean}`)}`,
+            };
+          }
+        }
+      } catch {}
+      return null;
+    }
+
     async function fetchTracking() {
       setLoading(true);
       setError(null);
       try {
         const res = await fetch(`/api/v1/public/tracking/${trackingNumber}`);
         if (!res.ok) {
+          const localFallback = findInLocalStorage(trackingNumber);
+          if (localFallback) {
+            setData(localFallback);
+            setLoading(false);
+            return;
+          }
           const errJson = await res.json().catch(() => ({}));
           throw new Error(errJson.error || "Colis introuvable.");
         }
         const json = await res.json();
         setData(json);
       } catch (err: any) {
-        setError(err.message || "Erreur de connexion au serveur.");
+        const localFallback = findInLocalStorage(trackingNumber);
+        if (localFallback) {
+          setData(localFallback);
+        } else {
+          setError(err.message || "Erreur de connexion au serveur.");
+        }
       } finally {
         setLoading(false);
       }

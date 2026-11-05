@@ -145,3 +145,184 @@ export function buildAdminRequestWhatsAppUrl(params: {
 
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(lines.join("\n"))}`;
 }
+
+/**
+ * Construit le lien autonome et cliquable vers la page de règlement & upload de preuve de paiement
+ * d'une commande (/services/commande?pay=RM-...).
+ */
+export function getPaymentPageUrl(params: {
+  reference: string;
+  clientName?: string;
+  clientPhone?: string;
+  destination?: string;
+  shippingMode?: string;
+  weightKg?: number;
+  volumeCbm?: number;
+  goodsTotalFcfa?: number;
+  shippingFeeFcfa?: number;
+  totalAmountFcfa?: number;
+  productName?: string;
+  productQuantity?: string | number;
+  productImage?: string;
+  optionType?: string;
+}): string {
+  const origin =
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : "https://roum-transit.pages.dev";
+  const sp = new URLSearchParams();
+  sp.set("pay", (params.reference || "").trim());
+  if (params.clientName) sp.set("name", params.clientName.trim());
+  if (params.clientPhone) sp.set("phone", params.clientPhone.trim());
+  if (params.destination) sp.set("dest", params.destination.trim());
+  if (params.shippingMode) sp.set("mode", params.shippingMode.trim());
+  if (typeof params.weightKg === "number" && params.weightKg > 0) sp.set("weight", String(params.weightKg));
+  if (typeof params.volumeCbm === "number" && params.volumeCbm > 0) sp.set("cbm", String(params.volumeCbm));
+  if (typeof params.goodsTotalFcfa === "number" && params.goodsTotalFcfa > 0) sp.set("goods", String(Math.round(params.goodsTotalFcfa)));
+  if (typeof params.shippingFeeFcfa === "number" && params.shippingFeeFcfa > 0) sp.set("ship", String(Math.round(params.shippingFeeFcfa)));
+  if (typeof params.totalAmountFcfa === "number" && params.totalAmountFcfa > 0) sp.set("total", String(Math.round(params.totalAmountFcfa)));
+  if (params.productName) sp.set("title", params.productName.trim().substring(0, 120));
+  if (params.productQuantity) sp.set("qty", String(params.productQuantity));
+  if (params.productImage && !params.productImage.startsWith("data:")) {
+    sp.set("img", params.productImage);
+  }
+  if (params.optionType) sp.set("opt", params.optionType);
+  return `${origin}/services/commande?${sp.toString()}`;
+}
+
+/**
+ * ÉTAPE 2 (Admin ➔ Client) :
+ * Message WhatsApp courtois et détaillé envoyant le Devis Officiel (après estimation du poids par ROUM)
+ * + les numéros de paiement + le LIEN DE REDIRECTION CLIQUABLE vers les moyens de paiement & preuve.
+ */
+export function buildAdminQuotePaymentWhatsAppUrl(params: {
+  clientPhone: string;
+  clientName?: string;
+  reference: string;
+  productName?: string;
+  productQuantity?: string | number;
+  destination?: string;
+  shippingMode?: string;
+  estimatedWeightKg?: number;
+  estimatedCbm?: number;
+  goodsTotalFcfa?: number;
+  shippingFeeFcfa?: number;
+  totalAmountFcfa: number;
+  waveNumber?: string;
+  orangeNumber?: string;
+  moroccoRib?: string;
+  productImage?: string;
+  optionType?: string;
+}): string {
+  const cleanPhone = (params.clientPhone || "").replace(/[^0-9]/g, "").replace(/^00/, "");
+  const paymentUrl = getPaymentPageUrl({
+    reference: params.reference,
+    clientName: params.clientName,
+    clientPhone: params.clientPhone,
+    destination: params.destination,
+    shippingMode: params.shippingMode,
+    weightKg: params.estimatedWeightKg,
+    volumeCbm: params.estimatedCbm,
+    goodsTotalFcfa: params.goodsTotalFcfa,
+    shippingFeeFcfa: params.shippingFeeFcfa,
+    totalAmountFcfa: params.totalAmountFcfa,
+    productName: params.productName,
+    productQuantity: params.productQuantity,
+    productImage: params.productImage,
+    optionType: params.optionType,
+  });
+
+  const weightLabel = params.estimatedCbm
+    ? `${params.estimatedCbm} m³ (Volume estimé par ROUM)`
+    : `${params.estimatedWeightKg || 1} kg (Poids estimé par ROUM)`;
+
+  const waveNum = params.waveNumber || "+225 01 53 63 85 69";
+  const orangeNum = params.orangeNumber || "#144*389278# / +225 07 48 29 11 00";
+  const moroccoRib = params.moroccoRib || "230 780 0001234567890123 45";
+
+  const lines = [
+    `Bonjour ${params.clientName || "cher(e) client(e)"},`,
+    ``,
+    `Ici la Direction *ROUM TRANSIT INTERNATIONAL*.`,
+    `Suite à l'analyse de votre commande *${params.reference}* et à l'estimation du poids de votre marchandise, voici votre *Devis Officiel* :`,
+    ``,
+    `📦 *DÉTAIL DU DOSSIER :*`,
+    `• Référence : *${params.reference}*`,
+    params.productName ? `• Article : ${params.productName}` : null,
+    params.productQuantity ? `• Quantité : ${params.productQuantity} unité(s)` : null,
+    params.destination ? `• Destination : ${params.destination}` : null,
+    params.shippingMode ? `• Mode d'acheminement : ${params.shippingMode}` : null,
+    `• Poids / Volume estimé : *${weightLabel}*`,
+    ``,
+    `💰 *DEVIS OFFICIEL À RÉGLER :*`,
+    typeof params.goodsTotalFcfa === "number" && params.goodsTotalFcfa > 0
+      ? `• Achat Marchandises : *${Math.round(params.goodsTotalFcfa).toLocaleString("fr-FR")} FCFA*`
+      : null,
+    typeof params.shippingFeeFcfa === "number" && params.shippingFeeFcfa > 0
+      ? `• Transport & Douane (${weightLabel}) : *${Math.round(params.shippingFeeFcfa).toLocaleString("fr-FR")} FCFA*`
+      : null,
+    `• *TOTAL À PAYER : ${Math.round(params.totalAmountFcfa).toLocaleString("fr-FR")} FCFA*`,
+    ``,
+    `💳 *COMPTES OFFICIELS DE RÈGLEMENT :*`,
+    `• Wave Mobile Money : *${waveNum}*`,
+    `• Orange Money : *${orangeNum}*`,
+    `• Compte Maroc (RIB) : *${moroccoRib}*`,
+    ``,
+    `👉 *Cliquez sur ce lien pour ouvrir votre moyen de paiement et joindre votre preuve de règlement :*`,
+    `${paymentUrl}`,
+    ``,
+    `Dès confirmation de votre paiement, nous vous transmettrons votre *Numéro de Suivi Officiel* pour suivre votre colis en direct.`,
+    `Cordialement,`,
+    `*La Direction ROUM TRANSIT*`,
+  ].filter((l) => l !== null);
+
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(lines.join("\n"))}`;
+}
+
+/**
+ * ÉTAPE 3 (Admin ➔ Client) :
+ * Message WhatsApp confirmant l'encaissement du paiement et transmettant le NUMÉRO DE SUIVI CLIQUABLE
+ * qui renvoie directement vers la page /tracking/[trackingNumber].
+ */
+export function buildAdminPaymentConfirmedTrackingWhatsAppUrl(params: {
+  clientPhone: string;
+  clientName?: string;
+  reference: string;
+  trackingNumber: string;
+  productName?: string;
+  destination?: string;
+  shippingMode?: string;
+  weightOrVolume?: string;
+  totalAmountFcfa?: number;
+  shippingMark?: string;
+}): string {
+  const cleanPhone = (params.clientPhone || "").replace(/[^0-9]/g, "").replace(/^00/, "");
+  const trackingUrl = getTrackingPageUrl(params.trackingNumber);
+
+  const lines = [
+    `Bonjour ${params.clientName || "cher(e) client(e)"},`,
+    ``,
+    `✅ *CONFIRMATION D'ENCAISSEMENT & ATTRIBUTION DU NUMÉRO DE SUIVI*`,
+    `La Direction *ROUM TRANSIT INTERNATIONAL* vous confirme la bonne réception de votre paiement pour le dossier *${params.reference}*.`,
+    ``,
+    `📦 *VOTRE EXPÉDITION EST ACTIVÉE :*`,
+    `• N° de Suivi Officiel : *${params.trackingNumber}*`,
+    params.shippingMark ? `• Shipping Mark : *${params.shippingMark}*` : null,
+    params.productName ? `• Marchandise : ${params.productName}` : null,
+    params.destination ? `• Destination : ${params.destination}` : null,
+    params.shippingMode
+      ? `• Acheminement : ${params.shippingMode}${params.weightOrVolume ? ` (${params.weightOrVolume})` : ""}`
+      : null,
+    typeof params.totalAmountFcfa === "number" && params.totalAmountFcfa > 0
+      ? `• Montant encaissé : *${Math.round(params.totalAmountFcfa).toLocaleString("fr-FR")} FCFA* (Réglé)`
+      : null,
+    ``,
+    `👉 *Cliquez directement sur ce lien pour suivre votre colis en temps réel (${params.trackingNumber}) :*`,
+    `${trackingUrl}`,
+    ``,
+    `Merci pour votre confiance !`,
+    `*L'équipe ROUM TRANSIT INTERNATIONAL*`,
+  ].filter((l) => l !== null);
+
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(lines.join("\n"))}`;
+}

@@ -5,7 +5,7 @@ export interface PriceTier {
   maxQty: number | null;
   label: string;
   price: number;
-  currency: "RMB" | "USD" | "FCFA";
+  currency: "RMB" | "USD" | "EUR" | "FCFA";
 }
 
 function decodeHtmlEntities(str: string): string {
@@ -222,20 +222,25 @@ function parseNumericPrice(raw: string | number | undefined): number {
 }
 
 /**
- * Extrait la vraie devise et les tranches de prix B2B (MOQ / paliers de quantité) depuis le HTML/JSON Alibaba & 1688
+ * Extrait la vraie devise et les vraies tranches de prix B2B (MOQ / paliers de quantité)
+ * depuis le HTML/JSON Alibaba, 1688, Taobao, AliExpress et Made-in-China.
+ * ZÉRO faux rabais inventé : seuls les prix réels de la page fournisseur sont retournés.
  */
 function extractPricingAndTiersFromHtml(
   html: string,
   isChineseDomestic: boolean
 ): {
   price: number;
-  currency: "RMB" | "USD" | "FCFA";
+  currency: "RMB" | "USD" | "EUR" | "FCFA";
   minOrder: string;
   priceTiers: PriceTier[];
 } {
-  let detectedCurrency: "RMB" | "USD" | "FCFA" = isChineseDomestic ? "RMB" : "RMB";
+  // Devise par défaut selon la plateforme :
+  // - 1688 / Taobao / Tmall (marché domestique chinois) = RMB (¥)
+  // - Alibaba.com / AliExpress / Made-in-China (international) = USD ($)
+  let detectedCurrency: "RMB" | "USD" | "EUR" | "FCFA" = isChineseDomestic ? "RMB" : "USD";
 
-  // 1. Détection de la devise réelle dans les métadonnées / JSON-LD
+  // 1. Détection de la devise réelle dans JSON-LD / Meta / detailData
   const currencyMatch =
     html.match(/"priceCurrency"\s*:\s*"([A-Z]{3})"/i) ||
     html.match(/<meta[^>]+property=["'](?:product|og):price:currency["'][^>]+content=["']([A-Z]{3})["']/i) ||
@@ -244,21 +249,29 @@ function extractPricingAndTiersFromHtml(
   if (currencyMatch && currencyMatch[1]) {
     const code = currencyMatch[1].toUpperCase();
     if (code === "CNY" || code === "RMB") detectedCurrency = "RMB";
-    else if (code === "USD" || code === "EUR") detectedCurrency = "USD";
+    else if (code === "EUR") detectedCurrency = "EUR";
+    else if (code === "USD") detectedCurrency = "USD";
     else if (code === "XOF" || code === "XAF" || code === "CFA") detectedCurrency = "FCFA";
   }
 
   const rawTiers: Array<{ minQty: number; maxQty: number | null; price: number }> = [];
+  let usedDollarPrice = false;
 
-  // 2. Paliers explicites Alibaba (minQuantity / maxQuantity / price dans window.detailData)
-  const objectTierRegex =
-    /\{[^{}]*?"(?:minQuantity|minAmount|startQuantity|minOrderQuantity|min)"\s*:\s*"?(\d+)"?[^{}]*?(?:"(?:maxQuantity|maxAmount|endQuantity|max)"\s*:\s*"?(-?\d+)"?[^{}]*?)?"(?:price|value|discountPrice|originalPrice)"\s*:\s*"?([0-9.,]+)"?[^{}]*?\}/gi;
+  // 2. Paliers officiels Alibaba dans window.detailData (productLadderPrices / ladderPrices / priceRangeList)
+  const ladderBlocks = [
+    ...Array.from(html.matchAll(/"(?:productLadderPrices|ladderPrices|ladderPrice|priceRangeList|skuPriceList)"\s*:\s*\[([\s\S]*?)\]/gi)).map((m) => m[1]),
+  ];
+  const ladderSearchSource = ladderBlocks.length > 0 ? ladderBlocks.join("\n") : html;
 
-  for (const m of html.matchAll(objectTierRegex)) {
+  // 2.a. Paliers avec "dollarPrice" (toujours en USD sur Alibaba.com)
+  const dollarLadderRegex =
+    /\{[^{}]*?"(?:min|minQuantity|minAmount|startQuantity|minOrderQuantity)"\s*:\s*"?(\d+)"?[^{}]*?(?:"(?:max|maxQuantity|maxAmount|endQuantity)"\s*:\s*"?(-?\d+)"?[^{}]*?)?"dollarPrice"\s*:\s*"?([0-9.,]+)"?[^{}]*?\}/gi;
+  for (const m of ladderSearchSource.matchAll(dollarLadderRegex)) {
     const minQ = parseInt(m[1], 10);
     const maxQ = m[2] ? parseInt(m[2], 10) : null;
     const p = parseNumericPrice(m[3]);
     if (minQ > 0 && p > 0) {
+      usedDollarPrice = true;
       rawTiers.push({
         minQty: minQ,
         maxQty: maxQ && maxQ >= minQ ? maxQ : null,
@@ -267,11 +280,53 @@ function extractPricingAndTiersFromHtml(
     }
   }
 
-  // Inverse : "price" placé avant "minQuantity" dans l'objet JSON
+  // Inverse : "dollarPrice" avant "min"
+  if (rawTiers.length === 0) {
+    const revDollarLadderRegex =
+      /\{[^{}]*?"dollarPrice"\s*:\s*"?([0-9.,]+)"?[^{}]*?"(?:min|minQuantity|minAmount|startQuantity|minOrderQuantity)"\s*:\s*"?(\d+)"?(?:[^{}]*?"(?:max|maxQuantity|maxAmount|endQuantity)"\s*:\s*"?(-?\d+)"?)?[^{}]*?\}/gi;
+    for (const m of ladderSearchSource.matchAll(revDollarLadderRegex)) {
+      const p = parseNumericPrice(m[1]);
+      const minQ = parseInt(m[2], 10);
+      const maxQ = m[3] ? parseInt(m[3], 10) : null;
+      if (minQ > 0 && p > 0) {
+        usedDollarPrice = true;
+        rawTiers.push({
+          minQty: minQ,
+          maxQty: maxQ && maxQ >= minQ ? maxQ : null,
+          price: p,
+        });
+      }
+    }
+  }
+
+  // 2.b. Paliers avec clés explicites de quantité (minQuantity / startQuantity / minOrderQuantity, ou min+max dans un bloc ladder)
+  if (rawTiers.length === 0) {
+    const explicitTierRegex =
+      ladderBlocks.length > 0
+        ? /\{[^{}]*?"(?:minQuantity|minAmount|startQuantity|minOrderQuantity|min)"\s*:\s*"?(\d+)"?[^{}]*?(?:"(?:maxQuantity|maxAmount|endQuantity|max)"\s*:\s*"?(-?\d+)"?[^{}]*?)?"(?:price|discountPrice|originalPrice)"\s*:\s*"?([0-9.,]+)"?[^{}]*?\}/gi
+        : /\{[^{}]*?"(?:minQuantity|minAmount|startQuantity|minOrderQuantity)"\s*:\s*"?(\d+)"?[^{}]*?(?:"(?:maxQuantity|maxAmount|endQuantity|max)"\s*:\s*"?(-?\d+)"?[^{}]*?)?"(?:price|discountPrice|originalPrice)"\s*:\s*"?([0-9.,]+)"?[^{}]*?\}/gi;
+
+    for (const m of ladderSearchSource.matchAll(explicitTierRegex)) {
+      const minQ = parseInt(m[1], 10);
+      const maxQ = m[2] ? parseInt(m[2], 10) : null;
+      const p = parseNumericPrice(m[3]);
+      if (minQ > 0 && p > 0) {
+        rawTiers.push({
+          minQty: minQ,
+          maxQty: maxQ && maxQ >= minQ ? maxQ : null,
+          price: p,
+        });
+      }
+    }
+  }
+
   if (rawTiers.length === 0) {
     const reverseTierRegex =
-      /\{[^{}]*?"(?:price|value|discountPrice|originalPrice)"\s*:\s*"?([0-9.,]+)"?[^{}]*?"(?:minQuantity|minAmount|startQuantity|minOrderQuantity|min)"\s*:\s*"?(\d+)"?(?:[^{}]*?"(?:maxQuantity|maxAmount|endQuantity|max)"\s*:\s*"?(-?\d+)"?)?[^{}]*?\}/gi;
-    for (const m of html.matchAll(reverseTierRegex)) {
+      ladderBlocks.length > 0
+        ? /\{[^{}]*?"(?:price|discountPrice|originalPrice)"\s*:\s*"?([0-9.,]+)"?[^{}]*?"(?:minQuantity|minAmount|startQuantity|minOrderQuantity|min)"\s*:\s*"?(\d+)"?(?:[^{}]*?"(?:maxQuantity|maxAmount|endQuantity|max)"\s*:\s*"?(-?\d+)"?)?[^{}]*?\}/gi
+        : /\{[^{}]*?"(?:price|discountPrice|originalPrice)"\s*:\s*"?([0-9.,]+)"?[^{}]*?"(?:minQuantity|minAmount|startQuantity|minOrderQuantity)"\s*:\s*"?(\d+)"?(?:[^{}]*?"(?:maxQuantity|maxAmount|endQuantity|max)"\s*:\s*"?(-?\d+)"?)?[^{}]*?\}/gi;
+
+    for (const m of ladderSearchSource.matchAll(reverseTierRegex)) {
       const p = parseNumericPrice(m[1]);
       const minQ = parseInt(m[2], 10);
       const maxQ = m[3] ? parseInt(m[3], 10) : null;
@@ -308,16 +363,64 @@ function extractPricingAndTiersFromHtml(
     }
   }
 
-  // 4. Extraction lowPrice / highPrice depuis JSON-LD AggregateOffer ou meta tags
-  const lowPriceMatch = html.match(/"lowPrice"\s*:\s*"?([0-9.,]+)"?/i);
-  const highPriceMatch = html.match(/"highPrice"\s*:\s*"?([0-9.,]+)"?/i);
-  const singlePriceMatch =
-    html.match(/"price"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?/i) ||
-    html.match(/<meta[^>]+property=["'](?:product|og):price:amount["'][^>]+content=["']([0-9.,]+)["']/i);
+  // Si on a utilisé "dollarPrice", la devise est obligatoirement USD
+  if (usedDollarPrice) {
+    detectedCurrency = "USD";
+  } else {
+    // Vérifier le symbole monétaire dans formatPrice s'il est présent dans le bloc ladder
+    const formatPriceMatch = ladderSearchSource.match(/"formatPrice"\s*:\s*"([^"]+)"/i);
+    if (formatPriceMatch && formatPriceMatch[1]) {
+      const fp = formatPriceMatch[1];
+      if (/FCFA|CFA|XOF|XAF/i.test(fp)) detectedCurrency = "FCFA";
+      else if (/€|EUR/i.test(fp)) detectedCurrency = "EUR";
+      else if (/\$|USD/i.test(fp)) detectedCurrency = "USD";
+      else if (/[¥￥]|RMB|CNY/i.test(fp)) detectedCurrency = "RMB";
+    }
+  }
 
-  const lowPrice = lowPriceMatch ? parseNumericPrice(lowPriceMatch[1]) : 0;
-  const highPrice = highPriceMatch ? parseNumericPrice(highPriceMatch[1]) : 0;
-  const singlePrice = singlePriceMatch ? parseNumericPrice(singlePriceMatch[1]) : 0;
+  // 4. Extraction depuis les blocs JSON-LD (<script type="application/ld+json">) et balises Meta
+  let lowPrice = 0;
+  let highPrice = 0;
+  let singlePrice = 0;
+
+  const ldJsonMatches = html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+  for (const m of ldJsonMatches) {
+    const block = m[1] || "";
+    if (!/"(?:Product|Offer|AggregateOffer)"/i.test(block)) continue;
+
+    const ldCurr = block.match(/"priceCurrency"\s*:\s*"([A-Z]{3})"/i);
+    if (ldCurr && ldCurr[1] && !usedDollarPrice) {
+      const c = ldCurr[1].toUpperCase();
+      if (c === "CNY" || c === "RMB") detectedCurrency = "RMB";
+      else if (c === "EUR") detectedCurrency = "EUR";
+      else if (c === "USD") detectedCurrency = "USD";
+      else if (c === "XOF" || c === "XAF" || c === "CFA") detectedCurrency = "FCFA";
+    }
+
+    const lp = block.match(/"lowPrice"\s*:\s*"?([0-9.,]+)"?/i);
+    const hp = block.match(/"highPrice"\s*:\s*"?([0-9.,]+)"?/i);
+    const sp = block.match(/"price"\s*:\s*"?([0-9.,]+)"?/i);
+
+    if (lp && !lowPrice) lowPrice = parseNumericPrice(lp[1]);
+    if (hp && !highPrice) highPrice = parseNumericPrice(hp[1]);
+    if (sp && !singlePrice) singlePrice = parseNumericPrice(sp[1]);
+  }
+
+  if (!lowPrice) {
+    const lowPriceMatch = html.match(/"lowPrice"\s*:\s*"?([0-9.,]+)"?/i);
+    if (lowPriceMatch) lowPrice = parseNumericPrice(lowPriceMatch[1]);
+  }
+  if (!highPrice) {
+    const highPriceMatch = html.match(/"highPrice"\s*:\s*"?([0-9.,]+)"?/i);
+    if (highPriceMatch) highPrice = parseNumericPrice(highPriceMatch[1]);
+  }
+  if (!singlePrice) {
+    const metaPriceMatch =
+      html.match(/<meta[^>]+property=["'](?:product|og):price:amount["'][^>]+content=["']([0-9.,]+)["']/i) ||
+      html.match(/"(?:minPrice|fobPrice|promotionPrice|skuPrice)"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?/i) ||
+      html.match(/"price"\s*:\s*"?([0-9]+(?:\.[0-9]+)?)"?/i);
+    if (metaPriceMatch) singlePrice = parseNumericPrice(metaPriceMatch[1]);
+  }
 
   // Dédoublonner et trier les paliers trouvés
   const uniqueMap = new Map<number, { minQty: number; maxQty: number | null; price: number }>();
@@ -326,27 +429,20 @@ function extractPricingAndTiersFromHtml(
       uniqueMap.set(t.minQty, t);
     }
   }
-  let sortedTiers = Array.from(uniqueMap.values()).sort((a, b) => a.minQty - b.minQty).slice(0, 4);
+  let sortedTiers = Array.from(uniqueMap.values()).sort((a, b) => a.minQty - b.minQty).slice(0, 5);
 
-  // Si on a lowPrice et highPrice différents (AggregateOffer d'Alibaba) mais pas la liste détaillée
+  // Si on a une vraie fourchette fournisseur (lowPrice et highPrice différents sur la fiche) mais pas le tableau détaillé :
+  // on affiche uniquement les 2 bornes réelles du fournisseur (sans inventer de faux paliers intermédiaires)
   if (sortedTiers.length === 0 && lowPrice > 0 && highPrice > 0 && highPrice > lowPrice) {
-    const midPrice = Math.round(((highPrice + lowPrice) / 2) * 100) / 100;
     sortedTiers = [
-      { minQty: 1, maxQty: 4, price: highPrice },
-      { minQty: 5, maxQty: 9, price: midPrice },
-      { minQty: 10, maxQty: null, price: lowPrice },
+      { minQty: 1, maxQty: 1, price: highPrice },
+      { minQty: 2, maxQty: null, price: lowPrice },
     ];
   } else if (sortedTiers.length === 0) {
+    // Prix unique réel sur la page fournisseur : ZÉRO rabais inventé (-5%/-10% supprimés)
     const basePrice = highPrice || lowPrice || singlePrice;
     if (basePrice > 0) {
-      // Construire les paliers fournisseur standards à partir du prix unitaire détecté
-      const tier2 = Math.round(basePrice * 0.95 * 100) / 100;
-      const tier3 = Math.round(basePrice * 0.9 * 100) / 100;
-      sortedTiers = [
-        { minQty: 1, maxQty: 4, price: basePrice },
-        { minQty: 5, maxQty: 9, price: tier2 },
-        { minQty: 10, maxQty: null, price: tier3 },
-      ];
+      sortedTiers = [{ minQty: 1, maxQty: null, price: basePrice }];
     }
   }
 
@@ -364,7 +460,7 @@ function extractPricingAndTiersFromHtml(
     } else if (t.maxQty && t.maxQty === t.minQty) {
       label = `${t.minQty} pièce${t.minQty > 1 ? "s" : ""}`;
     } else {
-      label = `≥ ${t.minQty} pièces`;
+      label = `≥ ${t.minQty} pièce${t.minQty > 1 ? "s" : ""}`;
     }
     return {
       minQty: t.minQty,
@@ -426,7 +522,7 @@ export async function POST(req: NextRequest) {
         image: proxiedDirect,
         rawImage: directImage,
         price: 0,
-        currency: "RMB",
+        currency: "USD",
         minOrder: "1 pièce",
         priceTiers: [],
         supplier: "Fournisseur Chine",
@@ -451,7 +547,7 @@ export async function POST(req: NextRequest) {
     let title = "";
     let image = "";
     let price = 0;
-    let currency: "RMB" | "USD" | "FCFA" = "RMB";
+    let currency: "RMB" | "USD" | "EUR" | "FCFA" = isChineseDomestic ? "RMB" : "USD";
     let minOrder = "1 pièce";
     let priceTiers: PriceTier[] = [];
     const supplier = "Fournisseur certifié Chine";

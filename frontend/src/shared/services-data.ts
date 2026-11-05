@@ -623,7 +623,8 @@ export async function saveClientRequest(data: {
   else prefix = "FWD";
 
   const reference = `RM-${prefix}-${timestamp}`;
-  const trackingNumber = reference;
+  // Le numéro de suivi officiel n'est généré qu'à l'Étape 3 (après encaissement confirmé par l'Admin)
+  const trackingNumber = "";
   const clientUpper = (data.client_name || "CLIENT").toUpperCase().trim();
   const shippingMark = data.shipping_mark?.trim() || `ROUM / ${reference} / ${clientUpper}`;
 
@@ -684,6 +685,7 @@ export async function saveClientRequest(data: {
         product_url: data.product_url || "",
         product_image: data.product_image || null,
         product_name: data.product_name || null,
+        product_quantity: data.product_quantity || "1",
         unit_price: data.unit_price || null,
         unit_price_currency: data.unit_price_currency || null,
         total_goods_fcfa: data.total_goods_fcfa || null,
@@ -697,19 +699,25 @@ export async function saveClientRequest(data: {
         destination_country: data.destination_country,
         destination_city: data.destination_country.includes("(") ? data.destination_country.split("(")[1].replace(")", "").trim() : data.destination_country,
         shipping_mode_id: resolvedModeId,
+        shipping_mode_name: data.shipping_mode_name || "Voie Aérienne Express",
+        shipping_mode_type: data.shipping_mode_type || "AIR",
         description,
         shipping_mark: shippingMark,
-        tracking_number: trackingNumber,
+        tracking_number: null,
         paid_to_supplier: data.paid_to_supplier || null,
-        estimated_weight_kg: data.estimated_weight_kg || 5.0,
-        estimated_cbm: data.estimated_cbm || null,
+        estimated_weight_kg: typeof data.estimated_weight_kg === "number" ? data.estimated_weight_kg : null,
+        estimated_cbm: typeof data.estimated_cbm === "number" ? data.estimated_cbm : null,
         status: "NEW",
-        items_count: 1,
+        items_count: Number(data.product_quantity) || 1,
         items: [
           {
             id: `item-${Date.now()}`,
-            description: data.cargo_type || "Marchandises client",
-            quantity: data.product_quantity || 1,
+            product_name: data.product_name || data.cargo_type || "Marchandises client",
+            description: data.product_name || data.cargo_type || "Marchandises client",
+            quantity: Number(data.product_quantity) || 1,
+            unit_price: data.unit_price || null,
+            currency: data.unit_price_currency || "USD",
+            variants_description: data.product_specs || "",
             product_url: data.product_url || "",
           },
         ],
@@ -753,30 +761,25 @@ export async function saveClientRequest(data: {
       }),
     });
   } catch (err) {
-    // Si l'API backend n'est pas joignable, la synchronisation locale localStorage
-    // garantit déjà que l'administrateur verra la demande dans son interface
     console.warn("Envoi API Hono asynchrone :", err);
   }
 
-  // 3. Lien WhatsApp pré-rempli courtois avec numéro de suivi cliquable
+  // 3. Lien WhatsApp pré-rempli courtois (Étape 1 : Demande de commande envoyée à l'agence pour estimation du poids & devis)
   const supportPhone = "+2250787994412";
-  const originUrl =
-    typeof window !== "undefined" && window.location?.origin
-      ? window.location.origin
-      : "https://roum-transit.pages.dev";
-  const trackingLink = `${originUrl}/tracking/${encodeURIComponent(trackingNumber)}`;
   const waText =
     `Bonjour l'équipe *ROUM TRANSIT INTERNATIONAL*,\n` +
-    `Je viens d'enregistrer mon dossier sur votre plateforme officielle :\n\n` +
+    `Je viens d'enregistrer ma demande de commande sur votre plateforme officielle :\n\n` +
     `• Référence Dossier : *${reference}*\n` +
-    `• N° de Suivi Officiel : *${trackingNumber}*\n` +
     (shippingMark ? `• Shipping Mark : *${shippingMark}*\n` : "") +
     `• Client : ${data.client_name} (${data.client_phone})\n` +
     `• Corridor : ${data.origin_country} ➔ ${data.destination_country}\n` +
-    `• Détails : ${description}\n\n` +
-    `👉 *Suivi en direct du colis (${trackingNumber}) :*\n` +
-    `${trackingLink}\n\n` +
-    `Merci de bien vouloir me confirmer la prise en charge de mon dossier. Cordialement !`;
+    `• Moyen de transport choisi : ${data.shipping_mode_name || "Avion Express"}\n` +
+    `• Article : ${data.product_name || description}\n` +
+    (data.product_quantity ? `• Quantité : ${data.product_quantity} unité(s)\n` : "") +
+    (data.unit_price ? `• Prix unitaire fournisseur : ${data.unit_price} ${data.unit_price_currency || "USD"}\n` : "") +
+    (data.total_goods_fcfa ? `• Sous-total Marchandise : ${data.total_goods_fcfa.toLocaleString("fr-FR")} FCFA\n` : "") +
+    (data.product_url ? `• Lien article : ${data.product_url}\n` : "") +
+    `\nMerci d'estimer le poids de mon colis et de m'envoyer le devis complet avec le lien de règlement. Cordialement !`;
   const whatsappUrl = `https://wa.me/${supportPhone.replace(/\D/g, "")}?text=${encodeURIComponent(waText)}`;
 
   return {
@@ -786,6 +789,172 @@ export async function saveClientRequest(data: {
     warehouseAddress,
     whatsappUrl,
   };
+}
+
+/**
+ * Récupère un dossier de commande par sa référence (ex: RM-ALI-...)
+ */
+export function getClientRequestByReference(reference: string): any | null {
+  if (typeof window === "undefined" || !reference) return null;
+  try {
+    const saved = localStorage.getItem("roum_requests_data");
+    if (!saved) return null;
+    const list = JSON.parse(saved);
+    if (!Array.isArray(list)) return null;
+    const cleanRef = reference.trim().toUpperCase();
+    return (
+      list.find(
+        (r: any) =>
+          (r.reference || "").toUpperCase() === cleanRef ||
+          (r.id || "").toUpperCase() === cleanRef ||
+          (r.tracking_number || "").toUpperCase() === cleanRef
+      ) || null
+    );
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * ÉTAPE 2 (Admin) : Met à jour le dossier avec le poids estimé par ROUM et le devis officiel complet
+ */
+export function updateClientRequestAdminQuote(
+  reference: string,
+  quote: {
+    estimatedWeightKg?: number | null;
+    estimatedCbm?: number | null;
+    goodsTotalFcfa?: number;
+    shippingFeeFcfa?: number;
+    totalAmountFcfa: number;
+    shippingModeName?: string;
+    trackingNumber?: string;
+    status?: string;
+  }
+): any | null {
+  if (typeof window === "undefined" || !reference) return null;
+  try {
+    const saved = localStorage.getItem("roum_requests_data");
+    const list: any[] = saved ? JSON.parse(saved) : [];
+    const cleanRef = reference.trim().toUpperCase();
+    let updatedItem: any = null;
+    const nextList = list.map((r: any) => {
+      if ((r.reference || "").toUpperCase() === cleanRef || (r.id || "").toUpperCase() === cleanRef) {
+        updatedItem = {
+          ...r,
+          estimated_weight_kg:
+            quote.estimatedWeightKg !== undefined ? quote.estimatedWeightKg : r.estimated_weight_kg,
+          estimated_cbm: quote.estimatedCbm !== undefined ? quote.estimatedCbm : r.estimated_cbm,
+          total_goods_fcfa:
+            typeof quote.goodsTotalFcfa === "number" ? quote.goodsTotalFcfa : r.total_goods_fcfa,
+          shipping_fee_fcfa:
+            typeof quote.shippingFeeFcfa === "number" ? quote.shippingFeeFcfa : r.shipping_fee_fcfa,
+          total_amount_fcfa: quote.totalAmountFcfa,
+          shipping_mode_name: quote.shippingModeName || r.shipping_mode_name,
+          tracking_number: quote.trackingNumber || r.tracking_number,
+          status: quote.status || (r.status === "CONVERTED" ? "CONVERTED" : "QUOTE_SENT"),
+          updated_at: new Date().toISOString().replace("T", " ").substring(0, 19),
+        };
+        return updatedItem;
+      }
+      return r;
+    });
+    if (updatedItem) {
+      localStorage.setItem("roum_requests_data", JSON.stringify(nextList));
+      window.dispatchEvent(new Event("storage"));
+    }
+    return updatedItem;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * ÉTAPE 2 BIS (Client sur /services/commande?pay=RM-...) :
+ * Enregistre la preuve de paiement (capture, PDF ou vidéo) et le moyen de paiement utilisé par le client
+ */
+export function submitClientPaymentProof(
+  reference: string,
+  proof: {
+    paymentMethod: string;
+    receiptUrl: string;
+    receiptName: string;
+    fallbackData?: {
+      clientName?: string;
+      clientPhone?: string;
+      destination?: string;
+      shippingMode?: string;
+      weightKg?: number;
+      volumeCbm?: number;
+      goodsTotalFcfa?: number;
+      shippingFeeFcfa?: number;
+      totalAmountFcfa?: number;
+      productName?: string;
+      productQuantity?: string | number;
+      productImage?: string;
+      optionType?: string;
+    };
+  }
+): any {
+  if (typeof window === "undefined") return null;
+  try {
+    const saved = localStorage.getItem("roum_requests_data");
+    const list: any[] = saved ? JSON.parse(saved) : [];
+    const cleanRef = (reference || "").trim().toUpperCase();
+    let updatedItem: any = null;
+
+    const nextList = list.map((r: any) => {
+      if ((r.reference || "").toUpperCase() === cleanRef || (r.id || "").toUpperCase() === cleanRef) {
+        updatedItem = {
+          ...r,
+          payment_method_selected: proof.paymentMethod,
+          payment_receipt_url: proof.receiptUrl,
+          payment_receipt_name: proof.receiptName,
+          payment_submitted_at: new Date().toISOString().replace("T", " ").substring(0, 19),
+          status: r.status === "CONVERTED" ? "CONVERTED" : "IN_REVIEW",
+          updated_at: new Date().toISOString().replace("T", " ").substring(0, 19),
+        };
+        return updatedItem;
+      }
+      return r;
+    });
+
+    if (!updatedItem && proof.fallbackData) {
+      const fb = proof.fallbackData;
+      updatedItem = {
+        id: `req-${Date.now()}`,
+        reference: reference.trim(),
+        client_name: fb.clientName || "Client",
+        client_phone: fb.clientPhone || "",
+        request_type: fb.optionType === "avec_fournisseur" ? "SUPPLIER_PAYMENT" : "ALIBABA",
+        option_type: fb.optionType === "avec_fournisseur" ? "AVEC_FOURNISSEUR" : "SANS_FOURNISSEUR",
+        origin_country: "Chine",
+        destination_country: fb.destination || "Côte d'Ivoire",
+        shipping_mode_name: fb.shippingMode || "Voie Aérienne Express",
+        estimated_weight_kg: fb.weightKg || null,
+        estimated_cbm: fb.volumeCbm || null,
+        total_goods_fcfa: fb.goodsTotalFcfa || null,
+        shipping_fee_fcfa: fb.shippingFeeFcfa || null,
+        total_amount_fcfa: fb.totalAmountFcfa || null,
+        product_name: fb.productName || "Article commandé",
+        product_quantity: String(fb.productQuantity || 1),
+        product_image: fb.productImage || null,
+        payment_method_selected: proof.paymentMethod,
+        payment_receipt_url: proof.receiptUrl,
+        payment_receipt_name: proof.receiptName,
+        payment_submitted_at: new Date().toISOString().replace("T", " ").substring(0, 19),
+        status: "IN_REVIEW",
+        created_at: new Date().toISOString().replace("T", " ").substring(0, 19),
+        updated_at: new Date().toISOString().replace("T", " ").substring(0, 19),
+      };
+      nextList.unshift(updatedItem);
+    }
+
+    localStorage.setItem("roum_requests_data", JSON.stringify(nextList));
+    window.dispatchEvent(new Event("storage"));
+    return updatedItem;
+  } catch {
+    return null;
+  }
 }
 
 /**

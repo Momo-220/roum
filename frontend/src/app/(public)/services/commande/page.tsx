@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, Suspense, useRef } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -22,6 +23,8 @@ import {
 } from "lucide-react";
 import {
   saveClientRequest,
+  getClientRequestByReference,
+  submitClientPaymentProof,
   getLiveCompanySettings,
   getLiveTariffs,
   getAdminDestinationsDetailed,
@@ -47,7 +50,7 @@ interface PriceTier {
   maxQty: number | null;
   label: string;
   price: number;
-  currency: "RMB" | "USD" | "FCFA";
+  currency: "RMB" | "USD" | "EUR" | "FCFA";
 }
 
 interface ExtractedProduct {
@@ -62,7 +65,20 @@ interface ExtractedProduct {
   originalUrl: string;
 }
 
+function convertToFcfa(amount: number, currency?: string): number {
+  const num = Number(amount) || 0;
+  const curr = (currency || "USD").toUpperCase();
+  if (curr === "RMB" || curr === "CNY" || curr === "¥") return Math.round(num * 88);
+  if (curr === "EUR" || curr === "€") return Math.round(num * 656);
+  if (curr === "FCFA" || curr === "XOF" || curr === "XAF") return Math.round(num);
+  // Default USD ($ on Alibaba.com)
+  return Math.round(num * 610);
+}
+
 function CommandeFormContent() {
+  const searchParams = useSearchParams();
+  const payRefParam = searchParams.get("pay")?.trim() || "";
+
   const [option, setOption] = useState<"sans_fournisseur" | "avec_fournisseur">("sans_fournisseur");
 
   const [submitted, setSubmitted] = useState(false);
@@ -79,6 +95,7 @@ function CommandeFormContent() {
     destination: string;
     shippingModeDesc: string;
     receiptData: RoumReceiptData;
+    isPaymentStep?: boolean;
   } | null>(null);
 
   const [copiedTracking, setCopiedTracking] = useState(false);
@@ -281,7 +298,7 @@ function CommandeFormContent() {
   const [productQuery, setProductQuery] = useState("");
   const [productQuantity, setProductQuantity] = useState<number>(1);
   const [productUnitPrice, setProductUnitPrice] = useState<number>(15);
-  const [productCurrency, setProductCurrency] = useState<"RMB" | "USD" | "FCFA">("RMB");
+  const [productCurrency, setProductCurrency] = useState<"RMB" | "USD" | "EUR" | "FCFA">("USD");
 
   // Option 2 spécifique
   const [clientShippingMark, setClientShippingMark] = useState("");
@@ -382,7 +399,7 @@ function CommandeFormContent() {
     }
   }, [productLink]);
 
-  // Paiement & Reçu (Option 1)
+  // Paiement & Reçu (Étape 2 Bis)
   const [selectedPayMethod, setSelectedPayMethod] = useState<string>("wave");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptDataUrl, setReceiptDataUrl] = useState<string | null>(null);
@@ -497,7 +514,7 @@ function CommandeFormContent() {
       }
       if (data.price && data.price > 0) {
         setProductUnitPrice(data.price);
-        setProductCurrency((data.currency as "RMB" | "USD" | "FCFA") || "RMB");
+        setProductCurrency((data.currency as "RMB" | "USD" | "EUR" | "FCFA") || "USD");
       }
       if (data.minOrder && data.minOrder > 1 && productQuantity < data.minOrder) {
         setProductQuantity(data.minOrder);
@@ -519,7 +536,7 @@ function CommandeFormContent() {
       (qty < tiers[0].minQty ? tiers[0] : tiers[tiers.length - 1]);
     if (matchedTier && matchedTier.price > 0) {
       setProductUnitPrice(matchedTier.price);
-      setProductCurrency(matchedTier.currency || "RMB");
+      setProductCurrency(matchedTier.currency || "USD");
     }
   }, [productQuantity, extractedProduct]);
 
@@ -563,11 +580,9 @@ function CommandeFormContent() {
     setTimeout(() => setCopiedPay(null), 2000);
   };
 
-  // Calcul des conversions
+  // Calcul des conversions aux taux réels
   const unitPriceFCFA = useMemo(() => {
-    if (productCurrency === "RMB") return Math.round(productUnitPrice * 88);
-    if (productCurrency === "USD") return Math.round(productUnitPrice * 620);
-    return Math.round(productUnitPrice);
+    return convertToFcfa(productUnitPrice, productCurrency);
   }, [productUnitPrice, productCurrency]);
 
   const totalArticlesFCFA = useMemo(() => {
@@ -578,6 +593,156 @@ function CommandeFormContent() {
     return totalArticlesFCFA + shippingQuote;
   }, [totalArticlesFCFA, shippingQuote]);
 
+  // Données du dossier pour l'Étape 2 Bis (quand le client clique sur le lien ?pay=RM-...)
+  const payDossier = useMemo(() => {
+    if (!payRefParam) return null;
+    const saved = getClientRequestByReference(payRefParam);
+    const savedItem = saved?.items && saved.items[0] ? saved.items[0] : {};
+    const cName = searchParams.get("name") || searchParams.get("client") || saved?.client_name || "Client ROUM";
+    const cPhone = searchParams.get("phone") || saved?.client_phone || "";
+    const dest = searchParams.get("dest") || saved?.destination_country || "Côte d'Ivoire — Abidjan";
+    const mode = searchParams.get("mode") || saved?.shipping_mode_name || "Voie Aérienne";
+    const weightKgParam = searchParams.get("weight");
+    const cbmParam = searchParams.get("cbm");
+    const weightVal = weightKgParam
+      ? `${weightKgParam} kg`
+      : cbmParam
+      ? `${cbmParam} m³`
+      : saved?.estimated_weight_kg
+      ? `${saved.estimated_weight_kg} kg`
+      : saved?.estimated_cbm
+      ? `${saved.estimated_cbm} m³`
+      : "Estimé par ROUM";
+    const goodsFcfa = Number(searchParams.get("goods") || saved?.total_goods_fcfa || 0);
+    const shipFcfa = Number(searchParams.get("ship") || saved?.shipping_fee_fcfa || 0);
+    const totalFcfa =
+      Number(searchParams.get("total") || saved?.total_amount_fcfa || 0) || goodsFcfa + shipFcfa;
+    const title =
+      searchParams.get("title") ||
+      saved?.product_name ||
+      savedItem?.product_name ||
+      "Article commandé";
+    const qty = Number(searchParams.get("qty") || saved?.product_quantity || savedItem?.quantity || 1);
+    const img =
+      searchParams.get("img") ||
+      saved?.product_image ||
+      savedItem?.product_image ||
+      "";
+    const url = saved?.product_url || savedItem?.product_url || "";
+    const optType =
+      searchParams.get("opt") === "avec_fournisseur" || saved?.option_type === "AVEC_FOURNISSEUR"
+        ? ("avec_fournisseur" as const)
+        : ("sans_fournisseur" as const);
+    const sMark = saved?.shipping_mark || "";
+
+    return {
+      reference: payRefParam,
+      clientName: cName,
+      clientPhone: cPhone,
+      destination: dest,
+      transportMode: mode,
+      weightLabel: String(weightVal).includes("kg") || String(weightVal).includes("m³") ? String(weightVal) : `${weightVal} kg`,
+      goodsFcfa,
+      shipFcfa,
+      totalFcfa,
+      productTitle: title,
+      quantity: qty,
+      productImage: img,
+      productUrl: url,
+      optionType: optType,
+      shippingMark: sMark,
+    };
+  }, [payRefParam, searchParams]);
+
+  // Validation Étape 2 Bis : Envoi de la preuve de paiement par le client
+  const handlePaymentProofSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payDossier) return;
+    if (!receiptDataUrl) {
+      alert("Veuillez joindre la capture d'écran, le reçu PDF ou la vidéo de votre paiement avant de valider.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const selectedMethodLabel =
+        activePaymentMethods.find((m) => m.id === selectedPayMethod)?.label || selectedPayMethod.toUpperCase();
+
+      // Mise à jour ou création dans localStorage / API
+      submitClientPaymentProof(payDossier.reference, {
+        paymentMethod: selectedPayMethod,
+        receiptUrl: receiptDataUrl,
+        receiptName: receiptFileName || "Preuve de paiement",
+        fallbackData: {
+          clientName: payDossier.clientName,
+          clientPhone: payDossier.clientPhone,
+          destination: payDossier.destination,
+          shippingMode: payDossier.transportMode,
+          goodsTotalFcfa: payDossier.goodsFcfa,
+          shippingFeeFcfa: payDossier.shipFcfa,
+          totalAmountFcfa: payDossier.totalFcfa,
+          productName: payDossier.productTitle,
+          productQuantity: payDossier.quantity,
+          productImage: payDossier.productImage,
+          optionType: payDossier.optionType,
+        },
+      });
+
+      const receiptData: RoumReceiptData = {
+        receiptTitle: "REÇU DE PAIEMENT & PREUVE DE RÈGLEMENT",
+        reference: payDossier.reference,
+        trackingNumber: undefined,
+        shippingMark: payDossier.shippingMark || undefined,
+        date: new Date().toLocaleDateString("fr-FR", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        clientName: payDossier.clientName,
+        clientPhone: payDossier.clientPhone,
+        origin: "Chine (Guangzhou / Yiwu)",
+        destination: payDossier.destination,
+        optionType: payDossier.optionType,
+        transportMode: payDossier.transportMode,
+        weightOrVolume: payDossier.weightLabel,
+        productTitle: payDossier.productTitle,
+        productUrl: payDossier.productUrl || undefined,
+        productImage: payDossier.productImage || undefined,
+        quantity: payDossier.quantity,
+        goodsTotalFcfa: payDossier.goodsFcfa > 0 ? payDossier.goodsFcfa : undefined,
+        shippingFeeFcfa: payDossier.shipFcfa,
+        grandTotalFcfa: payDossier.totalFcfa,
+        paymentMethodLabel: `${selectedMethodLabel} (Justificatif joint : ${receiptFileName || "Reçu"})`,
+      };
+
+      const agencyWaPhone = settings.whatsapp_number?.trim() || "2250787994412";
+      const customWaUrl = buildClientReceiptWhatsAppUrl(receiptData, agencyWaPhone);
+
+      setOrderResult({
+        reference: payDossier.reference,
+        trackingNumber: "",
+        shippingMark: payDossier.shippingMark,
+        whatsappUrl: customWaUrl,
+        totalAmount: payDossier.totalFcfa,
+        receiptName: receiptFileName,
+        option: payDossier.optionType,
+        destination: payDossier.destination,
+        shippingModeDesc: payDossier.transportMode,
+        receiptData,
+        isPaymentStep: true,
+      });
+      setSubmitted(true);
+    } catch (err) {
+      console.error("Erreur envoi preuve de paiement:", err);
+      setSubmitted(true);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Validation Étape 1 : Demande de commande initiale (SANS poids estimé ni paiement immédiat)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientName.trim() || !clientPhone.trim()) {
@@ -605,9 +770,9 @@ function CommandeFormContent() {
     try {
       let cargoDescription = "";
       if (option === "sans_fournisseur") {
-        cargoDescription = `[SOURCING SANS FOURNISSEUR] Produit: ${productQuery.trim() || extractedProduct?.title || "Article Alibaba"} | Qté: ${productQuantity} | P.U: ${productUnitPrice} ${productCurrency} | Fret: ${transportModeLabel} (${selectedTransportMode === "SEA" ? `${packageVolume} m³` : `${packageWeight} kg`}) | Total: ${grandTotalFCFA.toLocaleString("fr-FR")} FCFA`;
+        cargoDescription = `[SOURCING SANS FOURNISSEUR] Produit: ${productQuery.trim() || extractedProduct?.title || "Article Alibaba"} | Qté: ${productQuantity} | P.U: ${productUnitPrice} ${productCurrency} (≈ ${unitPriceFCFA.toLocaleString("fr-FR")} FCFA) | Sous-total Marchandises: ${totalArticlesFCFA.toLocaleString("fr-FR")} FCFA | Transport choisi: ${transportModeLabel} (${transportUnitRateFormatted}) — Poids en attente d'estimation ROUM`;
       } else {
-        cargoDescription = `[EXPÉDITION AVEC FOURNISSEUR] Shipping Mark: ${clientShippingMark.trim()} | Usine: ${paidToSupplier.trim() || "Déjà réglé"} (${supplierContact.trim() || "Contact usine"}) | Colis: ${goodsDescription.trim() || extractedProduct?.title || "Marchandises"} | Fret: ${transportModeLabel} (${selectedTransportMode === "SEA" ? `${packageVolume} m³` : `${packageWeight} kg`} à ${transportUnitRateFormatted}) | Devis: ${shippingQuote.toLocaleString("fr-FR")} FCFA`;
+        cargoDescription = `[EXPÉDITION AVEC FOURNISSEUR] Shipping Mark: ${clientShippingMark.trim()} | Usine: ${paidToSupplier.trim() || "Déjà réglé"} (${supplierContact.trim() || "Contact usine"}) | Colis: ${goodsDescription.trim() || extractedProduct?.title || "Marchandises"} | Transport choisi: ${transportModeLabel} (${transportUnitRateFormatted}) — Poids en attente d'estimation ROUM`;
       }
 
       const res = await saveClientRequest({
@@ -627,38 +792,29 @@ function CommandeFormContent() {
           productQuery.trim() ||
           extractedProduct?.title ||
           (option === "avec_fournisseur" ? goodsDescription.trim() : "Article Alibaba"),
-        unit_price: option === "sans_fournisseur" ? productUnitPrice : undefined,
-        unit_price_currency: option === "sans_fournisseur" ? productCurrency : undefined,
-        total_goods_fcfa: option === "sans_fournisseur" ? totalArticlesFCFA : undefined,
-        shipping_fee_fcfa: shippingQuote,
-        total_amount_fcfa: option === "sans_fournisseur" ? grandTotalFCFA : shippingQuote,
-        payment_method_selected: option === "sans_fournisseur" ? selectedPayMethod : "MOBILE_MONEY_ARRIVEE",
-        payment_receipt_url: option === "sans_fournisseur" ? receiptDataUrl || undefined : undefined,
-        payment_receipt_name: option === "sans_fournisseur" ? receiptFileName || undefined : undefined,
+        unit_price: option === "sans_fournisseur" ? productUnitPrice : (extractedProduct?.price || undefined),
+        unit_price_currency: option === "sans_fournisseur" ? productCurrency : (extractedProduct?.currency || undefined),
+        total_goods_fcfa: option === "sans_fournisseur" ? totalArticlesFCFA : 0,
+        shipping_fee_fcfa: 0,
+        total_amount_fcfa: option === "sans_fournisseur" ? totalArticlesFCFA : 0,
+        payment_method_selected: "EN_ATTENTE_DEVIS_ROUM",
         product_quantity: String(productQuantity || 1),
         product_specs:
           option === "sans_fournisseur"
-            ? `Mode: ${transportModeLabel} | Articles: ${totalArticlesFCFA.toLocaleString("fr-FR")} F | Fret: ${shippingQuote.toLocaleString("fr-FR")} F`
-            : `Shipping Mark: ${clientShippingMark.trim()} | Payé usine: ${paidToSupplier.trim()} | Fret: ${shippingQuote.toLocaleString("fr-FR")} F`,
+            ? `Mode: ${transportModeLabel} (${transportUnitRateFormatted}) | Qté: ${productQuantity} pcs | Marchandises: ${totalArticlesFCFA.toLocaleString("fr-FR")} FCFA | Poids: à estimer par ROUM`
+            : `Shipping Mark: ${clientShippingMark.trim()} | Payé usine: ${paidToSupplier.trim()} | Mode: ${transportModeLabel} (${transportUnitRateFormatted}) | Poids: à estimer par ROUM`,
         shipping_mode_type: selectedTransportMode === "SEA" ? "SEA" : "AIR",
         shipping_mode_name: transportModeLabel,
-        estimated_weight_kg: selectedTransportMode !== "SEA" ? packageWeight : undefined,
-        estimated_cbm: selectedTransportMode === "SEA" ? packageVolume : undefined,
         cargo_type: cargoDescription,
       });
-
-      const selectedPaymentLabel =
-        option === "sans_fournisseur"
-          ? activePaymentMethods.find((m) => m.id === selectedPayMethod)?.label || selectedPayMethod.toUpperCase()
-          : "Mobile Money Wave / Orange Money à la réception";
 
       const receiptData: RoumReceiptData = {
         receiptTitle:
           option === "avec_fournisseur"
-            ? "BON D'EXPÉDITION & TRANSIT OFFICIEL"
-            : "BON DE COMMANDE & ACHAT CHINE",
+            ? "FICHE DE DEMANDE D'EXPÉDITION (ÉTAPE 1)"
+            : "FICHE DE DEMANDE DE COMMANDE (ÉTAPE 1)",
         reference: res.reference,
-        trackingNumber: res.trackingNumber || res.reference,
+        trackingNumber: undefined,
         shippingMark: res.shippingMark || (option === "avec_fournisseur" ? clientShippingMark.trim() : undefined),
         date: new Date().toLocaleDateString("fr-FR", {
           day: "2-digit",
@@ -672,9 +828,8 @@ function CommandeFormContent() {
         origin: "Chine (Guangzhou / Yiwu)",
         destination: destinationCity.trim(),
         optionType: option,
-        transportMode: transportModeLabel,
-        weightOrVolume:
-          selectedTransportMode === "SEA" ? `${packageVolume} m³ (CBM)` : `${packageWeight} kg`,
+        transportMode: `${transportModeLabel} (${transportUnitRateFormatted})`,
+        weightOrVolume: "En attente d'estimation par ROUM TRANSIT",
         productTitle:
           productQuery.trim() ||
           extractedProduct?.title ||
@@ -689,9 +844,9 @@ function CommandeFormContent() {
         goodsTotalFcfa: option === "sans_fournisseur" ? totalArticlesFCFA : undefined,
         paidToSupplierLabel: option === "avec_fournisseur" ? paidToSupplier.trim() || undefined : undefined,
         supplierContact: option === "avec_fournisseur" ? supplierContact.trim() || undefined : undefined,
-        shippingFeeFcfa: shippingQuote,
-        grandTotalFcfa: option === "sans_fournisseur" ? grandTotalFCFA : shippingQuote,
-        paymentMethodLabel: selectedPaymentLabel,
+        shippingFeeFcfa: 0,
+        grandTotalFcfa: option === "sans_fournisseur" ? totalArticlesFCFA : 0,
+        paymentMethodLabel: "Règlement à l'Étape 2 après estimation du poids & envoi du lien par ROUM",
       };
 
       const agencyWaPhone = settings.whatsapp_number?.trim() || "2250787994412";
@@ -699,15 +854,16 @@ function CommandeFormContent() {
 
       setOrderResult({
         reference: res.reference,
-        trackingNumber: res.trackingNumber,
+        trackingNumber: "",
         shippingMark: res.shippingMark,
         whatsappUrl: customWaUrl,
-        totalAmount: option === "sans_fournisseur" ? grandTotalFCFA : shippingQuote,
-        receiptName: receiptFileName,
+        totalAmount: option === "sans_fournisseur" ? totalArticlesFCFA : 0,
+        receiptName: "",
         option,
         destination: destinationCity,
         shippingModeDesc: transportModeLabel,
         receiptData,
+        isPaymentStep: false,
       });
       setSubmitted(true);
     } catch (err) {
@@ -731,8 +887,14 @@ function CommandeFormContent() {
 
         {/* Titre minimaliste */}
         <div className="ios-header">
-          <h1 className="ios-title">Passer une commande</h1>
-          <p className="ios-subtitle">Achats et expéditions Chine vers l&apos;Afrique</p>
+          <h1 className="ios-title">
+            {payDossier ? "Finaliser mon règlement" : "Passer une commande"}
+          </h1>
+          <p className="ios-subtitle">
+            {payDossier
+              ? `Étape 2 · Devis officiel & Poids estimés par ROUM TRANSIT (${payDossier.reference})`
+              : "Achats et expéditions Chine vers l'Afrique aux vrais tarifs usine"}
+          </p>
         </div>
 
         {submitted && orderResult ? (
@@ -741,12 +903,16 @@ function CommandeFormContent() {
               <CheckCircle2 size={38} color="#16A34A" />
             </div>
             <h2 className="ios-success-title">
-              {orderResult.option === "avec_fournisseur"
-                ? "Dossier & Reçu officiel générés"
-                : "Commande & Reçu officiel générés"}
+              {orderResult.isPaymentStep
+                ? "Preuve de paiement & Reçu enregistrés"
+                : orderResult.option === "avec_fournisseur"
+                ? "Demande d'expédition enregistrée"
+                : "Demande de commande enregistrée"}
             </h2>
             <p className="ios-success-desc">
-              Vous pouvez télécharger ou imprimer votre reçu PDF ci-dessous, puis l&apos;envoyer en un clic à l&apos;agence sur WhatsApp.
+              {orderResult.isPaymentStep
+                ? "Votre justificatif a été transmis à ROUM TRANSIT. Dès confirmation de l'encaissement par notre équipe, vous recevrez votre Numéro de Suivi (Tracking Number) officiel sur WhatsApp."
+                : "Téléchargez votre fiche PDF ci-dessous et envoyez-la sur WhatsApp à l'agence. ROUM TRANSIT estimera le poids de votre colis et vous enverra votre lien de paiement officiel."}
             </p>
 
             {/* Aperçu visuel de l'article sur le reçu */}
@@ -772,28 +938,45 @@ function CommandeFormContent() {
             <div className="ios-inset-box">
               <div className="ios-row-item">
                 <span className="ios-item-label">Référence Dossier</span>
-                <span className="ios-item-val mono">{orderResult.reference}</span>
-              </div>
-
-              <div className="ios-row-item">
-                <span className="ios-item-label">N° de Suivi Colis</span>
                 <div className="ios-item-val-group">
-                  <Link
-                    href={`/tracking/${orderResult.trackingNumber || orderResult.reference}`}
-                    className="ios-item-val mono"
-                    style={{ color: "#0F766E", textDecoration: "underline", fontWeight: 800 }}
-                  >
-                    {orderResult.trackingNumber || orderResult.reference}
-                  </Link>
+                  <span className="ios-item-val mono">{orderResult.reference}</span>
                   <button
                     type="button"
-                    onClick={() => copyText(orderResult.trackingNumber || orderResult.reference, "tracking")}
+                    onClick={() => copyText(orderResult.reference, "tracking")}
                     className="ios-copy-pill"
                   >
                     {copiedTracking ? <Check size={12} color="#16A34A" /> : <Copy size={12} />}
                     <span>{copiedTracking ? "Copié" : "Copier"}</span>
                   </button>
                 </div>
+              </div>
+
+              <div className="ios-row-item">
+                <span className="ios-item-label">N° de Suivi Colis</span>
+                {orderResult.trackingNumber ? (
+                  <div className="ios-item-val-group">
+                    <Link
+                      href={`/tracking/${orderResult.trackingNumber}`}
+                      className="ios-item-val mono"
+                      style={{ color: "#0F766E", textDecoration: "underline", fontWeight: 800 }}
+                    >
+                      {orderResult.trackingNumber}
+                    </Link>
+                  </div>
+                ) : (
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      color: "#92400E",
+                      background: "#FEF3C7",
+                      padding: "3px 9px",
+                      borderRadius: "9999px",
+                    }}
+                  >
+                    Attribué après validation du paiement
+                  </span>
+                )}
               </div>
 
               {orderResult.shippingMark && (
@@ -827,10 +1010,16 @@ function CommandeFormContent() {
 
               <div className="ios-row-item highlight" style={{ paddingTop: "6px", borderTop: "1px solid rgba(28,24,21,0.08)" }}>
                 <span className="ios-item-label">
-                  {orderResult.option === "avec_fournisseur" ? "Devis Transit estimé" : "Total à régler"}
+                  {orderResult.isPaymentStep
+                    ? "Total réglé (Devis ROUM)"
+                    : orderResult.option === "avec_fournisseur"
+                    ? "Frais de transport"
+                    : "Sous-total Marchandises (Hors fret)"}
                 </span>
                 <span className="ios-item-val bold">
-                  {orderResult.totalAmount?.toLocaleString("fr-FR")} FCFA
+                  {orderResult.totalAmount && orderResult.totalAmount > 0
+                    ? `${orderResult.totalAmount.toLocaleString("fr-FR")} FCFA`
+                    : "Sur estimation du poids par ROUM"}
                 </span>
               </div>
             </div>
@@ -855,12 +1044,6 @@ function CommandeFormContent() {
               </button>
             </div>
 
-            {orderResult.option === "avec_fournisseur" && (
-              <p className="ios-note-subtle" style={{ marginTop: "10px" }}>
-                Paiement par Wave ou Orange Money lors du retrait à l&apos;entrepôt ({orderResult.destination}).
-              </p>
-            )}
-
             <div className="ios-actions-stack">
               <a
                 href={orderResult.whatsappUrl}
@@ -869,17 +1052,210 @@ function CommandeFormContent() {
                 className="ios-btn-whatsapp-agency"
               >
                 <MessageCircle size={18} />
-                <span>Envoyer ce reçu par WhatsApp à l&apos;agence</span>
+                <span>
+                  {orderResult.isPaymentStep
+                    ? "Confirmer mon paiement sur WhatsApp à l'agence"
+                    : "Envoyer ma commande sur WhatsApp à l'agence"}
+                </span>
               </a>
-              <Link
-                href={`/tracking/${orderResult.trackingNumber || orderResult.reference}`}
-                className="ios-btn-primary"
-              >
-                <Package size={16} />
-                <span>Suivre mon colis en direct</span>
-              </Link>
             </div>
           </div>
+        ) : payDossier ? (
+          /* ÉTAPE 2 BIS : ÉCRAN DE RÈGLEMENT & ENVOI DE LA PREUVE DE PAIEMENT */
+          <form onSubmit={handlePaymentProofSubmit} className="ios-form-root">
+            <div className="ios-card">
+              <div className="ios-section">
+                <div className="ios-section-caption">Récapitulatif &amp; Devis validé par ROUM TRANSIT</div>
+
+                {payDossier.productImage && (
+                  <div className="ios-product-preview-card" style={{ marginTop: 0 }}>
+                    <div className="ios-product-preview-main">
+                      <div
+                        className="ios-product-preview-thumb-wrap"
+                        onClick={() => setZoomImageUrl(payDossier.productImage)}
+                        title="Cliquez pour agrandir la photo"
+                      >
+                        <img
+                          src={payDossier.productImage}
+                          alt={payDossier.productTitle}
+                          className="ios-product-preview-thumb"
+                        />
+                        <span className="ios-thumb-zoom-hint">
+                          <ZoomIn size={12} />
+                        </span>
+                      </div>
+                      <div className="ios-product-preview-body">
+                        <span className="ios-product-preview-badge">✓ Dossier vérifié par ROUM TRANSIT</span>
+                        <div className="ios-product-preview-title">{payDossier.productTitle}</div>
+                        <div style={{ fontSize: "0.8rem", color: "#524B43", fontWeight: 600 }}>
+                          Quantité : {payDossier.quantity} pcs · Destination : {payDossier.destination}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="ios-receipt">
+                  <div className="ios-receipt-row">
+                    <span>Référence Dossier</span>
+                    <span className="mono" style={{ fontWeight: 700, color: "#1C1815" }}>
+                      {payDossier.reference}
+                    </span>
+                  </div>
+                  <div className="ios-receipt-row">
+                    <span>Client</span>
+                    <span>
+                      {payDossier.clientName} {payDossier.clientPhone ? `(${payDossier.clientPhone})` : ""}
+                    </span>
+                  </div>
+                  <div className="ios-receipt-row">
+                    <span>Moyen de transport</span>
+                    <span>{payDossier.transportMode}</span>
+                  </div>
+                  <div className="ios-receipt-row">
+                    <span style={{ fontWeight: 700, color: "#166534" }}>Poids / Volume estimé par ROUM</span>
+                    <span
+                      className="mono"
+                      style={{
+                        fontWeight: 800,
+                        color: "#166534",
+                        background: "#DCFCE7",
+                        padding: "2px 8px",
+                        borderRadius: "9999px",
+                      }}
+                    >
+                      {payDossier.weightLabel}
+                    </span>
+                  </div>
+
+                  <div className="ios-receipt-divider" />
+
+                  {payDossier.goodsFcfa > 0 && (
+                    <div className="ios-receipt-row">
+                      <span>Sous-total Marchandises ({payDossier.quantity} pcs)</span>
+                      <span className="mono">{payDossier.goodsFcfa.toLocaleString("fr-FR")} FCFA</span>
+                    </div>
+                  )}
+                  <div className="ios-receipt-row">
+                    <span>Frais de Transport &amp; Douane ({payDossier.weightLabel})</span>
+                    <span className="mono">{payDossier.shipFcfa.toLocaleString("fr-FR")} FCFA</span>
+                  </div>
+
+                  <div className="ios-receipt-divider" />
+
+                  <div className="ios-receipt-row total">
+                    <span>Total officiel à régler</span>
+                    <span className="bold" style={{ color: "#16A34A" }}>
+                      {payDossier.totalFcfa.toLocaleString("fr-FR")} <small>FCFA</small>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="ios-divider" />
+
+              <div className="ios-section">
+                <div className="ios-section-caption">1. Choisissez votre moyen de paiement officiel</div>
+                <div className="ios-payment-list">
+                  {activePaymentMethods.map((pm) => {
+                    const isSelected = selectedPayMethod === pm.id;
+                    const isBankRib = pm.id === "morocco";
+                    return (
+                      <div
+                        key={pm.id}
+                        className={`ios-payment-row ${isSelected ? "selected" : ""}`}
+                        onClick={() => setSelectedPayMethod(pm.id)}
+                      >
+                        <div className="ios-pay-left">
+                          {pm.logo}
+                          <div>
+                            <div className="ios-pay-name">{pm.label}</div>
+                            <div className="ios-pay-num mono">{pm.accountNumber}</div>
+                            <div style={{ fontSize: "0.72rem", color: "#8E8E93" }}>{pm.accountHolder}</div>
+                          </div>
+                        </div>
+                        <div className="ios-pay-actions">
+                          {!isBankRib && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openPaymentApp(pm.id, pm.copyValue);
+                              }}
+                              className="ios-open-app-pill"
+                            >
+                              <Smartphone size={12} />
+                              <span>Ouvrir l&apos;app</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyPayMethod(pm.id, pm.copyValue);
+                            }}
+                            className="ios-copy-pill"
+                          >
+                            {copiedPay === pm.id ? <Check size={12} color="#16A34A" /> : <Copy size={12} />}
+                            <span>{copiedPay === pm.id ? "Copié" : isBankRib ? "Copier le RIB" : "Copier"}</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="ios-section-caption" style={{ marginTop: "10px" }}>
+                  2. Joignez votre preuve de paiement (capture d&apos;écran, reçu PDF ou vidéo)
+                </div>
+                <div className="ios-upload-wrap">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,video/*,.pdf"
+                    onChange={handleReceiptChange}
+                    style={{ display: "none" }}
+                    id="receiptUploadPay"
+                  />
+                  {!receiptFile ? (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="ios-upload-btn"
+                      style={{ height: "54px", borderColor: "#C5A265", background: "#FFFBEB", color: "#92400E" }}
+                    >
+                      <Upload size={16} />
+                      <span>Cliquez ici pour joindre votre preuve de paiement</span>
+                    </button>
+                  ) : (
+                    <div className="ios-receipt-attached" style={{ flexDirection: "column", alignItems: "stretch", gap: "8px", borderRadius: "16px", padding: "12px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span className="ios-receipt-name">
+                          ✓ Preuve jointe : {receiptFileName}
+                        </span>
+                        <button type="button" onClick={handleRemoveReceipt} className="ios-receipt-remove" title="Supprimer">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                      {receiptDataUrl && receiptDataUrl.startsWith("data:image/") && (
+                        <img
+                          src={receiptDataUrl}
+                          alt="Preuve de paiement"
+                          style={{ maxHeight: "160px", objectFit: "contain", borderRadius: "10px", background: "#FFFFFF" }}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="ios-submit-wrap">
+                <button type="submit" disabled={submitting} className="ios-submit-btn">
+                  {submitting ? "Envoi en cours..." : "Envoyer ma preuve de paiement & Générer mon reçu"}
+                </button>
+              </div>
+            </div>
+          </form>
         ) : (
           <form onSubmit={handleSubmit} onPaste={handlePasteImage} className="ios-form-root">
             {/* Input unique pour l'image de l'article (accessible Option 1 & Option 2) */}
@@ -985,38 +1361,10 @@ function CommandeFormContent() {
                       Voie Maritime Groupage · 35 à 45 jours ({rateSea.toLocaleString("fr-FR")} FCFA / m³)
                     </option>
                   </select>
-                </div>
-
-                {/* Poids ou Volume */}
-                <div className="ios-field">
-                  <label htmlFor="packageWeightOrVolume">
-                    {selectedTransportMode === "SEA" ? "Volume estimé (m³)" : "Poids estimé (kg)"}
-                  </label>
-                  {selectedTransportMode === "SEA" ? (
-                    <input
-                      id="packageWeightOrVolume"
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      required
-                      value={packageVolume}
-                      onChange={(e) => setPackageVolume(parseFloat(e.target.value) || 0.1)}
-                      placeholder="0.25"
-                      className="ios-input"
-                    />
-                  ) : (
-                    <input
-                      id="packageWeightOrVolume"
-                      type="number"
-                      step="0.5"
-                      min="0.5"
-                      required
-                      value={packageWeight}
-                      onChange={(e) => setPackageWeight(parseFloat(e.target.value) || 1)}
-                      placeholder="5"
-                      className="ios-input"
-                    />
-                  )}
+                  <p className="ios-note-subtle" style={{ marginTop: "4px", color: "#524B43" }}>
+                    ✓ Vous n&apos;avez pas besoin de connaître le poids de votre article :{" "}
+                    <strong>ROUM TRANSIT l&apos;estimera pour vous</strong> ({transportUnitRateFormatted}) avant de vous envoyer votre lien de règlement.
+                  </p>
                 </div>
               </div>
 
@@ -1174,7 +1522,7 @@ function CommandeFormContent() {
                         {extractedProduct?.priceTiers && extractedProduct.priceTiers.length > 0 && (
                           <div className="ios-tiers-box">
                             <div className="ios-tiers-header">
-                              <span>Prix fournisseur par tranche de quantité (cliquez pour choisir)</span>
+                              <span>Vrais prix fournisseur par tranche (cliquez pour choisir)</span>
                               {extractedProduct.minOrder && extractedProduct.minOrder > 1 && (
                                 <span className="ios-moq-tag">MOQ : {extractedProduct.minOrder} pcs</span>
                               )}
@@ -1185,12 +1533,7 @@ function CommandeFormContent() {
                                 const isActive =
                                   (qty >= tier.minQty && (tier.maxQty === null || qty <= tier.maxQty)) ||
                                   (idx === 0 && qty < tier.minQty);
-                                const tierFcfa =
-                                  tier.currency === "RMB"
-                                    ? Math.round(tier.price * 88)
-                                    : tier.currency === "USD"
-                                    ? Math.round(tier.price * 620)
-                                    : Math.round(tier.price);
+                                const tierFcfa = convertToFcfa(tier.price, tier.currency);
                                 return (
                                   <button
                                     key={`${tier.label}-${idx}`}
@@ -1277,7 +1620,7 @@ function CommandeFormContent() {
                             id="productUnitPrice"
                             type="number"
                             step="any"
-                            min="0.1"
+                            min="0.01"
                             required
                             value={productUnitPrice}
                             onChange={(e) => setProductUnitPrice(parseFloat(e.target.value) || 0)}
@@ -1288,8 +1631,9 @@ function CommandeFormContent() {
                             onChange={(e) => setProductCurrency(e.target.value as any)}
                             className="ios-select-compact"
                           >
-                            <option value="RMB">¥ RMB</option>
                             <option value="USD">$ USD</option>
+                            <option value="EUR">€ EUR</option>
+                            <option value="RMB">¥ RMB</option>
                             <option value="FCFA">FCFA</option>
                           </select>
                         </div>
@@ -1424,10 +1768,10 @@ function CommandeFormContent() {
                               {extractedProduct?.price && extractedProduct.price > 0 ? (
                                 <>
                                   <span className="ios-product-preview-price-cny">
-                                    {extractedProduct.price.toLocaleString("fr-FR")} {extractedProduct.currency || "RMB"}
+                                    {extractedProduct.price.toLocaleString("fr-FR")} {extractedProduct.currency || "USD"}
                                   </span>
                                   <span className="ios-product-preview-price-cfa">
-                                    / unité (≈ {Math.round(extractedProduct.price * 88).toLocaleString("fr-FR")} FCFA)
+                                    / unité (≈ {convertToFcfa(extractedProduct.price, extractedProduct.currency || "USD").toLocaleString("fr-FR")} FCFA)
                                   </span>
                                 </>
                               ) : (
@@ -1449,12 +1793,7 @@ function CommandeFormContent() {
                             </div>
                             <div className="ios-tiers-grid">
                               {extractedProduct.priceTiers.map((tier, idx) => {
-                                const tierFcfa =
-                                  tier.currency === "RMB"
-                                    ? Math.round(tier.price * 88)
-                                    : tier.currency === "USD"
-                                    ? Math.round(tier.price * 620)
-                                    : Math.round(tier.price);
+                                const tierFcfa = convertToFcfa(tier.price, tier.currency);
                                 return (
                                   <button
                                     key={`${tier.label}-${idx}`}
@@ -1522,7 +1861,7 @@ function CommandeFormContent() {
                           id="paidToSupplier"
                           type="text"
                           required
-                          placeholder="Ex : 8 450 RMB ¥ ou 1 200 $"
+                          placeholder="Ex : 1 200 $ USD ou 8 450 RMB ¥"
                           value={paidToSupplier}
                           onChange={(e) => setPaidToSupplier(e.target.value)}
                           className="ios-input"
@@ -1547,141 +1886,178 @@ function CommandeFormContent() {
 
               <div className="ios-divider" />
 
-              {/* SECTION 3 : DEVIS ESTIMÉ */}
+              {/* SECTION 3 : RÉCAPITULATIF MARCHANDISES & MODALITÉS DE TRANSPORT */}
               <div className="ios-section">
-                <div className="ios-section-caption">Devis estimé</div>
+                <div className="ios-section-caption">Récapitulatif de votre commande</div>
 
                 <div className="ios-receipt">
-                  <div className="ios-receipt-row">
-                    <span>
-                      Transport {transportModeLabel} ({selectedTransportMode === "SEA" ? `${packageVolume} m³` : `${packageWeight} kg`})
-                    </span>
-                    <span className="mono">{shippingQuote.toLocaleString("fr-FR")} FCFA</span>
-                  </div>
-
-                  {option === "sans_fournisseur" && (
+                  {option === "sans_fournisseur" ? (
                     <div className="ios-receipt-row">
-                      <span>Articles ({productQuantity} pcs)</span>
-                      <span className="mono">{totalArticlesFCFA.toLocaleString("fr-FR")} FCFA</span>
+                      <span>
+                        Marchandises ({productQuantity} pcs × {productUnitPrice.toLocaleString("fr-FR")} {productCurrency})
+                      </span>
+                      <span className="mono" style={{ fontWeight: 700, color: "#1C1815" }}>
+                        {totalArticlesFCFA.toLocaleString("fr-FR")} FCFA
+                      </span>
                     </div>
-                  )}
-
-                  {option === "avec_fournisseur" && paidToSupplier && (
+                  ) : (
                     <div className="ios-receipt-row">
                       <span>Marchandise réglée fournisseur</span>
-                      <span className="mono">{paidToSupplier}</span>
+                      <span className="mono">{paidToSupplier || "Réglé à l'usine"}</span>
                     </div>
                   )}
+
+                  <div className="ios-receipt-row">
+                    <span>Moyen de transport souhaité</span>
+                    <span style={{ fontWeight: 600, color: "#1C1815" }}>{transportModeLabel}</span>
+                  </div>
+
+                  <div className="ios-receipt-row">
+                    <span>Tarif officiel du transport</span>
+                    <span className="mono">{transportUnitRateFormatted}</span>
+                  </div>
+
+                  <div className="ios-receipt-row">
+                    <span>Poids / Volume du colis</span>
+                    <span
+                      style={{
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        color: "#92400E",
+                        background: "#FEF3C7",
+                        padding: "2px 8px",
+                        borderRadius: "9999px",
+                      }}
+                    >
+                      Estimé par ROUM TRANSIT
+                    </span>
+                  </div>
 
                   <div className="ios-receipt-divider" />
 
                   <div className="ios-receipt-row total">
-                    <span>{option === "sans_fournisseur" ? "Total global estimé" : "Devis transport estimé"}</span>
+                    <span>
+                      {option === "sans_fournisseur"
+                        ? "Sous-total Marchandises (Hors transport)"
+                        : "Frais de transport"}
+                    </span>
                     <span className="bold">
-                      {(option === "sans_fournisseur" ? grandTotalFCFA : shippingQuote).toLocaleString("fr-FR")}{" "}
-                      <small>FCFA</small>
+                      {option === "sans_fournisseur" ? (
+                        <>
+                          {totalArticlesFCFA.toLocaleString("fr-FR")} <small>FCFA</small>
+                        </>
+                      ) : (
+                        <small style={{ fontSize: "0.86rem", fontWeight: 700, color: "#166534" }}>
+                          Calculés après pesée par ROUM
+                        </small>
+                      )}
                     </span>
                   </div>
                 </div>
-
-                <p className="ios-note-subtle">
-                  {option === "sans_fournisseur"
-                    ? "Dédouanement complet inclus jusqu'à destination."
-                    : `Paiement du fret par Wave ou Orange Money lors du retrait à ${destinationCity}.`}
-                </p>
               </div>
 
-              {/* SECTION 4 (Option 1 uniquement) : RÈGLEMENT */}
-              {option === "sans_fournisseur" && (
-                <>
-                  <div className="ios-divider" />
+              <div className="ios-divider" />
 
-                  <div className="ios-section">
-                    <div className="ios-section-caption">Comptes de règlement officiels</div>
-
-                    <div className="ios-payment-list">
-                      {activePaymentMethods.map((pm) => {
-                        const isSelected = selectedPayMethod === pm.id;
-                        const isBankRib = pm.id === "morocco";
-                        return (
-                          <div
-                            key={pm.id}
-                            className={`ios-payment-row ${isSelected ? "selected" : ""}`}
-                            onClick={() => setSelectedPayMethod(pm.id)}
-                          >
-                            <div className="ios-pay-left">
-                              {pm.logo}
-                              <div>
-                                <div className="ios-pay-name">{pm.label}</div>
-                                <div className="ios-pay-num mono">{pm.accountNumber}</div>
-                                <div style={{ fontSize: "0.72rem", color: "#8E8E93" }}>{pm.accountHolder}</div>
-                              </div>
-                            </div>
-                            <div className="ios-pay-actions">
-                              {!isBankRib && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openPaymentApp(pm.id, pm.copyValue);
-                                  }}
-                                  className="ios-open-app-pill"
-                                  title="Ouvrir directement l'application sur votre smartphone"
-                                >
-                                  <Smartphone size={12} />
-                                  <span>Ouvrir l&apos;app</span>
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  copyPayMethod(pm.id, pm.copyValue);
-                                }}
-                                className="ios-copy-pill"
-                              >
-                                {copiedPay === pm.id ? <Check size={12} color="#16A34A" /> : <Copy size={12} />}
-                                <span>{copiedPay === pm.id ? "Copié" : isBankRib ? "Copier le RIB" : "Copier"}</span>
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div className="ios-upload-wrap">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*,video/*,.pdf"
-                        onChange={handleReceiptChange}
-                        style={{ display: "none" }}
-                        id="receiptUpload"
-                      />
-                      {!receiptFile ? (
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          className="ios-upload-btn"
-                        >
-                          <Upload size={14} />
-                          <span>Joindre la preuve de paiement (capture, reçu ou vidéo)</span>
-                        </button>
-                      ) : (
-                        <div className="ios-receipt-attached">
-                          <span className="ios-receipt-name">
-                            {receiptFile?.type?.startsWith("video/") ? "📹 Vidéo jointe : " : "🖼️ Justificatif : "}
-                            {receiptFileName}
-                          </span>
-                          <button type="button" onClick={handleRemoveReceipt} className="ios-receipt-remove" title="Supprimer">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      )}
+              {/* SECTION 4 : PROCESSUS EN 3 ÉTAPES (AUCUN PAIEMENT IMMÉDIAT REQUIS ICI) */}
+              <div className="ios-section">
+                <div className="ios-section-caption">Comment fonctionne la validation &amp; le règlement ?</div>
+                <div
+                  style={{
+                    background: "#F7F5F0",
+                    border: "1px solid rgba(197, 162, 101, 0.35)",
+                    borderRadius: "18px",
+                    padding: "14px 16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                    fontSize: "0.82rem",
+                    color: "#3F3A34",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                    <span
+                      style={{
+                        width: "22px",
+                        height: "22px",
+                        borderRadius: "50%",
+                        background: "#1C1815",
+                        color: "#FFFFFF",
+                        fontSize: "0.72rem",
+                        fontWeight: 800,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        marginTop: "1px",
+                      }}
+                    >
+                      1
+                    </span>
+                    <div>
+                      <strong style={{ color: "#1C1815" }}>Envoi de votre commande (Sans paiement immédiat)</strong>
+                      <div style={{ color: "#716C65", fontSize: "0.78rem", marginTop: "1px" }}>
+                        Validez votre demande ci-dessous pour obtenir votre fiche PDF et l&apos;envoyer sur WhatsApp à ROUM TRANSIT.
+                      </div>
                     </div>
                   </div>
-                </>
-              )}
+
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                    <span
+                      style={{
+                        width: "22px",
+                        height: "22px",
+                        borderRadius: "50%",
+                        background: "#C5A265",
+                        color: "#FFFFFF",
+                        fontSize: "0.72rem",
+                        fontWeight: 800,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        marginTop: "1px",
+                      }}
+                    >
+                      2
+                    </span>
+                    <div>
+                      <strong style={{ color: "#1C1815" }}>Estimation du poids &amp; Lien de paiement sur WhatsApp</strong>
+                      <div style={{ color: "#716C65", fontSize: "0.78rem", marginTop: "1px" }}>
+                        Notre équipe estime le poids réel de votre article, calcule le devis exact et vous envoie sur WhatsApp un{" "}
+                        <strong>lien de paiement officiel</strong> (Wave, Orange Money ou Compte Maroc) pour joindre votre reçu.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                    <span
+                      style={{
+                        width: "22px",
+                        height: "22px",
+                        borderRadius: "50%",
+                        background: "#16A34A",
+                        color: "#FFFFFF",
+                        fontSize: "0.72rem",
+                        fontWeight: 800,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        marginTop: "1px",
+                      }}
+                    >
+                      3
+                    </span>
+                    <div>
+                      <strong style={{ color: "#1C1815" }}>Confirmation d&apos;encaissement &amp; N° de Suivi Officiel</strong>
+                      <div style={{ color: "#716C65", fontSize: "0.78rem", marginTop: "1px" }}>
+                        Dès confirmation de votre paiement, nous vous envoyons votre{" "}
+                        <strong>Tracking Number cliquable</strong> pour suivre votre colis en direct jusqu&apos;à destination.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               {/* BOUTON D'ACTION PRINCIPAL EN PILULE */}
               <div className="ios-submit-wrap">
@@ -1689,7 +2065,7 @@ function CommandeFormContent() {
                   {submitting
                     ? "Enregistrement..."
                     : option === "sans_fournisseur"
-                    ? "Valider ma commande"
+                    ? "Envoyer ma commande (Estimation du poids par ROUM)"
                     : "Créer mon dossier d'expédition"}
                 </button>
               </div>

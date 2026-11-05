@@ -113,7 +113,8 @@ function formatNumberFr(n: number): string {
  */
 export function generateOfficialPdfBlob(rawData: RoumReceiptData): Blob {
   const data = normalizeReceiptData(rawData);
-  const trackingCode = data.trackingNumber || data.reference;
+  const hasActiveTracking = Boolean(data.trackingNumber && data.trackingNumber.trim());
+  const trackingCode = hasActiveTracking ? data.trackingNumber!.trim() : data.reference;
   const trackingUrl = getTrackingPageUrl(trackingCode);
   const dateStr =
     data.createdAt ||
@@ -207,9 +208,29 @@ export function generateOfficialPdfBlob(rawData: RoumReceiptData): Blob {
   rectFill(40, 658, 515, 64, 0.969, 0.961, 0.941); // #F7F5F0
   rectStroke(40, 658, 515, 64, 0.85, 0.82, 0.78, 0.8);
 
-  text(54, 704, "NUMERO DE SUIVI OFFICIEL", 8, true, 0.45, 0.42, 0.39);
+  text(
+    54,
+    704,
+    hasActiveTracking ? "NUMERO DE SUIVI OFFICIEL" : "REFERENCE DE DOSSIER OFFICIEL",
+    8,
+    true,
+    0.45,
+    0.42,
+    0.39
+  );
   text(54, 686, trackingCode, 15, true, 0.11, 0.09, 0.08);
-  text(54, 668, `Lien de suivi direct : ${trackingUrl}`, 8.5, false, 0.145, 0.388, 0.922);
+  text(
+    54,
+    668,
+    hasActiveTracking
+      ? `Lien de suivi direct : ${trackingUrl}`
+      : "N de suivi attribue des confirmation du reglement par la Direction ROUM",
+    8.5,
+    false,
+    0.145,
+    0.388,
+    0.922
+  );
 
   if (data.shippingMark) {
     text(340, 704, "SHIPPING MARK (MARQUAGE CARTON)", 8, true, 0.45, 0.42, 0.39);
@@ -717,54 +738,68 @@ export function buildClientReceiptWhatsAppUrl(
   agencyPhone = "2250787994412"
 ): string {
   const data = normalizeReceiptData(rawData);
+  const hasActiveTracking = Boolean(data.trackingNumber && data.trackingNumber.trim());
   const trackingCode = (data.trackingNumber || data.reference || "").trim();
   const trackingUrl = getTrackingPageUrl(trackingCode);
   const cleanPhone = agencyPhone.replace(/[^0-9]/g, "");
 
   const headerTitle =
     data.optionType === "avec_fournisseur"
-      ? `*REÇU DE DOSSIER D'EXPÉDITION N° ${data.reference}*`
+      ? `*FICHE DE DOSSIER D'EXPÉDITION N° ${data.reference}*`
       : data.optionType === "devis" || data.optionType === "devis_tarif"
       ? `*CONFIRMATION DE DEVIS TRANSIT N° ${data.reference}*`
       : data.optionType === "suivi" || data.optionType === "suivi_colis"
       ? `*DEMANDE D'ASSISTANCE SUIVI COLIS N° ${trackingCode}*`
-      : `*REÇU DE COMMANDE & SOURCING N° ${data.reference}*`;
+      : data.receiptAttachedName
+      ? `*CONFIRMATION DE PAIEMENT & PREUVE JOINTE — DOSSIER N° ${data.reference}*`
+      : `*DEMANDE DE COMMANDE & DEVIS POIDS — DOSSIER N° ${data.reference}*`;
 
   const lines = [
     `Bonjour l'équipe *ROUM TRANSIT INTERNATIONAL*,`,
-    `Je vous transmets le reçu officiel de mon opération enregistrée sur votre plateforme :`,
+    `Je vous transmets le récapitulatif officiel de mon dossier enregistré sur votre plateforme :`,
     ``,
     headerTitle,
-    `• N° de Suivi Officiel : *${trackingCode}*`,
+    `• Référence Dossier : *${data.reference}*`,
+    hasActiveTracking ? `• N° de Suivi Officiel : *${data.trackingNumber}*` : null,
     data.shippingMark ? `• Shipping Mark : *${data.shippingMark}*` : null,
     `• Client : ${data.clientName} (${data.clientPhone})`,
     `• Corridor : ${data.originCountry || "Chine"} ➔ ${data.destination}`,
-    `• Mode de transport : ${data.transportMode} (${data.weightOrVolume})`,
+    `• Mode de transport choisi : ${data.transportMode}${data.weightOrVolume ? ` (${data.weightOrVolume})` : ""}`,
     ``,
     `*DÉTAILS DE LA MARCHANDISE :*`,
     `• Article : ${data.productTitle}`,
     data.quantity ? `• Quantité : ${data.quantity} unité(s)` : null,
     data.unitPriceFormatted
-      ? `• Prix unitaire usine : ${data.unitPriceFormatted}${data.activeTierLabel ? ` (Tranche ${data.activeTierLabel})` : ""}`
+      ? `• Prix unitaire fournisseur : ${data.unitPriceFormatted}${data.activeTierLabel ? ` (Tranche ${data.activeTierLabel})` : ""}`
       : null,
     data.supplierInfo ? `• Infos fournisseur : ${data.supplierInfo}` : null,
     data.productUrl ? `• Lien article : ${data.productUrl}` : null,
     ``,
     `*RÉCAPITULATIF FINANCIER :*`,
     data.goodsTotalFcfa && data.goodsTotalFcfa > 0
-      ? `• Marchandises : ${formatNumberFr(data.goodsTotalFcfa)} FCFA`
+      ? `• Sous-total Marchandises : ${formatNumberFr(data.goodsTotalFcfa)} FCFA`
       : null,
     data.shippingFeeFcfa && data.shippingFeeFcfa > 0
       ? `• Fret & Douane : ${formatNumberFr(data.shippingFeeFcfa)} FCFA`
+      : `• Fret & Douane : À estimer par ROUM TRANSIT selon le poids réel du colis`,
+    data.totalAmountFcfa && data.totalAmountFcfa > 0
+      ? `• *${data.shippingFeeFcfa && data.shippingFeeFcfa > 0 ? "TOTAL À RÉGLER" : "SOUS-TOTAL MARCHANDISE"} : ${formatNumberFr(data.totalAmountFcfa)} FCFA*`
       : null,
-    `• *TOTAL : ${formatNumberFr(data.totalAmountFcfa)} FCFA* (Douane 100% incluse)`,
-    data.paymentMethodLabel ? `• Règlement : ${data.paymentMethodLabel}` : null,
-    data.receiptAttachedName ? `• Preuve jointe : Oui (${data.receiptAttachedName})` : null,
+    data.paymentMethodLabel ? `• Moyen de paiement : ${data.paymentMethodLabel}` : null,
+    data.receiptAttachedName ? `• Preuve de paiement jointe : Oui (${data.receiptAttachedName})` : null,
+    ...(hasActiveTracking
+      ? [
+          ``,
+          `👉 *Lien direct de suivi du colis (${trackingCode}) :*`,
+          `${trackingUrl}`,
+        ]
+      : []),
     ``,
-    `👉 *Lien direct de suivi du colis (${trackingCode}) :*`,
-    `${trackingUrl}`,
-    ``,
-    `Merci de bien vouloir me confirmer la bonne réception de ce reçu. Cordialement !`,
+    data.receiptAttachedName
+      ? `J'ai joint ma preuve de paiement sur la plateforme. Merci de confirmer l'encaissement et de m'envoyer mon Numéro de Suivi Officiel. Cordialement !`
+      : hasActiveTracking
+      ? `Merci de bien vouloir me confirmer la bonne réception de ce reçu. Cordialement !`
+      : `Merci d'estimer le poids de mon colis et de m'envoyer le devis complet avec le lien de paiement. Cordialement !`,
   ].filter((l) => l !== null);
 
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(lines.join("\n"))}`;
