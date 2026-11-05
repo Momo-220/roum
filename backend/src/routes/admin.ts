@@ -1298,14 +1298,15 @@ adminRouter.get("/tariffs", async (c) => {
       r.origin_city,
       COALESCE(r.destination_country, 'Côte d''Ivoire') as destination_country,
       r.destination_city,
-      COALESCE(sm.name, t.category_tag, 'Standard') as shipping_mode_name,
-      COALESCE(sm.name, t.category_tag, 'Standard') as service_name,
+      COALESCE(t.category_tag, sm.name, 'Standard') as shipping_mode_name,
+      COALESCE(t.category_tag, sm.name, 'Standard') as service_name,
       COALESCE(sm.type, 'AIR') as shipping_mode_type,
       COALESCE(sm.pricing_basis, 'PER_KG') as pricing_basis
     FROM tariffs t
     LEFT JOIN routes r ON t.route_id = r.id
     LEFT JOIN shipping_modes sm ON t.shipping_mode_id = sm.id
-    ORDER BY r.origin_country ASC, sm.name ASC
+    WHERE t.is_active = 1
+    ORDER BY r.origin_country ASC, t.id ASC
   `).all();
   return c.json({ tariffs });
 });

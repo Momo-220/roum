@@ -902,7 +902,11 @@ export function updateClientRequestAdminQuote(
     }
 
     // Synchronisation directe vers la Base de Données SQLite D1 (Admin ➔ Base de données ➔ Client)
-    const token = localStorage.getItem("roum_auth_token") || "roum_local_admin_session";
+    const token =
+      localStorage.getItem("roum_admin_token") ||
+      sessionStorage.getItem("roum_admin_token") ||
+      localStorage.getItem("roum_auth_token") ||
+      "roum_local_admin_session";
     fetch(`/api/v1/admin/requests/${encodeURIComponent(reference.trim())}/quote`, {
       method: "PATCH",
       headers: {

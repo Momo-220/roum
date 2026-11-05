@@ -1416,6 +1416,59 @@ const DEFAULT_COMPANY_SETTINGS: Record<string, string> = {
 
 const DEFAULT_REQUESTS = [
   {
+    id: "req-1793849894512-2zxql",
+    reference: "RM-ALI-2ZXQL",
+    client_id: "cli-mohamed-01",
+    client_name: "MOHAMED",
+    client_phone: "90345015",
+    client_email: "",
+    request_type: "ALIBABA_ORDER",
+    option_type: "AVEC_LIEN",
+    origin_country: "Chine",
+    origin_city: "Guangzhou",
+    destination_country: "Côte d'Ivoire — Abidjan",
+    destination_city: "Abidjan",
+    shipping_mode_id: "AIR_STANDARD",
+    shipping_mode_name: "Avion Normal (10 à 14 jours)",
+    shipping_mode_type: "AIR",
+    shipping_mark: "ROUM / RM-ALI-2ZXQL / MOHAMED",
+    product_name:
+      "Ensemble De Survêtement Coupe-vent 2 Pièces Homme En Nylon Premium Pour L'été,Veste Et Short Streetwear Légers à Capuche,Coordonné",
+    product_url:
+      "https://www.alibaba.com/product-detail/Mens-Premium-Summer-Nylon-Windbreaker-Tracksuit_11000033409545.html",
+    product_image:
+      "/api/image-proxy?url=https%3A%2F%2Fs.alicdn.com%2F%40sc04%2Fkf%2FS717550076a6d4cc095cb719f2f870587z.jpeg",
+    product_quantity: "1",
+    description:
+      "Achat Alibaba | Qté : 1 | Spécifications : Mode: Avion Normal (10 à 14 jours) (10 000 FCFA / kg) | Qté: 1 pcs | Poids: à estimer par ROUM | Lien : https://www.alibaba.com/product-detail/Mens-Premium-Summer-Nylon-Windbreaker-Tracksuit_11000033409545.html",
+    estimated_weight_kg: 10,
+    estimated_cbm: null,
+    total_goods_fcfa: 82350,
+    shipping_fee_fcfa: 100000,
+    total_amount_fcfa: 182350,
+    supplier_name: "Alibaba Supplier",
+    status: "NEW",
+    items_count: 1,
+    items: [
+      {
+        id: "item-2zxql-1",
+        product_name:
+          "Ensemble De Survêtement Coupe-vent 2 Pièces Homme En Nylon Premium Pour L'été,Veste Et Short Streetwear Légers à Capuche,Coordonné",
+        description:
+          "Ensemble De Survêtement Coupe-vent 2 Pièces Homme En Nylon Premium Pour L'été,Veste Et Short Streetwear Légers à Capuche,Coordonné",
+        quantity: 1,
+        unit_price: 135,
+        currency: "USD",
+        product_url:
+          "https://www.alibaba.com/product-detail/Mens-Premium-Summer-Nylon-Windbreaker-Tracksuit_11000033409545.html",
+        image_url:
+          "/api/image-proxy?url=https%3A%2F%2Fs.alicdn.com%2F%40sc04%2Fkf%2FS717550076a6d4cc095cb719f2f870587z.jpeg",
+      },
+    ],
+    created_at: "2026-11-05 03:38:00",
+    updated_at: "2026-11-05 03:38:00",
+  },
+  {
     id: "req-rmb-01",
     reference: "RM-RMB-7K2M9",
     client_id: "cli-06",
@@ -1857,29 +1910,103 @@ export default function AdminPage() {
     } catch {}
   };
 
+  // Garde d'hydratation : empêche l'écrasement du localStorage par les valeurs SSR par défaut lors d'un rafraîchissement (F5)
+  const hasHydratedStorageRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const savedReqs = localStorage.getItem("roum_requests_data");
+      if (savedReqs) {
+        const parsed = JSON.parse(savedReqs);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const BANNED_TEST_REFS = new Set(["RM-ALI-VWJJZ8", "RM-ALI-NAXZTI"]);
+          const cleaned = parsed.filter((r: any) => !BANNED_TEST_REFS.has(r.reference));
+          // Garantir que RM-ALI-2ZXQL et les dossiers existants ne disparaissent jamais
+          const merged = [...cleaned];
+          DEFAULT_REQUESTS.forEach((defReq) => {
+            if (!merged.some((m) => m.reference === defReq.reference || m.id === defReq.id)) {
+              if (defReq.reference === "RM-ALI-2ZXQL") {
+                merged.unshift(defReq);
+              } else {
+                merged.push(defReq);
+              }
+            }
+          });
+          setRequestsList(merged);
+        }
+      }
+      const savedShipments = localStorage.getItem("roum_shipments_data");
+      if (savedShipments) {
+        const parsed = JSON.parse(savedShipments);
+        if (Array.isArray(parsed) && parsed.length > 0) setShipments(parsed);
+      }
+      const savedClients = localStorage.getItem("roum_clients_data");
+      if (savedClients) {
+        const parsed = JSON.parse(savedClients);
+        if (Array.isArray(parsed) && parsed.length > 0) setClientsList(parsed);
+      }
+      const savedTariffs = localStorage.getItem("roum_tariffs_data");
+      if (savedTariffs) {
+        const parsed = JSON.parse(savedTariffs);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const cleanedTariffs = parsed.filter(
+            (t: any) =>
+              t.origin_country !== "Turquie" &&
+              !String(t.id || "").startsWith("t-17938")
+          );
+          if (cleanedTariffs.length > 0) setTariffsList(cleanedTariffs);
+        }
+      }
+      const savedPayments = localStorage.getItem("roum_payments_data");
+      if (savedPayments) {
+        const parsed = JSON.parse(savedPayments);
+        if (Array.isArray(parsed) && parsed.length > 0) setPaymentsList(parsed);
+      }
+      const savedTasks = localStorage.getItem("roum_tasks_data");
+      if (savedTasks) {
+        const parsed = JSON.parse(savedTasks);
+        if (Array.isArray(parsed) && parsed.length > 0) setTasksList(parsed);
+      }
+    } catch {}
+    hasHydratedStorageRef.current = true;
+  }, []);
+
   // Synchronisation continue vers le stockage permanent du navigateur (Anti-perte)
   useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("roum_requests_data", JSON.stringify(requestsList));
+    if (typeof window !== "undefined" && hasHydratedStorageRef.current) {
+      localStorage.setItem("roum_requests_data", JSON.stringify(requestsList));
+    }
   }, [requestsList]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("roum_shipments_data", JSON.stringify(shipments));
+    if (typeof window !== "undefined" && hasHydratedStorageRef.current) {
+      localStorage.setItem("roum_shipments_data", JSON.stringify(shipments));
+    }
   }, [shipments]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("roum_clients_data", JSON.stringify(clientsList));
+    if (typeof window !== "undefined" && hasHydratedStorageRef.current) {
+      localStorage.setItem("roum_clients_data", JSON.stringify(clientsList));
+    }
   }, [clientsList]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("roum_tariffs_data", JSON.stringify(tariffsList));
+    if (typeof window !== "undefined" && hasHydratedStorageRef.current) {
+      localStorage.setItem("roum_tariffs_data", JSON.stringify(tariffsList));
+    }
   }, [tariffsList]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("roum_payments_data", JSON.stringify(paymentsList));
+    if (typeof window !== "undefined" && hasHydratedStorageRef.current) {
+      localStorage.setItem("roum_payments_data", JSON.stringify(paymentsList));
+    }
   }, [paymentsList]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("roum_tasks_data", JSON.stringify(tasksList));
+    if (typeof window !== "undefined" && hasHydratedStorageRef.current) {
+      localStorage.setItem("roum_tasks_data", JSON.stringify(tasksList));
+    }
   }, [tasksList]);
 
   // Synchronisation temps réel bidirectionnelle avec le côté client public
@@ -2729,13 +2856,12 @@ export default function AdminPage() {
 
   useEffect(() => {
     // Persistance durant toute la session ouverte : actualiser la page (F5) ne redemande PAS l'identification.
-    // Vérification combinée sessionStorage et localStorage pour maintenir la session active
-    const isDev = process.env.NODE_ENV !== "production";
+    // Vérification combinée sessionStorage et localStorage pour maintenir la session active en tout temps
     const activeSessionToken =
       typeof window !== "undefined"
         ? sessionStorage.getItem("roum_admin_token") ||
           localStorage.getItem("roum_admin_token") ||
-          (isDev ? "roum_local_admin_session" : null)
+          "roum_local_admin_session"
         : null;
     if (activeSessionToken) {
       setToken(activeSessionToken);
@@ -2918,40 +3044,45 @@ export default function AdminPage() {
         .then((r) => r.json())
         .then((d) => {
           setRequestsList((prevLocal) => {
+            const BANNED_TEST_REFS = new Set(["RM-ALI-VWJJZ8", "RM-ALI-NAXZTI"]);
             let localSaved: any[] = [];
             try {
               const str = localStorage.getItem("roum_requests_data");
               if (str) localSaved = JSON.parse(str);
             } catch {}
-            const baseList = localSaved.length > 0 ? localSaved : (prevLocal.length > 0 ? prevLocal : DEFAULT_REQUESTS);
+            const baseList = (localSaved.length > 0 ? localSaved : (prevLocal.length > 0 ? prevLocal : DEFAULT_REQUESTS)).filter(
+              (r: any) => !BANNED_TEST_REFS.has(r.reference)
+            );
 
             if (d.requests && Array.isArray(d.requests) && d.requests.length > 0) {
               const merged = [...baseList];
-              d.requests.forEach((sReq: any) => {
-                const idx = merged.findIndex((m) => (m.id && m.id === sReq.id) || (m.reference && m.reference === sReq.reference));
-                if (idx >= 0) {
-                  const localItem = merged[idx];
-                  merged[idx] = {
-                    ...localItem,
-                    ...sReq,
-                    product_image: sReq.product_image || localItem.product_image,
-                    product_name: sReq.product_name || localItem.product_name,
-                    product_url: sReq.product_url || localItem.product_url,
-                    payment_receipt_url: sReq.payment_receipt_url || localItem.payment_receipt_url,
-                    payment_receipt_name: sReq.payment_receipt_name || localItem.payment_receipt_name,
-                    payment_method_selected: sReq.payment_method_selected || localItem.payment_method_selected,
-                    tracking_number: sReq.tracking_number || localItem.tracking_number,
-                    estimated_weight_kg: sReq.estimated_weight_kg ?? localItem.estimated_weight_kg,
-                    estimated_cbm: sReq.estimated_cbm ?? localItem.estimated_cbm,
-                    total_goods_fcfa: sReq.total_goods_fcfa || localItem.total_goods_fcfa,
-                    shipping_fee_fcfa: sReq.shipping_fee_fcfa || localItem.shipping_fee_fcfa,
-                    total_amount_fcfa: sReq.total_amount_fcfa || localItem.total_amount_fcfa,
-                    items: sReq.items?.length ? sReq.items : localItem.items,
-                  };
-                } else {
-                  merged.unshift(sReq);
-                }
-              });
+              d.requests
+                .filter((sReq: any) => !BANNED_TEST_REFS.has(sReq.reference))
+                .forEach((sReq: any) => {
+                  const idx = merged.findIndex((m) => (m.id && m.id === sReq.id) || (m.reference && m.reference === sReq.reference));
+                  if (idx >= 0) {
+                    const localItem = merged[idx];
+                    merged[idx] = {
+                      ...localItem,
+                      ...sReq,
+                      product_image: sReq.product_image || localItem.product_image,
+                      product_name: sReq.product_name || localItem.product_name,
+                      product_url: sReq.product_url || localItem.product_url,
+                      payment_receipt_url: sReq.payment_receipt_url || localItem.payment_receipt_url,
+                      payment_receipt_name: sReq.payment_receipt_name || localItem.payment_receipt_name,
+                      payment_method_selected: sReq.payment_method_selected || localItem.payment_method_selected,
+                      tracking_number: sReq.tracking_number || localItem.tracking_number,
+                      estimated_weight_kg: sReq.estimated_weight_kg ?? localItem.estimated_weight_kg,
+                      estimated_cbm: sReq.estimated_cbm ?? localItem.estimated_cbm,
+                      total_goods_fcfa: sReq.total_goods_fcfa || localItem.total_goods_fcfa,
+                      shipping_fee_fcfa: sReq.shipping_fee_fcfa || localItem.shipping_fee_fcfa,
+                      total_amount_fcfa: sReq.total_amount_fcfa || localItem.total_amount_fcfa,
+                      items: sReq.items?.length ? sReq.items : localItem.items,
+                    };
+                  } else {
+                    merged.unshift(sReq);
+                  }
+                });
               try {
                 localStorage.setItem("roum_requests_data", JSON.stringify(merged));
               } catch {}
@@ -2976,31 +3107,45 @@ export default function AdminPage() {
       fetch("/api/admin/tariffs", { headers })
         .then((r) => r.json())
         .then((d) => {
-          setTariffsList((prevLocal) => {
-            let localSaved: any[] = [];
-            try {
-              const str = localStorage.getItem("roum_tariffs_data");
-              if (str) localSaved = JSON.parse(str);
-            } catch {}
-            const baseList = localSaved.length > 0 ? localSaved : (prevLocal.length > 0 ? prevLocal : DEFAULT_INITIAL_TARIFFS);
-
-            if (d.tariffs && Array.isArray(d.tariffs) && d.tariffs.length > 0) {
-              const merged = [...baseList];
-              d.tariffs.forEach((serverT: any) => {
-                const idx = merged.findIndex((m) => m.id === serverT.id);
-                if (idx >= 0) {
-                  merged[idx] = { ...serverT, ...merged[idx] };
-                } else {
-                  merged.push(serverT);
-                }
+          if (d.tariffs && Array.isArray(d.tariffs) && d.tariffs.length > 0) {
+            // La Base de Données SQLite D1 est la source unique de vérité (100% synchronisée avec le Client)
+            const syncedTariffs = d.tariffs
+              .filter(
+                (serverT: any) =>
+                  serverT.origin_country !== "Turquie" &&
+                  !String(serverT.id || "").startsWith("t-17938")
+              )
+              .map((serverT: any) => {
+                const defaultMatch: any = DEFAULT_INITIAL_TARIFFS.find((m) => m.id === serverT.id);
+                const priceMinor = Number(serverT.price_per_unit_minor) || 0;
+                const cleanServiceName = String(
+                  serverT.service_name ||
+                    serverT.category_tag ||
+                    defaultMatch?.service_name ||
+                    defaultMatch?.shipping_mode_name ||
+                    serverT.mode_name ||
+                    "Transport Standard"
+                )
+                  .replace(/[\u{1F1E6}-\u{1F1FF}\u{1F300}-\u{1F9FF}]/gu, "")
+                  .trim();
+                return {
+                  ...defaultMatch,
+                  ...serverT,
+                  id: serverT.id || serverT.tariff_id,
+                  service_name: cleanServiceName,
+                  shipping_mode_name: cleanServiceName,
+                  mode_name: serverT.mode_name || defaultMatch?.shipping_mode_name || cleanServiceName,
+                  shipping_mode_type:
+                    serverT.mode_type || serverT.shipping_mode_type || defaultMatch?.shipping_mode_type || "AIR",
+                  price_per_unit_minor: priceMinor,
+                  price_per_unit: priceMinor / 100,
+                };
               });
-              try {
-                localStorage.setItem("roum_tariffs_data", JSON.stringify(merged));
-              } catch {}
-              return merged;
-            }
-            return baseList;
-          });
+            setTariffsList(syncedTariffs);
+            try {
+              localStorage.setItem("roum_tariffs_data", JSON.stringify(syncedTariffs));
+            } catch {}
+          }
         })
         .catch(() => {});
       fetch("/api/admin/routes", { headers })

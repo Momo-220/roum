@@ -114,7 +114,7 @@ export default function TariffsPage() {
   const [weight, setWeight] = useState(5);
   const [cbm, setCbm] = useState(0.5);
   const [docCount, setDocCount] = useState(1);
-  const [catalogHub, setCatalogHub] = useState<"chine" | "dubai" | "maroc" | "france">("chine");
+  const [catalogHub, setCatalogHub] = useState<"all" | "chine" | "dubai" | "maroc" | "france">("all");
 
   const getDestinationsForOrigin = (orig: string) => {
     return getAdminDestinations(tariffs, orig);
@@ -167,8 +167,8 @@ export default function TariffsPage() {
       const ratePerKg = rateMinor / 100;
       return {
         amountFcfa: weight * ratePerKg,
-        duration: "5 jours chrono garantis",
-        label: `Groupage Aérien Casablanca ➔ ${destination}`,
+        duration: "5 jours garantis",
+        label: `Groupage Aérien Casablanca vers ${destination}`,
         rateFormatted: `${ratePerKg.toLocaleString("fr-FR")} FCFA / kg`,
         mode: "AIR" as const,
       };
@@ -390,7 +390,7 @@ export default function TariffsPage() {
       return [
         {
           key: "subsaharien",
-          label: `Groupage Aérien Casablanca ➔ ${destination}`,
+          label: `Groupage Aérien Casablanca vers ${destination}`,
           delay: "5 jours garantis",
           price: `${rate} FCFA / kg`,
           mode: "AIR",
@@ -516,6 +516,7 @@ export default function TariffsPage() {
   };
 
   const filteredCatalogTariffs = tariffs.filter((t) => {
+    if (catalogHub === "all") return true;
     const o = (t.origin_country || "").toLowerCase();
     if (catalogHub === "chine") return o.includes("chine");
     if (catalogHub === "dubai") return o.includes("duba") || o.includes("émirat");
@@ -524,37 +525,32 @@ export default function TariffsPage() {
   });
 
   return (
-    <div className="services-page-root">
-      <div className="services-container">
+    <div className="tariffs-minimal-root">
+      <div className="tariffs-minimal-container">
         <ScrollReveal>
-          {/* ========================================================
-              EN-TÊTE ÉDITORIAL LUXE (IDENTIQUE À LA PAGE SERVICES)
-             ======================================================== */}
-          <header className="services-header">
-            <div className="services-badge-category">
-              <span className="dot">●</span>
-              <span>02 / SIMULATEUR &amp; GRILLE TARIFAIRE OFFICIELLE</span>
+          {/* EN-TÊTE MINIMALISTE SOBRE */}
+          <header className="tariffs-minimal-header">
+            <div className="tariffs-minimal-eyebrow">
+              <span>SIMULATEUR &amp; GRILLE TARIFAIRE OFFICIELLE</span>
             </div>
-            <h1 className="services-title">Estimez le Tarif Exact de votre Colis.</h1>
-            <p className="services-desc">
-              Sélectionnez votre hub de départ, votre destination et votre voie d&apos;acheminement.
-              <strong> Dédouanement 100% inclus</strong>, sans aucun frais caché à l&apos;arrivée.
+            <h1 className="tariffs-minimal-title">Tarifs de Transit &amp; Dédouanement</h1>
+            <p className="tariffs-minimal-subtitle">
+              Calculez le coût exact de votre expédition ou consultez la grille officielle synchronisée avec l&apos;agence.
+              Dédouanement 100 % inclus, sans frais cachés.
             </p>
           </header>
 
-          {/* ========================================================
-              GRILLE BENTO ASYMÉTRIQUE (CONFIGURATEUR 7 COL + CARTE DEVIS 5 COL)
-             ======================================================== */}
-          <div className="bento-grid">
-            {/* CARTE GAUCHE (7 COLONNES) : CONFIGURATEUR INTERACTIF ÉDITORIAL */}
-            <section className="bento-config-panel">
+          {/* GRILLE PRINCIPALE : SIMULATEUR (GAUCHE) + RÉCAPITULATIF DEVIS SOBRE (DROITE) */}
+          <div className="tariffs-minimal-layout">
+            {/* PANNEAU GAUCHE : CONFIGURATEUR */}
+            <section className="tariffs-config-card">
               {/* 1. Hub de départ */}
-              <div className="config-step-block">
-                <div className="config-step-header">
-                  <span className="config-step-num">01</span>
-                  <span className="config-step-title">Hub de départ international</span>
+              <div className="t-step-group">
+                <div className="t-step-label-row">
+                  <span className="t-step-index">01</span>
+                  <span className="t-step-title">Pays de départ</span>
                 </div>
-                <div className="hub-capsules-grid">
+                <div className="t-hubs-grid">
                   {ORIGIN_HUBS.map((hub) => {
                     const isSelected = origin === hub.name;
                     return (
@@ -562,26 +558,26 @@ export default function TariffsPage() {
                         key={hub.name}
                         type="button"
                         onClick={() => handleOriginChange(hub.name)}
-                        className={`hub-capsule-card ${isSelected ? "active" : ""}`}
+                        className={`t-hub-btn ${isSelected ? "active" : ""}`}
                       >
-                        <div className="hub-capsule-top">
-                          <CircularFlag code={hub.flag} size={18} />
-                          <span className="hub-capsule-name">{hub.shortLabel}</span>
+                        <div className="t-hub-btn-top">
+                          <CircularFlag code={hub.flag} size={16} />
+                          <span className="t-hub-btn-name">{hub.shortLabel}</span>
                         </div>
-                        <span className="hub-capsule-sub">{hub.sub}</span>
+                        <span className="t-hub-btn-sub">{hub.sub}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* 2. Destination d'arrivée */}
-              <div className="config-step-block">
-                <div className="config-step-header">
-                  <span className="config-step-num">02</span>
-                  <span className="config-step-title">Destination d&apos;arrivée</span>
+              {/* 2. Destination */}
+              <div className="t-step-group">
+                <div className="t-step-label-row">
+                  <span className="t-step-index">02</span>
+                  <span className="t-step-title">Destination</span>
                 </div>
-                <div className="dest-pills-wrap">
+                <div className="t-dest-list">
                   {getDestinationsForOrigin(origin).map((dst) => {
                     const isSelected = destination === dst;
                     return (
@@ -589,9 +585,9 @@ export default function TariffsPage() {
                         key={dst}
                         type="button"
                         onClick={() => setDestination(dst)}
-                        className={`dest-pill-btn ${isSelected ? "active" : ""}`}
+                        className={`t-dest-btn ${isSelected ? "active" : ""}`}
                       >
-                        <CircularFlag countryName={dst} size={15} />
+                        <CircularFlag countryName={dst} size={14} />
                         <span>{dst}</span>
                       </button>
                     );
@@ -599,13 +595,13 @@ export default function TariffsPage() {
                 </div>
               </div>
 
-              {/* 3. Voie d'acheminement & Formule */}
-              <div className="config-step-block">
-                <div className="config-step-header">
-                  <span className="config-step-num">03</span>
-                  <span className="config-step-title">Voie d&apos;acheminement &amp; Formule</span>
+              {/* 3. Mode de transport */}
+              <div className="t-step-group">
+                <div className="t-step-label-row">
+                  <span className="t-step-index">03</span>
+                  <span className="t-step-title">Formule d&apos;expédition</span>
                 </div>
-                <div className="formulas-stack">
+                <div className="t-formula-list">
                   {getFormulasForOrigin().map((f) => {
                     const isSelected = formulaKey === f.key;
                     const IconComp =
@@ -623,40 +619,40 @@ export default function TariffsPage() {
                         key={f.key}
                         type="button"
                         onClick={() => setFormulaKey(f.key)}
-                        className={`formula-row-card ${isSelected ? "active" : ""}`}
+                        className={`t-formula-item ${isSelected ? "active" : ""}`}
                       >
-                        <div className="formula-row-left">
-                          <div className={`formula-icon-box ${isSelected ? "active" : ""}`}>
-                            <IconComp size={16} />
+                        <div className="t-formula-left">
+                          <div className="t-formula-icon">
+                            <IconComp size={15} />
                           </div>
                           <div style={{ minWidth: 0 }}>
-                            <div className="formula-row-label">{f.label}</div>
-                            <div className="formula-row-delay">Délai moyen : {f.delay}</div>
+                            <div className="t-formula-name">{f.label}</div>
+                            <div className="t-formula-delay">Délai : {f.delay}</div>
                           </div>
                         </div>
-                        <div className="formula-row-price">{f.price}</div>
+                        <div className="t-formula-rate">{f.price}</div>
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* 4. Poids, Volume ou Nombre de plis */}
-              <div className="config-step-block" style={{ marginBottom: 0 }}>
-                <div className="config-step-header">
-                  <span className="config-step-num">04</span>
-                  <span className="config-step-title">
+              {/* 4. Quantité / Poids / Volume */}
+              <div className="t-step-group" style={{ marginBottom: 0 }}>
+                <div className="t-step-label-row">
+                  <span className="t-step-index">04</span>
+                  <span className="t-step-title">
                     {formulaKey === "sea"
-                      ? "Volume estimé en Mètre Cube (m³)"
+                      ? "Volume estimé (m³)"
                       : formulaKey === "doc" || formulaKey === "tech"
-                      ? "Nombre de plis ou cartons sécurisés"
-                      : "Poids estimé du colis (en kg)"}
+                      ? "Nombre d'unités / plis"
+                      : "Poids estimé (kg)"}
                   </span>
                 </div>
 
                 {formulaKey === "sea" ? (
-                  <div className="qty-control-wrap">
-                    <div className="qty-input-row">
+                  <div className="t-qty-box">
+                    <div className="t-qty-input-wrap">
                       <input
                         type="number"
                         min="0.1"
@@ -667,17 +663,17 @@ export default function TariffsPage() {
                           const v = parseFloat(cleaned);
                           setCbm(Number.isFinite(v) && v > 0 ? v : 0.1);
                         }}
-                        className="qty-number-input tabular-nums"
+                        className="t-qty-input tabular-nums"
                       />
-                      <span className="qty-unit-badge">m³ (CBM)</span>
+                      <span className="t-qty-unit">m³ (CBM)</span>
                     </div>
-                    <div className="qty-presets-row">
+                    <div className="t-qty-presets">
                       {[0.5, 1, 2, 5, 10].map((preset) => (
                         <button
                           key={preset}
                           type="button"
                           onClick={() => setCbm(preset)}
-                          className={`qty-preset-pill ${cbm === preset ? "active" : ""}`}
+                          className={`t-preset-chip ${cbm === preset ? "active" : ""}`}
                         >
                           {preset} m³
                         </button>
@@ -685,8 +681,8 @@ export default function TariffsPage() {
                     </div>
                   </div>
                 ) : formulaKey === "doc" || formulaKey === "tech" ? (
-                  <div className="qty-control-wrap">
-                    <div className="qty-input-row">
+                  <div className="t-qty-box">
+                    <div className="t-qty-input-wrap">
                       <input
                         type="number"
                         min="1"
@@ -697,17 +693,17 @@ export default function TariffsPage() {
                           const v = parseInt(cleaned, 10);
                           setDocCount(Number.isFinite(v) && v >= 1 ? v : 1);
                         }}
-                        className="qty-number-input tabular-nums"
+                        className="t-qty-input tabular-nums"
                       />
-                      <span className="qty-unit-badge">unité(s)</span>
+                      <span className="t-qty-unit">unité(s)</span>
                     </div>
-                    <div className="qty-presets-row">
+                    <div className="t-qty-presets">
                       {[1, 2, 3, 5, 10].map((preset) => (
                         <button
                           key={preset}
                           type="button"
                           onClick={() => setDocCount(preset)}
-                          className={`qty-preset-pill ${docCount === preset ? "active" : ""}`}
+                          className={`t-preset-chip ${docCount === preset ? "active" : ""}`}
                         >
                           {preset} {preset > 1 ? "unités" : "unité"}
                         </button>
@@ -715,8 +711,8 @@ export default function TariffsPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="qty-control-wrap">
-                    <div className="qty-input-row">
+                  <div className="t-qty-box">
+                    <div className="t-qty-input-wrap">
                       <input
                         type="number"
                         min="1"
@@ -727,17 +723,17 @@ export default function TariffsPage() {
                           const v = parseFloat(cleaned);
                           setWeight(Number.isFinite(v) && v > 0 ? v : 1);
                         }}
-                        className="qty-number-input tabular-nums"
+                        className="t-qty-input tabular-nums"
                       />
-                      <span className="qty-unit-badge">Kilogrammes (kg)</span>
+                      <span className="t-qty-unit">Kilogrammes (kg)</span>
                     </div>
-                    <div className="qty-presets-row">
+                    <div className="t-qty-presets">
                       {[1, 5, 10, 25, 50, 100].map((preset) => (
                         <button
                           key={preset}
                           type="button"
                           onClick={() => setWeight(preset)}
-                          className={`qty-preset-pill ${weight === preset ? "active" : ""}`}
+                          className={`t-preset-chip ${weight === preset ? "active" : ""}`}
                         >
                           {preset} kg
                         </button>
@@ -748,130 +744,107 @@ export default function TariffsPage() {
               </div>
             </section>
 
-            {/* CARTE DROITE (5 COLONNES) : CARTE BENTO SOMBRE DEVIS OFFICIEL */}
-            <article className="bento-card card-quote-result">
-              <img
-                src={
-                  estimate.mode === "SEA"
-                    ? "/images/services/maritime_new.jpg"
-                    : "/images/services/aerien_new.jpg"
-                }
-                alt="Cotation Officielle Roum Transit"
-                className="bento-card-bg"
-              />
-              <div className="bento-scrim-strong" />
-              <div className="bento-content">
-                <div>
-                  <div className="bento-tag">
-                    <span className="green-dot" />
-                    <span>COTATION CERTIFIÉE · DOUANE 100% INCLUSE</span>
-                  </div>
-
-                  <div style={{ marginTop: "18px" }}>
-                    <div className="quote-eyebrow-label">MONTANT TOTAL ESTIMÉ</div>
-                    <div className="bento-stat-highlight tabular-nums" style={{ color: "#FFA066", fontSize: "clamp(2rem, 3.4vw, 2.7rem)", margin: "6px 0 8px 0" }}>
-                      {estimate.amountFcfa.toLocaleString("fr-FR")} FCFA
-                    </div>
-                    <p className="bento-card-subtitle" style={{ marginBottom: "14px" }}>
-                      {estimate.label}
-                    </p>
-                  </div>
-
-                  <div className="options-duo" style={{ marginTop: "10px", marginBottom: "14px" }}>
-                    <div className="option-box">
-                      <span className="option-tag">Corridor Officiel</span>
-                      <p className="option-desc" style={{ display: "inline-flex", alignItems: "center", gap: "5px", flexWrap: "wrap" }}>
-                        <CircularFlag countryName={origin} size={13} />
-                        <span>{origin.includes("Dubaï") ? "Dubaï" : origin}</span>
-                        <span>➔</span>
-                        <CircularFlag countryName={destination} size={13} />
-                        <strong>{destination}</strong>
-                      </p>
-                    </div>
-                    <div className="option-box">
-                      <span className="option-tag">Délai &amp; Tarif</span>
-                      <p className="option-desc">
-                        {estimate.duration} · <strong>{estimate.rateFormatted}</strong>
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="bento-bullets">
-                    <div className="bento-bullet">
-                      <span className="bento-bullet-dot" />
-                      <span>Dédouanement complet inclus (Zéro frais surprise)</span>
-                    </div>
-                    <div className="bento-bullet">
-                      <span className="bento-bullet-dot" />
-                      <span>Pesée vidéo certifiée dès réception en entrepôt</span>
-                    </div>
-                    <div className="bento-bullet">
-                      <span className="bento-bullet-dot" />
-                      <span>
-                        Règlement :{" "}
-                        <strong>
-                          Wave ({settings.payment_wave_ci || "+225 01 53 63 85 69"}) · Orange Money · Maroc
-                        </strong>
-                      </span>
-                    </div>
-                  </div>
+            {/* PANNEAU DROIT : CARTE DE DEVIS MINIMALISTE CLAIRE (ZÉRO ORANGE, ZÉRO LUEUR) */}
+            <aside className="tariffs-summary-card">
+              <div>
+                <div className="t-summary-top-tag">
+                  <ShieldCheck size={14} />
+                  <span>ESTIMATION OFFICIELLE · DOUANE INCLUSE</span>
                 </div>
 
-                <div className="quote-actions-stack">
-                  <div className="quote-pdf-row">
-                    <button
-                      type="button"
-                      onClick={() => downloadOfficialReceiptPdf(getQuoteReceiptData())}
-                      className="quote-glass-btn"
-                    >
-                      <Download size={14} />
-                      <span>Télécharger PDF</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => printOfficialReceipt(getQuoteReceiptData())}
-                      className="quote-glass-btn"
-                    >
-                      <Printer size={14} />
-                      <span>Imprimer Devis</span>
-                    </button>
+                <div className="t-summary-amount-block">
+                  <span className="t-summary-caption">Montant total estimé</span>
+                  <div className="t-summary-price tabular-nums">
+                    {estimate.amountFcfa.toLocaleString("fr-FR")} <span className="t-summary-currency">FCFA</span>
                   </div>
+                  <p className="t-summary-service-label">{estimate.label}</p>
+                </div>
 
-                  <a
-                    href={getWaLink()}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="quote-wa-primary-btn"
-                  >
-                    <MessageCircle size={17} />
-                    <span>Envoyer ce devis par WhatsApp à l&apos;agence</span>
-                  </a>
-
-                  <div className="bento-bottom-row" style={{ marginTop: "10px", paddingTop: "10px", borderTop: "1px solid rgba(255,255,255,0.12)" }}>
-                    <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.72)" }}>
-                      Vous avez un lien Alibaba / 1688 ?
+                <div className="t-summary-specs">
+                  <div className="t-spec-row">
+                    <span className="t-spec-key">Corridor</span>
+                    <span className="t-spec-val">
+                      <CircularFlag countryName={origin} size={13} />
+                      <span>{origin.includes("Dubaï") ? "Dubaï" : origin}</span>
+                      <ArrowRight size={12} />
+                      <CircularFlag countryName={destination} size={13} />
+                      <strong>{destination}</strong>
                     </span>
-                    <Link href="/services/commande" className="bento-cta-pill">
-                      <span>Commander un article</span>
-                      <ArrowRight size={14} />
-                    </Link>
+                  </div>
+                  <div className="t-spec-row">
+                    <span className="t-spec-key">Tarif unitaire</span>
+                    <span className="t-spec-val tabular-nums">{estimate.rateFormatted}</span>
+                  </div>
+                  <div className="t-spec-row">
+                    <span className="t-spec-key">Délai estimé</span>
+                    <span className="t-spec-val">{estimate.duration}</span>
+                  </div>
+                  <div className="t-spec-row">
+                    <span className="t-spec-key">Règlement</span>
+                    <span className="t-spec-val">Wave · Orange Money · Virement</span>
                   </div>
                 </div>
               </div>
-            </article>
+
+              <div className="t-summary-actions">
+                <a
+                  href={getWaLink()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="t-btn-primary"
+                >
+                  <MessageCircle size={16} />
+                  <span>Envoyer ce devis sur WhatsApp</span>
+                </a>
+
+                <div className="t-btn-secondary-grid">
+                  <button
+                    type="button"
+                    onClick={() => downloadOfficialReceiptPdf(getQuoteReceiptData())}
+                    className="t-btn-outline"
+                  >
+                    <Download size={14} />
+                    <span>Télécharger PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => printOfficialReceipt(getQuoteReceiptData())}
+                    className="t-btn-outline"
+                  >
+                    <Printer size={14} />
+                    <span>Imprimer</span>
+                  </button>
+                </div>
+
+                <div className="t-summary-footer-link">
+                  <span>Commander un article sur Alibaba / 1688 ?</span>
+                  <Link href="/services/commande" className="t-inline-link">
+                    <span>Ouvrir le formulaire</span>
+                    <ArrowRight size={13} />
+                  </Link>
+                </div>
+              </div>
+            </aside>
           </div>
 
-          {/* ========================================================
-              BLOC GRILLE TARIFAIRE PAR CORRIDOR (STYLE BOARDING PASS DE /SERVICES)
-             ======================================================== */}
-          <div className="shipping-pass-block">
-            <div className="pass-tabs-header">
-              <div className="pass-header-info">
-                <span className="pass-label">GRILLE TARIFAIRE OFFICIELLE SYNCHRONISÉE EN DIRECT</span>
-                <h3 className="pass-headline">Catalogue des Tarifs par Hub de Départ</h3>
+          {/* GRILLE COMPLÈTE DES TARIFS OFFICIELS (SYNCHRONISÉE À 100 % AVEC L'ADMIN) */}
+          <section className="tariffs-directory-section">
+            <div className="tariffs-directory-header">
+              <div>
+                <span className="tariffs-directory-eyebrow">
+                   BASE DE DONNÉES SYNCHRONISÉE ({filteredCatalogTariffs.length} TARIFS)
+                </span>
+                <h2 className="tariffs-directory-title">Grille Tarifaire Officielle</h2>
               </div>
 
-              <div className="pass-warehouse-capsules">
+              <div className="tariffs-filter-tabs">
+                <button
+                  type="button"
+                  onClick={() => setCatalogHub("all")}
+                  className={`t-filter-tab ${catalogHub === "all" ? "active" : ""}`}
+                >
+                  <span>Tous ({tariffs.length})</span>
+                </button>
                 {(
                   [
                     { key: "chine", label: "Chine", flag: "cn", originName: "Chine" },
@@ -887,17 +860,16 @@ export default function TariffsPage() {
                       setCatalogHub(hub.key);
                       handleOriginChange(hub.originName);
                     }}
-                    className={`pass-capsule-btn ${catalogHub === hub.key ? "active" : ""}`}
-                    style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                    className={`t-filter-tab ${catalogHub === hub.key ? "active" : ""}`}
                   >
-                    <CircularFlag code={hub.flag} size={14} />
+                    <CircularFlag code={hub.flag} size={13} />
                     <span>{hub.label}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="tariff-catalog-grid">
+            <div className="tariffs-cards-grid">
               {filteredCatalogTariffs.map((t) => {
                 const isSea = t.shipping_mode_type === "SEA" || t.pricing_basis === "PER_CBM";
                 const unitLabel =
@@ -908,44 +880,44 @@ export default function TariffsPage() {
                     : "/ kg";
                 const priceMajor = Math.round((t.price_per_unit_minor || 0) / 100);
                 return (
-                  <div key={t.id} className="tariff-catalog-card">
-                    <div className="tariff-card-top">
-                      <div className="tariff-corridor-badge">
+                  <div key={t.id} className="t-rate-card">
+                    <div className="t-rate-card-head">
+                      <div className="t-rate-corridor">
                         <CircularFlag countryName={t.origin_country || "Chine"} size={14} />
                         <span>{t.origin_country?.includes("Émirats") ? "Dubaï" : t.origin_country}</span>
-                        <span style={{ color: "#CC4E16" }}>➔</span>
+                        <ArrowRight size={12} color="#6E675F" />
                         <CircularFlag countryName={t.destination_country || "Côte d'Ivoire"} size={14} />
                         <strong>{t.destination_country}</strong>
                       </div>
-                      <span className={`tariff-mode-pill ${isSea ? "sea" : "air"}`}>
-                        {isSea ? <Ship size={12} /> : <Plane size={12} />}
-                        <span>{isSea ? "Bateau" : "Avion"}</span>
+                      <span className="t-rate-badge">
+                        {isSea ? <Ship size={11} /> : <Plane size={11} />}
+                        <span>{isSea ? "Maritime" : "Aérien"}</span>
                       </span>
                     </div>
 
-                    <div className="tariff-service-title">
+                    <div className="t-rate-service">
                       {t.service_name || t.shipping_mode_name}
                     </div>
 
-                    <div className="tariff-price-row tabular-nums">
-                      <span className="tariff-price-amount">
+                    <div className="t-rate-price-line tabular-nums">
+                      <span className="t-rate-price-val">
                         {priceMajor.toLocaleString("fr-FR")} {t.currency || "FCFA"}
                       </span>
-                      <span className="tariff-price-unit">{unitLabel}</span>
+                      <span className="t-rate-price-unit">{unitLabel}</span>
                       {t.secondary_display && (
-                        <span className="tariff-secondary-pill">{t.secondary_display}</span>
+                        <span className="t-rate-secondary">{t.secondary_display}</span>
                       )}
                     </div>
 
-                    <div className="tariff-card-footer">
-                      <span className="tariff-delay-text">
+                    <div className="t-rate-card-foot">
+                      <span className="t-rate-meta">
                         <Clock size={12} />
                         <span>
-                          Délai : {t.estimated_days_min} à {t.estimated_days_max} jours
+                          {t.estimated_days_min} à {t.estimated_days_max} jours
                         </span>
                       </span>
-                      <span className="tariff-customs-tag">
-                        <CheckCircle2 size={12} color="#166534" />
+                      <span className="t-rate-meta">
+                        <CheckCircle2 size={12} />
                         <span>Douane incluse</span>
                       </span>
                     </div>
@@ -953,170 +925,133 @@ export default function TariffsPage() {
                 );
               })}
             </div>
-          </div>
-
-          {/* ========================================================
-              BANDEAU DE GARANTIES ÉDITORIAL (IDENTIQUE À /SERVICES)
-             ======================================================== */}
-          <div className="services-guarantees-bar">
-            <div className="guarantee-item">
-              <ShieldCheck size={22} color="#166534" style={{ flexShrink: 0 }} />
-              <div style={{ minWidth: 0 }}>
-                <div className="guarantee-title">Douane 100% comprise</div>
-                <div className="guarantee-desc">Zéro frais surprise à l&apos;arrivée à destination</div>
-              </div>
-            </div>
-            <div className="guarantee-item">
-              <MapPin size={22} color="var(--c-text-main)" style={{ flexShrink: 0 }} />
-              <div style={{ minWidth: 0 }}>
-                <div className="guarantee-title">Pesée Vidéo Magasin</div>
-                <div className="guarantee-desc">Colis pesés et filmés dès réception en entrepôt</div>
-              </div>
-            </div>
-            <div className="guarantee-item">
-              <Clock size={22} color="var(--c-text-main)" style={{ flexShrink: 0 }} />
-              <div style={{ minWidth: 0 }}>
-                <div className="guarantee-title">Délais scellés</div>
-                <div className="guarantee-desc">Avion 4 à 5 jours chrono · Bateau hebdomadaire</div>
-              </div>
-            </div>
-          </div>
+          </section>
         </ScrollReveal>
       </div>
 
-      {/* ========================================================
-          STYLES CSS ÉDITORIAUX BENTO (ALIGNÉS SUR LA PAGE SERVICES)
-         ======================================================== */}
+      {/* STYLES MINIMALISTES ÉPURÉS — ZÉRO ORANGE, ZÉRO LUEUR, ZÉRO DÉPASSEMENT */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
-        .services-page-root {
-          background-color: transparent;
-          color: var(--c-text-main);
+        .tariffs-minimal-root {
+          color: #181512;
           min-height: calc(100vh - 110px);
-          padding: 32px 18px 120px 18px;
+          padding: 36px 18px 110px 18px;
           box-sizing: border-box;
           overflow-x: hidden;
         }
 
-        .services-container {
-          max-width: 1140px;
+        .tariffs-minimal-container {
+          max-width: 1120px;
           margin: 0 auto;
           box-sizing: border-box;
         }
 
-        .services-header {
+        .tariffs-minimal-header {
           text-align: center;
-          margin-bottom: 38px;
+          margin-bottom: 36px;
         }
 
-        .services-badge-category {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
+        .tariffs-minimal-eyebrow {
+          display: inline-block;
           font-family: var(--c-font-mono);
-          font-size: 0.74rem;
+          font-size: 0.72rem;
           font-weight: 700;
-          letter-spacing: 0.12em;
+          letter-spacing: 0.1em;
           text-transform: uppercase;
-          color: var(--c-text-light);
-          margin-bottom: 12px;
+          color: #6E675F;
+          background: #F2EFE9;
+          border: 1px solid #E5E0D8;
+          padding: 5px 12px;
+          border-radius: 9999px;
+          margin-bottom: 14px;
         }
 
-        .services-badge-category .dot {
-          color: #CC4E16;
-        }
-
-        .services-title {
+        .tariffs-minimal-title {
           font-family: var(--c-font-display);
-          font-size: clamp(1.8rem, 4vw, 2.7rem);
+          font-size: clamp(1.75rem, 3.6vw, 2.45rem);
           font-weight: 800;
-          letter-spacing: -0.035em;
-          line-height: 1.12;
-          color: var(--c-text-main);
-          margin: 0 auto 12px auto;
-          max-width: 780px;
+          letter-spacing: -0.03em;
+          line-height: 1.15;
+          color: #181512;
+          margin: 0 auto 10px auto;
+          max-width: 720px;
         }
 
-        .services-desc {
-          font-size: 0.98rem;
-          color: var(--c-text-muted);
-          max-width: 620px;
+        .tariffs-minimal-subtitle {
+          font-size: 0.95rem;
+          color: #6E675F;
+          max-width: 600px;
           margin: 0 auto;
-          line-height: 1.5;
+          line-height: 1.55;
         }
 
-        /* GRILLE BENTO 12 COLONNES */
-        .bento-grid {
+        .tariffs-minimal-layout {
           display: grid;
           grid-template-columns: repeat(12, 1fr);
-          gap: 18px;
-          margin-bottom: 32px;
-          align-items: stretch;
+          gap: 20px;
+          margin-bottom: 28px;
+          align-items: start;
         }
 
-        /* PANNEAU CONFIGURATEUR (7 COLONNES) */
-        .bento-config-panel {
+        .tariffs-config-card {
           grid-column: span 7;
-          background-color: #FFFFFF;
-          border-radius: 24px;
-          padding: 26px 28px;
-          border: 1px solid rgba(20, 13, 9, 0.08);
-          box-shadow: 0 10px 30px -8px rgba(20, 13, 9, 0.06);
+          background: #FFFFFF;
+          border: 1px solid #E5E0D8;
+          border-radius: 16px;
+          padding: 26px;
           display: flex;
           flex-direction: column;
-          justify-content: space-between;
-          gap: 20px;
+          gap: 22px;
           box-sizing: border-box;
           min-width: 0;
         }
 
-        .config-step-block {
+        .t-step-group {
           display: flex;
           flex-direction: column;
           gap: 10px;
           min-width: 0;
         }
 
-        .config-step-header {
+        .t-step-label-row {
           display: flex;
           align-items: center;
           gap: 8px;
         }
 
-        .config-step-num {
+        .t-step-index {
           font-family: var(--c-font-mono);
-          font-size: 0.68rem;
-          font-weight: 800;
-          color: #CC4E16;
-          background: rgba(204, 78, 22, 0.1);
+          font-size: 0.7rem;
+          font-weight: 700;
+          color: #181512;
+          background: #F2EFE9;
+          border: 1px solid #E5E0D8;
           padding: 2px 7px;
-          border-radius: 9999px;
-          letter-spacing: 0.06em;
+          border-radius: 6px;
         }
 
-        .config-step-title {
-          font-size: 0.84rem;
-          font-weight: 800;
-          color: #140D09;
-          letter-spacing: -0.01em;
+        .t-step-title {
+          font-size: 0.86rem;
+          font-weight: 700;
+          color: #181512;
         }
 
-        .hub-capsules-grid {
+        .t-hubs-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
           gap: 8px;
         }
 
-        .hub-capsule-card {
+        .t-hub-btn {
           padding: 10px 12px;
-          border-radius: 14px;
-          border: 1.5px solid rgba(20, 13, 9, 0.1);
-          background-color: #FAF7F2;
-          color: #140D09;
+          border-radius: 10px;
+          border: 1px solid #E5E0D8;
+          background: #FAF8F5;
+          color: #181512;
           cursor: pointer;
           text-align: left;
-          transition: all 0.18s ease;
+          transition: all 0.15s ease;
           display: flex;
           flex-direction: column;
           gap: 3px;
@@ -1124,513 +1059,486 @@ export default function TariffsPage() {
           box-sizing: border-box;
         }
 
-        .hub-capsule-card:hover {
-          border-color: rgba(204, 78, 22, 0.45);
+        .t-hub-btn:hover {
+          border-color: #181512;
         }
 
-        .hub-capsule-card.active {
-          background-color: #1A130F;
+        .t-hub-btn.active {
+          background: #181512;
           color: #FFFFFF;
-          border-color: #1A130F;
-          box-shadow: 0 6px 16px rgba(26, 19, 15, 0.18);
+          border-color: #181512;
         }
 
-        .hub-capsule-top {
+        .t-hub-btn-top {
           display: flex;
           align-items: center;
           gap: 7px;
+          min-width: 0;
         }
 
-        .hub-capsule-name {
+        .t-hub-btn-name {
           font-size: 0.82rem;
-          font-weight: 800;
+          font-weight: 700;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
 
-        .hub-capsule-sub {
+        .t-hub-btn-sub {
           font-size: 0.68rem;
-          color: var(--c-text-muted);
+          color: #6E675F;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
 
-        .hub-capsule-card.active .hub-capsule-sub {
-          color: #FFA066;
+        .t-hub-btn.active .t-hub-btn-sub {
+          color: rgba(255, 255, 255, 0.72);
         }
 
-        .dest-pills-wrap {
+        .t-dest-list {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
         }
 
-        .dest-pill-btn {
+        .t-dest-btn {
           display: inline-flex;
           align-items: center;
-          gap: 7px;
-          padding: 8px 14px;
-          border-radius: 9999px;
-          border: 1.5px solid rgba(20, 13, 9, 0.1);
-          background-color: #FAF7F2;
-          color: #140D09;
-          font-size: 0.8rem;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.18s ease;
-        }
-
-        .dest-pill-btn.active {
-          background-color: #1A130F;
-          color: #FFFFFF;
-          border-color: #1A130F;
-        }
-
-        .formulas-stack {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .formula-row-card {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          padding: 10px 14px;
-          border-radius: 14px;
-          border: 1.5px solid rgba(20, 13, 9, 0.09);
-          background-color: #FAF7F2;
-          color: #140D09;
-          cursor: pointer;
-          text-align: left;
-          transition: all 0.18s ease;
-          box-sizing: border-box;
-          min-width: 0;
-        }
-
-        .formula-row-card.active {
-          background-color: #FFFFFF;
-          border-color: #CC4E16;
-          box-shadow: 0 4px 14px rgba(204, 78, 22, 0.12);
-        }
-
-        .formula-row-left {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          min-width: 0;
-        }
-
-        .formula-icon-box {
-          width: 34px;
-          height: 34px;
-          border-radius: 10px;
-          background: rgba(20, 13, 9, 0.06);
-          color: #140D09;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-
-        .formula-icon-box.active {
-          background: #1A130F;
-          color: #FFA066;
-        }
-
-        .formula-row-label {
-          font-size: 0.84rem;
-          font-weight: 800;
-          color: #140D09;
-        }
-
-        .formula-row-delay {
-          font-size: 0.72rem;
-          color: var(--c-text-muted);
-        }
-
-        .formula-row-price {
-          font-family: var(--c-font-mono);
-          font-size: 0.78rem;
-          font-weight: 800;
-          color: #CC4E16;
-          background: rgba(204, 78, 22, 0.1);
-          padding: 4px 10px;
-          border-radius: 9999px;
-          white-space: nowrap;
-          flex-shrink: 0;
-        }
-
-        .qty-control-wrap {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .qty-input-row {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .qty-number-input {
-          flex: 1;
-          height: 44px;
-          padding: 0 14px;
-          border-radius: 12px;
-          border: 1.5px solid rgba(20, 13, 9, 0.15);
-          background: #FAF7F2;
-          font-size: 1.05rem;
-          font-weight: 800;
-          color: #140D09;
-          box-sizing: border-box;
-          min-width: 0;
-        }
-
-        .qty-unit-badge {
-          font-family: var(--c-font-mono);
-          font-size: 0.75rem;
-          font-weight: 700;
-          color: var(--c-text-muted);
-          background: #FAF7F2;
-          padding: 10px 14px;
-          border-radius: 12px;
-          border: 1px solid rgba(20, 13, 9, 0.08);
-          white-space: nowrap;
-        }
-
-        .qty-presets-row {
-          display: flex;
-          flex-wrap: wrap;
           gap: 6px;
-        }
-
-        .qty-preset-pill {
-          padding: 5px 12px;
-          border-radius: 9999px;
-          border: 1px solid rgba(20, 13, 9, 0.12);
-          background: #FFFFFF;
-          color: var(--c-text-secondary);
-          font-size: 0.74rem;
-          font-weight: 700;
+          padding: 7px 13px;
+          border-radius: 8px;
+          border: 1px solid #E5E0D8;
+          background: #FAF8F5;
+          color: #181512;
+          font-size: 0.8rem;
+          font-weight: 600;
           cursor: pointer;
           transition: all 0.15s ease;
         }
 
-        .qty-preset-pill.active {
-          background: #1A130F;
-          color: #FFFFFF;
-          border-color: #1A130F;
+        .t-dest-btn:hover {
+          border-color: #181512;
         }
 
-        /* CARTE DROITE BENTO (5 COLONNES) */
-        .bento-card {
-          position: relative;
-          border-radius: 24px;
-          overflow: hidden;
-          background-color: #1A130F;
+        .t-dest-btn.active {
+          background: #181512;
           color: #FFFFFF;
+          border-color: #181512;
+        }
+
+        .t-formula-list {
           display: flex;
           flex-direction: column;
+          gap: 8px;
+        }
+
+        .t-formula-item {
+          display: flex;
+          align-items: center;
           justify-content: space-between;
-          box-shadow: 0 10px 30px -8px rgba(20, 13, 9, 0.18);
+          gap: 12px;
+          padding: 11px 14px;
+          border-radius: 10px;
+          border: 1px solid #E5E0D8;
+          background: #FAF8F5;
+          color: #181512;
+          cursor: pointer;
+          text-align: left;
+          transition: all 0.15s ease;
           box-sizing: border-box;
           min-width: 0;
         }
 
-        .card-quote-result {
+        .t-formula-item:hover {
+          border-color: #181512;
+        }
+
+        .t-formula-item.active {
+          background: #FFFFFF;
+          border: 1.5px solid #181512;
+        }
+
+        .t-formula-left {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 0;
+        }
+
+        .t-formula-icon {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          background: #F2EFE9;
+          color: #181512;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .t-formula-item.active .t-formula-icon {
+          background: #181512;
+          color: #FFFFFF;
+        }
+
+        .t-formula-name {
+          font-size: 0.84rem;
+          font-weight: 700;
+          color: #181512;
+        }
+
+        .t-formula-delay {
+          font-size: 0.72rem;
+          color: #6E675F;
+        }
+
+        .t-formula-rate {
+          font-family: var(--c-font-mono);
+          font-size: 0.76rem;
+          font-weight: 700;
+          color: #181512;
+          background: #F2EFE9;
+          border: 1px solid #E5E0D8;
+          padding: 4px 10px;
+          border-radius: 6px;
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+
+        .t-formula-item.active .t-formula-rate {
+          background: #181512;
+          color: #FFFFFF;
+          border-color: #181512;
+        }
+
+        .t-qty-box {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .t-qty-input-wrap {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .t-qty-input {
+          flex: 1;
+          height: 42px;
+          padding: 0 12px;
+          border-radius: 8px;
+          border: 1px solid #D5CFC5;
+          background: #FAF8F5;
+          font-size: 1rem;
+          font-weight: 700;
+          color: #181512;
+          box-sizing: border-box;
+          min-width: 0;
+        }
+
+        .t-qty-input:focus {
+          outline: none;
+          border-color: #181512;
+          background: #FFFFFF;
+        }
+
+        .t-qty-unit {
+          font-family: var(--c-font-mono);
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #6E675F;
+          background: #FAF8F5;
+          padding: 10px 12px;
+          border-radius: 8px;
+          border: 1px solid #E5E0D8;
+          white-space: nowrap;
+        }
+
+        .t-qty-presets {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+
+        .t-preset-chip {
+          padding: 5px 11px;
+          border-radius: 6px;
+          border: 1px solid #E5E0D8;
+          background: #FFFFFF;
+          color: #6E675F;
+          font-size: 0.74rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .t-preset-chip.active {
+          background: #181512;
+          color: #FFFFFF;
+          border-color: #181512;
+        }
+
+        /* CARTE RÉCAPITULATIF DEVIS (DROITE - 5 COLONNES) */
+        .tariffs-summary-card {
           grid-column: span 5;
-        }
-
-        .bento-card-bg {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          z-index: 1;
-          opacity: 0.35;
-        }
-
-        .bento-scrim-strong {
-          position: absolute;
-          inset: 0;
-          z-index: 2;
-          background: linear-gradient(
-            180deg,
-            rgba(26, 19, 15, 0.86) 0%,
-            rgba(20, 13, 9, 0.96) 60%,
-            rgba(20, 13, 9, 0.99) 100%
-          );
-          pointer-events: none;
-        }
-
-        .bento-content {
-          position: relative;
-          z-index: 3;
+          background: #FFFFFF;
+          border: 1px solid #E5E0D8;
+          border-radius: 16px;
           padding: 26px;
-          height: 100%;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
+          gap: 22px;
           box-sizing: border-box;
           min-width: 0;
         }
 
-        .bento-tag {
+        .t-summary-top-tag {
           display: inline-flex;
           align-items: center;
           gap: 6px;
           font-family: var(--c-font-mono);
-          font-size: 0.66rem;
+          font-size: 0.68rem;
           font-weight: 700;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          color: rgba(255, 255, 255, 0.92);
-          padding: 5px 12px;
-          border-radius: 9999px;
-          background: rgba(255, 255, 255, 0.14);
-          backdrop-filter: blur(10px);
-          width: max-content;
-          max-width: 100%;
+          letter-spacing: 0.06em;
+          color: #181512;
+          background: #F2EFE9;
+          border: 1px solid #E5E0D8;
+          padding: 5px 10px;
+          border-radius: 6px;
         }
 
-        .bento-tag .green-dot {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background-color: #22C55E;
-          flex-shrink: 0;
+        .t-summary-amount-block {
+          margin-top: 18px;
+          padding-bottom: 18px;
+          border-bottom: 1px solid #EDEAE4;
         }
 
-        .quote-eyebrow-label {
+        .t-summary-caption {
           font-family: var(--c-font-mono);
           font-size: 0.7rem;
-          font-weight: 700;
-          letter-spacing: 0.1em;
-          color: rgba(255, 255, 255, 0.68);
+          font-weight: 600;
           text-transform: uppercase;
-        }
-
-        .bento-stat-highlight {
-          font-family: var(--c-font-display);
-          font-weight: 800;
-          letter-spacing: -0.03em;
-          line-height: 1.05;
-        }
-
-        .bento-card-subtitle {
-          font-size: 0.86rem;
-          color: rgba(255, 255, 255, 0.88);
-          line-height: 1.4;
-          margin: 0;
-        }
-
-        .options-duo {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-        }
-
-        .option-box {
-          border-left: 2px solid #FFA066;
-          padding-left: 10px;
-          min-width: 0;
-        }
-
-        .option-tag {
-          font-family: var(--c-font-mono);
-          font-size: 0.66rem;
-          font-weight: 700;
-          color: #FFA066;
+          letter-spacing: 0.08em;
+          color: #6E675F;
           display: block;
-          margin-bottom: 3px;
-          text-transform: uppercase;
         }
 
-        .option-desc {
-          font-size: 0.76rem;
-          color: rgba(255, 255, 255, 0.9);
-          line-height: 1.35;
+        .t-summary-price {
+          font-family: var(--c-font-display);
+          font-size: clamp(1.9rem, 3.2vw, 2.5rem);
+          font-weight: 800;
+          color: #181512;
+          letter-spacing: -0.03em;
+          line-height: 1.1;
+          margin: 6px 0;
+        }
+
+        .t-summary-currency {
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: #6E675F;
+        }
+
+        .t-summary-service-label {
+          font-size: 0.84rem;
+          color: #6E675F;
           margin: 0;
+          line-height: 1.4;
         }
 
-        .bento-bullets {
+        .t-summary-specs {
           display: flex;
           flex-direction: column;
-          gap: 7px;
-          margin-top: 8px;
+          gap: 10px;
+          margin-top: 16px;
         }
 
-        .bento-bullet {
+        .t-spec-row {
           display: flex;
-          align-items: flex-start;
-          gap: 8px;
-          font-size: 0.78rem;
-          color: rgba(255, 255, 255, 0.9);
-          line-height: 1.4;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          font-size: 0.8rem;
+          padding-bottom: 8px;
+          border-bottom: 1px dashed #EDEAE4;
+          flex-wrap: wrap;
         }
 
-        .bento-bullet-dot {
-          width: 5px;
-          height: 5px;
-          border-radius: 50%;
-          background-color: #FFA066;
-          flex-shrink: 0;
-          margin-top: 6px;
+        .t-spec-key {
+          color: #6E675F;
+          font-weight: 500;
         }
 
-        .quote-actions-stack {
-          margin-top: 22px;
+        .t-spec-val {
+          color: #181512;
+          font-weight: 600;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          flex-wrap: wrap;
+        }
+
+        .t-summary-actions {
           display: flex;
           flex-direction: column;
           gap: 10px;
         }
 
-        .quote-pdf-row {
+        .t-btn-primary {
+          height: 44px;
+          border-radius: 10px;
+          background: #181512;
+          color: #FFFFFF;
+          font-size: 0.84rem;
+          font-weight: 700;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          text-decoration: none;
+          transition: opacity 0.15s ease;
+        }
+
+        .t-btn-primary:hover {
+          opacity: 0.9;
+        }
+
+        .t-btn-secondary-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 8px;
         }
 
-        .quote-glass-btn {
-          height: 40px;
-          border-radius: 9999px;
-          border: 1px solid rgba(255, 255, 255, 0.22);
-          background: rgba(255, 255, 255, 0.1);
-          color: #FFFFFF;
+        .t-btn-outline {
+          height: 38px;
+          border-radius: 8px;
+          border: 1px solid #E5E0D8;
+          background: #FAF8F5;
+          color: #181512;
           font-size: 0.78rem;
-          font-weight: 700;
+          font-weight: 600;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: 6px;
           cursor: pointer;
-          transition: all 0.18s ease;
+          transition: border-color 0.15s ease;
         }
 
-        .quote-glass-btn:hover {
-          background: rgba(255, 255, 255, 0.2);
+        .t-btn-outline:hover {
+          border-color: #181512;
+          background: #FFFFFF;
         }
 
-        .quote-wa-primary-btn {
-          height: 46px;
-          border-radius: 9999px;
-          background: #CC4E16;
-          color: #FFFFFF;
-          font-size: 0.86rem;
-          font-weight: 800;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          text-decoration: none;
-          box-shadow: 0 8px 20px rgba(204, 78, 22, 0.35);
-          transition: all 0.2s ease;
-        }
-
-        .quote-wa-primary-btn:hover {
-          background: #E05A1E;
-          transform: translateY(-1px);
-        }
-
-        .bento-bottom-row {
+        .t-summary-footer-link {
+          margin-top: 4px;
+          padding-top: 12px;
+          border-top: 1px solid #EDEAE4;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 10px;
+          gap: 8px;
           flex-wrap: wrap;
+          font-size: 0.76rem;
+          color: #6E675F;
         }
 
-        .bento-cta-pill {
+        .t-inline-link {
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          color: #FFA066;
-          font-size: 0.8rem;
+          gap: 4px;
+          color: #181512;
           font-weight: 700;
-          text-decoration: none;
+          text-decoration: underline;
+          text-underline-offset: 3px;
         }
 
-        /* BLOC CATALOGUE DES TARIFS (STYLE BOARDING PASS DE /SERVICES) */
-        .shipping-pass-block {
-          margin-top: 24px;
-          background-color: #FFFFFF;
-          border-radius: 20px;
-          padding: 26px 30px;
-          box-shadow: 0 4px 24px rgba(20, 13, 9, 0.05);
-          border: 1px solid rgba(20, 13, 9, 0.07);
+        /* GRILLE COMPLÈTE DES TARIFS */
+        .tariffs-directory-section {
+          background: #FFFFFF;
+          border: 1px solid #E5E0D8;
+          border-radius: 16px;
+          padding: 26px;
           box-sizing: border-box;
         }
 
-        .pass-tabs-header {
+        .tariffs-directory-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
           flex-wrap: wrap;
-          gap: 16px;
-          padding-bottom: 20px;
-          border-bottom: 1px dashed rgba(20, 13, 9, 0.14);
-          margin-bottom: 22px;
+          gap: 14px;
+          padding-bottom: 18px;
+          border-bottom: 1px solid #EDEAE4;
+          margin-bottom: 20px;
         }
 
-        .pass-label {
+        .tariffs-directory-eyebrow {
           font-family: var(--c-font-mono);
           font-size: 0.68rem;
           font-weight: 700;
-          letter-spacing: 0.1em;
-          color: #CC4E16;
+          letter-spacing: 0.08em;
+          color: #6E675F;
           display: block;
           margin-bottom: 4px;
         }
 
-        .pass-headline {
+        .tariffs-directory-title {
           font-family: var(--c-font-display);
-          font-size: 1.3rem;
+          font-size: 1.25rem;
           font-weight: 800;
-          color: var(--c-text-main);
+          color: #181512;
           margin: 0;
           letter-spacing: -0.02em;
         }
 
-        .pass-warehouse-capsules {
+        .tariffs-filter-tabs {
           display: flex;
-          gap: 8px;
+          gap: 6px;
           flex-wrap: wrap;
         }
 
-        .pass-capsule-btn {
-          padding: 8px 16px;
-          border-radius: 9999px;
-          font-size: 0.8rem;
-          font-weight: 700;
-          border: 1px solid rgba(20, 13, 9, 0.12);
-          background-color: #FAF7F2;
-          color: var(--c-text-secondary);
+        .t-filter-tab {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 13px;
+          border-radius: 8px;
+          font-size: 0.78rem;
+          font-weight: 600;
+          border: 1px solid #E5E0D8;
+          background: #FAF8F5;
+          color: #6E675F;
           cursor: pointer;
-          transition: all 0.18s ease;
+          transition: all 0.15s ease;
         }
 
-        .pass-capsule-btn.active {
-          background-color: #140D09;
+        .t-filter-tab:hover {
+          color: #181512;
+          border-color: #181512;
+        }
+
+        .t-filter-tab.active {
+          background: #181512;
           color: #FFFFFF;
-          border-color: #140D09;
+          border-color: #181512;
         }
 
-        .tariff-catalog-grid {
+        .tariffs-cards-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-          gap: 14px;
+          grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+          gap: 12px;
         }
 
-        .tariff-catalog-card {
-          background: #FAF7F2;
-          border: 1px solid rgba(20, 13, 9, 0.08);
-          border-radius: 16px;
-          padding: 16px;
+        .t-rate-card {
+          background: #FAF8F5;
+          border: 1px solid #E5E0D8;
+          border-radius: 12px;
+          padding: 15px;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
@@ -1639,7 +1547,7 @@ export default function TariffsPage() {
           min-width: 0;
         }
 
-        .tariff-card-top {
+        .t-rate-card-head {
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -1647,141 +1555,101 @@ export default function TariffsPage() {
           flex-wrap: wrap;
         }
 
-        .tariff-corridor-badge {
+        .t-rate-corridor {
           display: inline-flex;
           align-items: center;
           gap: 5px;
           font-size: 0.76rem;
-          font-weight: 700;
-          color: #140D09;
+          font-weight: 600;
+          color: #181512;
+          min-width: 0;
+          flex-wrap: wrap;
         }
 
-        .tariff-mode-pill {
+        .t-rate-badge {
           display: inline-flex;
           align-items: center;
           gap: 4px;
           font-size: 0.68rem;
-          font-weight: 800;
-          padding: 3px 8px;
-          border-radius: 9999px;
+          font-weight: 600;
+          padding: 2px 8px;
+          border-radius: 6px;
+          background: #FFFFFF;
+          border: 1px solid #E5E0D8;
+          color: #181512;
         }
 
-        .tariff-mode-pill.air {
-          background: rgba(204, 78, 22, 0.12);
-          color: #CC4E16;
+        .t-rate-service {
+          font-size: 0.85rem;
+          font-weight: 700;
+          color: #181512;
+          line-height: 1.35;
         }
 
-        .tariff-mode-pill.sea {
-          background: rgba(15, 118, 110, 0.12);
-          color: #0F766E;
-        }
-
-        .tariff-service-title {
-          font-size: 0.88rem;
-          font-weight: 800;
-          color: #140D09;
-          line-height: 1.3;
-        }
-
-        .tariff-price-row {
+        .t-rate-price-line {
           display: flex;
           align-items: baseline;
-          gap: 6px;
+          gap: 5px;
           flex-wrap: wrap;
         }
 
-        .tariff-price-amount {
+        .t-rate-price-val {
           font-family: var(--c-font-display);
-          font-size: 1.25rem;
+          font-size: 1.2rem;
           font-weight: 800;
-          color: #140D09;
+          color: #181512;
         }
 
-        .tariff-price-unit {
-          font-size: 0.78rem;
-          font-weight: 700;
-          color: var(--c-text-muted);
+        .t-rate-price-unit {
+          font-size: 0.76rem;
+          font-weight: 600;
+          color: #6E675F;
         }
 
-        .tariff-secondary-pill {
+        .t-rate-secondary {
           font-family: var(--c-font-mono);
-          font-size: 0.7rem;
-          font-weight: 700;
-          color: #CC4E16;
-          background: rgba(204, 78, 22, 0.1);
-          padding: 2px 7px;
-          border-radius: 9999px;
+          font-size: 0.68rem;
+          font-weight: 600;
+          color: #6E675F;
+          background: #FFFFFF;
+          border: 1px solid #E5E0D8;
+          padding: 1px 6px;
+          border-radius: 4px;
         }
 
-        .tariff-card-footer {
+        .t-rate-card-foot {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 8px;
           padding-top: 8px;
-          border-top: 1px solid rgba(20, 13, 9, 0.06);
+          border-top: 1px solid #EAE5DC;
           font-size: 0.72rem;
-          color: var(--c-text-muted);
+          color: #6E675F;
           flex-wrap: wrap;
         }
 
-        .tariff-delay-text,
-        .tariff-customs-tag {
+        .t-rate-meta {
           display: inline-flex;
           align-items: center;
           gap: 4px;
-          font-weight: 600;
-        }
-
-        /* BANDEAU GARANTIES */
-        .services-guarantees-bar {
-          margin-top: 24px;
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 16px;
-          background: rgba(255, 255, 255, 0.65);
-          border: 1px solid rgba(20, 13, 9, 0.07);
-          border-radius: 16px;
-          padding: 18px 24px;
-          box-sizing: border-box;
-        }
-
-        .guarantee-item {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          min-width: 0;
-        }
-
-        .guarantee-title {
-          font-size: 0.86rem;
-          font-weight: 800;
-          color: var(--c-text-main);
-        }
-
-        .guarantee-desc {
-          font-size: 0.76rem;
-          color: var(--c-text-muted);
+          font-weight: 500;
         }
 
         @media (max-width: 960px) {
-          .bento-config-panel,
-          .card-quote-result {
+          .tariffs-config-card,
+          .tariffs-summary-card {
             grid-column: span 12;
-          }
-          .services-guarantees-bar {
-            grid-template-columns: 1fr;
           }
         }
 
         @media (max-width: 600px) {
-          .bento-config-panel,
-          .bento-content,
-          .shipping-pass-block {
+          .tariffs-config-card,
+          .tariffs-summary-card,
+          .tariffs-directory-section {
             padding: 18px;
           }
-          .options-duo,
-          .quote-pdf-row {
+          .t-btn-secondary-grid {
             grid-template-columns: 1fr;
           }
         }
