@@ -39,6 +39,7 @@ export function FloatingBottomNav() {
     >
       <nav
         aria-label="Navigation principale"
+        className="roum-floating-nav"
         style={{
           display: "flex",
           alignItems: "center",
@@ -98,14 +99,16 @@ export function FloatingBottomNav() {
         })}
       </nav>
 
-      <style jsx>{`
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         @media (max-width: 380px) {
-          nav {
+          .roum-floating-nav {
             height: 40px !important;
             padding: 3px 6px !important;
             gap: 1.5px !important;
           }
-          :global(.roum-nav-pill) {
+          .roum-nav-pill {
             height: 34px !important;
             padding: 0 5px !important;
             font-size: 0.65rem !important;
@@ -114,19 +117,21 @@ export function FloatingBottomNav() {
         }
 
         @media (max-width: 340px) {
-          nav {
+          .roum-floating-nav {
             height: 38px !important;
             padding: 2.5px 4px !important;
             gap: 1px !important;
           }
-          :global(.roum-nav-pill) {
+          .roum-nav-pill {
             height: 32px !important;
             padding: 0 4.5px !important;
             font-size: 0.61rem !important;
             gap: 2.5px !important;
           }
         }
-      `}</style>
+      `,
+        }}
+      />
     </div>
   );
 }

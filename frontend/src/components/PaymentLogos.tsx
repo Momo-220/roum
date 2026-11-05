@@ -34,12 +34,12 @@ export function WaveLogo({ size = 36 }: { size?: number }) {
         title="Wave Mobile Money"
       >
         <img
-          src="/images/payments/wave.png"
+          src="/images/payments/wave.jpeg"
           alt="Wave"
           width={size}
           height={size}
           onError={() => setImgError(true)}
-          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
         />
       </div>
     );
@@ -126,12 +126,12 @@ export function OrangeMoneyLogo({ size = 36 }: { size?: number }) {
         title="Orange Money"
       >
         <img
-          src="/images/payments/orange.png"
+          src="/images/payments/Orange%20money.png"
           alt="Orange Money"
           width={size}
           height={size}
           onError={() => setImgError(true)}
-          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
         />
       </div>
     );
@@ -199,12 +199,12 @@ export function CompteMarocLogo({ size = 36 }: { size?: number }) {
         title="Compte Bancaire Maroc"
       >
         <img
-          src="/images/payments/maroc.png"
+          src="/images/payments/bank-transfer.png"
           alt="Maroc Bank"
           width={size}
           height={size}
           onError={() => setImgError(true)}
-          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
         />
       </div>
     );

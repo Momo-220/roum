@@ -30,7 +30,9 @@ export function WhatsAppFloatingButton() {
         />
       </svg>
 
-      <style jsx>{`
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         .whatsapp-floating-btn {
           position: fixed;
           bottom: max(72px, calc(env(safe-area-inset-bottom, 14px) + 58px));
@@ -49,7 +51,7 @@ export function WhatsAppFloatingButton() {
           transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s ease;
         }
 
-        :global(.whatsapp-icon-svg) {
+        .whatsapp-icon-svg {
           width: 54px;
           height: 54px;
           display: block;
@@ -67,12 +69,14 @@ export function WhatsAppFloatingButton() {
             right: 14px;
             bottom: max(68px, calc(env(safe-area-inset-bottom, 12px) + 54px));
           }
-          :global(.whatsapp-icon-svg) {
+          .whatsapp-icon-svg {
             width: 48px;
             height: 48px;
           }
         }
-      `}</style>
+      `,
+        }}
+      />
     </a>
   );
 }

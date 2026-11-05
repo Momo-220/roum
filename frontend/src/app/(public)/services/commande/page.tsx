@@ -450,6 +450,9 @@ function CommandeFormContent() {
 
     setExtracting(true);
     setExtractError(null);
+    if (userProductImage && !userProductImage.startsWith("data:")) {
+      setUserProductImage(null);
+    }
     try {
       const res = await fetch("/api/extract-product", {
         method: "POST",
@@ -931,12 +934,41 @@ function CommandeFormContent() {
                     {(userProductImage || (extractedProduct && (extractedProduct.image || extractedProduct.title))) ? (
                       <div className="ios-product-preview-card">
                         <div className="ios-product-preview-thumb-wrap">
-                          <img
-                            src={userProductImage || extractedProduct?.image || ""}
-                            alt={extractedProduct?.title || "Article"}
-                            className="ios-product-preview-thumb"
-                            referrerPolicy="no-referrer"
-                          />
+                          {(userProductImage || extractedProduct?.image) ? (
+                            <img
+                              src={userProductImage || extractedProduct?.image || ""}
+                              alt={extractedProduct?.title || "Article"}
+                              className="ios-product-preview-thumb"
+                              onError={(e) => {
+                                const currentSrc = e.currentTarget.getAttribute("src") || "";
+                                if (currentSrc.startsWith("http") && !currentSrc.includes("/api/image-proxy")) {
+                                  e.currentTarget.src = `/api/image-proxy?url=${encodeURIComponent(currentSrc)}`;
+                                } else {
+                                  setUserProductImage(null);
+                                  setExtractedProduct((prev) => (prev ? { ...prev, image: "" } : null));
+                                }
+                              }}
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => productImageInputRef.current?.click()}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                border: "none",
+                                background: "#F7F5F0",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: "pointer",
+                                color: "#8E877E",
+                              }}
+                              title="Ajouter la photo de l'article"
+                            >
+                              <Camera size={20} />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => productImageInputRef.current?.click()}
@@ -1101,12 +1133,41 @@ function CommandeFormContent() {
                     {(userProductImage || (extractedProduct && (extractedProduct.image || extractedProduct.title))) ? (
                       <div className="ios-product-preview-card">
                         <div className="ios-product-preview-thumb-wrap">
-                          <img
-                            src={userProductImage || extractedProduct?.image || ""}
-                            alt={extractedProduct?.title || "Article"}
-                            className="ios-product-preview-thumb"
-                            referrerPolicy="no-referrer"
-                          />
+                          {(userProductImage || extractedProduct?.image) ? (
+                            <img
+                              src={userProductImage || extractedProduct?.image || ""}
+                              alt={extractedProduct?.title || "Article"}
+                              className="ios-product-preview-thumb"
+                              onError={(e) => {
+                                const currentSrc = e.currentTarget.getAttribute("src") || "";
+                                if (currentSrc.startsWith("http") && !currentSrc.includes("/api/image-proxy")) {
+                                  e.currentTarget.src = `/api/image-proxy?url=${encodeURIComponent(currentSrc)}`;
+                                } else {
+                                  setUserProductImage(null);
+                                  setExtractedProduct((prev) => (prev ? { ...prev, image: "" } : null));
+                                }
+                              }}
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => productImageInputRef.current?.click()}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                border: "none",
+                                background: "#F7F5F0",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: "pointer",
+                                color: "#8E877E",
+                              }}
+                              title="Ajouter la photo de l'article"
+                            >
+                              <Camera size={20} />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => productImageInputRef.current?.click()}
@@ -1380,7 +1441,9 @@ function CommandeFormContent() {
         )}
       </div>
 
-      <style jsx>{`
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         .ios-page-wrap {
           min-height: 100vh;
           background-color: #FAF8F5;
@@ -2325,7 +2388,9 @@ function CommandeFormContent() {
         .mono {
           font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         }
-      `}</style>
+      `,
+        }}
+      />
     </div>
   );
 }

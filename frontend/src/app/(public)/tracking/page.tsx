@@ -428,7 +428,9 @@ export default function TrackingPage() {
         </ScrollReveal>
       </div>
 
-      <style jsx>{`
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         .snake-horizontal-viewport::-webkit-scrollbar {
           height: 4px;
         }
@@ -437,7 +439,7 @@ export default function TrackingPage() {
           border-radius: 9999px;
         }
 
-        :global(.step-circle-node) {
+        .step-circle-node {
           width: 44px;
           height: 44px;
           border-radius: 50%;
@@ -460,7 +462,7 @@ export default function TrackingPage() {
           box-shadow: 0 2px 8px rgba(140, 109, 88, 0.08);
         }
 
-        :global(.step-circle-node.active) {
+        .step-circle-node.active {
           opacity: 1 !important;
           transform: scale(1.08) !important;
           background-color: #F3ECE2 !important;
@@ -469,7 +471,7 @@ export default function TrackingPage() {
           box-shadow: 0 6px 20px -2px rgba(140, 109, 88, 0.25) !important;
         }
 
-        :global(.pulse-ripple) {
+        .pulse-ripple {
           position: absolute;
           inset: -6px;
           border-radius: 50%;
@@ -480,7 +482,7 @@ export default function TrackingPage() {
           z-index: -1;
         }
 
-        :global(.step-circle-node.active .pulse-ripple) {
+        .step-circle-node.active .pulse-ripple {
           animation: rippleEffect 0.8s ease-out forwards;
         }
 
@@ -495,17 +497,19 @@ export default function TrackingPage() {
           }
         }
 
-        :global(.step-meta-node) {
+        .step-meta-node {
           opacity: 0;
           transform: translateY(6px);
           transition: opacity 0.35s ease, transform 0.35s ease;
         }
 
-        :global(.step-meta-node.active) {
+        .step-meta-node.active {
           opacity: 1 !important;
           transform: translateY(0) !important;
         }
-      `}</style>
+      `,
+        }}
+      />
     </div>
   );
 }

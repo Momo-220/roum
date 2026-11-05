@@ -173,7 +173,9 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         />
       )}
 
-      <style jsx>{`
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         @keyframes splashPulse {
           0%, 100% {
             transform: scale(0.92);
@@ -184,7 +186,9 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
             opacity: 0.7;
           }
         }
-      `}</style>
+      `,
+        }}
+      />
     </div>
   );
 }

@@ -533,7 +533,9 @@ export function ServicesVisualCards() {
       {/* ========================================================
           STYLES CSS RESPONSIFS ET ANIMATIONS FLUIDES
          ======================================================== */}
-      <style jsx>{`
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         .services-section-wrapper {
           margin-bottom: 56px;
         }
@@ -1044,7 +1046,9 @@ export function ServicesVisualCards() {
             cursor: pointer;
           }
         }
-      `}</style>
+      `,
+        }}
+      />
     </section>
   );
 }

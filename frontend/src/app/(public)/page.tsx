@@ -94,7 +94,9 @@ export default function HomePage() {
       {/* ========================================================
           STYLES ADAPTATIFS DESKTOP & MOBILE
          ======================================================== */}
-      <style jsx>{`
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         .home-main-wrapper {
           max-width: 1120px;
           margin: 0 auto;
@@ -251,7 +253,9 @@ export default function HomePage() {
             font-size: 0.86rem;
           }
         }
-      `}</style>
+      `,
+        }}
+      />
     </div>
   );
 }

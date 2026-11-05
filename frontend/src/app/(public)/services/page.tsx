@@ -475,7 +475,9 @@ function ServicesContent() {
       {/* ========================================================
           STYLES CSS INLINE RESPONSIVE & ÉDITORIAL
          ======================================================== */}
-      <style jsx>{`
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         .services-page-root {
           background-color: transparent;
           color: var(--c-text-main);
@@ -725,17 +727,17 @@ function ServicesContent() {
           color: #FFA066;
         }
 
-        :global(.bento-cta-pill span) {
+        .bento-cta-pill span {
           margin-right: 8px !important;
         }
 
-        :global(.bento-cta-pill svg) {
+        .bento-cta-pill svg {
           margin-left: 6px !important;
           flex-shrink: 0 !important;
           transition: transform 0.18s ease !important;
         }
 
-        :global(.bento-cta-pill:hover svg) {
+        .bento-cta-pill:hover svg {
           transform: translateX(5px) !important;
         }
 
@@ -1325,11 +1327,11 @@ function ServicesContent() {
             flex-shrink: 0 !important;
           }
 
-          :global(.bento-cta-pill span) {
+          .bento-cta-pill span {
             margin-right: 8px !important;
           }
 
-          :global(.bento-cta-pill svg) {
+          .bento-cta-pill svg {
             margin-left: 6px !important;
             flex-shrink: 0 !important;
           }
@@ -1414,16 +1416,18 @@ function ServicesContent() {
             box-sizing: border-box !important;
           }
 
-          :global(.bento-cta-pill span) {
+          .bento-cta-pill span {
             margin-right: 8px !important;
           }
 
-          :global(.bento-cta-pill svg) {
+          .bento-cta-pill svg {
             margin-left: 6px !important;
             flex-shrink: 0 !important;
           }
         }
-      `}</style>
+      `,
+        }}
+      />
     </div>
   );
 }
