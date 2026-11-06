@@ -89,6 +89,11 @@ function cleanProductImageUrl(raw: string): string {
     if (lower.includes(pat)) return "";
   }
 
+  // Images d'interface d'Alibaba : dossier /@img/ ou taille écrite dans le nom (…-200-200.png).
+  if (lower.includes("/@img/") || /-\d{2,4}-\d{2,4}\.(png|jpe?g|webp)(\?|$)/.test(lower)) {
+    return "";
+  }
+
   // Supprimer les suffixes de redimensionnement miniature d'Alicdn (.jpg_350x350.jpg, .jpg_720x720q50.jpg_.webp, etc.)
   // sans jamais doubler l'extension .jpg
   candidate = candidate.replace(/\.(jpg|jpeg|png|webp)_[A-Za-z0-9_.-]+$/i, ".$1");
@@ -494,6 +499,26 @@ function extractPricingAndTiersFromHtml(
   };
 }
 
+/**
+ * Les pages promotionnelles d'Alibaba (sale.alibaba.com) ne contiennent pas l'article.
+ * Son identifiant est dans l'adresse, ce qui permet de rejoindre la vraie fiche produit.
+ */
+function resolveAlibabaProductUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname.endsWith("alibaba.com") || parsed.pathname.includes("/product-detail/")) {
+      return url;
+    }
+    for (const key of ["topOfferIds", "offerIds", "offerId", "productIds", "productId"]) {
+      const id = parsed.searchParams.get(key)?.match(/\d{6,}/)?.[0];
+      if (id) return `https://www.alibaba.com/product-detail/_${id}.html`;
+    }
+  } catch {
+    // Adresse illisible : la suite de l'analyse s'en charge.
+  }
+  return url;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { url } = await req.json();
@@ -537,6 +562,8 @@ export async function POST(req: NextRequest) {
         originalUrl: trimmedUrl,
       });
     }
+
+    trimmedUrl = resolveAlibabaProductUrl(trimmedUrl);
 
     // 2. Détection de la plateforme
     let platform = "Alibaba";
@@ -637,9 +664,12 @@ export async function POST(req: NextRequest) {
           .replace(/\s+/g, " ")
           .trim();
 
-        title = cleanedSlug
-          ? cleanedSlug.charAt(0).toUpperCase() + cleanedSlug.slice(1)
-          : `Article sélectionné sur ${platform}`;
+        // « item.htm » ou « index.html » ne disent rien de l'article.
+        const isGenericSlug = /^(item|items|detail|details|index|offer|product|products)$/i.test(cleanedSlug);
+        title =
+          cleanedSlug && !isGenericSlug
+            ? cleanedSlug.charAt(0).toUpperCase() + cleanedSlug.slice(1)
+            : `Article sélectionné sur ${platform}`;
       } catch {
         title = `Article sélectionné sur ${platform}`;
       }

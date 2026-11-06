@@ -493,8 +493,15 @@ function CommandeFormContent() {
       if (!res.ok) throw new Error("Échec d'analyse");
       const data: ExtractedProduct = await res.json();
       setExtractedProduct(data);
+      // On garde la vraie adresse de l'article : c'est elle que la direction ouvrira.
+      if (data.originalUrl && data.originalUrl !== targetUrl) {
+        lastExtractedUrlRef.current = data.originalUrl;
+        setProductLink(data.originalUrl);
+      }
       if (data.image) {
         setUserProductImage(data.image);
+      } else if (!userProductImage?.startsWith("data:")) {
+        setExtractError("Photo non trouvée sur ce lien : ajoutez-la vous-même.");
       }
       if (data.title && (!productQuery || productQuery === "Article Alibaba")) {
         setProductQuery(data.title);
