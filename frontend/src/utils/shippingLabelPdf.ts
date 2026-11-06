@@ -236,14 +236,14 @@ export function buildShippingLabelPdf(
 
   // --- Étiquette collée sur le carton ---
   const hasClient = Boolean(data.clientName);
-  const stickerHeight = hasClient ? 284 : 272;
+  const stickerHeight = hasClient ? 282 : 270;
   const sticker = {
     x: front.x + 20,
     y: front.y + (front.h - 18 - stickerHeight) / 2,
     w: front.w - 40,
     h: stickerHeight,
   };
-  const inner = { left: sticker.x + 20, right: sticker.x + sticker.w - 20 };
+  const inner = { left: sticker.x + 24, right: sticker.x + sticker.w - 24 };
   const innerWidth = inner.right - inner.left;
   const stickerTop = sticker.y + sticker.h;
 
@@ -252,21 +252,20 @@ export function buildShippingLabelPdf(
   });
   roundedRect(sticker.x, sticker.y, sticker.w, sticker.h, 12, "#FFFFFF");
 
-  fittedLogo("ImLabel", images.onLabel, inner.left, stickerTop - 48, 36);
-  text(inner.right, stickerTop - 27, data.companyName, 8, "bold", INK, { align: "right" });
-  text(inner.right, stickerTop - 38, "Aérien · Maritime · Douane incluse", 7.5, "regular", MUTED, { align: "right" });
+  fittedLogo("ImLabel", images.onLabel, inner.left - 4, stickerTop - 58, 38);
+  text(inner.right, stickerTop - 42, "Aérien · Maritime", 8, "regular", MUTED, { align: "right" });
 
-  text(inner.left, stickerTop - 67, data.codeLabel, 7, "bold", MUTED, { spacing: 0.8 });
-  let codeSize = 25;
+  text(inner.left, stickerTop - 86, data.codeLabel, 7, "bold", MUTED, { spacing: 0.8 });
+  let codeSize = 22;
   while (codeSize > 12 && textWidth(data.code, codeSize, "mono") > innerWidth) codeSize -= 0.5;
-  text(inner.left, stickerTop - 91, data.code, codeSize, "mono", INK);
+  text(inner.left, stickerTop - 110, data.code, codeSize, "mono", INK);
 
   // Code-barres scannable.
   const modules = code128Modules(data.code);
   const moduleCount = modules.reduce((sum, width) => sum + width, 0);
   const moduleWidth = innerWidth / moduleCount;
-  const barTop = stickerTop - 99;
-  const barHeight = 38;
+  const barTop = stickerTop - 124;
+  const barHeight = 36;
   let cursor = inner.left;
   modules.forEach((width, index) => {
     const barWidth = width * moduleWidth;
@@ -275,51 +274,35 @@ export function buildShippingLabelPdf(
   });
 
   // Trajet, en grand : c'est ce qu'on lit en premier sur un carton.
-  const routeTop = barTop - barHeight - 11;
+  const routeTop = barTop - barHeight - 14;
   const columnX = inner.left + innerWidth * 0.5;
   const columnWidth = innerWidth * 0.5 - 8;
 
-  strokeLine(inner.left, routeTop, inner.right, routeTop, LINE, 0.7);
   text(inner.left, routeTop - 14, "DE", 7, "bold", MUTED, { spacing: 0.8 });
-  text(inner.left, routeTop - 29, truncate(data.origin, columnWidth - 22, 12, "bold"), 12, "bold", INK);
-  arrow(columnX - 25, routeTop - 25, 15, ACCENT);
+  text(inner.left, routeTop - 30, truncate(data.origin, columnWidth - 22, 12, "bold"), 12, "bold", INK);
+  arrow(columnX - 25, routeTop - 26, 15, ACCENT);
   text(columnX, routeTop - 14, "VERS", 7, "bold", MUTED, { spacing: 0.8 });
-  text(columnX, routeTop - 29, truncate(data.destination, columnWidth, 12, "bold"), 12, "bold", ACCENT);
+  text(columnX, routeTop - 30, truncate(data.destination, columnWidth, 12, "bold"), 12, "bold", ACCENT);
 
-  const detailTop = routeTop - 39;
-  strokeLine(inner.left, detailTop, inner.right, detailTop, LINE, 0.7);
+  const detailTop = routeTop - 44;
 
   // Le détail entre parenthèses (« Bateau / CBM ») ne tient pas sur l'étiquette.
   const transport = data.transportMode.replace(/\s*\(.*\)/, "");
 
   if (hasClient) {
     text(inner.left, detailTop - 14, "DESTINATAIRE", 7, "bold", MUTED, { spacing: 0.8 });
-    text(inner.left, detailTop - 27, truncate(data.clientName!, columnWidth, 10, "bold"), 10, "bold", INK);
-    text(inner.left, detailTop - 39, truncate(data.clientPhone || "", columnWidth, 9, "regular"), 9, "regular", MUTED);
+    text(inner.left, detailTop - 28, truncate(data.clientName!, columnWidth, 10, "bold"), 10, "bold", INK);
+    text(inner.left, detailTop - 41, truncate(data.clientPhone || "", columnWidth, 9, "regular"), 9, "regular", MUTED);
   } else {
     text(inner.left, detailTop - 14, "POIDS / VOLUME", 7, "bold", MUTED, { spacing: 0.8 });
-    text(inner.left, detailTop - 27, truncate(data.weightOrVolume, columnWidth, 10, "bold"), 10, "bold", INK);
+    text(inner.left, detailTop - 28, truncate(data.weightOrVolume, columnWidth, 10, "bold"), 10, "bold", INK);
   }
 
   text(columnX, detailTop - 14, "TRANSPORT", 7, "bold", MUTED, { spacing: 0.8 });
-  text(columnX, detailTop - 27, truncate(transport, columnWidth, 10, "bold"), 10, "bold", INK);
+  text(columnX, detailTop - 28, truncate(transport, columnWidth, 10, "bold"), 10, "bold", INK);
   if (hasClient) {
-    text(columnX, detailTop - 39, truncate(data.weightOrVolume, columnWidth, 9, "regular"), 9, "regular", MUTED);
+    text(columnX, detailTop - 41, truncate(data.weightOrVolume, columnWidth, 9, "regular"), 9, "regular", MUTED);
   }
-
-  // Marquage à écrire sur le colis, ou article si aucun marquage n'existe.
-  const markTop = detailTop - (hasClient ? 49 : 37);
-  const markBottom = markTop - 40;
-  roundedRect(inner.left - 8, markBottom, innerWidth + 16, 34, 8, ACCENT_TINT);
-  text(inner.left + 2, markBottom + 22, data.shippingMark ? "MARQUAGE CARTON" : "CONTENU", 6.5, "bold", ACCENT, { spacing: 0.7 });
-  text(
-    inner.left + 2,
-    markBottom + 9,
-    truncate(data.shippingMark || data.productTitle || "Marchandises", innerWidth - 8, 9.5, "bold"),
-    9.5,
-    "bold",
-    ACCENT,
-  );
 
   // --- Message et boutons cliquables, en pilules ---
   text(297.5, 268, data.headline, 17, "bold", INK, { align: "center" });
@@ -336,8 +319,13 @@ export function buildShippingLabelPdf(
   text(44, 164, "ARTICLE", 7, "bold", MUTED, { spacing: 0.8 });
   const titleLines = wrap(data.productTitle || "Marchandises", 215, 10, "bold", 2);
   titleLines.forEach((line, index) => text(44, 150 - index * 13, line, 10, "bold", INK));
+  let articleLine = 150 - titleLines.length * 13;
   if (data.quantity) {
-    text(44, 150 - titleLines.length * 13, `Quantité : ${data.quantity}`, 9, "regular", MUTED);
+    text(44, articleLine, `Quantité : ${data.quantity}`, 9, "regular", MUTED);
+    articleLine -= 12;
+  }
+  if (data.shippingMark) {
+    text(44, articleLine, truncate(`Marquage carton : ${data.shippingMark}`, 215, 9, "regular"), 9, "regular", MUTED);
   }
 
   text(280, 164, "RÈGLEMENT", 7, "bold", MUTED, { spacing: 0.8 });

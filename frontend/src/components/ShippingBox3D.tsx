@@ -12,8 +12,13 @@ interface ShippingBox3DProps {
 export function ShippingBox3D({ code, className }: ShippingBox3DProps) {
   const id = useId().replace(/:/g, "");
 
-  const barX = 58;
-  const barWidth = 224;
+  // Contenu de l'étiquette, avec 24 unités de marge de chaque côté.
+  const labelLeft = 64;
+  const labelRight = 296;
+  const barX = labelLeft;
+  const barWidth = labelRight - labelLeft;
+  // Un chiffre de police à chasse fixe mesure environ 0,6 fois sa taille.
+  const codeSize = Math.min(22, barWidth / (code.length * 0.6));
   const modules = code128Modules(code);
   const moduleWidth = barWidth / modules.reduce((total, width) => total + width, 0);
 
@@ -96,25 +101,33 @@ export function ShippingBox3D({ code, className }: ShippingBox3DProps) {
       <rect x="40" y="120" width="280" height="222" rx="10" fill="#6B4A2E" opacity="0.16" transform="translate(2 3)" />
       <rect x="40" y="120" width="280" height="222" rx="10" fill="#FFFFFF" />
 
-
-      <image href="/images/roum-logo-transparent.png" x="54" y="130" width="66" height="40" />
-      <text x="304" y="148" textAnchor="end" fontSize="9.5" fontWeight="800" fill="#3A2A21" fontFamily="var(--c-font-sans)">
-        ROUM TRANSIT
-      </text>
-      <text x="304" y="161" textAnchor="end" fontSize="8" fill="#857667" fontFamily="var(--c-font-sans)">
+      <image href="/images/roum-logo-transparent.png" x="60" y="134" width="74" height="44" />
+      <text
+        x={labelRight}
+        y="160"
+        textAnchor="end"
+        fontSize="9"
+        fill="#857667"
+        fontFamily="var(--c-font-sans)"
+      >
         Aérien · Maritime
       </text>
-      <line x1="58" y1="178" x2="302" y2="178" stroke="#E8DECF" />
 
-      <text x="58" y="195" fontSize="7.5" fontWeight="700" letterSpacing="0.8" fill="#857667" fontFamily="var(--c-font-sans)">
+      <text
+        x={labelLeft}
+        y="204"
+        fontSize="8.5"
+        fontWeight="700"
+        letterSpacing="1"
+        fill="#857667"
+        fontFamily="var(--c-font-sans)"
+      >
         NUMÉRO DE SUIVI
       </text>
       <text
-        x="58"
-        y="216"
-        textLength="244"
-        lengthAdjust="spacingAndGlyphs"
-        fontSize="19"
+        x={labelLeft}
+        y="227"
+        fontSize={codeSize}
         fontWeight="800"
         fill="#3A2A21"
         fontFamily="var(--c-font-mono)"
@@ -124,16 +137,12 @@ export function ShippingBox3D({ code, className }: ShippingBox3DProps) {
 
       <g fill="#3A2A21">
         {bars.map((bar, index) => (
-          <rect key={index} x={bar.x + 10} y="228" width={bar.width} height="46" />
+          <rect key={index} x={bar.x} y="242" width={bar.width} height="42" />
         ))}
       </g>
 
-      <rect x="52" y="288" width="256" height="40" rx="9" fill="#F3EBDF" />
-      <text x="64" y="304" fontSize="7" fontWeight="700" letterSpacing="0.7" fill="#6B5844" fontFamily="var(--c-font-sans)">
-        DOUANE INCLUSE
-      </text>
-      <text x="64" y="319" fontSize="11" fontWeight="800" fill="#6B5844" fontFamily="var(--c-font-sans)">
-        Livré jusqu&apos;à destination
+      <text x={labelLeft} y="313" fontSize="10" fontWeight="600" fill="#6B5844" fontFamily="var(--c-font-sans)">
+        Douane incluse · Livré jusqu&apos;à destination
       </text>
     </svg>
   );
