@@ -36,3 +36,6 @@ npm-debug.log*
 
 # External Cloned Repos
 ECC/
+
+# Sauvegardes locales de la base
+.db-backups/

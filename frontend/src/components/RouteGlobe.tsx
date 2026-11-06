@@ -66,9 +66,9 @@ const THEME = {
 
   // 1. Transactions EN TRANSIT (Ambre dynamique)
   inTransit: {
-    arc: "#B4652A",
-    comet: "#EA580C",
-    pin: "#B4652A",
+    arc: "#2F6B78",
+    comet: "#2F6B78",
+    pin: "#2F6B78",
   },
 
   // 2. Transactions LIVRÉES (Vert sauge profond)
@@ -1482,13 +1482,13 @@ export function RouteGlobe({
                     hoveredRoute.route.status_category === "DELIVERED"
                       ? "rgba(16, 185, 129, 0.12)"
                       : hoveredRoute.route.status_category === "IN_TRANSIT"
-                      ? "rgba(245, 158, 11, 0.12)"
+                      ? "rgba(184, 164, 136, 0.12)"
                       : "rgba(37, 99, 235, 0.12)",
                   color:
                     hoveredRoute.route.status_category === "DELIVERED"
                       ? "#10B981"
                       : hoveredRoute.route.status_category === "IN_TRANSIT"
-                      ? "#B4652A"
+                      ? "#2F6B78"
                       : "#2563EB",
                 }}
               >

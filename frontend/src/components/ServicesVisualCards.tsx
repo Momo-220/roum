@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { getStartingOffers, type OfficialTariff } from "@/shared";
+import { usePublicCatalog } from "@/shared/usePublicCatalog";
 import Link from "next/link";
 import { ArrowDownRight, ArrowRight, X } from "lucide-react";
 
@@ -31,7 +33,7 @@ const SERVICES_DATA: ServiceItem[] = [
     subtitle: "Paiement en Yuans (RMB) par Mobile Money",
     description:
       "Commandez sur Alibaba et 1688 en réglant en FCFA par Mobile Money. Nous payons votre usine en Yuans sous 24h avec contrôle colis inclus.",
-    image: "/images/services/achats.jpg",
+    image: "/images/services/achat.jpg",
     href: "/services?tab=alibaba",
     ctaText: "Accéder à la Centrale d'Achat",
     options: [
@@ -62,7 +64,7 @@ const SERVICES_DATA: ServiceItem[] = [
     subtitle: "Groupage CBM & Conteneurs FCL",
     description:
       "Acheminement maritime économique au m³ depuis la Chine. Dédouanement 100% compris jusqu'à destination finale.",
-    image: "/images/services/maritime.jpg",
+    image: "/images/services/maritime-ciel.jpg",
     href: "/tariffs?mode=SEA",
     ctaText: "Voir les tarifs maritimes",
     features: [
@@ -83,7 +85,7 @@ const SERVICES_DATA: ServiceItem[] = [
     subtitle: "Chine, Dubaï, France & Maroc direct",
     description:
       "Vols hebdomadaires pour colis urgents, téléphones et électronique. Pesée vidéo et dédouanement complet inclus au kilo.",
-    image: "/images/services/aerien.jpg",
+    image: "/images/services/aerien-hublot.jpg",
     href: "/tariffs?mode=AIR",
     ctaText: "Voir les tarifs aériens",
     features: [
@@ -99,7 +101,46 @@ const SERVICES_DATA: ServiceItem[] = [
   },
 ];
 
+/** Les prix et délais affichés suivent la grille tarifaire réelle. */
+function withLiveOffers(tariffs: OfficialTariff[]): ServiceItem[] {
+  const offers = getStartingOffers(tariffs);
+
+  return SERVICES_DATA.map((service) => {
+    if (service.id === "maritime" && offers.sea) {
+      return {
+        ...service,
+        badge: `BATEAU · DÈS ${offers.sea.price} FCFA / M³`,
+        metrics: [
+          { label: "Délai moyen", value: `${offers.sea.delay} jours` },
+          { label: "Tarif groupage", value: `Dès ${offers.sea.price} F / m³` },
+        ],
+      };
+    }
+
+    if (service.id === "aerien" && offers.air) {
+      const express = offers.express?.delay;
+      return {
+        ...service,
+        badge: express ? `AVION · EXPRESS ${express.toUpperCase()} JOURS` : service.badge,
+        features: service.features.map((feature) =>
+          feature.startsWith("Formule Express") && express
+            ? `Formule Express (${express} j)${offers.normal ? ` ou Normale (${offers.normal.delay} j)` : ""}`
+            : feature
+        ),
+        metrics: [
+          { label: "Délai express", value: express ? `${express} jours` : "—" },
+          { label: "Tarif indicatif", value: `Dès ${offers.air.price} F / kg` },
+        ],
+      };
+    }
+
+    return service;
+  });
+}
+
 export function ServicesVisualCards() {
+  const { tariffs } = usePublicCatalog();
+  const services = useMemo(() => withLiveOffers(tariffs), [tariffs]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
@@ -127,7 +168,7 @@ export function ServicesVisualCards() {
   // Placement CSS Grid pour Desktop
   const getDesktopGridPlacement = (serviceId: string): React.CSSProperties => {
     if (activeId === null) {
-      const idx = SERVICES_DATA.findIndex((s) => s.id === serviceId);
+      const idx = services.findIndex((s) => s.id === serviceId);
       return {
         gridColumn: `${idx + 1} / ${idx + 2}`,
         gridRow: "1 / 2",
@@ -141,7 +182,7 @@ export function ServicesVisualCards() {
       };
     }
 
-    const inactiveCards = SERVICES_DATA.filter((s) => s.id !== activeId);
+    const inactiveCards = services.filter((s) => s.id !== activeId);
     const inactiveIndex = inactiveCards.findIndex((s) => s.id === serviceId);
 
     return {
@@ -170,7 +211,7 @@ export function ServicesVisualCards() {
          ======================================================== */}
       <div className="desktop-cards-container">
         <div className={`desktop-grid ${activeId !== null ? "has-active" : "is-default"}`}>
-          {SERVICES_DATA.map((service) => {
+          {services.map((service) => {
             const isExpanded = activeId === service.id;
             const isStackedSquare = activeId !== null && !isExpanded;
             const isHovered = hoveredCard === service.id;
@@ -340,7 +381,7 @@ export function ServicesVisualCards() {
       <div className="mobile-cards-container">
         {activeId === null ? (
           <div className="mobile-horizontal-scroll">
-            {SERVICES_DATA.map((service) => (
+            {services.map((service) => (
               <div
                 key={service.id}
                 onClick={(e) => handleCardClick(service.id, e)}
@@ -387,7 +428,7 @@ export function ServicesVisualCards() {
         ) : (
           <div className="mobile-active-layout">
             {(() => {
-              const activeService = SERVICES_DATA.find((s) => s.id === activeId)!;
+              const activeService = services.find((s) => s.id === activeId)!;
               return (
                 <div className="mobile-active-card">
                   <img
@@ -478,7 +519,7 @@ export function ServicesVisualCards() {
 
             {/* Deux autres cartes en carrés en-dessous */}
             <div className="mobile-secondary-squares-row">
-              {SERVICES_DATA.filter((s) => s.id !== activeId).map((service) => (
+              {services.filter((s) => s.id !== activeId).map((service) => (
                 <div
                   key={service.id}
                   onClick={(e) => handleCardClick(service.id, e)}
@@ -856,7 +897,7 @@ export function ServicesVisualCards() {
           font-size: 0.72rem;
           font-family: var(--c-font-mono);
           font-weight: 700;
-          color: #FFA066;
+          color: #EADDCB;
           text-transform: uppercase;
           letter-spacing: 0.05em;
           margin-bottom: 2px;

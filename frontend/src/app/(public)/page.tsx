@@ -51,7 +51,7 @@ export default function HomePage() {
 
           {/* Carte Mondiale d'Arrière-Plan (Compacte et proportionnée) */}
           <div className="hero-map-wrapper">
-            <WorldMap lineColor="#0EA5E9" />
+            <WorldMap />
           </div>
 
           {/* Module de Recherche de Colis (Épuré & élégant) */}
@@ -145,14 +145,14 @@ export default function HomePage() {
           position: relative;
           z-index: 2;
           pointer-events: none;
-          max-height: 160px;
+          max-height: clamp(160px, 33vw, 300px);
           overflow: hidden;
           mask-image: linear-gradient(
             to bottom,
             rgba(0, 0, 0, 0.22) 0%,
             rgba(0, 0, 0, 0.6) 20%,
             #000000 45%,
-            #000000 75%,
+            #000000 84%,
             transparent 100%
           );
           -webkit-mask-image: linear-gradient(
@@ -160,7 +160,7 @@ export default function HomePage() {
             rgba(0, 0, 0, 0.22) 0%,
             rgba(0, 0, 0, 0.6) 20%,
             #000000 45%,
-            #000000 75%,
+            #000000 84%,
             transparent 100%
           );
         }
@@ -201,7 +201,7 @@ export default function HomePage() {
         }
 
         .hero-search-submit {
-          background-color: var(--c-text-main);
+          background-color: var(--c-accent);
           color: var(--c-bg);
           border: none;
           border-radius: 9999px;

@@ -127,8 +127,13 @@ export async function verifyJwt<T = Record<string, unknown>>(token: string, secr
     ["verify"]
   );
 
-  const signatureBytes = base64UrlDecode(sigB64);
-  const isValid = await crypto.subtle.verify("HMAC", key, signatureBytes, enc.encode(dataToSign));
+  let isValid = false;
+  try {
+    const signatureBytes = base64UrlDecode(sigB64);
+    isValid = await crypto.subtle.verify("HMAC", key, signatureBytes, enc.encode(dataToSign));
+  } catch {
+    return null;
+  }
   if (!isValid) return null;
 
   try {
@@ -180,7 +185,7 @@ function base64UrlDecode(str: string): Uint8Array {
   return bytes;
 }
 
-function constantTimeCompare(a: string, b: string): boolean {
+export function constantTimeCompare(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let result = 0;
   for (let i = 0; i < a.length; i++) {

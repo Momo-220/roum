@@ -1,7 +1,24 @@
 import { NextResponse } from "next/server";
 
+/** L'assistant consomme un quota payant et reçoit des chiffres internes : session admin obligatoire. */
+async function hasAdminSession(req: Request): Promise<boolean> {
+  const authorization = req.headers.get("authorization");
+  if (!authorization) return false;
+  try {
+    const apiUrl = process.env.API_URL || "http://127.0.0.1:8787";
+    const res = await fetch(`${apiUrl}/api/auth/me`, { headers: { Authorization: authorization } });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(req: Request) {
   try {
+    if (!(await hasAdminSession(req))) {
+      return NextResponse.json({ error: "Authentification requise." }, { status: 401 });
+    }
+
     const body = await req.json();
     const { message, context, history, userFullName } = body;
     const bossName =

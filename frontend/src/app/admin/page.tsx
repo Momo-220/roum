@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import {
   Package,
@@ -69,6 +69,7 @@ import {
   History,
   TrendingUp,
   RotateCcw,
+  Menu,
 } from "lucide-react";
 import RouteGlobe from "@/components/RouteGlobe";
 import { CircularFlag } from "@/components/CircularFlag";
@@ -97,9 +98,10 @@ import {
   buildAdminPaymentConfirmedTrackingWhatsAppUrl,
   getPaymentPageUrl,
   getTrackingPageUrl,
-  updateClientRequestAdminQuote,
   decodeHtmlEntitiesText,
 } from "@/shared";
+import { ApiError, apiRequest, type ApiOptions } from "@/shared/api";
+import { useLiveSync } from "@/shared/useLiveSync";
 import {
   downloadOfficialReceiptPdf,
   printOfficialReceipt,
@@ -324,9 +326,9 @@ function renderPaymentMethodBadge(method: string = "") {
           gap: "6px",
           padding: "4px 10px",
           borderRadius: "9999px",
-          background: "#FFF7ED",
-          border: "1px solid rgba(249, 115, 22, 0.28)",
-          color: "#C2410C",
+          background: "#F6F0E6",
+          border: "1px solid rgba(30, 77, 91, 0.28)",
+          color: "#1E4D5B",
           fontSize: "0.74rem",
           fontWeight: "700",
           lineHeight: 1,
@@ -627,685 +629,6 @@ export function formatAuditEntity(entity?: string): string {
   return entity;
 }
 
-// 19 Tarifs Officiels extraits directement des 3 flyers marketing réels de ROUM TRANSIT
-const DEFAULT_INITIAL_TARIFFS = [
-  // --- 1. FLYER CHINE & DUBAÏ ➔ AFRIQUE (COTE D'IVOIRE) ---
-  {
-    id: "tariff-cn-ci-express",
-    origin_country: "Chine",
-    origin_city: "Guangzhou",
-    destination_country: "Côte d'Ivoire",
-    destination_city: "Abidjan",
-    shipping_mode_name: "Voie Express (4 jours)",
-    shipping_mode_type: "AIR",
-    category_tag: "Voie Express",
-    pricing_basis: "PER_KG",
-    currency: "FCFA",
-    price_per_unit_minor: 1200000, // 12 000 FCFA / kg
-    minimum_charge_minor: 1200000,
-    estimated_days_min: 4,
-    estimated_days_max: 5,
-    flyer_source: "Chine/Dubaï ➔ Afrique",
-    note: "Livraison ultra-rapide en 4 jours",
-    is_active: 1,
-  },
-  {
-    id: "tariff-cn-ci-normal",
-    origin_country: "Chine",
-    origin_city: "Guangzhou",
-    destination_country: "Côte d'Ivoire",
-    destination_city: "Abidjan",
-    shipping_mode_name: "Voie Normale (2 semaines)",
-    shipping_mode_type: "AIR",
-    category_tag: "Voie Normale",
-    pricing_basis: "PER_KG",
-    currency: "FCFA",
-    price_per_unit_minor: 1000000, // 10 000 FCFA / kg
-    minimum_charge_minor: 1000000,
-    estimated_days_min: 12,
-    estimated_days_max: 14,
-    flyer_source: "Chine/Dubaï ➔ Afrique",
-    note: "Économique · 2 semaines",
-    is_active: 1,
-  },
-  {
-    id: "tariff-cn-ci-special",
-    origin_country: "Chine",
-    origin_city: "Guangzhou",
-    destination_country: "Côte d'Ivoire",
-    destination_city: "Abidjan",
-    shipping_mode_name: "Complément alimentaire + Batterie",
-    shipping_mode_type: "AIR",
-    category_tag: "Batteries & Compléments",
-    pricing_basis: "PER_KG",
-    currency: "FCFA",
-    price_per_unit_minor: 1400000, // 14 000 FCFA / kg
-    minimum_charge_minor: 1400000,
-    estimated_days_min: 7,
-    estimated_days_max: 10,
-    flyer_source: "Chine/Dubaï ➔ Afrique",
-    note: "Produits sous réglementation spéciale",
-    is_active: 1,
-  },
-  {
-    id: "tariff-cn-ci-tech",
-    origin_country: "Chine",
-    origin_city: "Guangzhou",
-    destination_country: "Côte d'Ivoire",
-    destination_city: "Abidjan",
-    shipping_mode_name: "Pièce d'ordinateur & High-Tech",
-    shipping_mode_type: "AIR",
-    category_tag: "High-Tech & PC",
-    pricing_basis: "PER_UNIT",
-    currency: "FCFA",
-    price_per_unit_minor: 5000000, // 50 000 FCFA
-    minimum_charge_minor: 5000000,
-    estimated_days_min: 4,
-    estimated_days_max: 7,
-    flyer_source: "Chine/Dubaï ➔ Afrique",
-    note: "Protection anti-choc et sécurisation renforcée",
-    is_active: 1,
-  },
-  {
-    id: "tariff-cn-ci-sea",
-    origin_country: "Chine",
-    origin_city: "Yiwu / Guangzhou",
-    destination_country: "Côte d'Ivoire",
-    destination_city: "Abidjan",
-    shipping_mode_name: "Par Bateau (Le CBM)",
-    shipping_mode_type: "SEA",
-    category_tag: "Conteneur Bateau",
-    pricing_basis: "PER_CBM",
-    currency: "FCFA",
-    price_per_unit_minor: 30000000, // 300 000 FCFA / CBM
-    minimum_charge_minor: 30000000,
-    estimated_days_min: 35,
-    estimated_days_max: 45,
-    flyer_source: "Chine/Dubaï ➔ Afrique",
-    note: "Tarif au m³ (CBM) conteneur sécurisé",
-    is_active: 1,
-  },
-  {
-    id: "tariff-ae-ci-express",
-    origin_country: "Émirats Arabes Unis",
-    origin_city: "Dubaï",
-    destination_country: "Côte d'Ivoire",
-    destination_city: "Abidjan",
-    shipping_mode_name: "Voie Express Dubaï (4 jours)",
-    shipping_mode_type: "AIR",
-    category_tag: "Dubaï Express",
-    pricing_basis: "PER_KG",
-    currency: "FCFA",
-    price_per_unit_minor: 1200000, // 12 000 FCFA / kg
-    minimum_charge_minor: 1200000,
-    estimated_days_min: 4,
-    estimated_days_max: 5,
-    flyer_source: "Chine/Dubaï ➔ Afrique",
-    note: "Envol direct Dubaï DXB vers Abidjan",
-    is_active: 1,
-  },
-  {
-    id: "tariff-ae-ci-normal",
-    origin_country: "Émirats Arabes Unis",
-    origin_city: "Dubaï",
-    destination_country: "Côte d'Ivoire",
-    destination_city: "Abidjan",
-    shipping_mode_name: "Voie Normale Dubaï (2 semaines)",
-    shipping_mode_type: "AIR",
-    category_tag: "Dubaï Standard",
-    pricing_basis: "PER_KG",
-    currency: "FCFA",
-    price_per_unit_minor: 1000000, // 10 000 FCFA / kg
-    minimum_charge_minor: 1000000,
-    estimated_days_min: 10,
-    estimated_days_max: 14,
-    flyer_source: "Chine/Dubaï ➔ Afrique",
-    note: "Groupage régulier hebdomadaire",
-    is_active: 1,
-  },
-  {
-    id: "tariff-ae-ci-sea",
-    origin_country: "Émirats Arabes Unis",
-    origin_city: "Dubaï (Jebel Ali)",
-    destination_country: "Côte d'Ivoire",
-    destination_city: "Abidjan",
-    shipping_mode_name: "Par Bateau (Le CBM)",
-    shipping_mode_type: "SEA",
-    category_tag: "Conteneur Bateau",
-    pricing_basis: "PER_CBM",
-    currency: "FCFA",
-    price_per_unit_minor: 30000000, // 300 000 FCFA / CBM
-    minimum_charge_minor: 30000000,
-    estimated_days_min: 30,
-    estimated_days_max: 40,
-    flyer_source: "Chine/Dubaï ➔ Afrique",
-    note: "Groupage maritime départ Jebel Ali",
-    is_active: 1,
-  },
-
-  // --- 2. FLYER MAROC ➔ AFRIQUE SUBSAHARIENNE (N°1 DU GROUPAGE AÉRIEN) ---
-  {
-    id: "tariff-ma-ci-sub",
-    origin_country: "Maroc",
-    origin_city: "Casablanca",
-    destination_country: "Côte d'Ivoire",
-    destination_city: "Abidjan",
-    shipping_mode_name: "Groupage Aérien Subsaharien",
-    shipping_mode_type: "AIR",
-    category_tag: "Subsaharien 5 jours",
-    pricing_basis: "PER_KG",
-    currency: "FCFA",
-    price_per_unit_minor: 650000, // 6 500 FCFA / kg
-    minimum_charge_minor: 650000,
-    estimated_days_min: 5,
-    estimated_days_max: 5,
-    flyer_source: "Maroc ➔ Subsaharien",
-    note: "Fourchette : 6 500 F - 7 500 F / kg · Délai 5j",
-    is_active: 1,
-  },
-  {
-    id: "tariff-ma-sn-sub",
-    origin_country: "Maroc",
-    origin_city: "Casablanca",
-    destination_country: "Sénégal",
-    destination_city: "Dakar",
-    shipping_mode_name: "Groupage Aérien Subsaharien",
-    shipping_mode_type: "AIR",
-    category_tag: "Subsaharien 5 jours",
-    pricing_basis: "PER_KG",
-    currency: "FCFA",
-    price_per_unit_minor: 700000, // 7 000 FCFA / kg
-    minimum_charge_minor: 700000,
-    estimated_days_min: 5,
-    estimated_days_max: 5,
-    flyer_source: "Maroc ➔ Subsaharien",
-    note: "Fourchette : 6 500 F - 7 500 F / kg · Délai 5j",
-    is_active: 1,
-  },
-  {
-    id: "tariff-ma-ml-sub",
-    origin_country: "Maroc",
-    origin_city: "Casablanca",
-    destination_country: "Mali",
-    destination_city: "Bamako",
-    shipping_mode_name: "Groupage Aérien Subsaharien",
-    shipping_mode_type: "AIR",
-    category_tag: "Subsaharien 5 jours",
-    pricing_basis: "PER_KG",
-    currency: "FCFA",
-    price_per_unit_minor: 700000, // 7 000 FCFA / kg
-    minimum_charge_minor: 700000,
-    estimated_days_min: 5,
-    estimated_days_max: 5,
-    flyer_source: "Maroc ➔ Subsaharien",
-    note: "Fourchette : 6 500 F - 7 500 F / kg · Délai 5j",
-    is_active: 1,
-  },
-  {
-    id: "tariff-ma-bf-sub",
-    origin_country: "Maroc",
-    origin_city: "Casablanca",
-    destination_country: "Burkina Faso",
-    destination_city: "Ouagadougou",
-    shipping_mode_name: "Groupage Aérien Subsaharien",
-    shipping_mode_type: "AIR",
-    category_tag: "Subsaharien 5 jours",
-    pricing_basis: "PER_KG",
-    currency: "FCFA",
-    price_per_unit_minor: 750000, // 7 500 FCFA / kg
-    minimum_charge_minor: 750000,
-    estimated_days_min: 5,
-    estimated_days_max: 5,
-    flyer_source: "Maroc ➔ Subsaharien",
-    note: "Fourchette : 6 500 F - 7 500 F / kg · Délai 5j",
-    is_active: 1,
-  },
-  {
-    id: "tariff-ma-ga-sub",
-    origin_country: "Maroc",
-    origin_city: "Casablanca",
-    destination_country: "Gabon",
-    destination_city: "Libreville",
-    shipping_mode_name: "Groupage Aérien Subsaharien",
-    shipping_mode_type: "AIR",
-    category_tag: "Subsaharien 5 jours",
-    pricing_basis: "PER_KG",
-    currency: "FCFA",
-    price_per_unit_minor: 750000, // 7 500 FCFA / kg
-    minimum_charge_minor: 750000,
-    estimated_days_min: 5,
-    estimated_days_max: 5,
-    flyer_source: "Maroc ➔ Subsaharien",
-    note: "Fourchette : 6 500 F - 7 500 F / kg · Délai 5j",
-    is_active: 1,
-  },
-
-  // --- 3. FLYER ABIDJAN - PARIS & PARIS - ABIDJAN (BILATÉRAL) ---
-  {
-    id: "tariff-fr-ci-divers",
-    origin_country: "France",
-    origin_city: "Paris",
-    destination_country: "Côte d'Ivoire",
-    destination_city: "Abidjan",
-    shipping_mode_name: "Divers Articles (Marchandises Générales)",
-    shipping_mode_type: "AIR",
-    category_tag: "Paris ➔ Abidjan (Divers)",
-    pricing_basis: "PER_KG",
-    currency: "FCFA",
-    price_per_unit_minor: 850000, // 8 500 FCFA / kg
-    minimum_charge_minor: 850000,
-    estimated_days_min: 3,
-    estimated_days_max: 5,
-    flyer_source: "Paris ↔ Abidjan",
-    secondary_display: "8 500 F / 12 € Kg",
-    note: "Tarif bilatéral France ↔ Côte d'Ivoire",
-    is_active: 1,
-  },
-  {
-    id: "tariff-fr-ci-cosmetic",
-    origin_country: "France",
-    origin_city: "Paris",
-    destination_country: "Côte d'Ivoire",
-    destination_city: "Abidjan",
-    shipping_mode_name: "Cosmétique et Liquide",
-    shipping_mode_type: "AIR",
-    category_tag: "Cosmétiques & Liquides",
-    pricing_basis: "PER_KG",
-    currency: "FCFA",
-    price_per_unit_minor: 900000, // 9 000 FCFA / kg
-    minimum_charge_minor: 900000,
-    estimated_days_min: 3,
-    estimated_days_max: 5,
-    flyer_source: "Paris ↔ Abidjan",
-    secondary_display: "9 000 F / 14 € Kg",
-    note: "Emballage & sécurisation étanche incluse",
-    is_active: 1,
-  },
-  {
-    id: "tariff-fr-ci-doc",
-    origin_country: "France",
-    origin_city: "Paris",
-    destination_country: "Côte d'Ivoire",
-    destination_city: "Abidjan",
-    shipping_mode_name: "Document Administratif (Pli Express)",
-    shipping_mode_type: "AIR",
-    category_tag: "Pli Administratif",
-    pricing_basis: "PER_UNIT",
-    currency: "FCFA",
-    price_per_unit_minor: 1300000, // 13 000 FCFA
-    minimum_charge_minor: 1300000,
-    estimated_days_min: 2,
-    estimated_days_max: 3,
-    flyer_source: "Paris ↔ Abidjan",
-    secondary_display: "13 000 F / 20 € Forfait",
-    note: "Pli confidentiel scellé avec accusé",
-    is_active: 1,
-  },
-  {
-    id: "tariff-ci-fr-divers",
-    origin_country: "Côte d'Ivoire",
-    origin_city: "Abidjan",
-    destination_country: "France",
-    destination_city: "Paris",
-    shipping_mode_name: "Divers Articles (Marchandises Générales)",
-    shipping_mode_type: "AIR",
-    category_tag: "Abidjan ➔ Paris (Divers)",
-    pricing_basis: "PER_KG",
-    currency: "FCFA",
-    price_per_unit_minor: 850000, // 8 500 FCFA / kg
-    minimum_charge_minor: 850000,
-    estimated_days_min: 3,
-    estimated_days_max: 5,
-    flyer_source: "Paris ↔ Abidjan",
-    secondary_display: "8 500 F / 12 € Kg",
-    note: "Expédition depuis Abidjan Bingerville vers Paris",
-    is_active: 1,
-  },
-  {
-    id: "tariff-ci-fr-cosmetic",
-    origin_country: "Côte d'Ivoire",
-    origin_city: "Abidjan",
-    destination_country: "France",
-    destination_city: "Paris",
-    shipping_mode_name: "Cosmétique et Liquide",
-    shipping_mode_type: "AIR",
-    category_tag: "Cosmétiques & Liquides",
-    pricing_basis: "PER_KG",
-    currency: "FCFA",
-    price_per_unit_minor: 900000, // 9 000 FCFA / kg
-    minimum_charge_minor: 900000,
-    estimated_days_min: 3,
-    estimated_days_max: 5,
-    flyer_source: "Paris ↔ Abidjan",
-    secondary_display: "9 000 F / 14 € Kg",
-    note: "Beurres, huiles, cosmétiques africains vers l'Europe",
-    is_active: 1,
-  },
-  {
-    id: "tariff-ci-fr-doc",
-    origin_country: "Côte d'Ivoire",
-    origin_city: "Abidjan",
-    destination_country: "France",
-    destination_city: "Paris",
-    shipping_mode_name: "Document Administratif (Pli Express)",
-    shipping_mode_type: "AIR",
-    category_tag: "Pli Administratif",
-    pricing_basis: "PER_UNIT",
-    currency: "FCFA",
-    price_per_unit_minor: 1300000, // 13 000 FCFA
-    minimum_charge_minor: 1300000,
-    estimated_days_min: 2,
-    estimated_days_max: 3,
-    flyer_source: "Paris ↔ Abidjan",
-    secondary_display: "13 000 F / 20 € Forfait",
-    note: "Pli confidentiel scellé avec accusé",
-    is_active: 1,
-  },
-];
-
-const DEFAULT_15_SHIPMENTS = [
-  {
-    id: "tx-1",
-    tracking_number: "RM-AIR-2610-K8P9Q2",
-    client_name: "Aminata Diallo",
-    client_phone: "+223 76 12 34 56",
-    origin_city: "Guangzhou",
-    origin_country: "Chine",
-    destination_city: "Bamako",
-    destination_country: "Mali",
-    current_status: "IN_TRANSIT",
-    status_label: "En vol Guangzhou → Bamako",
-    shipping_mode_name: "Voie Aérienne Express",
-    shipping_mode_id: "AIR_EXPRESS",
-    total_parcels_count: 2,
-    total_weight_kg: 18.5,
-    total_volume_cbm: 0.12,
-    payment_status: "PAID",
-    total_price_minor: 25900,
-    created_at: "2026-10-25 10:14:00",
-  },
-  {
-    id: "tx-2",
-    tracking_number: "RM-SEA-2610-M4V7W1",
-    client_name: "Ibrahim Traoré",
-    client_phone: "+225 07 45 89 12",
-    origin_city: "Yiwu",
-    origin_country: "Chine",
-    destination_city: "Abidjan",
-    destination_country: "Côte d'Ivoire",
-    current_status: "IN_TRANSIT",
-    status_label: "En mer (Conteneur LCL)",
-    shipping_mode_name: "Voie Maritime (Bateau)",
-    shipping_mode_id: "SEA_LCL",
-    total_parcels_count: 14,
-    total_weight_kg: 420.0,
-    total_volume_cbm: 2.8,
-    payment_status: "PAID",
-    total_price_minor: 78400,
-    created_at: "2026-10-22 14:30:00",
-  },
-  {
-    id: "tx-3",
-    tracking_number: "RM-AIR-2610-R3T9Y5",
-    client_name: "Khadija Diop",
-    client_phone: "+221 77 890 12 34",
-    origin_city: "Dubaï",
-    origin_country: "Émirats AU",
-    destination_city: "Dakar",
-    destination_country: "Sénégal",
-    current_status: "IN_TRANSIT",
-    status_label: "En vol Dubaï → Dakar",
-    shipping_mode_name: "Voie Aérienne Express",
-    shipping_mode_id: "AIR_EXPRESS",
-    total_parcels_count: 3,
-    total_weight_kg: 34.0,
-    total_volume_cbm: 0.25,
-    payment_status: "PAID",
-    total_price_minor: 47600,
-    created_at: "2026-10-26 08:45:00",
-  },
-  {
-    id: "tx-4",
-    tracking_number: "RM-AIR-2610-P7L2M8",
-    client_name: "Boubacar Cissé",
-    client_phone: "+224 622 34 56 78",
-    origin_city: "Casablanca",
-    origin_country: "Maroc",
-    destination_city: "Conakry",
-    destination_country: "Guinée",
-    current_status: "IN_TRANSIT",
-    status_label: "En transit Casablanca → Conakry",
-    shipping_mode_name: "Voie Aérienne Standard",
-    shipping_mode_id: "AIR_STANDARD",
-    total_parcels_count: 2,
-    total_weight_kg: 28.0,
-    total_volume_cbm: 0.18,
-    payment_status: "PENDING",
-    total_price_minor: 33600,
-    created_at: "2026-10-26 12:20:00",
-  },
-  {
-    id: "tx-5",
-    tracking_number: "RM-AIR-2610-Q9HLSS",
-    client_name: "Oumar Sidibé",
-    client_phone: "+223 70 12 34 56",
-    origin_city: "Guangzhou",
-    origin_country: "Chine",
-    destination_city: "Bamako",
-    destination_country: "Mali",
-    current_status: "IN_TRANSIT",
-    status_label: "En cours d'acheminement",
-    shipping_mode_name: "Voie Aérienne Express",
-    shipping_mode_id: "AIR_EXPRESS",
-    total_parcels_count: 1,
-    total_weight_kg: 14.5,
-    total_volume_cbm: 0.09,
-    payment_status: "PAID",
-    total_price_minor: 20300,
-    created_at: "2026-10-27 17:41:23",
-  },
-  {
-    id: "tx-6",
-    tracking_number: "RM-SEA-2610-C5D6E7",
-    client_name: "Fanta Coulibaly",
-    client_phone: "+228 90 12 34 56",
-    origin_city: "Yiwu",
-    origin_country: "Chine",
-    destination_city: "Lomé",
-    destination_country: "Togo",
-    current_status: "IN_TRANSIT",
-    status_label: "En mer (Conteneur LCL)",
-    shipping_mode_name: "Voie Maritime (Bateau)",
-    shipping_mode_id: "SEA_LCL",
-    total_parcels_count: 9,
-    total_weight_kg: 310.0,
-    total_volume_cbm: 2.1,
-    payment_status: "PAID",
-    total_price_minor: 58800,
-    created_at: "2026-10-23 11:15:00",
-  },
-  {
-    id: "tx-7",
-    tracking_number: "RM-AIR-2610-W2X3Y4",
-    client_name: "Mamadou Camara",
-    client_phone: "+223 66 78 90 12",
-    origin_city: "Dubaï",
-    origin_country: "Émirats AU",
-    destination_city: "Bamako",
-    destination_country: "Mali",
-    current_status: "IN_TRANSIT",
-    status_label: "En vol Dubaï → Bamako",
-    shipping_mode_name: "Voie Aérienne Express",
-    shipping_mode_id: "AIR_EXPRESS",
-    total_parcels_count: 2,
-    total_weight_kg: 25.0,
-    total_volume_cbm: 0.16,
-    payment_status: "PAID",
-    total_price_minor: 35000,
-    created_at: "2026-10-26 16:00:00",
-  },
-  {
-    id: "tx-8",
-    tracking_number: "RM-AIR-2610-B1C2D3",
-    client_name: "Moussa Konaté",
-    client_phone: "+223 75 43 21 09",
-    origin_city: "Guangzhou",
-    origin_country: "Chine",
-    destination_city: "Bamako",
-    destination_country: "Mali",
-    current_status: "DELIVERED",
-    status_label: "Livré en boutique Bamako",
-    shipping_mode_name: "Voie Aérienne Express",
-    shipping_mode_id: "AIR_EXPRESS",
-    total_parcels_count: 2,
-    total_weight_kg: 22.0,
-    total_volume_cbm: 0.15,
-    payment_status: "PAID",
-    total_price_minor: 30800,
-    created_at: "2026-10-20 09:30:00",
-  },
-  {
-    id: "tx-9",
-    tracking_number: "RM-SEA-2610-E5F6G7",
-    client_name: "Awa Sanogo",
-    client_phone: "+223 79 87 65 43",
-    origin_city: "Casablanca",
-    origin_country: "Maroc",
-    destination_city: "Bamako",
-    destination_country: "Mali",
-    current_status: "DELIVERED",
-    status_label: "Livré en agence Bamako",
-    shipping_mode_name: "Groupage Aérien Subsaharien (5 jours)",
-    shipping_mode_id: "AIR_EXPRESS",
-    total_parcels_count: 5,
-    total_weight_kg: 180.0,
-    total_volume_cbm: 1.4,
-    payment_status: "PAID",
-    total_price_minor: 45000,
-    created_at: "2026-10-18 15:40:00",
-  },
-  {
-    id: "tx-10",
-    tracking_number: "RM-AIR-2610-Y9Z1A2",
-    client_name: "Seydou Keita",
-    client_phone: "+225 05 67 89 01",
-    origin_city: "Dubaï",
-    origin_country: "Émirats AU",
-    destination_city: "Abidjan",
-    destination_country: "Côte d'Ivoire",
-    current_status: "DELIVERED",
-    status_label: "Livré à Abidjan",
-    shipping_mode_name: "Voie Aérienne Express",
-    shipping_mode_id: "AIR_EXPRESS",
-    total_parcels_count: 4,
-    total_weight_kg: 45.0,
-    total_volume_cbm: 0.32,
-    payment_status: "PAID",
-    total_price_minor: 58500,
-    created_at: "2026-10-19 11:00:00",
-  },
-  {
-    id: "tx-11",
-    tracking_number: "RM-AIR-2610-J4K5L6",
-    client_name: "Fatoumata Bamba",
-    client_phone: "+221 70 334 45 55",
-    origin_city: "Casablanca",
-    origin_country: "Maroc",
-    destination_city: "Dakar",
-    destination_country: "Sénégal",
-    current_status: "DELIVERED",
-    status_label: "Livré à Dakar",
-    shipping_mode_name: "Voie Aérienne Express",
-    shipping_mode_id: "AIR_EXPRESS",
-    total_parcels_count: 1,
-    total_weight_kg: 16.5,
-    total_volume_cbm: 0.1,
-    payment_status: "PAID",
-    total_price_minor: 115500,
-    created_at: "2026-10-18 23:49:23",
-  },
-  {
-    id: "tx-12",
-    tracking_number: "RM-SEA-2610-N7P8Q9",
-    client_name: "Cheick Oumar",
-    client_phone: "+224 66 55 44 33",
-    origin_city: "Guangzhou",
-    origin_country: "Chine",
-    destination_city: "Conakry",
-    destination_country: "Guinée",
-    current_status: "DELIVERED",
-    status_label: "Livré à Conakry",
-    shipping_mode_name: "Voie Maritime (Bateau)",
-    shipping_mode_id: "SEA_LCL",
-    total_parcels_count: 3,
-    total_weight_kg: 290.0,
-    total_volume_cbm: 1.95,
-    payment_status: "PAID",
-    total_price_minor: 585000,
-    created_at: "2026-09-27 23:49:23",
-  },
-  {
-    id: "tx-13",
-    tracking_number: "RM-AIR-2610-U1V2W3",
-    client_name: "Marie-Claire Kouassi",
-    client_phone: "+225 01 22 33 44",
-    origin_city: "Paris",
-    origin_country: "France",
-    destination_city: "Abidjan",
-    destination_country: "Côte d'Ivoire",
-    current_status: "IN_TRANSIT",
-    status_label: "En vol Paris → Abidjan",
-    shipping_mode_name: "Voie Aérienne Express",
-    shipping_mode_id: "AIR_EXPRESS",
-    total_parcels_count: 1,
-    total_weight_kg: 8.0,
-    total_volume_cbm: 0.05,
-    payment_status: "PAID",
-    total_price_minor: 68000,
-    created_at: "2026-10-26 23:49:23",
-  },
-  {
-    id: "tx-14",
-    tracking_number: "RM-AIR-2610-D8E9F1",
-    client_name: "Bakary Dembélé",
-    client_phone: "+223 78 99 88 77",
-    origin_city: "Guangzhou",
-    origin_country: "Chine",
-    destination_city: "Bamako",
-    destination_country: "Mali",
-    current_status: "RECEIVED_AT_HUB",
-    status_label: "Reçu au magasin de Guangzhou",
-    shipping_mode_name: "Voie Aérienne Express",
-    shipping_mode_id: "AIR_EXPRESS",
-    total_parcels_count: 1,
-    total_weight_kg: 12.0,
-    total_volume_cbm: 0.08,
-    payment_status: "PENDING",
-    total_price_minor: 144000,
-    created_at: "2026-10-27 19:49:23",
-  },
-  {
-    id: "tx-15",
-    tracking_number: "RM-SEA-2610-S4T5U6",
-    client_name: "Salif Traoré",
-    client_phone: "+225 07 88 99 00",
-    origin_city: "Yiwu",
-    origin_country: "Chine",
-    destination_city: "Abidjan",
-    destination_country: "Côte d'Ivoire",
-    current_status: "RECEIVED_AT_HUB",
-    status_label: "Empotage conteneur à Yiwu",
-    shipping_mode_name: "Voie Maritime (Bateau)",
-    shipping_mode_id: "SEA_LCL",
-    total_parcels_count: 5,
-    total_weight_kg: 250.0,
-    total_volume_cbm: 1.8,
-    payment_status: "PENDING",
-    total_price_minor: 540000,
-    created_at: "2026-10-27 17:49:23",
-  },
-];
-
 function renderCleanAssistantText(rawText: string) {
   const cleaned = rawText
     .replace(/\*\*/g, "")
@@ -1414,248 +737,9 @@ const DEFAULT_COMPANY_SETTINGS: Record<string, string> = {
   payment_morocco_whatsapp: "Casablanca Maarif · WhatsApp : +212 6 00 00 00 00",
 };
 
-const DEFAULT_REQUESTS = [
-  {
-    id: "req-1793849894512-2zxql",
-    reference: "RM-ALI-2ZXQL",
-    client_id: "cli-mohamed-01",
-    client_name: "MOHAMED",
-    client_phone: "90345015",
-    client_email: "",
-    request_type: "ALIBABA_ORDER",
-    option_type: "AVEC_LIEN",
-    origin_country: "Chine",
-    origin_city: "Guangzhou",
-    destination_country: "Côte d'Ivoire — Abidjan",
-    destination_city: "Abidjan",
-    shipping_mode_id: "AIR_STANDARD",
-    shipping_mode_name: "Avion Normal (10 à 14 jours)",
-    shipping_mode_type: "AIR",
-    shipping_mark: "ROUM / RM-ALI-2ZXQL / MOHAMED",
-    product_name:
-      "Ensemble De Survêtement Coupe-vent 2 Pièces Homme En Nylon Premium Pour L'été,Veste Et Short Streetwear Légers à Capuche,Coordonné",
-    product_url:
-      "https://www.alibaba.com/product-detail/Mens-Premium-Summer-Nylon-Windbreaker-Tracksuit_11000033409545.html",
-    product_image:
-      "/api/image-proxy?url=https%3A%2F%2Fs.alicdn.com%2F%40sc04%2Fkf%2FS717550076a6d4cc095cb719f2f870587z.jpeg",
-    product_quantity: "1",
-    description:
-      "Achat Alibaba | Qté : 1 | Spécifications : Mode: Avion Normal (10 à 14 jours) (10 000 FCFA / kg) | Qté: 1 pcs | Poids: à estimer par ROUM | Lien : https://www.alibaba.com/product-detail/Mens-Premium-Summer-Nylon-Windbreaker-Tracksuit_11000033409545.html",
-    estimated_weight_kg: 10,
-    estimated_cbm: null,
-    total_goods_fcfa: 82350,
-    shipping_fee_fcfa: 100000,
-    total_amount_fcfa: 182350,
-    supplier_name: "Alibaba Supplier",
-    status: "NEW",
-    items_count: 1,
-    items: [
-      {
-        id: "item-2zxql-1",
-        product_name:
-          "Ensemble De Survêtement Coupe-vent 2 Pièces Homme En Nylon Premium Pour L'été,Veste Et Short Streetwear Légers à Capuche,Coordonné",
-        description:
-          "Ensemble De Survêtement Coupe-vent 2 Pièces Homme En Nylon Premium Pour L'été,Veste Et Short Streetwear Légers à Capuche,Coordonné",
-        quantity: 1,
-        unit_price: 135,
-        currency: "USD",
-        product_url:
-          "https://www.alibaba.com/product-detail/Mens-Premium-Summer-Nylon-Windbreaker-Tracksuit_11000033409545.html",
-        image_url:
-          "/api/image-proxy?url=https%3A%2F%2Fs.alicdn.com%2F%40sc04%2Fkf%2FS717550076a6d4cc095cb719f2f870587z.jpeg",
-      },
-    ],
-    created_at: "2026-11-05 03:38:00",
-    updated_at: "2026-11-05 03:38:00",
-  },
-  {
-    id: "req-rmb-01",
-    reference: "RM-RMB-7K2M9",
-    client_id: "cli-06",
-    client_name: "Amadou Diallo (Électro Abidjan)",
-    client_phone: "+225 07 89 44 22",
-    client_email: "amadou.electro@gmail.com",
-    request_type: "SUPPLIER_PAYMENT",
-    option_type: "AVEC_FOURNISSEUR",
-    rmb_amount: "8 450",
-    supplier_contact: "WeChat: sz_oled_display (M. Zhang)",
-    origin_country: "Chine",
-    origin_city: "Shenzhen",
-    destination_country: "Côte d'Ivoire (Abidjan)",
-    destination_city: "Abidjan",
-    shipping_mode_id: "AIR_EXPRESS",
-    description: "[PAIEMENT FOURNISSEUR RMB] Montant: 8 450 ¥ | Usine: WeChat: sz_oled_display (M. Zhang) | Marchandise: 120 Écrans OLED iPhone & Samsung | Réf: https://detail.1688.com/offer/718294.html",
-    estimated_weight_kg: 18.5,
-    estimated_cbm: 0.12,
-    supplier_name: "Shenzhen OLED Optoelectronics Co.",
-    status: "NEW",
-    items_count: 120,
-    items: [
-      {
-        id: "item-rmb-01",
-        description: "Écrans OLED iPhone 13/14 reconditionnés A+",
-        quantity: 120,
-        unit_price: 70,
-        currency: "CNY",
-        product_url: "https://detail.1688.com/offer/718294.html",
-      },
-    ],
-    payment_receipt_url: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&auto=format&fit=crop&q=80",
-    payment_receipt_name: "recu_virement_wave_743800fcfa.jpg",
-    payment_method_selected: "WAVE",
-    created_at: "2026-11-03 10:15:00",
-    updated_at: "2026-11-03 10:15:00",
-  },
-  {
-    id: "req-01",
-    reference: "REQ-ALIBABA-2610-001",
-    client_id: "cli-02",
-    client_name: "Koffi & Fils Import",
-    client_phone: "+225 07 88 99 11",
-    client_email: "koffi.import@gmail.com",
-    request_type: "ALIBABA",
-    origin_country: "Chine",
-    origin_city: "Guangzhou",
-    destination_country: "Côte d'Ivoire",
-    destination_city: "Abidjan",
-    shipping_mode_id: "AIR_EXPRESS",
-    description: "Achat & commande de 50 trottinettes électriques 350W pliables + casques de protection en ligne. Contrôle qualité usine requis avant expédition.",
-    estimated_weight_kg: 480.0,
-    estimated_cbm: 2.8,
-    supplier_name: "Guangzhou E-Vehicle Tech Co., Ltd",
-    status: "IN_REVIEW",
-    payment_receipt_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-    payment_receipt_name: "video_preuve_virement_orange_money.mp4",
-    payment_method_selected: "ORANGE MONEY",
-    assigned_to_user_id: "user-superadmin-01",
-    admin_notes: "Fournisseur contacté sur WeChat, proforma en négociation.",
-    items_count: 50,
-    items: [
-      { id: "item-01", description: "Trottinettes électriques 350W pliables", quantity: 50, unit_price: 180, currency: "USD", product_url: "https://alibaba.com/product/trottinette-350w" },
-      { id: "item-02", description: "Casques de protection renforcés", quantity: 50, unit_price: 15, currency: "USD" }
-    ],
-    created_at: "2026-10-26 14:00:00",
-    updated_at: "2026-10-27 09:30:00",
-  },
-  {
-    id: "req-02",
-    reference: "REQ-ALIBABA-2610-002",
-    client_id: "cli-03",
-    client_name: "Boutique Glamour Dakar",
-    client_phone: "+221 77 34 56 78",
-    client_email: "glamour.dakar@gmail.com",
-    request_type: "ALIBABA",
-    origin_country: "Chine",
-    origin_city: "Yiwu",
-    destination_country: "Sénégal",
-    destination_city: "Dakar",
-    shipping_mode_id: "AIR_STANDARD",
-    description: "Achat groupé textile et confections de robes de soirée sur 1688 Yiwu, 250 pièces assorties.",
-    estimated_weight_kg: 115.0,
-    estimated_cbm: 0.75,
-    supplier_name: "Yiwu Fashion Garments Factory",
-    status: "NEW",
-    assigned_to_user_id: "user-superadmin-01",
-    admin_notes: "Liens 1688 reçus, calcul des frais d'achat et commission 5% en cours.",
-    items_count: 250,
-    items: [
-      { id: "item-03", description: "Robes de soirée assorties dentelle & satin", quantity: 250, unit_price: 35, currency: "CNY", product_url: "https://1688.com/product/robes-soiree-yiwu" }
-    ],
-    created_at: "2026-10-27 11:15:00",
-    updated_at: "2026-10-27 11:15:00",
-  },
-  {
-    id: "req-03",
-    reference: "REQ-TRANSIT-2610-003",
-    client_id: "cli-05",
-    client_name: "Mali Tech Distribution",
-    client_phone: "+223 70 11 22 33",
-    client_email: "malitech@afribone.net.ml",
-    request_type: "SUPPLIER_TRANSIT",
-    origin_country: "Chine",
-    origin_city: "Shenzhen",
-    destination_country: "Mali",
-    destination_city: "Bamako",
-    shipping_mode_id: "AIR_EXPRESS",
-    description: "Réception chez fournisseur à Shenzhen de 60 cartes mères industrielles et écrans PC. Groupage aérien express vers Bamako.",
-    estimated_weight_kg: 42.0,
-    estimated_cbm: 0.35,
-    supplier_name: "Shenzhen Micro Electronics Ltd",
-    status: "QUOTE_SENT",
-    assigned_to_user_id: "user-superadmin-01",
-    admin_notes: "Devis express envoyé sur WhatsApp (+223). En attente accord client.",
-    items_count: 60,
-    items: [
-      { id: "item-04", description: "Cartes mères industrielles B550", quantity: 30, unit_price: 85, currency: "USD" },
-      { id: "item-05", description: "Écrans d'affichage haute définition 24 pouces", quantity: 30, unit_price: 95, currency: "USD" }
-    ],
-    created_at: "2026-10-27 15:20:00",
-    updated_at: "2026-10-27 18:00:00",
-  },
-  {
-    id: "req-04",
-    reference: "REQ-PARCEL-2610-004",
-    client_id: "cli-04",
-    client_name: "Cosmétiques Bio Bingerville",
-    client_phone: "+225 05 12 34 56",
-    client_email: "contact@biobingerville.ci",
-    request_type: "PARCEL_SHIPPING",
-    origin_country: "France",
-    origin_city: "Paris",
-    destination_country: "Côte d'Ivoire",
-    destination_city: "Abidjan",
-    shipping_mode_id: "AIR_STANDARD",
-    description: "Expédition régulière bimensuelle de cosmétiques, crèmes de beauté et savons clarifiants Paris ↔ Abidjan.",
-    estimated_weight_kg: 35.0,
-    estimated_cbm: 0.22,
-    supplier_name: "Laboratoires Dermasoin Paris",
-    status: "NEW",
-    assigned_to_user_id: "user-superadmin-01",
-    admin_notes: "Colis attendu au point de collecte Paris ce vendredi.",
-    items_count: 14,
-    items: [
-      { id: "item-06", description: "Lots crèmes hydratantes visage 200ml", quantity: 20, unit_price: 12, currency: "EUR" },
-      { id: "item-07", description: "Pains de savons clarifiants dermatologiques", quantity: 50, unit_price: 4, currency: "EUR" }
-    ],
-    created_at: "2026-10-28 01:10:00",
-    updated_at: "2026-10-28 01:10:00",
-  },
-];
-
-const DEFAULT_CLIENTS = [
-  { id: "cli-01", full_name: "Aminata Diallo", phone_whatsapp: "+223 76 12 34 56", email: "aminata.diallo@gmail.com", city: "Bamako", country: "Mali", shipments_count: 1, total_spent_minor: 22200000 },
-  { id: "cli-02", full_name: "Ibrahim Traoré", phone_whatsapp: "+225 07 45 67 89", email: "ibrahim.traore@yahoo.fr", city: "Abidjan", country: "Côte d'Ivoire", shipments_count: 1, total_spent_minor: 126000000 },
-  { id: "cli-03", full_name: "Khadija Diop", phone_whatsapp: "+221 77 89 01 23", email: "khadija.diop@orange.sn", city: "Dakar", country: "Sénégal", shipments_count: 1, total_spent_minor: 40800000 },
-  { id: "cli-04", full_name: "Boubacar Cissé", phone_whatsapp: "+224 62 11 22 33", email: "boubacar.cisse@gmail.com", city: "Conakry", country: "Guinée", shipments_count: 1, total_spent_minor: 18200000 },
-  { id: "cli-05", full_name: "Oumar Sidibé", phone_whatsapp: "+223 66 77 88 99", email: "oumar.sidibe@gmail.com", city: "Bamako", country: "Mali", shipments_count: 1, total_spent_minor: 17400000 },
-  { id: "cli-06", full_name: "Fanta Coulibaly", phone_whatsapp: "+228 90 12 34 56", email: "fanta.coulibaly@moov.tg", city: "Lomé", country: "Togo", shipments_count: 1, total_spent_minor: 60000000 },
-  { id: "cli-07", full_name: "Mamadou Camara", phone_whatsapp: "+223 70 88 99 00", email: "mamadou.camara@malitel.ml", city: "Bamako", country: "Mali", shipments_count: 1, total_spent_minor: 7440000 },
-  { id: "cli-08", full_name: "Moussa Konaté", phone_whatsapp: "+223 65 44 33 22", email: "moussa.konate@gmail.com", city: "Bamako", country: "Mali", shipments_count: 1, total_spent_minor: 66500000 },
-  { id: "cli-09", full_name: "Awa Sanogo", phone_whatsapp: "+223 79 00 11 22", email: "awa.sanogo@gmail.com", city: "Bamako", country: "Mali", shipments_count: 0, total_spent_minor: 0 },
-  { id: "cli-10", full_name: "Seydou Keita", phone_whatsapp: "+225 05 66 77 88", email: "seydou.keita@ci.com", city: "Abidjan", country: "Côte d'Ivoire", shipments_count: 0, total_spent_minor: 0 },
-  { id: "cli-11", full_name: "Fatoumata Bamba", phone_whatsapp: "+221 70 33 44 55", email: "fatou.bamba@gmail.com", city: "Dakar", country: "Sénégal", shipments_count: 0, total_spent_minor: 0 },
-  { id: "cli-12", full_name: "Cheick Oumar", phone_whatsapp: "+224 66 55 44 33", email: "cheick.oumar@gn.com", city: "Conakry", country: "Guinée", shipments_count: 0, total_spent_minor: 0 },
-  { id: "cli-13", full_name: "Marie-Claire Kouassi", phone_whatsapp: "+225 01 22 33 44", email: "mc.kouassi@avocat.ci", city: "Abidjan", country: "Côte d'Ivoire", shipments_count: 0, total_spent_minor: 0 },
-  { id: "cli-14", full_name: "Bakary Dembélé", phone_whatsapp: "+223 78 99 88 77", email: "bakary.dembele@sotelma.ml", city: "Bamako", country: "Mali", shipments_count: 0, total_spent_minor: 0 },
-  { id: "cli-15", full_name: "Salif Traoré", phone_whatsapp: "+225 07 88 99 00", email: "salif.traore@boutique.ci", city: "Abidjan", country: "Côte d'Ivoire", shipments_count: 0, total_spent_minor: 0 },
-];
-
-const DEFAULT_PAYMENTS = [
-  { id: "pay-01", shipment_id: "sh-01", client_id: "cli-01", client_name: "Aminata Diallo", amount_minor: 22200000, currency: "FCFA", payment_method: "ORANGE_MONEY", payment_type: "FULL", reference_code: "OM-CI-2610-8841", status: "CONFIRMED", receipt_notes: "Règlement total voie express Chine -> Bamako 18.5kg", recorded_at: "2026-10-25 11:20:00" },
-  { id: "pay-02", shipment_id: "sh-02", client_id: "cli-02", client_name: "Ibrahim Traoré", amount_minor: 126000000, currency: "FCFA", payment_method: "BANK_TRANSFER", payment_type: "FULL", reference_code: "VIR-SGBCI-44910", status: "CONFIRMED", receipt_notes: "Paiement intégral groupage maritime CBM 4.2m3", recorded_at: "2026-10-25 14:45:00" },
-  { id: "pay-03", shipment_id: "sh-03", client_id: "cli-03", client_name: "Khadija Diop", amount_minor: 40800000, currency: "FCFA", payment_method: "WAVE", payment_type: "FULL", reference_code: "WV-SN-2610-9912", status: "CONFIRMED", receipt_notes: "Envol direct Dubaï -> Dakar 34kg", recorded_at: "2026-10-26 09:15:00" },
-  { id: "pay-04", shipment_id: "sh-04", client_id: "cli-04", client_name: "Boubacar Cissé", amount_minor: 18200000, currency: "FCFA", payment_method: "CASH", payment_type: "FULL", reference_code: "ESP-ABJ-00412", status: "CONFIRMED", receipt_notes: "Encaissé en agence Bingerville (Maroc -> Abidjan 28kg)", recorded_at: "2026-10-26 15:30:00" },
-  { id: "pay-05", shipment_id: "sh-05", client_id: "cli-05", client_name: "Oumar Sidibé", amount_minor: 17400000, currency: "FCFA", payment_method: "ORANGE_MONEY", payment_type: "FULL", reference_code: "OM-ML-2610-1123", status: "CONFIRMED", receipt_notes: "Voie Aérienne Chine -> Bamako 14.5kg", recorded_at: "2026-10-27 10:00:00" },
-  { id: "pay-06", shipment_id: "sh-06", client_id: "cli-06", client_name: "Fanta Coulibaly", amount_minor: 60000000, currency: "FCFA", payment_method: "WAVE", payment_type: "FULL", reference_code: "WV-CI-2610-3301", status: "CONFIRMED", receipt_notes: "Conteneur Bateau 2.0 CBM LCL", recorded_at: "2026-10-27 12:40:00" },
-  { id: "pay-07", shipment_id: "sh-07", client_id: "cli-07", client_name: "Mamadou Camara", amount_minor: 7440000, currency: "FCFA", payment_method: "WAVE", payment_type: "FULL", reference_code: "WV-CI-2610-5590", status: "CONFIRMED", receipt_notes: "Voie Express Chine -> Côte d'Ivoire 6.2kg", recorded_at: "2026-10-27 16:10:00" },
-  { id: "pay-08", shipment_id: "sh-08", client_id: "cli-08", client_name: "Moussa Konaté", amount_minor: 66500000, currency: "FCFA", payment_method: "BANK_TRANSFER", payment_type: "FULL", reference_code: "VIR-ECOBANK-7712", status: "CONFIRMED", receipt_notes: "Groupage Aérien Régulier 95kg", recorded_at: "2026-10-27 17:05:00" },
-];
-
-const DEFAULT_TASKS = [
-  { id: "tsk-01", title: "Contrôle pesée & scellés lot CAN-2610-04", description: "Pesée volumétrique, contrôle scanner et scellés de sécurité au magasin central de Guangzhou avant chargement vol cargo.", category: "WAREHOUSE_CHECK", priority: "URGENT", status: "IN_PROGRESS", due_date: "2026-10-28 12:00:00", created_at: "2026-10-27 08:00:00" },
-  { id: "tsk-02", title: "Dédouanement conteneur maritime CBM n°7", description: "Finalisation du dédouanement et bon à enlever au Port Autonome d'Abidjan pour les lots LCL.", category: "GENERAL", priority: "HIGH", status: "TODO", due_date: "2026-10-29 17:00:00", created_at: "2026-10-27 14:30:00" },
-  { id: "tsk-03", title: "Appel validation devis commande REQ-01", description: "Contacter Koffi & Fils pour confirmation de commande avec le fournisseur et encaissement acompte.", category: "QUOTE_PREP", priority: "MEDIUM", status: "TODO", due_date: "2026-10-28 16:00:00", created_at: "2026-10-27 16:00:00" },
-];
+/** Jeton de session locale : n'existe que pendant le développement, jamais dans le site en ligne. */
+const DEV_SESSION_TOKEN = process.env.NODE_ENV === "development" ? "roum_local_admin_session" : null;
+const CUSTOM_HUBS_SETTING = "custom_hubs_json";
 
 export default function AdminPage() {
   const [token, setToken] = useState<string | null>(null);
@@ -1663,8 +747,8 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
 
   // Formulaire de connexion
-  const [email, setEmail] = useState("admin@roumtransit.com");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -1683,133 +767,25 @@ export default function AdminPage() {
     | "settings"
   >("dashboard");
 
-  // Données avec Persistance Locale Totale (Zéro perte de données)
+  // Données : uniquement ce que la base renvoie. Rien n'est conservé ni inventé dans le navigateur.
   const [stats, setStats] = useState<any>({
-    total_shipments: 15,
-    active_shipments: 8,
-    delivered_shipments: 5,
-    pending_requests: 3,
-    total_clients: 15,
-    total_payments_minor: 358540000,
+    total_shipments: 0,
+    active_shipments: 0,
+    pending_requests: 0,
+    total_clients: 0,
+    total_payments_minor: 0,
   });
-
-  const [requestsList, setRequestsList] = useState<any[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("roum_requests_data");
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return DEFAULT_REQUESTS;
-  });
-
-  const [shipments, setShipments] = useState<any[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("roum_shipments_data");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const BANNED_MOCKS = new Set([
-              "RM-AIR-2610-D4E5F6",
-              "RM-AIR-2610-T7U8V9",
-              "RM-AIR-2610-H8J9K0",
-              "RM-AIR-2610-L1M2N3",
-              "RM-AIR-2610-K3L4P5",
-              "RM-AIR-2610-N1P2Q3",
-            ]);
-            const filtered = parsed.filter((s: any) => !BANNED_MOCKS.has(s.tracking_number));
-            if (filtered.length > 0) return filtered;
-          }
-        }
-      } catch {}
-    }
-    return DEFAULT_15_SHIPMENTS;
-  });
-
-  const [clientsList, setClientsList] = useState<any[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("roum_clients_data");
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return DEFAULT_CLIENTS;
-  });
-
-  const [tariffsList, setTariffsList] = useState<any[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("roum_tariffs_data");
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return DEFAULT_INITIAL_TARIFFS;
-  });
-
+  const [requestsList, setRequestsList] = useState<any[]>([]);
+  const [shipments, setShipments] = useState<any[]>([]);
+  const [clientsList, setClientsList] = useState<any[]>([]);
+  const [tariffsList, setTariffsList] = useState<any[]>([]);
   const [routesList, setRoutesList] = useState<any[]>([]);
   const [modesList, setModesList] = useState<any[]>([]);
-
-  // Modes de transport garantis (jamais vides)
-  const availableModes = useMemo(() => {
-    if (modesList && modesList.length > 0) return modesList;
-    return [
-      { id: "AIR_EXPRESS", name: "Avion Express (4 à 5 jours)" },
-      { id: "AIR_STANDARD", name: "Avion Normal (10 à 14 jours)" },
-      { id: "SEA_LCL", name: "Maritime Groupage (35 à 45 jours)" },
-      { id: "SEA_FCL", name: "Maritime Conteneur Complet" },
-    ];
-  }, [modesList]);
-
-  // Liaisons corridors garanties (jamais vides, extraites en direct des tarifs configurés)
-  const availableRoutes = useMemo(() => {
-    if (routesList && routesList.length > 0) return routesList;
-    const map = new Map<string, { id: string; origin_country: string; destination_country: string }>();
-    (tariffsList || []).forEach((t: any, idx: number) => {
-      const orig = (t.origin_country || "Chine").trim();
-      const dest = (t.destination_country || "Côte d'Ivoire").trim();
-      if (!dest) return;
-      const key = `${orig} -> ${dest}`;
-      if (!map.has(key)) {
-        map.set(key, {
-          id: t.route_id || `route-${orig.slice(0, 2).toLowerCase()}-${dest.slice(0, 2).toLowerCase()}-${idx}`,
-          origin_country: orig,
-          destination_country: dest,
-        });
-      }
-    });
-    const list = Array.from(map.values());
-    if (list.length > 0) return list;
-    return [
-      { id: "route-cn-ci", origin_country: "Chine", destination_country: "Côte d'Ivoire" },
-      { id: "route-cn-sn", origin_country: "Chine", destination_country: "Sénégal" },
-      { id: "route-cn-ml", origin_country: "Chine", destination_country: "Mali" },
-      { id: "route-cn-bf", origin_country: "Chine", destination_country: "Burkina Faso" },
-      { id: "route-ae-ci", origin_country: "Émirats Arabes Unis", destination_country: "Côte d'Ivoire" },
-      { id: "route-fr-ci", origin_country: "France", destination_country: "Côte d'Ivoire" },
-      { id: "route-ma-ci", origin_country: "Maroc", destination_country: "Côte d'Ivoire" },
-    ];
-  }, [routesList, tariffsList]);
-
-  const [paymentsList, setPaymentsList] = useState<any[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("roum_payments_data");
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return DEFAULT_PAYMENTS;
-  });
-
-  const [tasksList, setTasksList] = useState<any[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("roum_tasks_data");
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return DEFAULT_TASKS;
-  });
+  const availableModes = modesList;
+  const availableRoutes = routesList;
+  const [paymentsList, setPaymentsList] = useState<any[]>([]);
+  const [tasksList, setTasksList] = useState<any[]>([]);
+  const [hasLoadedData, setHasLoadedData] = useState(false);
 
   const [roles, setRoles] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
@@ -1888,154 +864,13 @@ export default function AdminPage() {
   };
 
   const handleSaveEditPaymentCard = async (cardKey: string, cardLabel: string) => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
-      window.dispatchEvent(new Event("storage"));
-      window.dispatchEvent(new CustomEvent("roum:settings_updated", { detail: companySettings }));
-      try {
-        const bc = new BroadcastChannel("roum_sync_bus");
-        bc.postMessage({ type: "SETTINGS_UPDATED", settings: companySettings });
-        bc.close();
-      } catch {}
-    }
-    triggerToast(`Coordonnées ${cardLabel} enregistrées avec succès !`, "Moyens de Paiement");
-    setEditingPaymentCard(null);
-    try {
-      const activeToken = token || "roum_local_admin_session";
-      await fetch("/api/admin/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${activeToken}` },
-        body: JSON.stringify(companySettings),
-      });
-    } catch {}
+    const saved = await adminCall(
+      "/settings",
+      { method: "PUT", body: companySettings },
+      { scopes: [], success: `Coordonnées ${cardLabel} enregistrées avec succès !`, successTitle: "Moyens de Paiement" }
+    );
+    if (saved) setEditingPaymentCard(null);
   };
-
-  // Garde d'hydratation : empêche l'écrasement du localStorage par les valeurs SSR par défaut lors d'un rafraîchissement (F5)
-  const hasHydratedStorageRef = useRef(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const savedReqs = localStorage.getItem("roum_requests_data");
-      if (savedReqs) {
-        const parsed = JSON.parse(savedReqs);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const BANNED_TEST_REFS = new Set(["RM-ALI-VWJJZ8", "RM-ALI-NAXZTI"]);
-          const cleaned = parsed.filter((r: any) => !BANNED_TEST_REFS.has(r.reference));
-          // Garantir que RM-ALI-2ZXQL et les dossiers existants ne disparaissent jamais
-          const merged = [...cleaned];
-          DEFAULT_REQUESTS.forEach((defReq) => {
-            if (!merged.some((m) => m.reference === defReq.reference || m.id === defReq.id)) {
-              if (defReq.reference === "RM-ALI-2ZXQL") {
-                merged.unshift(defReq);
-              } else {
-                merged.push(defReq);
-              }
-            }
-          });
-          setRequestsList(merged);
-        }
-      }
-      const savedShipments = localStorage.getItem("roum_shipments_data");
-      if (savedShipments) {
-        const parsed = JSON.parse(savedShipments);
-        if (Array.isArray(parsed) && parsed.length > 0) setShipments(parsed);
-      }
-      const savedClients = localStorage.getItem("roum_clients_data");
-      if (savedClients) {
-        const parsed = JSON.parse(savedClients);
-        if (Array.isArray(parsed) && parsed.length > 0) setClientsList(parsed);
-      }
-      const savedTariffs = localStorage.getItem("roum_tariffs_data");
-      if (savedTariffs) {
-        const parsed = JSON.parse(savedTariffs);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const cleanedTariffs = parsed.filter(
-            (t: any) =>
-              t.origin_country !== "Turquie" &&
-              !String(t.id || "").startsWith("t-17938")
-          );
-          if (cleanedTariffs.length > 0) setTariffsList(cleanedTariffs);
-        }
-      }
-      const savedPayments = localStorage.getItem("roum_payments_data");
-      if (savedPayments) {
-        const parsed = JSON.parse(savedPayments);
-        if (Array.isArray(parsed) && parsed.length > 0) setPaymentsList(parsed);
-      }
-      const savedTasks = localStorage.getItem("roum_tasks_data");
-      if (savedTasks) {
-        const parsed = JSON.parse(savedTasks);
-        if (Array.isArray(parsed) && parsed.length > 0) setTasksList(parsed);
-      }
-    } catch {}
-    hasHydratedStorageRef.current = true;
-  }, []);
-
-  // Synchronisation continue vers le stockage permanent du navigateur (Anti-perte)
-  useEffect(() => {
-    if (typeof window !== "undefined" && hasHydratedStorageRef.current) {
-      localStorage.setItem("roum_requests_data", JSON.stringify(requestsList));
-    }
-  }, [requestsList]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && hasHydratedStorageRef.current) {
-      localStorage.setItem("roum_shipments_data", JSON.stringify(shipments));
-    }
-  }, [shipments]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && hasHydratedStorageRef.current) {
-      localStorage.setItem("roum_clients_data", JSON.stringify(clientsList));
-    }
-  }, [clientsList]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && hasHydratedStorageRef.current) {
-      localStorage.setItem("roum_tariffs_data", JSON.stringify(tariffsList));
-    }
-  }, [tariffsList]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && hasHydratedStorageRef.current) {
-      localStorage.setItem("roum_payments_data", JSON.stringify(paymentsList));
-    }
-  }, [paymentsList]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && hasHydratedStorageRef.current) {
-      localStorage.setItem("roum_tasks_data", JSON.stringify(tasksList));
-    }
-  }, [tasksList]);
-
-  // Synchronisation temps réel bidirectionnelle avec le côté client public
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const handleSyncFromClient = () => {
-      try {
-        const savedReqs = localStorage.getItem("roum_requests_data");
-        if (savedReqs) {
-          const parsed = JSON.parse(savedReqs);
-          if (Array.isArray(parsed)) setRequestsList(parsed);
-        }
-        const savedTariffs = localStorage.getItem("roum_tariffs_data");
-        if (savedTariffs) {
-          const parsed = JSON.parse(savedTariffs);
-          if (Array.isArray(parsed)) setTariffsList(parsed);
-        }
-      } catch (err) {
-        console.warn("Erreur synchronisation temps réel admin :", err);
-      }
-    };
-
-    window.addEventListener("storage", handleSyncFromClient);
-    window.addEventListener("roum:request_created", handleSyncFromClient);
-    return () => {
-      window.removeEventListener("storage", handleSyncFromClient);
-      window.removeEventListener("roum:request_created", handleSyncFromClient);
-    };
-  }, []);
 
   // Notifications Toast Système Style Dashboard (Supprime les popups du navigateur)
   const [toast, setToast] = useState<{ message: string; title?: string; type: "success" | "error" | "info" } | null>(null);
@@ -2248,6 +1083,35 @@ export default function AdminPage() {
   const [taskFilter, setTaskFilter] = useState<"ALL" | "URGENT" | "PENDING" | "DONE">("ALL");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Sur téléphone, les tableaux deviennent des cartes : chaque cellule affiche l'intitulé de sa colonne.
+  useEffect(() => {
+    const root = document.querySelector(".admin-main-viewport");
+    if (!root) return;
+
+    const labelCells = () => {
+      root.querySelectorAll("table").forEach((table) => {
+        const headers = Array.from(table.querySelectorAll("thead th")).map((th) => th.textContent?.trim() || "");
+        table.querySelectorAll("tbody tr").forEach((row) => {
+          Array.from(row.children).forEach((cell, index) => {
+            const label = (cell as HTMLTableCellElement).colSpan > 1 ? "" : headers[index] || "";
+            if (cell.getAttribute("data-label") !== label) cell.setAttribute("data-label", label);
+          });
+        });
+      });
+    };
+
+    labelCells();
+    const observer = new MutationObserver(labelCells);
+    observer.observe(root, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [user]);
+
+  // Sur téléphone, choisir une rubrique referme le menu.
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [activeTab]);
   const [isGlobeExpanded, setIsGlobeExpanded] = useState(false);
 
   // Synchronisation Tableau de bord & Globe 3D
@@ -2556,7 +1420,7 @@ export default function AdminPage() {
         try {
           const res = await fetch("/api/assistant", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
             body: JSON.stringify({
               message: q,
               context: liveContext,
@@ -2705,15 +1569,7 @@ export default function AdminPage() {
     estimated_days_max: 5,
     note: "Groupage aérien Maroc 5 jours garantis",
   });
-  const [customHubs, setCustomHubs] = useState<any[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("roum_custom_hubs");
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return [];
-  });
+  const [customHubs, setCustomHubs] = useState<any[]>([]);
   const [showAddHubModal, setShowAddHubModal] = useState(false);
   const [newHubForm, setNewHubForm] = useState({
     name: "Entrepôt Istanbul (Turquie)",
@@ -2854,26 +1710,29 @@ export default function AdminPage() {
   const [tariffCurrencyFilter, setTariffCurrencyFilter] = useState("ALL");
   const [tariffCorridorFilter, setTariffCorridorFilter] = useState("ALL");
 
+  const clearSession = useCallback(() => {
+    sessionStorage.removeItem("roum_admin_token");
+    localStorage.removeItem("roum_admin_token");
+    setToken(null);
+    setUser(null);
+    setHasLoadedData(false);
+  }, []);
+
   useEffect(() => {
-    // Persistance durant toute la session ouverte : actualiser la page (F5) ne redemande PAS l'identification.
-    // Vérification combinée sessionStorage et localStorage pour maintenir la session active en tout temps
+    // Une session ouverte survit à l'actualisation de la page ; le serveur la valide à chaque ouverture.
     const activeSessionToken =
-      typeof window !== "undefined"
-        ? sessionStorage.getItem("roum_admin_token") ||
-          localStorage.getItem("roum_admin_token") ||
-          "roum_local_admin_session"
-        : null;
+      sessionStorage.getItem("roum_admin_token") || localStorage.getItem("roum_admin_token") || DEV_SESSION_TOKEN;
     if (activeSessionToken) {
-      setToken(activeSessionToken);
       fetchSession(activeSessionToken);
       return;
     }
-    setToken(null);
-    setUser(null);
     setLoading(false);
   }, []);
 
   const normalizeCeoUser = (rawUser: any): UserSession => {
+    // Les droits viennent toujours du serveur : seul le profil de la direction est personnalisable ici.
+    if (rawUser && !rawUser.isSuperAdmin) return rawUser;
+
     let savedProfile: any = null;
     let savedAvatar: string | null = null;
     if (typeof window !== "undefined") {
@@ -2913,10 +1772,10 @@ export default function AdminPage() {
       fullName,
       roleId: rawUser?.roleId || "CEO",
       roleName,
-      isSuperAdmin: true,
+      isSuperAdmin: Boolean(rawUser?.isSuperAdmin),
       hubLocation: rawUser?.hubLocation || "Abidjan / Bamako",
-      permissions: rawUser?.permissions || ["*"],
-      allowedStatuses: rawUser?.allowedStatuses || ["*"],
+      permissions: rawUser?.permissions || [],
+      allowedStatuses: rawUser?.allowedStatuses || [],
       avatarUrl: resolvedAvatar,
       phone: savedProfile?.phone || rawUser?.phone || undefined,
     };
@@ -2924,33 +1783,20 @@ export default function AdminPage() {
 
   const fetchSession = async (jwtToken: string) => {
     try {
-      const res = await fetch("/api/auth/me", {
-        headers: { Authorization: `Bearer ${jwtToken}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.user) {
-          setUser(normalizeCeoUser(data.user));
-          setToken(jwtToken);
-          loadDashboardData(jwtToken);
-          setLoading(false);
-          return;
-        }
-      }
-    } catch {
-      // Poursuite directe
-    }
-
-    if (jwtToken) {
-      const fallbackUser = normalizeCeoUser(null);
-      setUser(fallbackUser);
+      const data = await apiRequest<{ user: any }>("/api/auth/me", { token: jwtToken });
       setToken(jwtToken);
-      loadDashboardData(jwtToken);
-    } else {
-      setUser(null);
-      setToken(null);
+      setUser(normalizeCeoUser(data.user));
+    } catch (err) {
+      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+        clearSession();
+      } else {
+        // Serveur injoignable : la session reste ouverte et le bandeau de connexion prend le relais.
+        setToken(jwtToken);
+        setUser(normalizeCeoUser(null));
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -2959,286 +1805,234 @@ export default function AdminPage() {
     setLoginLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
+      const data = await apiRequest<{ token: string; user: any }>("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: { email, password },
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.token) {
-          sessionStorage.setItem("roum_admin_token", data.token);
-          localStorage.setItem("roum_admin_token", data.token);
-          setToken(data.token);
-          setUser(normalizeCeoUser(data.user));
-          loadDashboardData(data.token);
-          setLoginLoading(false);
-          return;
-        }
-      }
-    } catch {
-      // Poursuite directe sans blocage
+      sessionStorage.setItem("roum_admin_token", data.token);
+      localStorage.setItem("roum_admin_token", data.token);
+      setPassword("");
+      setToken(data.token);
+      setUser(normalizeCeoUser(data.user));
+    } catch (err: any) {
+      setLoginError(err?.message || "Connexion impossible.");
+    } finally {
+      setLoginLoading(false);
     }
-
-    // Accès direct sans blocage : ouverture immédiate de l'espace de gestion
-    const fallbackUser = normalizeCeoUser({ email: email || "ceo@roumtransit.com" });
-    const directToken = "roum_local_admin_session";
-    sessionStorage.setItem("roum_admin_token", directToken);
-    localStorage.setItem("roum_admin_token", directToken);
-    setToken(directToken);
-    setUser(fallbackUser);
-    loadDashboardData(directToken);
-    setLoginLoading(false);
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("roum_admin_token");
-    localStorage.removeItem("roum_admin_token");
-    setToken(null);
-    setUser(null);
+    apiRequest("/api/auth/logout", { method: "POST", token }).catch(() => {});
+    clearSession();
   };
 
-  const loadDashboardData = async (jwtToken: string) => {
-    setIsRefreshing(true);
-    const headers = { Authorization: `Bearer ${jwtToken}` };
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+  const scopeSequenceRef = useRef<Record<string, number>>({});
+  const metaLoadedRef = useRef(false);
+  const hubsSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /** Lecture d'un domaine. Une réponse dépassée par une lecture plus récente est ignorée. */
+  const loadScope = async <T,>(scope: string, path: string, apply: (data: T) => void) => {
+    const sequence = (scopeSequenceRef.current[scope] = (scopeSequenceRef.current[scope] || 0) + 1);
     try {
-      fetch("/api/admin/stats", { headers })
-        .then((r) => r.json())
-        .then((d) => d.stats && setStats(d.stats))
-        .catch(() => {});
-
-      fetch("/api/admin/shipments", { headers })
-        .then((r) => r.json())
-        .then((d) => {
-          setShipments((prevLocal) => {
-            let localSaved: any[] = [];
-            try {
-              const str = localStorage.getItem("roum_shipments_data");
-              if (str) localSaved = JSON.parse(str);
-            } catch {}
-            const baseList = localSaved.length > 0 ? localSaved : (prevLocal.length > 0 ? prevLocal : DEFAULT_15_SHIPMENTS);
-
-            if (d.shipments && Array.isArray(d.shipments) && d.shipments.length > 0) {
-              const merged = [...baseList];
-              d.shipments.forEach((serverS: any) => {
-                const idx = merged.findIndex((m) => (m.id && m.id === serverS.id) || (m.tracking_number && m.tracking_number === serverS.tracking_number));
-                if (idx >= 0) {
-                  merged[idx] = { ...merged[idx], ...serverS };
-                } else {
-                  merged.push(serverS);
-                }
-              });
-              try {
-                localStorage.setItem("roum_shipments_data", JSON.stringify(merged));
-              } catch {}
-              return merged;
-            }
-            return baseList;
-          });
-        })
-        .catch(() => {});
-
-      fetch("/api/admin/requests", { headers })
-        .then((r) => r.json())
-        .then((d) => {
-          setRequestsList((prevLocal) => {
-            const BANNED_TEST_REFS = new Set(["RM-ALI-VWJJZ8", "RM-ALI-NAXZTI"]);
-            let localSaved: any[] = [];
-            try {
-              const str = localStorage.getItem("roum_requests_data");
-              if (str) localSaved = JSON.parse(str);
-            } catch {}
-            const baseList = (localSaved.length > 0 ? localSaved : (prevLocal.length > 0 ? prevLocal : DEFAULT_REQUESTS)).filter(
-              (r: any) => !BANNED_TEST_REFS.has(r.reference)
-            );
-
-            if (d.requests && Array.isArray(d.requests) && d.requests.length > 0) {
-              const merged = [...baseList];
-              d.requests
-                .filter((sReq: any) => !BANNED_TEST_REFS.has(sReq.reference))
-                .forEach((sReq: any) => {
-                  const idx = merged.findIndex((m) => (m.id && m.id === sReq.id) || (m.reference && m.reference === sReq.reference));
-                  if (idx >= 0) {
-                    const localItem = merged[idx];
-                    merged[idx] = {
-                      ...localItem,
-                      ...sReq,
-                      product_image: sReq.product_image || localItem.product_image,
-                      product_name: sReq.product_name || localItem.product_name,
-                      product_url: sReq.product_url || localItem.product_url,
-                      payment_receipt_url: sReq.payment_receipt_url || localItem.payment_receipt_url,
-                      payment_receipt_name: sReq.payment_receipt_name || localItem.payment_receipt_name,
-                      payment_method_selected: sReq.payment_method_selected || localItem.payment_method_selected,
-                      tracking_number: sReq.tracking_number || localItem.tracking_number,
-                      estimated_weight_kg: sReq.estimated_weight_kg ?? localItem.estimated_weight_kg,
-                      estimated_cbm: sReq.estimated_cbm ?? localItem.estimated_cbm,
-                      total_goods_fcfa: sReq.total_goods_fcfa || localItem.total_goods_fcfa,
-                      shipping_fee_fcfa: sReq.shipping_fee_fcfa || localItem.shipping_fee_fcfa,
-                      total_amount_fcfa: sReq.total_amount_fcfa || localItem.total_amount_fcfa,
-                      items: sReq.items?.length ? sReq.items : localItem.items,
-                    };
-                  } else {
-                    merged.unshift(sReq);
-                  }
-                });
-              try {
-                localStorage.setItem("roum_requests_data", JSON.stringify(merged));
-              } catch {}
-              return merged;
-            }
-            return baseList;
-          });
-        })
-        .catch(() => {});
-
-      fetch("/api/admin/clients", { headers })
-        .then((r) => r.json())
-        .then((d) => {
-          if (d.clients && d.clients.length > 0) {
-            setClientsList(d.clients);
-            try {
-              localStorage.setItem("roum_clients_data", JSON.stringify(d.clients));
-            } catch {}
-          } else {
-            setClientsList(DEFAULT_CLIENTS);
-          }
-        })
-        .catch(() => setClientsList(DEFAULT_CLIENTS));
-
-      fetch("/api/admin/tariffs", { headers })
-        .then((r) => r.json())
-        .then((d) => {
-          if (d.tariffs && Array.isArray(d.tariffs) && d.tariffs.length > 0) {
-            // La Base de Données SQLite D1 est la source unique de vérité (100% synchronisée avec le Client)
-            const syncedTariffs = d.tariffs
-              .filter(
-                (serverT: any) =>
-                  serverT.origin_country !== "Turquie" &&
-                  !String(serverT.id || "").startsWith("t-17938")
-              )
-              .map((serverT: any) => {
-                const defaultMatch: any = DEFAULT_INITIAL_TARIFFS.find((m) => m.id === serverT.id);
-                const priceMinor = Number(serverT.price_per_unit_minor) || 0;
-                const cleanServiceName = String(
-                  serverT.service_name ||
-                    serverT.category_tag ||
-                    defaultMatch?.service_name ||
-                    defaultMatch?.shipping_mode_name ||
-                    serverT.mode_name ||
-                    "Transport Standard"
-                )
-                  .replace(/[\u{1F1E6}-\u{1F1FF}\u{1F300}-\u{1F9FF}]/gu, "")
-                  .trim();
-                return {
-                  ...defaultMatch,
-                  ...serverT,
-                  id: serverT.id || serverT.tariff_id,
-                  service_name: cleanServiceName,
-                  shipping_mode_name: cleanServiceName,
-                  mode_name: serverT.mode_name || defaultMatch?.shipping_mode_name || cleanServiceName,
-                  shipping_mode_type:
-                    serverT.mode_type || serverT.shipping_mode_type || defaultMatch?.shipping_mode_type || "AIR",
-                  price_per_unit_minor: priceMinor,
-                  price_per_unit: priceMinor / 100,
-                };
-              });
-            setTariffsList(syncedTariffs);
-            try {
-              localStorage.setItem("roum_tariffs_data", JSON.stringify(syncedTariffs));
-            } catch {}
-          }
-        })
-        .catch(() => {});
-      fetch("/api/admin/routes", { headers })
-        .then((r) => r.json())
-        .then((d) => d.routes && setRoutesList(d.routes))
-        .catch(() => {});
-      fetch("/api/admin/modes", { headers })
-        .then((r) => r.json())
-        .then((d) => d.modes && setModesList(d.modes))
-        .catch(() => {});
-
-      fetch("/api/admin/payments", { headers })
-        .then((r) => r.json())
-        .then((d) => {
-          if (d.payments && d.payments.length > 0) {
-            setPaymentsList(d.payments);
-            try {
-              localStorage.setItem("roum_payments_data", JSON.stringify(d.payments));
-            } catch {}
-          } else {
-            setPaymentsList(DEFAULT_PAYMENTS);
-          }
-        })
-        .catch(() => setPaymentsList(DEFAULT_PAYMENTS));
-
-      fetch("/api/admin/tasks", { headers })
-        .then((r) => r.json())
-        .then((d) => {
-          if (d.tasks && d.tasks.length > 0) {
-            setTasksList(d.tasks);
-            try {
-              localStorage.setItem("roum_tasks_data", JSON.stringify(d.tasks));
-            } catch {}
-          } else {
-            setTasksList(DEFAULT_TASKS);
-          }
-        })
-        .catch(() => setTasksList(DEFAULT_TASKS));
-
-      fetch("/api/admin/roles", { headers })
-        .then((r) => r.json())
-        .then((d) => d.roles && setRoles(d.roles))
-        .catch(() => {});
-      fetch("/api/admin/permissions", { headers })
-        .then((r) => r.json())
-        .then((d) => d.permissions && setAllPermissions(d.permissions))
-        .catch(() => {});
-      fetch("/api/admin/statuses", { headers })
-        .then((r) => r.json())
-        .then((d) => d.statuses && setAllStatuses(d.statuses))
-        .catch(() => {});
-      fetch("/api/admin/users", { headers })
-        .then((r) => r.json())
-        .then((d) => d.users && setUsersList(d.users))
-        .catch(() => {});
-
-      fetch("/api/admin/settings", { headers })
-        .then((r) => r.json())
-        .then((d) => d.settings && setCompanySettings((prev) => ({ ...DEFAULT_COMPANY_SETTINGS, ...d.settings })))
-        .catch(() => {});
-      fetch("/api/admin/audit-logs", { headers })
-        .then((r) => r.json())
-        .then((d) => d.logs && setAuditLogs(d.logs))
-        .catch(() => {});
-    } finally {
-      setIsRefreshing(false);
+      const data = await apiRequest<T>(`/api/admin${path}`, { token });
+      if (scopeSequenceRef.current[scope] === sequence) apply(data);
+    } catch (err) {
+      // Un rôle limité n'a pas accès à tous les domaines : ce n'est pas une panne.
+      if (err instanceof ApiError && err.status === 403) return;
+      throw err;
     }
   };
 
-  // Synchronisation automatique en arrière-plan toutes les 25s (multi-appareils / clients distants)
+  const loadSettings = async () => {
+    await loadScope<{ settings: Record<string, string> }>("settings", "/settings", (d) => {
+      const { [CUSTOM_HUBS_SETTING]: hubsJson, ...rest } = d.settings || {};
+      setCompanySettings({ ...DEFAULT_COMPANY_SETTINGS, ...rest });
+      if (hubsJson) {
+        try {
+          setCustomHubs(JSON.parse(hubsJson));
+        } catch {
+          setCustomHubs([]);
+        }
+      } else {
+        // Reprise unique des entrepôts créés quand ils n'existaient que dans ce navigateur.
+        try {
+          const legacy = JSON.parse(localStorage.getItem("roum_custom_hubs") || "[]");
+          if (Array.isArray(legacy) && legacy.length > 0) {
+            setCustomHubs(legacy);
+            void persistHubs(legacy);
+          }
+        } catch {
+          setCustomHubs([]);
+        }
+      }
+    });
+  };
+
+  /** Recharge depuis la base les domaines indiqués. Renvoie `false` si l'un d'eux a échoué. */
+  const refreshData = async (scopes: string[]): Promise<boolean> => {
+    const has = (scope: string) => scopes.includes(scope);
+    const tasks: Promise<unknown>[] = [
+      loadScope<{ stats: any }>("stats", "/stats", (d) => d.stats && setStats(d.stats)),
+      loadScope<{ logs: any[] }>("audit", "/audit-logs", (d) => setAuditLogs(d.logs || [])),
+    ];
+
+    if (has("shipments")) {
+      tasks.push(loadScope<{ shipments: any[] }>("shipments", "/shipments", (d) => setShipments(d.shipments || [])));
+    }
+    if (has("requests")) {
+      tasks.push(
+        loadScope<{ requests: any[] }>("requests", "/requests", (d) => {
+          const list = d.requests || [];
+          setRequestsList(list);
+          // La fiche ouverte suit la base, sans perdre la preuve de paiement chargée à part.
+          setShowRequestDetailModal((open: any) => {
+            if (!open) return open;
+            const fresh = list.find((r) => r.id === open.id);
+            if (!fresh) return open;
+            return { ...open, ...fresh, payment_receipt_url: fresh.payment_receipt_url || open.payment_receipt_url };
+          });
+        })
+      );
+    }
+    if (has("clients")) {
+      tasks.push(loadScope<{ clients: any[] }>("clients", "/clients", (d) => setClientsList(d.clients || [])));
+    }
+    if (has("payments")) {
+      tasks.push(loadScope<{ payments: any[] }>("payments", "/payments", (d) => setPaymentsList(d.payments || [])));
+    }
+    if (has("tasks")) {
+      tasks.push(loadScope<{ tasks: any[] }>("tasks", "/tasks", (d) => setTasksList(d.tasks || [])));
+    }
+    if (has("tariffs")) {
+      tasks.push(
+        loadScope<{ tariffs: any[] }>("tariffs", "/tariffs", (d) => {
+          setTariffsList(
+            (d.tariffs || []).map((serverT: any) => {
+              const priceMinor = Number(serverT.price_per_unit_minor) || 0;
+              const minimumMinor = Number(serverT.minimum_charge_minor) || 0;
+              const cleanServiceName = String(serverT.service_name || serverT.category_tag || "Transport Standard")
+                .replace(/[\u{1F1E6}-\u{1F1FF}\u{1F300}-\u{1F9FF}]/gu, "")
+                .trim();
+              return {
+                ...serverT,
+                service_name: cleanServiceName,
+                shipping_mode_name: cleanServiceName,
+                mode_name: cleanServiceName,
+                shipping_mode_type: serverT.shipping_mode_type || "AIR",
+                price_per_unit_minor: priceMinor,
+                price_per_unit: priceMinor / 100,
+                minimum_charge: minimumMinor / 100,
+              };
+            })
+          );
+        }),
+        loadScope<{ routes: any[] }>("routes", "/routes", (d) => setRoutesList(d.routes || [])),
+        loadScope<{ modes: any[] }>("modes", "/modes", (d) => setModesList(d.modes || []))
+      );
+    }
+    // Un formulaire de paramètres en cours de saisie n'est jamais écrasé : il se recharge à la sortie de l'onglet.
+    if (has("settings") && (activeTabRef.current !== "settings" || !metaLoadedRef.current)) {
+      tasks.push(loadSettings());
+    }
+
+    if (!metaLoadedRef.current) {
+      tasks.push(
+        loadScope<{ roles: any[] }>("roles", "/roles", (d) => setRoles(d.roles || [])),
+        loadScope<{ permissions: any[] }>("permissions", "/permissions", (d) => setAllPermissions(d.permissions || [])),
+        loadScope<{ statuses: any[] }>("statuses", "/statuses", (d) => setAllStatuses(d.statuses || [])),
+        loadScope<{ users: any[] }>("users", "/users", (d) => setUsersList(d.users || []))
+      );
+    }
+
+    setIsRefreshing(true);
+    const results = await Promise.allSettled(tasks);
+    setIsRefreshing(false);
+
+    const unauthorized = results.some(
+      (r) => r.status === "rejected" && r.reason instanceof ApiError && r.reason.status === 401
+    );
+    if (unauthorized) {
+      clearSession();
+      return false;
+    }
+
+    const ok = results.every((r) => r.status === "fulfilled");
+    if (ok) {
+      metaLoadedRef.current = true;
+      setHasLoadedData(true);
+    }
+    return ok;
+  };
+
+  const { status: syncStatus, checkNow: checkSyncNow } = useLiveSync({
+    endpoint: "/api/admin/sync",
+    token,
+    enabled: Boolean(token && user),
+    intervalMs: 3000,
+    onChange: refreshData,
+    onUnauthorized: clearSession,
+  });
+
   useEffect(() => {
-    if (!token) return;
-    const timer = setInterval(() => {
-      loadDashboardData(token);
-    }, 25000);
-    return () => clearInterval(timer);
-  }, [token]);
+    if (activeTab !== "settings" && token && user && metaLoadedRef.current) {
+      loadSettings().catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  /**
+   * Toute écriture passe par ici. Le message de succès n'apparaît qu'après confirmation du serveur ;
+   * sinon l'erreur réelle est affichée, l'écran reste inchangé et la fonction renvoie `null`.
+   */
+  const adminCall = async <T = any,>(
+    path: string,
+    options: ApiOptions,
+    feedback: { scopes: string[]; success?: string; successTitle?: string; errorTitle?: string }
+  ): Promise<T | null> => {
+    try {
+      const data = await apiRequest<T>(`/api/admin${path}`, { ...options, token });
+      if (feedback.success) triggerToast(feedback.success, feedback.successTitle);
+      await refreshData(feedback.scopes);
+      return data ?? ({} as T);
+    } catch (err: any) {
+      if (err instanceof ApiError && err.status === 401) {
+        clearSession();
+        return null;
+      }
+      triggerToast(
+        err?.message || "L'action n'a pas pu être enregistrée.",
+        feedback.errorTitle || "Non enregistré",
+        "error"
+      );
+      if (err instanceof ApiError && err.conflict) await refreshData(feedback.scopes);
+      return null;
+    }
+  };
+
+  const persistHubs = (hubs: any[], feedback?: { success: string; successTitle: string }) =>
+    adminCall(
+      "/settings",
+      { method: "PUT", body: { [CUSTOM_HUBS_SETTING]: JSON.stringify(hubs) } },
+      { scopes: [], ...feedback }
+    );
+
+  /** Modification champ par champ : on attend la fin de la frappe avant d'enregistrer. */
+  const queueHubsSave = (hubs: any[]) => {
+    if (hubsSaveTimerRef.current) clearTimeout(hubsSaveTimerRef.current);
+    hubsSaveTimerRef.current = setTimeout(() => void persistHubs(hubs), 800);
+  };
 
   const handleCreateShipment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
 
-    try {
-      const res = await fetch("/api/admin/shipments", {
+    const created = await adminCall<{ tracking_number: string }>(
+      "/shipments",
+      {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+        body: {
           client: {
             full_name: newShipment.client_name,
             phone_whatsapp: newShipment.client_phone,
@@ -3256,110 +2050,34 @@ export default function AdminPage() {
               description: newShipment.description,
             },
           ],
-        }),
-      });
-
-      if (res.ok) {
-        setShowCreateShipmentModal(false);
-        loadDashboardData(token);
-        return;
-      }
-    } catch {
-      // Poursuite directe
-    }
-
-    const mockNewShipment = {
-      id: `ship-${Date.now()}`,
-      tracking_number: `RT-${Math.floor(100000 + Math.random() * 900000)}`,
-      client_name: newShipment.client_name,
-      client_phone: newShipment.client_phone,
-      client_country: newShipment.client_country,
-      client_city: newShipment.client_city,
-      origin_city: "Dubaï",
-      origin_country: "Émirats Arabes Unis",
-      destination_city: newShipment.client_city || "Bamako",
-      destination_country: newShipment.client_country || "Mali",
-      shipping_mode_name: newShipment.shipping_mode_id === "MARITIME" ? "Voie Maritime" : "Voie Aérienne Express",
-      shipping_mode_id: newShipment.shipping_mode_id,
-      current_status_code: "RECEIVED_AT_ORIGIN",
-      current_status_label: "Colis reçu à l'entrepôt de départ",
-      parcel_count: 1,
-      total_weight_kg: Number(newShipment.weight_kg) || 5,
-      estimated_price_minor: Math.round(Number(newShipment.estimated_price || 0) * 100),
-      currency: newShipment.currency || "FCFA",
-      created_at: new Date().toISOString().replace("T", " ").substring(0, 19),
-      parcels: [
-        {
-          id: `p-${Date.now()}`,
-          package_label: newShipment.package_label || "Colis 1",
-          weight_kg: Number(newShipment.weight_kg) || 5,
-          description: newShipment.description,
         },
-      ],
-    };
-    setShipments((prev) => [mockNewShipment, ...prev]);
-    setShowCreateShipmentModal(false);
+      },
+      { scopes: ["shipments", "clients"], successTitle: "Expédition créée", success: "Expédition enregistrée en base." }
+    );
+    if (created) setShowCreateShipmentModal(false);
   };
 
   const handleUpdateStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !showStatusModal) return;
 
-    try {
-      const res = await fetch(`/api/admin/shipments/${showStatusModal.id}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(statusUpdate),
-      });
-
-      if (res.ok) {
-        setShowStatusModal(null);
-        loadDashboardData(token);
-        return;
-      }
-    } catch {
-      // Poursuite directe
-    }
-
-    const labelMap: Record<string, string> = {
-      RECEIVED_AT_ORIGIN: "Colis reçu à l'entrepôt de départ",
-      IN_TRANSIT: "En cours d'acheminement international",
-      ARRIVED_DESTINATION_HUB: "Arrivé au magasin de destination",
-      CUSTOMS_CLEARANCE_IN_PROGRESS: "Dédouanement en cours",
-      CUSTOMS_CLEARED: "Dédouané - En route pour livraison",
-      OUT_FOR_DELIVERY: "En cours de livraison finale",
-      DELIVERED: "Colis livré avec succès au destinataire",
-      BLOCKED_CUSTOMS: "Retenu pour vérification douanière",
-    };
-    setShipments((prev) =>
-      prev.map((s) =>
-        s.id === showStatusModal.id
-          ? {
-              ...s,
-              current_status_code: statusUpdate.new_status,
-              current_status_label: labelMap[statusUpdate.new_status] || statusUpdate.new_status,
-            }
-          : s
-      )
+    const updated = await adminCall(
+      `/shipments/${showStatusModal.id}/status`,
+      { method: "PATCH", body: statusUpdate },
+      { scopes: ["shipments", "requests"], success: "Statut enregistré : le client le voit déjà.", successTitle: "Suivi Colis" }
     );
-    setShowStatusModal(null);
+    if (updated) setShowStatusModal(null);
   };
 
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !newPayment.client_id) return;
 
-    try {
-      const res = await fetch("/api/admin/payments", {
+    const recorded = await adminCall(
+      "/payments",
+      {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+        body: {
           client_id: newPayment.client_id,
           shipment_id: newPayment.shipment_id || undefined,
           amount_minor: Math.round(Number(newPayment.amount) * 100),
@@ -3369,60 +2087,21 @@ export default function AdminPage() {
           reference_code: newPayment.reference_code || undefined,
           status: newPayment.status || "PENDING",
           receipt_notes: newPayment.receipt_notes || undefined,
-        }),
-      });
-
-      if (res.ok) {
-        setShowRecordPaymentModal(null);
-        loadDashboardData(token);
-        return;
-      }
-    } catch {
-      // Poursuite directe
-    }
-
-    const recordedPayment = {
-      id: `pay-${Date.now()}`,
-      client_id: newPayment.client_id,
-      client_name: clientsList.find((c) => c.id === newPayment.client_id)?.full_name || "Client Roum",
-      shipment_id: newPayment.shipment_id || null,
-      tracking_number: shipments.find((s) => s.id === newPayment.shipment_id)?.tracking_number || null,
-      amount_minor: Math.round(Number(newPayment.amount) * 100),
-      currency: newPayment.currency,
-      payment_method: newPayment.payment_method,
-      payment_type: newPayment.payment_type,
-      reference_code: newPayment.reference_code || `REF-${Math.floor(10000 + Math.random() * 90000)}`,
-      status: newPayment.status || "CONFIRMED",
-      receipt_notes: newPayment.receipt_notes || null,
-      created_at: new Date().toISOString().replace("T", " ").substring(0, 19),
-    };
-    setPaymentsList((prev) => [recordedPayment, ...prev]);
-    setShowRecordPaymentModal(null);
+        },
+      },
+      { scopes: ["payments", "shipments"], success: "Paiement enregistré.", successTitle: "Finances & Caisse" }
+    );
+    if (recorded) setShowRecordPaymentModal(null);
   };
 
   const handleConfirmPayment = async (paymentId: string) => {
     if (!token) return;
     if (!confirm("Confirmer la bonne réception de ce paiement sur le compte / en caisse de Roum Transit ?")) return;
 
-    try {
-      const res = await fetch(`/api/admin/payments/${paymentId}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: "CONFIRMED" }),
-      });
-      if (res.ok) {
-        loadDashboardData(token);
-        return;
-      }
-    } catch {
-      // Poursuite directe
-    }
-
-    setPaymentsList((prev) =>
-      prev.map((p) => (p.id === paymentId ? { ...p, status: "CONFIRMED" } : p))
+    await adminCall(
+      `/payments/${paymentId}/status`,
+      { method: "PATCH", body: { status: "CONFIRMED" } },
+      { scopes: ["payments", "shipments"], success: "Paiement confirmé.", successTitle: "Finances & Caisse" }
     );
   };
 
@@ -3430,25 +2109,10 @@ export default function AdminPage() {
     if (!token) return;
     if (!confirm("Rejeter ou annuler ce paiement ?")) return;
 
-    try {
-      const res = await fetch(`/api/admin/payments/${paymentId}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: "CANCELLED" }),
-      });
-      if (res.ok) {
-        loadDashboardData(token);
-        return;
-      }
-    } catch {
-      // Poursuite directe
-    }
-
-    setPaymentsList((prev) =>
-      prev.map((p) => (p.id === paymentId ? { ...p, status: "CANCELLED" } : p))
+    await adminCall(
+      `/payments/${paymentId}/status`,
+      { method: "PATCH", body: { status: "CANCELLED" } },
+      { scopes: ["payments", "shipments"], success: "Paiement annulé.", successTitle: "Finances & Caisse" }
     );
   };
 
@@ -3489,303 +2153,130 @@ export default function AdminPage() {
   };
 
   const handleOpenRequestDetail = async (reqItem: any) => {
-    let freshest = { ...reqItem, items: reqItem.items || [] };
+    const initial = { ...reqItem, items: reqItem.items || [] };
+    setShowRequestDetailModal(initial);
+    initAdminQuoteFormForRequest(initial);
+
+    if (!token) return;
     try {
-      const savedStr = localStorage.getItem("roum_requests_data");
-      if (savedStr) {
-        const list = JSON.parse(savedStr);
-        const match = list.find(
-          (r: any) => (r.id && r.id === reqItem.id) || (r.reference && r.reference === reqItem.reference)
-        );
-        if (match) {
-          freshest = { ...freshest, ...match, items: match.items?.length ? match.items : freshest.items };
-        }
+      const data = await apiRequest<{ request: any; items: any[] }>(
+        `/api/admin/requests/${encodeURIComponent(reqItem.reference || reqItem.id)}`,
+        { token, timeoutMs: 60000 }
+      );
+      if (data.request) {
+        setShowRequestDetailModal({ ...data.request, items: data.items || [] });
+        initAdminQuoteFormForRequest(data.request);
       }
-    } catch {}
-
-    setShowRequestDetailModal(freshest);
-    initAdminQuoteFormForRequest(freshest);
-
-    const activeToken =
-      token ||
-      (typeof window !== "undefined"
-        ? sessionStorage.getItem("roum_admin_token") || localStorage.getItem("roum_admin_token")
-        : null) ||
-      "";
-
-    if (!activeToken) return;
-    try {
-      const res = await fetch(`/api/admin/requests/${encodeURIComponent(reqItem.reference || reqItem.id)}`, {
-        headers: { Authorization: `Bearer ${activeToken}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.request) {
-          const merged = {
-            ...freshest,
-            ...data.request,
-            items: data.items?.length ? data.items : (freshest.items?.length ? freshest.items : data.request.items || []),
-          };
-          setShowRequestDetailModal(merged);
-          initAdminQuoteFormForRequest(merged);
-        }
-      }
-    } catch {
-      // keep initial
+    } catch (err: any) {
+      triggerToast(err?.message || "Impossible de charger le dossier.", "Commandes Clients", "error");
     }
   };
 
-  // ÉTAPE 2 (Admin) : Enregistrer l'estimation du poids + devis et ouvrir WhatsApp avec le lien de paiement cliquable
-  const handleSaveQuoteAndSendPaymentWhatsApp = async (reqObj: any, openWhatsApp = true) => {
-    if (!reqObj) return;
+  // ÉTAPE 2 (Admin) : le devis est d'abord enregistré en base, le lien de paiement n'est envoyé qu'ensuite
+  const handleSaveQuoteAndSendPaymentWhatsApp = async (reqObj: any, openWhatsApp = true): Promise<any | null> => {
+    if (!reqObj) return null;
     const isSea =
       reqObj.shipping_mode_type === "SEA" ||
       String(reqObj.shipping_mode_name || "").toLowerCase().includes("maritime");
 
-    const activeToken =
-      token ||
-      (typeof window !== "undefined"
-        ? sessionStorage.getItem("roum_admin_token") || localStorage.getItem("roum_admin_token")
-        : null) ||
-      "";
-
-    const updatedFields = {
-      estimated_weight_kg: isSea ? null : Number(adminQuoteForm.weight_kg) || 1,
-      estimated_cbm: isSea ? Number(adminQuoteForm.volume_cbm) || 0.1 : null,
-      total_goods_fcfa: Number(adminQuoteForm.goods_fcfa) || 0,
-      shipping_fee_fcfa: Number(adminQuoteForm.shipping_fcfa) || 0,
-      total_amount_fcfa: Number(adminQuoteForm.total_fcfa) || 0,
-      status: reqObj.status === "CONVERTED" ? "CONVERTED" : "QUOTE_SENT",
-    };
-
-    updateClientRequestAdminQuote(reqObj.reference || reqObj.id, {
-      estimatedWeightKg: updatedFields.estimated_weight_kg,
-      estimatedCbm: updatedFields.estimated_cbm,
-      goodsTotalFcfa: updatedFields.total_goods_fcfa,
-      shippingFeeFcfa: updatedFields.shipping_fee_fcfa,
-      totalAmountFcfa: updatedFields.total_amount_fcfa,
-      status: updatedFields.status,
-    });
-
-    const updatedReq = { ...reqObj, ...updatedFields };
-    setShowRequestDetailModal(updatedReq);
-    setRequestsList((prev) => {
-      const next = prev.map((r) =>
-        r.id === reqObj.id || r.reference === reqObj.reference ? { ...r, ...updatedFields } : r
-      );
-      try {
-        localStorage.setItem("roum_requests_data", JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-
-    // Synchronisation directe dans la base de données SQLite D1
-    if (activeToken) {
-      try {
-        await fetch(`/api/admin/requests/${encodeURIComponent(reqObj.reference || reqObj.id)}/quote`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${activeToken}`,
-          },
-          body: JSON.stringify({
-            estimatedWeightKg: updatedFields.estimated_weight_kg,
-            estimatedCbm: updatedFields.estimated_cbm,
-            goodsTotalFcfa: updatedFields.total_goods_fcfa,
-            shippingFeeFcfa: updatedFields.shipping_fee_fcfa,
-            totalAmountFcfa: updatedFields.total_amount_fcfa,
-            status: updatedFields.status,
-            shippingModeName: reqObj.shipping_mode_name,
-          }),
-        });
-        loadDashboardData(activeToken);
-      } catch (err) {
-        console.error("Erreur enregistrement devis D1:", err);
+    const saved = await adminCall<{ request: any }>(
+      `/requests/${encodeURIComponent(reqObj.reference || reqObj.id)}/quote`,
+      {
+        method: "PATCH",
+        body: {
+          estimatedWeightKg: isSea ? null : Number(adminQuoteForm.weight_kg) || 1,
+          estimatedCbm: isSea ? Number(adminQuoteForm.volume_cbm) || 0.1 : null,
+          goodsTotalFcfa: Number(adminQuoteForm.goods_fcfa) || 0,
+          shippingFeeFcfa: Number(adminQuoteForm.shipping_fcfa) || 0,
+          totalAmountFcfa: Number(adminQuoteForm.total_fcfa) || 0,
+          shippingModeName: reqObj.shipping_mode_name,
+          expectedVersion: reqObj.row_version,
+        },
+      },
+      {
+        scopes: ["requests", "shipments", "payments"],
+        success: `Devis enregistré (${Number(adminQuoteForm.total_fcfa).toLocaleString("fr-FR")} FCFA) : le client le voit déjà.`,
+        successTitle: "Devis Enregistré en Base",
       }
-    }
+    );
+    if (!saved?.request) return null;
 
-    const waUrl = buildAdminQuotePaymentWhatsAppUrl({
-      clientPhone: updatedReq.client_phone || "",
-      clientName: updatedReq.client_name || "Client",
-      reference: updatedReq.reference || "DOSSIER",
-      destination: updatedReq.destination_country || "Côte d'Ivoire",
-      shippingMode: updatedReq.shipping_mode_name || (isSea ? "Voie Maritime" : "Voie Aérienne"),
-      estimatedWeightKg: isSea ? undefined : Number(adminQuoteForm.weight_kg) || 1,
-      estimatedCbm: isSea ? Number(adminQuoteForm.volume_cbm) || 0.1 : undefined,
-      productName: updatedReq.product_name || updatedReq.items?.[0]?.product_name || "Article commandé",
-      productImage:
-        updatedReq.product_image && !updatedReq.product_image.startsWith("data:")
-          ? updatedReq.product_image
-          : undefined,
-      productQuantity: Number(updatedReq.product_quantity || updatedReq.items?.[0]?.quantity || 1),
-      goodsTotalFcfa: Number(adminQuoteForm.goods_fcfa) || 0,
-      shippingFeeFcfa: Number(adminQuoteForm.shipping_fcfa) || 0,
-      totalAmountFcfa: Number(adminQuoteForm.total_fcfa) || 0,
-      waveNumber: companySettings.payment_wave_ci || "+225 07 87 99 44 12",
-      orangeNumber: companySettings.payment_orange_money_ci || "+225 07 00 00 00 00",
-      moroccoRib: `${companySettings.payment_morocco_bank || "CIH Bank"} (${companySettings.payment_morocco_rib || "230 780 0001234567890123 45"})`,
-    });
-
-    triggerToast(
-      `Devis enregistré & synchronisé (${Number(adminQuoteForm.total_fcfa).toLocaleString("fr-FR")} FCFA) !`,
-      "Devis Enregistré en Base"
+    const updatedReq = saved.request;
+    setShowRequestDetailModal((open: any) =>
+      open && open.id === updatedReq.id
+        ? { ...open, ...updatedReq, payment_receipt_url: updatedReq.payment_receipt_url || open.payment_receipt_url }
+        : open
     );
 
     if (openWhatsApp && typeof window !== "undefined") {
+      const waUrl = buildAdminQuotePaymentWhatsAppUrl({
+        clientPhone: updatedReq.client_phone || "",
+        clientName: updatedReq.client_name || "Client",
+        reference: updatedReq.reference,
+        accessKey: updatedReq.access_key,
+        destination: updatedReq.destination_country || "Côte d'Ivoire",
+        shippingMode: updatedReq.shipping_mode_name || (isSea ? "Voie Maritime" : "Voie Aérienne"),
+        estimatedWeightKg: isSea ? undefined : Number(adminQuoteForm.weight_kg) || 1,
+        estimatedCbm: isSea ? Number(adminQuoteForm.volume_cbm) || 0.1 : undefined,
+        productName: updatedReq.product_name || updatedReq.items?.[0]?.product_name || "Article commandé",
+        productQuantity: Number(updatedReq.product_quantity || updatedReq.items?.[0]?.quantity || 1),
+        goodsTotalFcfa: Number(adminQuoteForm.goods_fcfa) || 0,
+        shippingFeeFcfa: Number(adminQuoteForm.shipping_fcfa) || 0,
+        totalAmountFcfa: Number(adminQuoteForm.total_fcfa) || 0,
+        waveNumber: companySettings.payment_wave_ci,
+        orangeNumber: companySettings.payment_orange_money_ci,
+        moroccoRib: `${companySettings.payment_morocco_bank || ""} (${companySettings.payment_morocco_rib || ""})`,
+      });
       window.open(waUrl, "_blank", "noopener,noreferrer");
     }
+
+    return updatedReq;
   };
 
-  // ÉTAPE 3 (Admin) : Confirmer l'encaissement, générer le N° de Suivi Officiel (Tracking Number) et créer l'expédition active
+  // ÉTAPE 3 (Admin) : le serveur crée en une transaction l'expédition, le suivi et le paiement en caisse
   const handleConfirmEncashmentAndGenerateTracking = async (reqObj: any, openWhatsApp = true) => {
     if (!reqObj) return;
     const isSea =
       reqObj.shipping_mode_type === "SEA" ||
       String(reqObj.shipping_mode_name || "").toLowerCase().includes("maritime");
 
-    const now = new Date();
-    const yy = String(now.getFullYear()).slice(-2);
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const rand = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const officialTracking =
-      reqObj.tracking_number && String(reqObj.tracking_number).startsWith("RM-") && !String(reqObj.tracking_number).startsWith("RM-ALI-")
-        ? reqObj.tracking_number
-        : `RM-${isSea ? "SEA" : "AIR"}-${yy}${mm}-${rand}`;
+    // Les valeurs du formulaire ne concernent que le dossier ouvert à l'écran.
+    const formApplies = showRequestDetailModal?.id === reqObj.id;
+    const finalWeight = isSea ? null : Number((formApplies && adminQuoteForm.weight_kg) || reqObj.estimated_weight_kg) || null;
+    const finalVolume = isSea ? Number((formApplies && adminQuoteForm.volume_cbm) || reqObj.estimated_cbm) || null : null;
+    const finalTotal = Number((formApplies && adminQuoteForm.total_fcfa) || reqObj.total_amount_fcfa) || 0;
 
-    const finalWeight = isSea ? null : Number(adminQuoteForm.weight_kg || reqObj.estimated_weight_kg || 2);
-    const finalVolume = isSea ? Number(adminQuoteForm.volume_cbm || reqObj.estimated_cbm || 0.1) : null;
-    const finalTotal = Number(adminQuoteForm.total_fcfa || reqObj.total_amount_fcfa || 0);
+    const confirmed = await adminCall<{ tracking_number: string; request: any; already_confirmed?: boolean }>(
+      `/requests/${encodeURIComponent(reqObj.reference || reqObj.id)}/confirm-tracking`,
+      {
+        method: "POST",
+        // Rejouable : le serveur renvoie le même numéro sans rien créer de plus.
+        retries: 2,
+        body: {
+          weightKg: finalWeight,
+          volumeCbm: finalVolume,
+          goodsTotalFcfa: Number((formApplies && adminQuoteForm.goods_fcfa) || reqObj.total_goods_fcfa) || 0,
+          shippingFeeFcfa: Number((formApplies && adminQuoteForm.shipping_fcfa) || reqObj.shipping_fee_fcfa) || 0,
+          totalAmountFcfa: finalTotal > 0 ? finalTotal : undefined,
+        },
+      },
+      { scopes: ["requests", "shipments", "payments", "clients"], successTitle: "Suivi Colis Actif" }
+    );
+    if (!confirmed?.tracking_number) return;
 
-    const updatedFields = {
-      tracking_number: officialTracking,
-      status: "CONVERTED",
-      estimated_weight_kg: finalWeight,
-      estimated_cbm: finalVolume,
-      total_goods_fcfa: Number(adminQuoteForm.goods_fcfa || reqObj.total_goods_fcfa || 0),
-      shipping_fee_fcfa: Number(adminQuoteForm.shipping_fcfa || reqObj.shipping_fee_fcfa || 0),
-      total_amount_fcfa: finalTotal,
-    };
+    const officialTracking = confirmed.tracking_number;
+    triggerToast(`Encaissement confirmé ! N° de Suivi officiel : ${officialTracking}`, "Suivi Colis Actif");
 
-    updateClientRequestAdminQuote(reqObj.reference || reqObj.id, {
-      estimatedWeightKg: updatedFields.estimated_weight_kg,
-      estimatedCbm: updatedFields.estimated_cbm,
-      goodsTotalFcfa: updatedFields.total_goods_fcfa,
-      shippingFeeFcfa: updatedFields.shipping_fee_fcfa,
-      totalAmountFcfa: updatedFields.total_amount_fcfa,
-      trackingNumber: officialTracking,
-      status: "CONVERTED",
-    });
-
-    const activeToken =
-      token ||
-      (typeof window !== "undefined"
-        ? sessionStorage.getItem("roum_admin_token") || localStorage.getItem("roum_admin_token")
-        : null) ||
-      "";
-
-    // Connexion directe Admin -> Base de données SQLite D1 -> Client (création du suivi actif en BDD)
-    if (activeToken) {
-      try {
-        await fetch(`/api/v1/admin/requests/${encodeURIComponent(reqObj.reference || reqObj.id)}/confirm-tracking`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${activeToken}`,
-          },
-          body: JSON.stringify({
-            trackingNumber: officialTracking,
-            estimatedWeightKg: finalWeight,
-            estimatedCbm: finalVolume,
-            goodsTotalFcfa: updatedFields.total_goods_fcfa,
-            shippingFeeFcfa: updatedFields.shipping_fee_fcfa,
-            totalAmountFcfa: finalTotal,
-            shippingModeType: isSea ? "SEA" : "AIR",
-            shippingModeName: reqObj.shipping_mode_name || (isSea ? "Voie Maritime Groupage" : "Voie Aérienne Express"),
-          }),
-        });
-        loadDashboardData(activeToken);
-      } catch (err) {
-        console.error("Erreur confirmation suivi D1:", err);
-      }
+    if (confirmed.request) {
+      setShowRequestDetailModal((open: any) =>
+        open && open.id === confirmed.request.id
+          ? { ...open, ...confirmed.request, payment_receipt_url: confirmed.request.payment_receipt_url || open.payment_receipt_url }
+          : open
+      );
     }
 
-    const updatedReq = { ...reqObj, ...updatedFields };
-    setShowRequestDetailModal(updatedReq);
-    setRequestsList((prev) => {
-      const next = prev.map((r) =>
-        r.id === reqObj.id || r.reference === reqObj.reference ? { ...r, ...updatedFields } : r
-      );
-      try {
-        localStorage.setItem("roum_requests_data", JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-
-    // Création automatique de l'expédition active pour que le lien /tracking/RM-... fonctionne immédiatement
-    const destParts = String(updatedReq.destination_country || "Côte d'Ivoire — Abidjan").split("—");
-    const destCountryClean = destParts[0]?.trim() || "Côte d'Ivoire";
-    const destCityClean = destParts[1]?.trim() || "Abidjan";
-
-    const newActiveShipment = {
-      id: `ship-${Date.now()}`,
-      tracking_number: officialTracking,
-      reference: updatedReq.reference,
-      client_name: updatedReq.client_name || "Client ROUM",
-      client_phone: updatedReq.client_phone || "",
-      client_country: destCountryClean,
-      client_city: destCityClean,
-      origin_city: isSea ? "Yiwu" : "Guangzhou",
-      origin_country: updatedReq.origin_country || "Chine",
-      destination_city: destCityClean,
-      destination_country: destCountryClean,
-      shipping_mode_name: updatedReq.shipping_mode_name || (isSea ? "Voie Maritime Groupage" : "Voie Aérienne Express"),
-      shipping_mode_type: isSea ? "SEA" : "AIR",
-      current_status: "RECEIVED_AT_HUB",
-      current_status_code: "RECEIVED_AT_ORIGIN",
-      current_status_label: "Paiement confirmé · Colis pris en charge à l'entrepôt Chine",
-      status_label: "Paiement confirmé · Colis pris en charge à l'entrepôt Chine",
-      parcel_count: 1,
-      total_parcels_count: 1,
-      total_weight_kg: finalWeight || 2,
-      total_volume_cbm: finalVolume || 0.05,
-      estimated_price_minor: Math.round(finalTotal * 100),
-      final_price_minor: Math.round(finalTotal * 100),
-      currency: "FCFA",
-      payment_status: "PAID",
-      product_name: updatedReq.product_name,
-      product_image: updatedReq.product_image,
-      product_url: updatedReq.product_url,
-      shipping_mark: updatedReq.shipping_mark,
-      created_at: new Date().toISOString().replace("T", " ").substring(0, 19),
-      parcels: [
-        {
-          id: `p-${Date.now()}`,
-          package_label: updatedReq.product_name || `Dossier ${updatedReq.reference}`,
-          weight_kg: finalWeight || 2,
-          volume_cbm: finalVolume || 0.05,
-          description: updatedReq.description || updatedReq.product_name || "Marchandise commandée",
-        },
-      ],
-    };
-
-    setShipments((prev) => {
-      const existsIdx = prev.findIndex((s) => s.tracking_number === officialTracking);
-      const next =
-        existsIdx >= 0
-          ? prev.map((s, idx) => (idx === existsIdx ? { ...s, ...newActiveShipment } : s))
-          : [newActiveShipment, ...prev];
-      try {
-        localStorage.setItem("roum_shipments_data", JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-
-    triggerToast(
-      `Encaissement confirmé ! N° de Suivi officiel attribué : ${officialTracking}`,
-      "Suivi Colis Actif"
-    );
-
     if (openWhatsApp && typeof window !== "undefined") {
+      const updatedReq = confirmed.request || reqObj;
       const waUrl = buildAdminPaymentConfirmedTrackingWhatsAppUrl({
         clientPhone: updatedReq.client_phone || "",
         clientName: updatedReq.client_name || "Client",
@@ -3803,20 +2294,8 @@ export default function AdminPage() {
   };
 
   const handleOpenConvertModal = (reqItem: any) => {
-    const defaultFallbackRoutes = [
-      { id: "route-cn-ci-gz", origin_country: "Chine", destination_country: "Côte d'Ivoire" },
-      { id: "route-cn-sn", origin_country: "Chine", destination_country: "Sénégal" },
-      { id: "route-cn-ml", origin_country: "Chine", destination_country: "Mali" },
-      { id: "route-cn-bf", origin_country: "Chine", destination_country: "Burkina Faso" },
-      { id: "route-cn-gn", origin_country: "Chine", destination_country: "Guinée" },
-      { id: "route-cn-cm-gz", origin_country: "Chine", destination_country: "Cameroun" },
-      { id: "route-cn-bj-gz", origin_country: "Chine", destination_country: "Bénin" },
-      { id: "route-ae-ci", origin_country: "Émirats Arabes Unis", destination_country: "Côte d'Ivoire" },
-      { id: "route-ma-sn", origin_country: "Maroc", destination_country: "Sénégal" },
-      { id: "route-fr-ci", origin_country: "France", destination_country: "Côte d'Ivoire" },
-    ];
-    const routesPool = availableRoutes && availableRoutes.length > 0 ? availableRoutes : defaultFallbackRoutes;
-    let matchedRouteId = routesPool[0]?.id || "route-cn-ci-gz";
+    const routesPool = availableRoutes;
+    let matchedRouteId = routesPool[0]?.id || "";
     if (reqItem.destination_country) {
       const found = routesPool.find(
         (r) =>
@@ -3826,14 +2305,8 @@ export default function AdminPage() {
       if (found) matchedRouteId = found.id;
     }
 
-    const defaultFallbackModes = [
-      { id: "AIR_EXPRESS", name: "Avion Express (4 à 5 jours)" },
-      { id: "AIR_STANDARD", name: "Avion Normal (10 à 14 jours)" },
-      { id: "AIR_SPECIAL", name: "Avion Spécial Batteries & High-Tech (7 à 10 jours)" },
-      { id: "SEA_LCL", name: "Voie Maritime Groupage (35 à 45 jours)" },
-    ];
-    const modesPool = availableModes && availableModes.length > 0 ? availableModes : defaultFallbackModes;
-    let matchedModeId = modesPool[0]?.id || "AIR_STANDARD";
+    const modesPool = availableModes;
+    let matchedModeId = modesPool[0]?.id || "";
     if (reqItem.shipping_mode_id || reqItem.shipping_mode_type) {
       const found = modesPool.find(
         (m) =>
@@ -3860,22 +2333,12 @@ export default function AdminPage() {
     e.preventDefault();
     if (!showConvertRequestModal) return;
 
-    const activeToken =
-      token ||
-      (typeof window !== "undefined"
-        ? sessionStorage.getItem("roum_admin_token") || localStorage.getItem("roum_admin_token")
-        : null) ||
-      "";
-
-    try {
-      const targetIdentifier = showConvertRequestModal.reference || showConvertRequestModal.id;
-      const res = await fetch(`/api/admin/requests/${encodeURIComponent(targetIdentifier)}/convert`, {
+    const targetIdentifier = showConvertRequestModal.reference || showConvertRequestModal.id;
+    const converted = await adminCall<{ tracking_number: string }>(
+      `/requests/${encodeURIComponent(targetIdentifier)}/convert`,
+      {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(activeToken ? { Authorization: `Bearer ${activeToken}` } : {}),
-        },
-        body: JSON.stringify({
+        body: {
           shipping_mode_id: convertForm.shipping_mode_id,
           route_id: convertForm.route_id,
           weight_kg: Number(convertForm.weight_kg),
@@ -3884,55 +2347,14 @@ export default function AdminPage() {
           description: convertForm.description,
           estimated_price_minor: Math.round(Number(convertForm.estimated_price) * 100),
           currency: convertForm.currency,
-        }),
-      });
+        },
+      },
+      { scopes: ["requests", "shipments", "clients"], successTitle: "Conversion réussie" }
+    );
+    if (!converted?.tracking_number) return;
 
-      if (res.ok) {
-        const data = await res.json();
-        const trkNum = data.tracking_number;
-        triggerToast(`Dossier converti avec succès ! N° de suivi attribué : ${trkNum}`, "Conversion réussie");
-
-        setRequestsList((prev) => {
-          const next = prev.map((r) =>
-            (r.id && r.id === showConvertRequestModal.id) || (r.reference && r.reference === showConvertRequestModal.reference)
-              ? { ...r, status: "CONVERTED", tracking_number: trkNum }
-              : r
-          );
-          try {
-            localStorage.setItem("roum_requests_data", JSON.stringify(next));
-          } catch {}
-          return next;
-        });
-
-        setShowConvertRequestModal(null);
-        if (showRequestDetailModal && ((showRequestDetailModal.id && showRequestDetailModal.id === showConvertRequestModal.id) || (showRequestDetailModal.reference && showRequestDetailModal.reference === showConvertRequestModal.reference))) {
-          setShowRequestDetailModal((prev: any) => prev ? { ...prev, status: "CONVERTED", tracking_number: trkNum } : null);
-        }
-        if (activeToken) {
-          loadDashboardData(activeToken);
-        }
-        return;
-      }
-    } catch {
-      // Poursuite directe
-    }
-    const newNum = `RT-${Math.floor(100000 + Math.random() * 900000)}`;
-    triggerToast(`Dossier converti avec succès ! N° de suivi attribué : ${newNum}`, "Conversion réussie");
-    setRequestsList((prev) => {
-      const next = prev.map((r) =>
-        (r.id && r.id === showConvertRequestModal.id) || (r.reference && r.reference === showConvertRequestModal.reference)
-          ? { ...r, status: "CONVERTED", tracking_number: newNum }
-          : r
-      );
-      try {
-        localStorage.setItem("roum_requests_data", JSON.stringify(next));
-      } catch {}
-      return next;
-    });
+    triggerToast(`Dossier converti ! N° de suivi attribué : ${converted.tracking_number}`, "Conversion réussie");
     setShowConvertRequestModal(null);
-    if (showRequestDetailModal && ((showRequestDetailModal.id && showRequestDetailModal.id === showConvertRequestModal.id) || (showRequestDetailModal.reference && showRequestDetailModal.reference === showConvertRequestModal.reference))) {
-      setShowRequestDetailModal((prev: any) => prev ? { ...prev, status: "CONVERTED", tracking_number: newNum } : null);
-    }
   };
 
   const handleOpenIntakeModal = (shipment: any) => {
@@ -3951,46 +2373,26 @@ export default function AdminPage() {
     e.preventDefault();
     if (!token || !showIntakeModal) return;
 
-    try {
-      const res = await fetch(`/api/admin/shipments/${showIntakeModal.id}/intake`, {
+    const saved = await adminCall(
+      `/shipments/${showIntakeModal.id}/intake`,
+      {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+        body: {
           total_weight_kg: Number(intakeForm.total_weight_kg),
           total_volume_cbm: Number(intakeForm.total_volume_cbm) || undefined,
           hub_location: intakeForm.hub_location,
           status: intakeForm.status,
           comment: intakeForm.comment,
           final_price_minor: intakeForm.final_price_minor ? Number(intakeForm.final_price_minor) : undefined,
-        }),
-      });
-
-      if (res.ok) {
-        triggerToast("Réception physique et pesée réelle enregistrées avec succès !", "Réception Magasin");
-        setShowIntakeModal(null);
-        loadDashboardData(token);
-        return;
+        },
+      },
+      {
+        scopes: ["shipments", "requests", "payments"],
+        success: "Réception physique et pesée réelle enregistrées !",
+        successTitle: "Réception Magasin",
       }
-    } catch {
-      // Poursuite directe
-    }
-    triggerToast("Réception physique et pesée réelle enregistrées avec succès !", "Réception Magasin");
-    setShipments((prev) =>
-      prev.map((s) =>
-        s.id === showIntakeModal.id
-          ? {
-              ...s,
-              total_weight_kg: Number(intakeForm.total_weight_kg) || s.total_weight_kg,
-              current_status_code: intakeForm.status,
-              current_status_label: "Colis reçu et pesé au magasin",
-            }
-          : s
-      )
     );
-    setShowIntakeModal(null);
+    if (saved) setShowIntakeModal(null);
   };
 
   const handleOpenShipmentDetail = async (shipment: any) => {
@@ -4019,78 +2421,26 @@ export default function AdminPage() {
     e.preventDefault();
     if (!token) return;
 
-    try {
-      const res = await fetch("/api/admin/clients", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(newClient),
-      });
-
-      if (res.ok) {
-        setShowCreateClientModal(false);
-        triggerToast("Nouveau client enregistré avec succès !", "Client Ajouté");
-        loadDashboardData(token);
-      } else {
-        const d = await res.json();
-        triggerToast(d.error || "Erreur lors de la création du client.", "Information", "error");
-      }
-    } catch {
-      triggerToast("Client enregistré dans la base locale.", "Mode Hors-ligne");
-      const localC = {
-        id: `cli-${Date.now()}`,
-        full_name: newClient.full_name,
-        phone: newClient.phone_whatsapp,
-        email: newClient.email || null,
-        city: newClient.city || "Abidjan",
-        country: newClient.country || "Côte d'Ivoire",
-        address: newClient.address || "",
-        created_at: new Date().toISOString(),
-      };
-      setClientsList((prev) => [localC, ...prev]);
-      setShowCreateClientModal(false);
-    }
+    const created = await adminCall(
+      "/clients",
+      { method: "POST", body: newClient },
+      { scopes: ["clients"], success: "Nouveau client enregistré avec succès !", successTitle: "Client Ajouté" }
+    );
+    if (created) setShowCreateClientModal(false);
   };
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
 
-    try {
-      const res = await fetch("/api/admin/tasks", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(newTask),
-      });
-
-      if (res.ok) {
-        setShowCreateTaskModal(false);
-        triggerToast("Nouvelle tâche planifiée !", "Tâche Créée");
-        setNewTask({ title: "", description: "", category: "GENERAL", priority: "MEDIUM", due_date: "" });
-        loadDashboardData(token);
-      } else {
-        const d = await res.json();
-        triggerToast(d.error || "Erreur lors de la création de la tâche.", "Information", "error");
-      }
-    } catch {
-      triggerToast("Tâche enregistrée en mémoire locale.", "Mode Hors-ligne");
-      const localT = {
-        id: `task-${Date.now()}`,
-        title: newTask.title,
-        description: newTask.description,
-        category: newTask.category,
-        priority: newTask.priority,
-        status: "TODO",
-        due_date: newTask.due_date || null,
-        created_at: new Date().toISOString(),
-      };
-      setTasksList((prev) => [localT, ...prev]);
+    const created = await adminCall(
+      "/tasks",
+      { method: "POST", body: { ...newTask, due_date: newTask.due_date || undefined } },
+      { scopes: ["tasks"], success: "Nouvelle tâche planifiée !", successTitle: "Tâche Créée" }
+    );
+    if (created) {
       setShowCreateTaskModal(false);
+      setNewTask({ title: "", description: "", category: "GENERAL", priority: "MEDIUM", due_date: "" });
     }
   };
 
@@ -4098,26 +2448,15 @@ export default function AdminPage() {
     if (!token) return;
     const nextStatus = currentStatus === "DONE" ? "TODO" : "DONE";
 
-    setTasksList((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, status: nextStatus } : t))
-    );
-    triggerToast(nextStatus === "DONE" ? "Tâche marquée comme terminée !" : "Tâche réouverte", "Tâches");
-
-    try {
-      const res = await fetch(`/api/admin/tasks/${taskId}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: nextStatus }),
-      });
-      if (res.ok) {
-        loadDashboardData(token);
+    await adminCall(
+      `/tasks/${taskId}/status`,
+      { method: "PATCH", body: { status: nextStatus } },
+      {
+        scopes: ["tasks"],
+        success: nextStatus === "DONE" ? "Tâche marquée comme terminée !" : "Tâche réouverte",
+        successTitle: "Tâches",
       }
-    } catch {
-      // Données déjà à jour
-    }
+    );
   };
 
   const handleCreateRole = async (e: React.FormEvent) => {
@@ -4134,17 +2473,11 @@ export default function AdminPage() {
     e.preventDefault();
     if (!token) return;
 
-    try {
-      const modeObj = modesList.find((m) => m.id === newTariff.shipping_mode_id);
-      const isSea = newTariff.shipping_mode_id.includes("SEA") || (modeObj?.type === "SEA");
-
-      const res = await fetch("/api/admin/tariffs", {
+    const created = await adminCall(
+      "/tariffs",
+      {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+        body: {
           origin_country: newTariff.origin_country,
           origin_city: newTariff.origin_city,
           destination_country: newTariff.destination_country,
@@ -4155,36 +2488,14 @@ export default function AdminPage() {
           minimum_charge_minor: Math.round(Number(newTariff.minimum_charge) * 100),
           estimated_days_min: Number(newTariff.estimated_days_min) || null,
           estimated_days_max: Number(newTariff.estimated_days_max) || null,
-        }),
-      });
-
-      // Ajout optimiste immédiat
-      const newTariffItem = {
-        id: `tariff-${Date.now()}`,
-        origin_country: newTariff.origin_country,
-        origin_city: newTariff.origin_city,
-        destination_country: newTariff.destination_country,
-        destination_city: newTariff.destination_city,
-        shipping_mode_name: newTariff.service_name || modeObj?.name || (isSea ? "Voie Maritime (Le CBM)" : "Voie Aérienne Express (4 jours)"),
-        shipping_mode_type: isSea ? "SEA" : "AIR",
-        category_tag: newTariff.category_tag || (isSea ? "Voie Maritime" : "Voie Aérienne"),
-        pricing_basis: isSea ? "PER_CBM" : "PER_KG",
-        currency: newTariff.currency,
-        price_per_unit_minor: Math.round(Number(newTariff.price_per_unit) * 100),
-        minimum_charge_minor: Math.round(Number(newTariff.minimum_charge) * 100),
-        estimated_days_min: Number(newTariff.estimated_days_min) || 3,
-        estimated_days_max: Number(newTariff.estimated_days_max) || 7,
-        note: newTariff.note || "",
-        is_active: 1,
-      };
-
-      setTariffsList((prev) => [newTariffItem, ...prev]);
-      setShowCreateTariffModal(false);
-      triggerToast("Nouveau tarif ajouté avec succès !", "Grille Tarifaire");
-    } catch {
-      setShowCreateTariffModal(false);
-      triggerToast("Tarif enregistré en mémoire locale.", "Grille Tarifaire");
-    }
+          service_name: newTariff.service_name || undefined,
+          category_tag: newTariff.category_tag || undefined,
+          note: newTariff.note || undefined,
+        },
+      },
+      { scopes: ["tariffs"], success: "Nouveau tarif ajouté : il est déjà visible par les clients.", successTitle: "Grille Tarifaire" }
+    );
+    if (created) setShowCreateTariffModal(false);
   };
 
   const handleCreateAirRoute = async (e: React.FormEvent) => {
@@ -4238,31 +2549,14 @@ export default function AdminPage() {
       newItems.push(item2);
     }
 
-    let nextList: any[] = [];
-    setTariffsList((prev) => {
-      nextList = [...newItems, ...prev];
-      return nextList;
-    });
-
-    try {
-      localStorage.setItem("roum_tariffs_data", JSON.stringify(nextList.length > 0 ? nextList : newItems));
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("roum_tariffs_updated"));
-      }
-    } catch {}
-
-    try {
-      if (token) {
-        for (const it of newItems) {
-          await fetch("/api/admin/tariffs", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-            body: JSON.stringify(it),
-          });
-        }
-      }
-    } catch (err) {
-      console.error("Air route save error:", err);
+    for (const item of newItems) {
+      const { id: _localId, ...payload } = item;
+      const saved = await adminCall(
+        "/tariffs",
+        { method: "POST", body: { ...payload, service_name: item.shipping_mode_name } },
+        { scopes: ["tariffs"] }
+      );
+      if (!saved) return;
     }
 
     setShowCreateAirRouteModal(false);
@@ -4309,30 +2603,13 @@ export default function AdminPage() {
       is_active: 1,
     };
 
-    let nextList: any[] = [];
-    setTariffsList((prev) => {
-      nextList = [newMoroccoTariff, ...prev];
-      return nextList;
-    });
-
-    try {
-      localStorage.setItem("roum_tariffs_data", JSON.stringify(nextList.length > 0 ? nextList : [newMoroccoTariff]));
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("roum_tariffs_updated"));
-      }
-    } catch {}
-
-    try {
-      if (token) {
-        await fetch("/api/admin/tariffs", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify(newMoroccoTariff),
-        });
-      }
-    } catch (err) {
-      console.error("Morocco tariff save error:", err);
-    }
+    const { id: _localId, ...moroccoPayload } = newMoroccoTariff;
+    const savedMorocco = await adminCall(
+      "/tariffs",
+      { method: "POST", body: moroccoPayload },
+      { scopes: ["tariffs"] }
+    );
+    if (!savedMorocco) return;
 
     setShowAddMoroccoCountryModal(false);
     setSaveConfirmationPopup({
@@ -4348,7 +2625,7 @@ export default function AdminPage() {
     });
   };
 
-  const handleAddHub = (e: React.FormEvent) => {
+  const handleAddHub = async (e: React.FormEvent) => {
     e.preventDefault();
     const id = `hub-custom-${Date.now()}`;
     const countryInfo = [...STRATEGIC_HUBS, ...ALL_WORLD_COUNTRIES].find(
@@ -4368,10 +2645,8 @@ export default function AdminPage() {
     };
 
     const updated = [...customHubs, createdHub];
+    if (!(await persistHubs(updated))) return;
     setCustomHubs(updated);
-    try {
-      localStorage.setItem("roum_custom_hubs", JSON.stringify(updated));
-    } catch {}
 
     setShowAddHubModal(false);
     setSaveConfirmationPopup({
@@ -4387,72 +2662,32 @@ export default function AdminPage() {
     });
   };
 
-  const handleDeleteHub = (hubId: string) => {
+  const handleDeleteHub = async (hubId: string) => {
     const updated = customHubs.filter((h) => h.id !== hubId);
-    setCustomHubs(updated);
-    try {
-      localStorage.setItem("roum_custom_hubs", JSON.stringify(updated));
-    } catch {}
-    triggerToast("Entrepôt retiré avec succès.", "Entrepôts Internationaux");
+    const saved = await persistHubs(updated, {
+      success: "Entrepôt retiré avec succès.",
+      successTitle: "Entrepôts Internationaux",
+    });
+    if (saved) setCustomHubs(updated);
   };
 
   const handleDeleteTariff = async (tariffId: string) => {
-    const activeToken = token || (typeof window !== "undefined" ? sessionStorage.getItem("roum_admin_token") || localStorage.getItem("roum_admin_token") : null) || "roum_local_admin_session";
-    setTariffsList((prev) => {
-      const updated = prev.filter((t) => t.id !== tariffId);
-      try {
-        localStorage.setItem("roum_tariffs_data", JSON.stringify(updated));
-      } catch {}
-      return updated;
-    });
-    setPendingTariffEdits((prev) => {
-      if (!prev[tariffId]) return prev;
-      const copy = { ...prev };
-      delete copy[tariffId];
-      return copy;
-    });
-    triggerToast("Tarif retiré de la grille.", "Tarif Supprimé");
-
-    try {
-      await fetch(`/api/admin/tariffs/${tariffId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${activeToken}`,
-        },
-      });
-    } catch {
-      // Échec silencieux car déjà retiré de la liste locale
-    }
+    await adminCall(
+      `/tariffs/${tariffId}`,
+      { method: "DELETE" },
+      { scopes: ["tariffs"], success: "Tarif retiré de la grille.", successTitle: "Tarif Supprimé" }
+    );
   };
 
   const handleUpdateRequestStatus = async (requestId: string, newStatus: string) => {
-    const activeToken =
-      token ||
-      (typeof window !== "undefined"
-        ? sessionStorage.getItem("roum_admin_token") || localStorage.getItem("roum_admin_token")
-        : null) ||
-      "";
-
-    // 1. Mise à jour synchrone de la liste et persistance immédiate dans localStorage
-    setRequestsList((prev) => {
-      const next = prev.map((r) =>
-        (r.id && r.id === requestId) || (r.reference && r.reference === requestId)
-          ? { ...r, status: newStatus }
-          : r
-      );
-      try {
-        localStorage.setItem("roum_requests_data", JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-
-    // 2. Mise à jour de la modale ouverte si elle correspond à cette requête
-    setShowRequestDetailModal((prev: any) => {
-      if (prev && ((prev.id && prev.id === requestId) || (prev.reference && prev.reference === requestId))) {
-        return { ...prev, status: newStatus };
+    // « Payé » n'est pas un simple libellé : c'est l'encaissement qui crée l'expédition et le suivi.
+    if (newStatus === "CONVERTED") {
+      const reqObj = requestsList.find((r) => r.id === requestId || r.reference === requestId);
+      if (reqObj && !reqObj.shipment_id) {
+        await handleConfirmEncashmentAndGenerateTracking(reqObj, false);
+        return;
       }
-      return prev;
-    });
+    }
 
     const label =
       newStatus === "NEW"
@@ -4469,138 +2704,71 @@ export default function AdminPage() {
         ? "ANNULÉ"
         : newStatus;
 
-    triggerToast(`Statut mis à jour : ${label}`, "Commandes Clients");
-
-    // 3. Persistance dans SQLite D1 via Hono backend
-    if (activeToken) {
-      try {
-        const res = await fetch(`/api/admin/requests/${encodeURIComponent(requestId)}/status`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${activeToken}`,
-          },
-          body: JSON.stringify({ status: newStatus }),
-        });
-        if (res.ok) {
-          loadDashboardData(activeToken);
-        }
-      } catch (err) {
-        console.error("Erreur mise à jour statut D1:", err);
-      }
-    }
+    await adminCall(
+      `/requests/${encodeURIComponent(requestId)}/status`,
+      { method: "PATCH", body: { status: newStatus } },
+      { scopes: ["requests", "shipments"], success: `Statut mis à jour : ${label}`, successTitle: "Commandes Clients" }
+    );
   };
 
-  // --- ACTIONS DES MODALES MODIFIER (ZÉRO PERTE DE DONNÉES & SAUVEGARDE AUTOMATIQUE DIRECTE) ---
+  // --- ACTIONS DES MODALES MODIFIER : l'écran n'est mis à jour qu'après confirmation de la base ---
   const handleSaveEditTariff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTariff) return;
     const priceNum = Number(editingTariff.price_per_unit || 0);
     const priceMinor = Math.round(priceNum * 100);
     const minChargeMinor = Math.round(Number(editingTariff.minimum_charge || priceNum) * 100);
+    const originCountry = editingTariff.origin_country || "Chine";
+    const destinationCountry = editingTariff.destination_country || "Côte d'Ivoire";
+    const currency = editingTariff.currency || "FCFA";
 
-    const updatedItem = {
-      ...editingTariff,
-      price_per_unit: priceNum,
-      price_per_unit_minor: priceMinor,
-      minimum_charge_minor: minChargeMinor,
-      origin_country: editingTariff.origin_country || "Chine",
-      destination_country: editingTariff.destination_country || "Côte d'Ivoire",
-      currency: editingTariff.currency || "FCFA",
-      _isPendingEdit: false,
-    };
-
-    const currentList = tariffsList && tariffsList.length > 0 ? tariffsList : DEFAULT_INITIAL_TARIFFS;
-    const exists = currentList.some((t) => t.id === editingTariff.id);
-    const nextList = exists
-      ? currentList.map((t) => (t.id === editingTariff.id ? updatedItem : t))
-      : [updatedItem, ...currentList];
-
-    setTariffsList(nextList);
-
-    try {
-      localStorage.setItem("roum_tariffs_data", JSON.stringify(nextList));
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("roum_tariffs_updated"));
-      }
-    } catch (e) {
-      console.error("Local storage sync error:", e);
-    }
-
-    let saveSuccessful = false;
-    let serverErrorDetail = "";
-
-    try {
-      const activeToken = token || (typeof window !== "undefined" ? sessionStorage.getItem("roum_admin_token") || localStorage.getItem("roum_admin_token") : null) || "roum_local_admin_session";
-      const res = await fetch(`/api/admin/tariffs/${editingTariff.id}`, {
+    const saved = await adminCall(
+      `/tariffs/${editingTariff.id}`,
+      {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${activeToken}` },
-        body: JSON.stringify({
-          service_name: updatedItem.service_name,
-          origin_country: updatedItem.origin_country,
-          destination_country: updatedItem.destination_country,
-          transport_mode: updatedItem.transport_mode,
+        body: {
+          service_name: editingTariff.service_name,
+          origin_country: originCountry,
+          destination_country: destinationCountry,
+          transport_mode: editingTariff.transport_mode,
           price_per_unit_minor: priceMinor,
           minimum_charge_minor: minChargeMinor,
-          currency: updatedItem.currency || "FCFA",
-          estimated_days_min: updatedItem.estimated_days_min,
-          estimated_days_max: updatedItem.estimated_days_max,
-          note: updatedItem.note,
-        }),
-      });
-
-      if (res.ok) {
-        saveSuccessful = true;
-        fetch("/api/admin/tariffs", { headers: { Authorization: `Bearer ${activeToken}` } })
-          .then((r) => r.json())
-          .then((d) => {
-            if (d.tariffs && d.tariffs.length > 0) {
-              setTariffsList(d.tariffs);
-              localStorage.setItem("roum_tariffs_data", JSON.stringify(d.tariffs));
-            }
-          })
-          .catch(() => {});
-      } else {
-        const errJson = await res.json().catch(() => ({}));
-        serverErrorDetail = errJson.error || `Erreur HTTP ${res.status}`;
-        console.error("Erreur serveur lors de la mise à jour du tarif:", serverErrorDetail);
-      }
-    } catch (err: any) {
-      serverErrorDetail = err?.message || "Erreur réseau";
-      console.error("Auto-save error to backend:", err);
-    }
+          currency,
+          estimated_days_min: editingTariff.estimated_days_min,
+          estimated_days_max: editingTariff.estimated_days_max,
+          note: editingTariff.note,
+        },
+      },
+      { scopes: ["tariffs"], success: "Tarif mis à jour et validé en base.", successTitle: "Succès Enregistrement" }
+    );
+    if (!saved) return;
 
     setEditingTariff(null);
-
-    if (saveSuccessful) {
-      setSaveConfirmationPopup({
-        title: "Tarif Enregistré & Synchronisé !",
-        subtitle: "La modification a été enregistrée avec succès dans la base de données D1 SQLite.",
-        item: {
-          service: updatedItem.service_name,
-          price: `${priceNum.toLocaleString()} ${updatedItem.currency || "FCFA"}`,
-          route: `${updatedItem.origin_country} ➔ ${updatedItem.destination_country}`,
-          delay: updatedItem.estimated_days_min ? `${updatedItem.estimated_days_min} à ${updatedItem.estimated_days_max || updatedItem.estimated_days_min} jours` : "Délai garanti",
-          transport: updatedItem.transport_mode === "SEA_GROUPAGE" ? "Maritime Groupage" : "Aérien",
-        },
-      });
-      triggerToast("Tarif mis à jour et validé en base.", "Succès Enregistrement");
-    } else {
-      triggerToast(`Attention : La sauvegarde serveur a échoué (${serverErrorDetail}). Les données restent en cache local mais n'ont pas pu être persistées en base.`, "Erreur Serveur");
-    }
+    setSaveConfirmationPopup({
+      title: "Tarif Enregistré & Synchronisé !",
+      subtitle: "La modification est enregistrée en base et déjà visible par les clients.",
+      item: {
+        service: editingTariff.service_name,
+        price: `${priceNum.toLocaleString()} ${currency}`,
+        route: `${originCountry} ➔ ${destinationCountry}`,
+        delay: editingTariff.estimated_days_min
+          ? `${editingTariff.estimated_days_min} à ${editingTariff.estimated_days_max || editingTariff.estimated_days_min} jours`
+          : "Délai garanti",
+        transport: editingTariff.shipping_mode_type === "SEA" ? "Maritime Groupage" : "Aérien",
+      },
+    });
   };
 
   const handleSaveAllPendingTariffs = async () => {
     const pendingItems = Object.values(pendingTariffEdits);
     if (pendingItems.length === 0) return;
     setIsSavingBatchTariffs(true);
-    const activeToken = token || (typeof window !== "undefined" ? sessionStorage.getItem("roum_admin_token") || localStorage.getItem("roum_admin_token") : null) || "roum_local_admin_session";
 
-    try {
-      const res = await fetch("/api/admin/tariffs/batch", {
+    const saved = await adminCall(
+      "/tariffs/batch",
+      {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${activeToken}` },
-        body: JSON.stringify({
+        body: {
           tariffs: pendingItems.map((t) => ({
             id: t.id,
             service_name: t.service_name,
@@ -4612,56 +2780,20 @@ export default function AdminPage() {
             note: t.note,
             category_tag: t.category_tag,
           })),
-        }),
-      });
-
-      if (!res.ok) {
-        // Fallback individuel
-        await Promise.all(
-          pendingItems.map((t) =>
-            fetch(`/api/admin/tariffs/${t.id}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json", Authorization: `Bearer ${activeToken}` },
-              body: JSON.stringify({
-                service_name: t.service_name,
-                price_per_unit_minor: t.price_per_unit_minor,
-                minimum_charge_minor: t.minimum_charge_minor,
-                currency: t.currency,
-                estimated_days_min: t.estimated_days_min,
-                estimated_days_max: t.estimated_days_max,
-                note: t.note,
-              }),
-            })
-          )
-        );
+        },
+      },
+      {
+        scopes: ["tariffs"],
+        success: `Toutes les ${pendingItems.length} modifications ont été enregistrées en base !`,
+        successTitle: "Grille Tarifaire",
       }
+    );
 
-      // Nettoyer l'indicateur d'attente tout en préservant scrupuleusement l'ordre exact à l'écran
-      const cleanedList = tariffsList.map((t) => {
-        if (t._isPendingEdit) {
-          const { _isPendingEdit, ...rest } = t;
-          return rest;
-        }
-        return t;
-      });
-      setTariffsList(cleanedList);
+    if (saved) {
       setPendingTariffEdits({});
       setInitialTariffsBackup(null);
-
-      try {
-        localStorage.setItem("roum_tariffs_data", JSON.stringify(cleanedList));
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new Event("roum_tariffs_updated"));
-        }
-      } catch {}
-
-      triggerToast(`Toutes les ${pendingItems.length} modifications ont été enregistrées avec succès en base !`, "Grille Tarifaire");
-    } catch (err) {
-      console.error("Batch save error:", err);
-      triggerToast("Erreur lors de l'enregistrement simultané des tarifs.", "Erreur");
-    } finally {
-      setIsSavingBatchTariffs(false);
     }
+    setIsSavingBatchTariffs(false);
   };
 
   const handleCancelPendingTariffs = () => {
@@ -4688,75 +2820,70 @@ export default function AdminPage() {
     if (!editingShipment) return;
     const priceMinor = Math.round(Number(editingShipment.estimated_price || (editingShipment.estimated_price_minor / 100) || 0) * 100);
 
-    const updatedShipment = {
-      ...editingShipment,
-      total_weight_kg: Number(editingShipment.total_weight_kg) || 5,
-      estimated_price_minor: priceMinor > 0 ? priceMinor : editingShipment.estimated_price_minor,
-    };
-
-    setShipments((prev) => prev.map((s) => (s.id === editingShipment.id ? updatedShipment : s)));
-    if (selectedShipment?.id === editingShipment.id) {
-      setSelectedShipment(updatedShipment);
-    }
-    triggerToast("Dossier d'expédition mis à jour !", "Expédition");
-    setEditingShipment(null);
-
-    if (token) {
-      try {
-        await fetch(`/api/admin/shipments/${editingShipment.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify(updatedShipment),
-        });
-        loadDashboardData(token);
-      } catch {
-        // Cache local déjà synchronisé
+    const saved = await adminCall(
+      `/shipments/${editingShipment.id}`,
+      {
+        method: "PATCH",
+        body: {
+          current_status: editingShipment.current_status,
+          payment_status: editingShipment.payment_status,
+          total_weight_kg: Number(editingShipment.total_weight_kg) || 0,
+          total_volume_cbm: editingShipment.total_volume_cbm,
+          estimated_price_minor: priceMinor > 0 ? priceMinor : editingShipment.estimated_price_minor,
+          final_price_minor: editingShipment.final_price_minor,
+          currency: editingShipment.currency,
+          client_name: editingShipment.recipient_name || editingShipment.client_name,
+          client_phone: editingShipment.recipient_phone || editingShipment.client_phone,
+          client_city: editingShipment.client_city,
+          client_country: editingShipment.client_country,
+          sender_name: editingShipment.sender_name,
+          sender_phone: editingShipment.sender_phone,
+          origin_country: editingShipment.origin_country,
+          destination_country: editingShipment.destination_country,
+        },
+      },
+      {
+        scopes: ["shipments", "clients", "requests", "tariffs", "payments"],
+        success: "Dossier d'expédition mis à jour : le client le voit déjà.",
+        successTitle: "Expédition",
       }
-    }
+    );
+    if (!saved) return;
+
+    setEditingShipment(null);
+    if (selectedShipment?.id === editingShipment.id) setSelectedShipment(null);
   };
 
   const handleSaveEditRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingRequest) return;
 
-    setRequestsList((prev) => prev.map((r) => (r.id === editingRequest.id ? editingRequest : r)));
-    triggerToast("Commande modifiée et synchronisée !", "Commandes Clients");
-    setEditingRequest(null);
-
-    if (token) {
-      try {
-        await fetch(`/api/admin/requests/${editingRequest.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify(editingRequest),
-        });
-        loadDashboardData(token);
-      } catch {
-        // Cache local à jour
+    const saved = await adminCall(
+      `/requests/${encodeURIComponent(editingRequest.id)}`,
+      { method: "PATCH", body: { ...editingRequest, expected_version: editingRequest.row_version } },
+      {
+        scopes: ["requests", "shipments", "clients"],
+        success: "Commande modifiée : le client le voit déjà.",
+        successTitle: "Commandes Clients",
       }
-    }
+    );
+    if (saved) setEditingRequest(null);
   };
 
   const handleSaveEditClient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingClient) return;
 
-    setClientsList((prev) => prev.map((c) => (c.id === editingClient.id ? editingClient : c)));
-    triggerToast("Fiche client enregistrée avec succès !", "Répertoire Clients");
-    setEditingClient(null);
-
-    if (token) {
-      try {
-        await fetch(`/api/admin/clients/${editingClient.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify(editingClient),
-        });
-        loadDashboardData(token);
-      } catch {
-        // Cache local à jour
+    const saved = await adminCall(
+      `/clients/${editingClient.id}`,
+      { method: "PUT", body: { ...editingClient, phone_whatsapp: editingClient.phone ?? editingClient.phone_whatsapp } },
+      {
+        scopes: ["clients", "shipments", "requests"],
+        success: "Fiche client enregistrée avec succès !",
+        successTitle: "Répertoire Clients",
       }
-    }
+    );
+    if (saved) setEditingClient(null);
   };
 
   const handleSaveEditPayment = async (e: React.FormEvent) => {
@@ -4764,49 +2891,36 @@ export default function AdminPage() {
     if (!editingPayment) return;
     const amountMinor = Math.round(Number(editingPayment.amount || (editingPayment.amount_minor / 100) || 0) * 100);
 
-    const updatedPayment = {
-      ...editingPayment,
-      amount_minor: amountMinor,
-    };
-
-    setPaymentsList((prev) => prev.map((p) => (p.id === editingPayment.id ? updatedPayment : p)));
-    triggerToast("Paiement mis à jour et validé en caisse !", "Finances & Caisse");
-    setEditingPayment(null);
-
-    if (token) {
-      try {
-        await fetch(`/api/admin/payments/${editingPayment.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify(updatedPayment),
-        });
-        loadDashboardData(token);
-      } catch {
-        // Cache local à jour
-      }
-    }
+    const saved = await adminCall(
+      `/payments/${editingPayment.id}`,
+      {
+        method: "PATCH",
+        body: {
+          amount_minor: amountMinor,
+          currency: editingPayment.currency,
+          payment_method: editingPayment.payment_method,
+          payment_type: editingPayment.payment_type,
+          reference_code: editingPayment.payment_reference ?? editingPayment.reference_code,
+          shipment_tracking: editingPayment.shipment_tracking || undefined,
+          status: editingPayment.status,
+          receipt_notes: editingPayment.receipt_notes,
+        },
+      },
+      { scopes: ["payments", "shipments"], success: "Paiement mis à jour et validé en caisse !", successTitle: "Finances & Caisse" }
+    );
+    if (saved) setEditingPayment(null);
   };
 
   const handleSaveEditTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTask) return;
 
-    setTasksList((prev) => prev.map((t) => (t.id === editingTask.id ? editingTask : t)));
-    triggerToast("Tâche mise à jour avec succès !", "Tâches Opérationnelles");
-    setEditingTask(null);
-
-    if (token) {
-      try {
-        await fetch(`/api/admin/tasks/${editingTask.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify(editingTask),
-        });
-        loadDashboardData(token);
-      } catch {
-        // Cache local à jour
-      }
-    }
+    const saved = await adminCall(
+      `/tasks/${editingTask.id}`,
+      { method: "PATCH", body: editingTask },
+      { scopes: ["tasks"], success: "Tâche mise à jour avec succès !", successTitle: "Tâches Opérationnelles" }
+    );
+    if (saved) setEditingTask(null);
   };
 
   // ÉCRAN 1 : CONNEXION SOBRE & ÉPURÉE (SANS ANIMATION)
@@ -4909,7 +3023,7 @@ export default function AdminPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@roumtransit.com"
+                  placeholder="votre@email.com"
                   style={{
                     width: "100%",
                     height: "46px",
@@ -5073,12 +3187,6 @@ export default function AdminPage() {
                 </>
               )}
             </button>
-
-            <div style={{ textAlign: "center", marginTop: "12px" }}>
-              <span style={{ fontSize: "0.74rem", color: "#6B7280" }}>
-                Identifiants officiels pré-remplis : <strong>admin@roumtransit.com</strong> · <strong>admin123</strong>
-              </span>
-            </div>
           </form>
         </div>
 
@@ -5124,8 +3232,15 @@ export default function AdminPage() {
   // ÉCRAN 2 : INTERFACE SOBRE, MINIMALISTE ET ÉLÉGANTE DU DASHBOARD
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-app)" }}>
+      <div
+        className={`admin-drawer-backdrop ${isMobileMenuOpen ? "is-open" : ""}`}
+        onClick={() => setIsMobileMenuOpen(false)}
+        aria-hidden="true"
+      />
+
       {/* SIDEBAR DISCRÈTE ET RÉTRACTABLE (Logo 100% Isolé et Imposant) */}
       <aside
+        className={`admin-sidebar ${isMobileMenuOpen ? "is-open" : ""}`}
         style={{
           width: isSidebarCollapsed ? "72px" : "250px",
           transition: "width 0.22s cubic-bezier(0.4, 0, 0.2, 1), padding 0.22s ease",
@@ -5513,6 +3628,55 @@ export default function AdminPage() {
       <main
         className={`admin-main-viewport ${isGlobeExpanded && activeTab === "dashboard" ? "globe-fullscreen-mode" : ""}`}
       >
+        {!(isGlobeExpanded && activeTab === "dashboard") && (
+          <div className="admin-mobile-bar">
+            <button
+              type="button"
+              className="admin-mobile-menu-btn"
+              onClick={() => {
+                setIsSidebarCollapsed(false);
+                setIsMobileMenuOpen(true);
+              }}
+              aria-label="Ouvrir le menu"
+              aria-expanded={isMobileMenuOpen}
+            >
+              <Menu size={20} strokeWidth={2.2} />
+            </button>
+            <img src="/images/roum-logo-tight.png" alt="Roum Transit" style={{ height: "30px", width: "auto" }} />
+          </div>
+        )}
+
+        {syncStatus === "offline" && (
+          <div
+            role="alert"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
+              flexWrap: "wrap",
+              padding: "11px 16px",
+              marginBottom: "16px",
+              background: "#FEF2F2",
+              border: "1px solid rgba(239, 68, 68, 0.25)",
+              borderRadius: "12px",
+              color: "#B91C1C",
+              fontSize: "0.82rem",
+              fontWeight: 600,
+            }}
+          >
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+              <AlertCircle size={15} style={{ flexShrink: 0 }} />
+              {hasLoadedData
+                ? "Connexion au serveur perdue. Ces données peuvent dater et aucune action ne sera enregistrée pour le moment."
+                : "Impossible de charger les données du serveur."}
+            </span>
+            <button type="button" className="btn btn-secondary" onClick={checkSyncNow} style={{ padding: "5px 12px", fontSize: "0.76rem" }}>
+              Réessayer
+            </button>
+          </div>
+        )}
+
         {/* En-tête de page sobre (Masqué en mode plein cadre de la sphère) */}
         {!(isGlobeExpanded && activeTab === "dashboard") && (
           <div
@@ -6472,7 +4636,7 @@ export default function AdminPage() {
                   </div>
                   <div className="metric-card-body">
                     <div className="metric-card-value">
-                      {shipments.filter((s) => s.current_status === "IN_TRANSIT").length || stats?.active_shipments || 8} dossiers
+                      {shipments.filter((s) => s.current_status === "IN_TRANSIT").length} dossiers
                     </div>
                     <div className="metric-card-sub">
                       {shipments.filter((s) => s.current_status === "IN_TRANSIT").reduce((acc, s) => acc + (Number(s.total_weight_kg) || 0), 0).toLocaleString("fr-FR")} kg en acheminement
@@ -6530,7 +4694,7 @@ export default function AdminPage() {
                   </div>
                   <div className="metric-card-body">
                     <div className="metric-card-value">
-                      {shipments.filter((s) => s.current_status === "DELIVERED").length || stats?.delivered_shipments || 5} livrés
+                      {shipments.filter((s) => s.current_status === "DELIVERED").length} livrés
                     </div>
                     <div className="metric-card-sub">
                       Remis en mains propres aux clients
@@ -6559,10 +4723,10 @@ export default function AdminPage() {
                   </div>
                   <div className="metric-card-body">
                     <div className="metric-card-value">
-                      {formatCurrencyPrice(stats?.total_payments_minor || (paymentsList.length > 0 ? paymentsList.reduce((acc, p) => acc + (p.amount_minor || 0), 0) : 358540000), "FCFA")}
+                      {formatCurrencyPrice(stats?.total_payments_minor || 0, "FCFA")}
                     </div>
                     <div className="metric-card-sub">
-                      {paymentsList.length || 8} règlements clients confirmés
+                      {paymentsList.filter((p: any) => p.status === "CONFIRMED").length} règlements clients confirmés
                     </div>
                   </div>
                 </div>
@@ -6714,9 +4878,9 @@ export default function AdminPage() {
                             </span>
                           </div>
                           <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "4px", minWidth: "16px" }}>
-                            <div style={{ flex: 1, height: "1px", borderTop: "1px dashed rgba(122, 74, 40, 0.35)" }} />
+                            <div style={{ flex: 1, height: "1px", borderTop: "1px dashed rgba(30, 77, 91, 0.35)" }} />
                             <span style={{ color: "var(--brown-light)", fontSize: "0.75rem", lineHeight: 1 }}>→</span>
-                            <div style={{ flex: 1, height: "1px", borderTop: "1px dashed rgba(122, 74, 40, 0.35)" }} />
+                            <div style={{ flex: 1, height: "1px", borderTop: "1px dashed rgba(30, 77, 91, 0.35)" }} />
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
                             <CircularFlag countryName={activeShipment.destination_country || "Afrique"} size={16} />
@@ -7219,9 +5383,9 @@ export default function AdminPage() {
                   borderRadius: "9999px",
                   fontSize: "0.78rem",
                   fontWeight: requestCategoryFilter === "OPTION_2" ? 700 : 500,
-                  background: requestCategoryFilter === "OPTION_2" ? "#CC4E16" : "#FFF7ED",
-                  color: requestCategoryFilter === "OPTION_2" ? "#FFFFFF" : "#C2410C",
-                  border: "1px solid rgba(204, 78, 22, 0.25)",
+                  background: requestCategoryFilter === "OPTION_2" ? "#1E4D5B" : "#F6F0E6",
+                  color: requestCategoryFilter === "OPTION_2" ? "#FFFFFF" : "#1E4D5B",
+                  border: "1px solid rgba(30, 77, 91, 0.25)",
                   cursor: "pointer",
                   display: "inline-flex",
                   alignItems: "center",
@@ -7229,7 +5393,7 @@ export default function AdminPage() {
                 }}
               >
                 <span>Paiements Fournisseurs RMB (Option 2)</span>
-                <span style={{ background: requestCategoryFilter === "OPTION_2" ? "rgba(255,255,255,0.25)" : "#FDBA74", padding: "1px 6px", borderRadius: "9999px", fontSize: "0.7rem", fontWeight: 700 }}>
+                <span style={{ background: requestCategoryFilter === "OPTION_2" ? "rgba(255,255,255,0.25)" : "#DCCDB6", padding: "1px 6px", borderRadius: "9999px", fontSize: "0.7rem", fontWeight: 700 }}>
                   {supplierPaymentsList.length}
                 </span>
               </button>
@@ -7379,7 +5543,7 @@ export default function AdminPage() {
                                     <span>{r.tracking_number}</span>
                                   </Link>
                                 )}
-                                {r.payment_receipt_url && (
+                                {(r.has_payment_proof || r.payment_receipt_url) && (
                                   <span
                                     style={{
                                       fontSize: "0.66rem",
@@ -7395,7 +5559,7 @@ export default function AdminPage() {
                                   >
                                     <CheckCircle2 size={11} />
                                     <span>
-                                      {r.payment_receipt_url.startsWith("data:video") || /\.(mp4|mov|webm)$/i.test(r.payment_receipt_url)
+                                      {String(r.payment_receipt_mime || r.payment_receipt_url || "").includes("video") || /\.(mp4|mov|webm)$/i.test(r.payment_receipt_url || "")
                                         ? "Preuve vidéo"
                                         : "Preuve reçue"}
                                     </span>
@@ -7478,9 +5642,9 @@ export default function AdminPage() {
                               type="button"
                               onClick={() => handleOpenRequestDetail(r)}
                               style={{
-                                background: "#FEF3C7",
-                                color: "#92400E",
-                                border: "1px solid rgba(245, 158, 11, 0.35)",
+                                background: "#F1E7D9",
+                                color: "#6B5844",
+                                border: "1px solid rgba(184, 164, 136, 0.35)",
                                 borderRadius: "9999px",
                                 padding: "3px 9px",
                                 fontSize: "0.7rem",
@@ -7507,7 +5671,7 @@ export default function AdminPage() {
                                 case "IN_REVIEW":
                                   return { bg: "#F5F3FF", color: "#6D28D9", border: "rgba(139, 92, 246, 0.28)", stroke: "%236D28D9" };
                                 case "QUOTE_SENT":
-                                  return { bg: "#FFFBEB", color: "#B45309", border: "rgba(245, 158, 11, 0.28)", stroke: "%23B45309" };
+                                  return { bg: "#F6F0E6", color: "#1E4D5B", border: "rgba(184, 164, 136, 0.28)", stroke: "%231E4D5B" };
                                 case "CONVERTED":
                                   return { bg: "#ECFDF5", color: "#047857", border: "rgba(16, 185, 129, 0.28)", stroke: "%23047857" };
                                 case "CANCELLED":
@@ -7583,7 +5747,7 @@ export default function AdminPage() {
                                       estimatedWeightKg: r.estimated_weight_kg || 2,
                                       estimatedCbm: r.estimated_cbm || undefined,
                                       productName: r.product_name || "Article commandé",
-                                      productImage: r.product_image && !r.product_image.startsWith("data:") ? r.product_image : undefined,
+                                      accessKey: r.access_key,
                                       productQuantity: Number(r.product_quantity || 1),
                                       goodsTotalFcfa: Number(r.total_goods_fcfa || 0),
                                       shippingFeeFcfa: Number(r.shipping_fee_fcfa || 0),
@@ -7593,6 +5757,14 @@ export default function AdminPage() {
                                       moroccoRib: `${companySettings.payment_morocco_bank || "CIH Bank"} (${companySettings.payment_morocco_rib || "230 780 0001234567890123 45"})`,
                                     })
                               }
+                              onClick={(e) => {
+                                // Un devis sans montant ne doit jamais partir chez le client.
+                                if (!r.tracking_number && !(Number(r.total_amount_fcfa) > 0)) {
+                                  e.preventDefault();
+                                  handleOpenRequestDetail(r);
+                                  triggerToast("Saisissez d'abord le poids et le montant du devis.", "Devis à préparer", "info");
+                                }
+                              }}
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none", flexShrink: 0 }}
@@ -7666,7 +5838,7 @@ export default function AdminPage() {
                     <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                       Volume Yuans à Régler
                     </span>
-                    <span style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#FFF7ED", display: "flex", alignItems: "center", justifyContent: "center", color: "#CC4E16" }}>
+                    <span style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#F6F0E6", display: "flex", alignItems: "center", justifyContent: "center", color: "#1E4D5B" }}>
                       <Coins size={16} />
                     </span>
                   </div>
@@ -7674,7 +5846,7 @@ export default function AdminPage() {
                     ¥ {totalRmbToPay.toLocaleString("fr-FR")}
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: "4px" }}>
-                    Équivalent estimé : <strong style={{ color: "#CC4E16" }}>{estimatedCfaTotal.toLocaleString("fr-FR")} FCFA</strong>
+                    Équivalent estimé : <strong style={{ color: "#1E4D5B" }}>{estimatedCfaTotal.toLocaleString("fr-FR")} FCFA</strong>
                   </div>
                 </div>
 
@@ -7729,9 +5901,9 @@ export default function AdminPage() {
                       <WaveLogo size={16} />
                       <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#0369A1" }}>Wave</span>
                     </div>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "#FFF7ED", padding: "3px 8px", borderRadius: "9999px", border: "1px solid #FFEDD5" }}>
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "#F6F0E6", padding: "3px 8px", borderRadius: "9999px", border: "1px solid #FFEDD5" }}>
                       <OrangeMoneyLogo size={16} />
-                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#C2410C" }}>Orange</span>
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#1E4D5B" }}>Orange</span>
                     </div>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "#F0FDF4", padding: "3px 8px", borderRadius: "9999px", border: "1px solid #BBF7D0" }}>
                       <CompteMarocLogo size={16} />
@@ -7802,9 +5974,9 @@ export default function AdminPage() {
                         borderRadius: "9999px",
                         fontSize: "0.76rem",
                         fontWeight: supplierPaymentFilter === "IN_REVIEW" ? 700 : 500,
-                        background: supplierPaymentFilter === "IN_REVIEW" ? "#FFFBEB" : "#F3F4F6",
-                        color: supplierPaymentFilter === "IN_REVIEW" ? "#B45309" : "#4B5563",
-                        border: supplierPaymentFilter === "IN_REVIEW" ? "1px solid #FDE68A" : "none",
+                        background: supplierPaymentFilter === "IN_REVIEW" ? "#F6F0E6" : "#F3F4F6",
+                        color: supplierPaymentFilter === "IN_REVIEW" ? "#1E4D5B" : "#4B5563",
+                        border: supplierPaymentFilter === "IN_REVIEW" ? "1px solid #E3D4BF" : "none",
                         cursor: "pointer",
                       }}
                     >
@@ -7889,9 +6061,9 @@ export default function AdminPage() {
                                     onClick={() => handleOpenRequestDetail(r)}
                                     className="tabular-nums"
                                     style={{
-                                      background: "#FFF7ED",
+                                      background: "#F6F0E6",
                                       border: "1px solid #FFEDD5",
-                                      color: "#CC4E16",
+                                      color: "#1E4D5B",
                                       fontWeight: 800,
                                       fontSize: "0.78rem",
                                       cursor: "pointer",
@@ -7925,9 +6097,10 @@ export default function AdminPage() {
                                     })}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    style={{ color: "#15803D", textDecoration: "none", fontWeight: 600 }}
+                                    style={{ display: "inline-flex", alignItems: "center", gap: "5px", color: "#15803D", textDecoration: "none", fontWeight: 600 }}
                                   >
-                                    WhatsApp: {r.client_phone}
+                                    <WhatsAppLogo size={16} />
+                                    {r.client_phone}
                                   </a>
                                 </div>
                                 <div style={{ fontSize: "0.70rem", color: "#6B7280" }}>
@@ -7941,16 +6114,16 @@ export default function AdminPage() {
                               <div
                                 style={{
                                   display: "inline-block",
-                                  background: "#FFF7ED",
+                                  background: "#F6F0E6",
                                   border: "1px solid #FFEDD5",
                                   padding: "6px 10px",
                                   borderRadius: "12px",
                                 }}
                               >
-                                <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#9A3412", fontFamily: "var(--c-font-display)" }}>
+                                <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#163B46", fontFamily: "var(--c-font-display)" }}>
                                   ¥ {rmbAmountVal}
                                 </div>
-                                <div style={{ fontSize: "0.72rem", color: "#C2410C", fontWeight: 600, marginTop: "2px" }}>
+                                <div style={{ fontSize: "0.72rem", color: "#1E4D5B", fontWeight: 600, marginTop: "2px" }}>
                                   ~ {cfaEquivalent.toLocaleString("fr-FR")} FCFA
                                 </div>
                               </div>
@@ -8124,11 +6297,11 @@ export default function AdminPage() {
                                   })}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="btn btn-secondary"
-                                  style={{ padding: "5px 10px", fontSize: "0.72rem", color: "#15803D", borderRadius: "9999px" }}
+                                  style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
                                   title="Contacter le client sur WhatsApp avec lien de suivi cliquable"
+                                  aria-label="Contacter le client sur WhatsApp"
                                 >
-                                  WhatsApp
+                                  <WhatsAppLogo size={28} />
                                 </a>
                                 {r.status !== "CONVERTED" && (
                                   <button
@@ -8335,7 +6508,7 @@ export default function AdminPage() {
                             <div style={{ display: "inline-flex", gap: "5px", alignItems: "center", justifyContent: "flex-end" }}>
                               <button
                                 type="button"
-                                onClick={() => setEditingShipment(s)}
+                                onClick={() => setEditingShipment({ ...s, recipient_name: s.client_name, recipient_phone: s.client_phone })}
                                 className="btn-icon-clean"
                                 title="Modifier tous les champs de l'expédition"
                               >
@@ -8485,7 +6658,7 @@ export default function AdminPage() {
                           <div style={{ display: "inline-flex", gap: "7px", alignItems: "center" }}>
                             <button
                               type="button"
-                              onClick={() => setEditingClient(c)}
+                              onClick={() => setEditingClient({ ...c, phone: c.phone_whatsapp })}
                               className="btn-icon-clean"
                               title="Modifier la fiche client"
                             >
@@ -9392,7 +7565,7 @@ export default function AdminPage() {
                           const isPending = Boolean(t._isPendingEdit || pendingTariffEdits[t.id]);
 
                           return (
-                            <tr key={t.id} className="table-row-clean" style={isPending ? { background: "rgba(180, 83, 9, 0.04)" } : undefined}>
+                            <tr key={t.id} className="table-row-clean" style={isPending ? { background: "rgba(30, 77, 91, 0.04)" } : undefined}>
                               <td>
                                 <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                                   <CircularFlag countryName={t.origin_country} size={18} />
@@ -9451,7 +7624,7 @@ export default function AdminPage() {
                                     {formatCurrencyPrice(t.price_per_unit_minor, t.currency)} {isSea ? "/ m³" : isUnit ? "" : "/ kg"}
                                   </div>
                                   {isPending && (
-                                    <span style={{ fontSize: "0.62rem", background: "#FEF3C7", color: "#92400E", padding: "1px 6px", borderRadius: "9999px", fontWeight: "700" }}>
+                                    <span style={{ fontSize: "0.62rem", background: "#F1E7D9", color: "#6B5844", padding: "1px 6px", borderRadius: "9999px", fontWeight: "700" }}>
                                       En attente
                                     </span>
                                   )}
@@ -9717,7 +7890,7 @@ export default function AdminPage() {
                             <td style={{ color: "var(--brown-dark)", fontWeight: "800", fontSize: "0.79rem" }} className="tabular-nums">
                               {p.tracking_number || "—"}
                             </td>
-                            <td style={{ fontWeight: "800", color: "#B45309" }} className="tabular-nums">
+                            <td style={{ fontWeight: "800", color: "#1E4D5B" }} className="tabular-nums">
                               {formatCurrencyPrice(p.amount_minor, p.currency || "FCFA")}
                             </td>
                             <td>
@@ -9742,6 +7915,8 @@ export default function AdminPage() {
                                   onClick={() => setEditingPayment({
                                     ...p,
                                     amount: p.amount || (p.amount_minor / 100),
+                                    payment_reference: p.reference_code,
+                                    shipment_tracking: p.tracking_number,
                                   })}
                                   className="btn-icon-clean"
                                   title="Modifier ce paiement"
@@ -9841,6 +8016,8 @@ export default function AdminPage() {
                                 onClick={() => setEditingPayment({
                                   ...p,
                                   amount: p.amount || (p.amount_minor / 100),
+                                  payment_reference: p.reference_code,
+                                  shipment_tracking: p.tracking_number,
                                 })}
                                 className="btn-icon-clean"
                                 title="Modifier ce paiement"
@@ -10401,7 +8578,7 @@ export default function AdminPage() {
                             onChange={(e) => {
                               const updated = customHubs.map((h) => h.id === hub.id ? { ...h, address: e.target.value } : h);
                               setCustomHubs(updated);
-                              try { localStorage.setItem("roum_custom_hubs", JSON.stringify(updated)); } catch {}
+                              queueHubsSave(updated);
                             }}
                             className="input-clean"
                             style={{ fontSize: "0.82rem" }}
@@ -10417,7 +8594,7 @@ export default function AdminPage() {
                             onChange={(e) => {
                               const updated = customHubs.map((h) => h.id === hub.id ? { ...h, shipping_mark: e.target.value } : h);
                               setCustomHubs(updated);
-                              try { localStorage.setItem("roum_custom_hubs", JSON.stringify(updated)); } catch {}
+                              queueHubsSave(updated);
                             }}
                             className="input-clean"
                             style={{ fontSize: "0.82rem" }}
@@ -10433,7 +8610,7 @@ export default function AdminPage() {
                             onChange={(e) => {
                               const updated = customHubs.map((h) => h.id === hub.id ? { ...h, contact: e.target.value } : h);
                               setCustomHubs(updated);
-                              try { localStorage.setItem("roum_custom_hubs", JSON.stringify(updated)); } catch {}
+                              queueHubsSave(updated);
                             }}
                             className="input-clean"
                             style={{ fontSize: "0.82rem" }}
@@ -10888,28 +9065,18 @@ export default function AdminPage() {
                 <button
                   type="button"
                   onClick={async () => {
-                    if (typeof window !== "undefined") {
-                      localStorage.setItem("roum_company_settings", JSON.stringify(companySettings));
-                      window.dispatchEvent(new Event("storage"));
-                      window.dispatchEvent(new CustomEvent("roum:settings_updated", { detail: companySettings }));
-                      try {
-                        const bc = new BroadcastChannel("roum_sync_bus");
-                        bc.postMessage({ type: "SETTINGS_UPDATED", settings: companySettings });
-                        bc.close();
-                      } catch {}
-                    }
-                    triggerToast("Paramètres et coordonnées de l'entreprise enregistrés !", "Configuration");
-                    setSettingsSaved(true);
-                    setTimeout(() => setSettingsSaved(false), 3500);
-                    try {
-                      const activeToken = token || "roum_local_admin_session";
-                      await fetch("/api/admin/settings", {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${activeToken}` },
-                        body: JSON.stringify(companySettings),
-                      });
-                    } catch {
-                      // Cache local sécurisé
+                    const saved = await adminCall(
+                      "/settings",
+                      { method: "PUT", body: companySettings },
+                      {
+                        scopes: [],
+                        success: "Paramètres enregistrés : les clients voient déjà ces coordonnées.",
+                        successTitle: "Configuration",
+                      }
+                    );
+                    if (saved) {
+                      setSettingsSaved(true);
+                      setTimeout(() => setSettingsSaved(false), 3500);
                     }
                   }}
                   className="btn btn-primary"
@@ -11237,7 +9404,7 @@ export default function AdminPage() {
               </div>
               <div style={{ textAlign: "right" }}>
                 <span style={{ color: "var(--text-muted)", fontSize: "0.72rem", display: "block" }}>Statut actuel</span>
-                <span style={{ color: "#EA580C", fontWeight: "700" }}>
+                <span style={{ color: "#2F6B78", fontWeight: "700" }}>
                   {formatShipmentStatus(showStatusModal.current_status, showStatusModal.status_label)}
                 </span>
               </div>
@@ -11620,8 +9787,8 @@ export default function AdminPage() {
                   ) : (
                     <span
                       style={{
-                        background: "#FEF3C7",
-                        color: "#92400E",
+                        background: "#F1E7D9",
+                        color: "#6B5844",
                         padding: "3px 10px",
                         borderRadius: "9999px",
                         fontSize: "0.72rem",
@@ -11650,7 +9817,7 @@ export default function AdminPage() {
             <div
               style={{
                 background: "#FAF8F5",
-                border: "1.5px solid rgba(197, 162, 101, 0.4)",
+                border: "1.5px solid rgba(184, 164, 136, 0.4)",
                 borderRadius: "16px",
                 padding: "16px",
                 marginBottom: "18px",
@@ -11799,7 +9966,7 @@ export default function AdminPage() {
                     </div>
                     <div>
                       <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.7rem" }}>Prix unitaire usine</span>
-                      <strong style={{ color: "#C2410C", fontSize: "0.86rem" }}>
+                      <strong style={{ color: "#1E4D5B", fontSize: "0.86rem" }}>
                         {showRequestDetailModal.unit_price
                           ? `${Number(showRequestDetailModal.unit_price).toLocaleString("fr-FR")} ${showRequestDetailModal.unit_price_currency || "USD"}`
                           : "Chiffré par ROUM"}
@@ -11929,7 +10096,7 @@ export default function AdminPage() {
                 )}
               </div>
             ) : (
-              <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", padding: "12px 14px", borderRadius: "12px", marginBottom: "18px", fontSize: "0.8rem", color: "#92400E", display: "flex", alignItems: "flex-start", gap: "8px" }}>
+              <div style={{ background: "#F6F0E6", border: "1px solid #E3D4BF", padding: "12px 14px", borderRadius: "12px", marginBottom: "18px", fontSize: "0.8rem", color: "#6B5844", display: "flex", alignItems: "flex-start", gap: "8px" }}>
                 <Clock size={16} style={{ flexShrink: 0, marginTop: "2px" }} />
                 <div>
                   <strong>Aucune preuve de paiement jointe pour le moment.</strong> Estimez le poids ci-dessous et envoyez le lien de paiement sur WhatsApp au client pour qu&apos;il règle et téléverse son reçu.
@@ -12087,28 +10254,12 @@ export default function AdminPage() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    const isSea =
-                      showRequestDetailModal.shipping_mode_type === "SEA" ||
-                      String(showRequestDetailModal.shipping_mode_name || "").toLowerCase().includes("maritime");
-                    handleSaveQuoteAndSendPaymentWhatsApp(showRequestDetailModal, false);
+                  onClick={async () => {
+                    const savedDossier = await handleSaveQuoteAndSendPaymentWhatsApp(showRequestDetailModal, false);
+                    if (!savedDossier) return;
                     const link = getPaymentPageUrl({
-                      reference: showRequestDetailModal.reference || "DOSSIER",
-                      clientName: showRequestDetailModal.client_name,
-                      clientPhone: showRequestDetailModal.client_phone,
-                      destination: showRequestDetailModal.destination_country,
-                      shippingMode: showRequestDetailModal.shipping_mode_name || (isSea ? "Voie Maritime" : "Voie Aérienne"),
-                      weightKg: isSea ? undefined : adminQuoteForm.weight_kg,
-                      volumeCbm: isSea ? adminQuoteForm.volume_cbm : undefined,
-                      goodsTotalFcfa: adminQuoteForm.goods_fcfa,
-                      shippingFeeFcfa: adminQuoteForm.shipping_fcfa,
-                      totalAmountFcfa: adminQuoteForm.total_fcfa,
-                      productName: showRequestDetailModal.product_name,
-                      productImage:
-                        showRequestDetailModal.product_image && !showRequestDetailModal.product_image.startsWith("data:")
-                          ? showRequestDetailModal.product_image
-                          : undefined,
-                      productQuantity: Number(showRequestDetailModal.product_quantity || 1),
+                      reference: savedDossier.reference,
+                      accessKey: savedDossier.access_key,
                     });
                     navigator.clipboard?.writeText(link);
                     setCopiedPaymentLink(true);
@@ -12178,6 +10329,7 @@ export default function AdminPage() {
                   onClick={() => {
                     const r = showRequestDetailModal;
                     const receipt: RoumReceiptData = {
+                      supportPhone: companySettings.whatsapp_official_number,
                       receiptTitle: r.tracking_number
                         ? "REÇU OFFICIEL DE COMMANDE & SUIVI ACTIF"
                         : "DEVIS & FICHE DE COMMANDE ROUM TRANSIT",
@@ -12219,6 +10371,7 @@ export default function AdminPage() {
                   onClick={() => {
                     const r = showRequestDetailModal;
                     const receipt: RoumReceiptData = {
+                      supportPhone: companySettings.whatsapp_official_number,
                       receiptTitle: r.tracking_number
                         ? "REÇU OFFICIEL DE COMMANDE & SUIVI ACTIF"
                         : "DEVIS & FICHE DE COMMANDE ROUM TRANSIT",
@@ -12604,7 +10757,7 @@ export default function AdminPage() {
               </div>
               <div>
                 <span style={{ color: "var(--text-muted)", display: "block" }}>Règlement :</span>
-                <strong style={{ color: showShipmentDetailModal.payment_status === "PAID" ? "var(--state-success-text)" : "#B45309" }}>
+                <strong style={{ color: showShipmentDetailModal.payment_status === "PAID" ? "var(--state-success-text)" : "#1E4D5B" }}>
                   {showShipmentDetailModal.payment_status === "PAID" ? "Intégralement Réglé" : showShipmentDetailModal.payment_status === "PARTIAL" ? "Acompte Versé" : "En Attente de Règlement"}
                 </strong>
               </div>
@@ -14286,11 +12439,11 @@ export default function AdminPage() {
                 <div>
                   <label style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", display: "block", marginBottom: "4px" }}>Statut Règlement</label>
                   <select
-                    value={editingShipment.payment_status || "UNPAID"}
+                    value={editingShipment.payment_status || "PENDING"}
                     onChange={(e) => setEditingShipment({ ...editingShipment, payment_status: e.target.value })}
                     className="input-clean"
                   >
-                    <option value="UNPAID">En attente de règlement</option>
+                    <option value="PENDING">En attente de règlement</option>
                     <option value="PARTIAL">Acompte perçu</option>
                     <option value="PAID">Intégralement réglé</option>
                   </select>

@@ -207,7 +207,7 @@ export default function TrackingPage() {
           {/* En-tête officiel épuré */}
           <div style={{ textAlign: "center", marginBottom: "32px" }}>
             <div className="client-eyebrow" style={{ justifyContent: "center", marginBottom: "12px" }}>
-              <span style={{ color: "var(--c-accent-red)" }}>●</span>
+              <span style={{ color: "var(--c-accent)" }}>●</span>
               <span>TRAÇABILITÉ EN DIRECT & BORDEREAU</span>
             </div>
 
@@ -328,7 +328,7 @@ export default function TrackingPage() {
                 <defs>
                   <linearGradient id="hSnakeGradOfficial" x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stopColor="#140D09" stopOpacity="0.85" />
-                    <stop offset="50%" stopColor="#C2410C" stopOpacity="0.95" />
+                    <stop offset="50%" stopColor="#1E4D5B" stopOpacity="0.95" />
                     <stop offset="100%" stopColor="#8C6D58" stopOpacity="1" />
                   </linearGradient>
                 </defs>

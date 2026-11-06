@@ -12,7 +12,6 @@ import {
   Upload,
   Trash2,
   Package,
-  MessageCircle,
   Smartphone,
   ExternalLink,
   Camera,
@@ -22,12 +21,14 @@ import {
   X,
   RotateCcw,
 } from "lucide-react";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { newUuid } from "@/shared/api";
+import { useLiveSync } from "@/shared/useLiveSync";
+import { usePublicCatalog } from "@/shared/usePublicCatalog";
 import {
   saveClientRequest,
-  getClientRequestByReference,
+  fetchClientDossier,
   submitClientPaymentProof,
-  getLiveCompanySettings,
-  getLiveTariffs,
   getAdminDestinationsDetailed,
   findTariff,
   OfficialTariff,
@@ -67,6 +68,38 @@ interface ExtractedProduct {
   originalUrl: string;
 }
 
+/**
+ * Réduit une photo avant envoi : un cliché de téléphone pèse plusieurs Mo, trop pour un dossier en base.
+ * Un fichier que le navigateur ne sait pas décoder est refusé plutôt que perdu en silence.
+ */
+function compressImage(file: File, maxSide = 1200, quality = 0.8): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      const ctx = canvas.getContext("2d");
+      URL.revokeObjectURL(objectUrl);
+      if (!ctx) {
+        reject(new Error("Image illisible."));
+        return;
+      }
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Image illisible."));
+    };
+    img.src = objectUrl;
+  });
+}
+
 function convertToFcfa(amount: number, currency?: string): number {
   const num = Number(amount) || 0;
   const curr = (currency || "USD").toUpperCase();
@@ -80,6 +113,11 @@ function convertToFcfa(amount: number, currency?: string): number {
 function CommandeFormContent() {
   const searchParams = useSearchParams();
   const payRefParam = searchParams.get("pay")?.trim() || "";
+  const payKeyParam = searchParams.get("key")?.trim() || "";
+
+  // Conservées entre deux essais : un renvoi après coupure réseau ne crée ni doublon ni seconde preuve.
+  const orderIdempotencyKey = useRef(newUuid());
+  const proofIdempotencyKey = useRef(newUuid());
 
   const [option, setOption] = useState<"sans_fournisseur" | "avec_fournisseur">("sans_fournisseur");
 
@@ -120,51 +158,10 @@ function CommandeFormContent() {
   const [copiedMark, setCopiedMark] = useState(false);
   const [copiedPay, setCopiedPay] = useState<string | null>(null);
 
-  // Paramètres synchronisés avec l'Admin
-  const [settings, setSettings] = useState<Record<string, string>>(() => getLiveCompanySettings());
-  const [tariffs, setTariffs] = useState<OfficialTariff[]>(() => getLiveTariffs());
-
-  useEffect(() => {
-    fetch("/api/public/tariffs")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.tariffs && Array.isArray(d.tariffs) && d.tariffs.length > 0) {
-          const mapped: OfficialTariff[] = d.tariffs.map((t: any) => ({
-            id: t.id || t.tariff_id,
-            origin_country: t.origin_country || "Chine",
-            origin_city: t.origin_city || "",
-            destination_country: t.destination_country || "Côte d'Ivoire",
-            destination_city: t.destination_city || "",
-            shipping_mode_name: t.shipping_mode_name || t.mode_name || "Transport",
-            shipping_mode_type: (t.shipping_mode_type || t.mode_type || "AIR") as "AIR" | "SEA",
-            category_tag: t.category_tag || "",
-            pricing_basis: (t.pricing_basis || "PER_KG") as any,
-            currency: t.currency || "FCFA",
-            price_per_unit_minor: t.price_per_unit_minor || 0,
-            minimum_charge_minor: t.minimum_charge_minor || 0,
-            estimated_days_min: t.estimated_days_min || 7,
-            estimated_days_max: t.estimated_days_max || 14,
-            note: t.note || "",
-            is_active: t.is_active ?? 1,
-          }));
-          setTariffs(mapped);
-          try {
-            localStorage.setItem("roum_tariffs_data", JSON.stringify(mapped));
-          } catch {}
-        }
-      })
-      .catch(() => {});
-
-    const handleSync = () => {
-      setTariffs(getLiveTariffs());
-    };
-    window.addEventListener("storage", handleSync);
-    window.addEventListener("roum_tariffs_updated", handleSync);
-    return () => {
-      window.removeEventListener("storage", handleSync);
-      window.removeEventListener("roum_tariffs_updated", handleSync);
-    };
-  }, []);
+  // Paramètres synchronisés avec la base de données
+  const { tariffs, settings } = usePublicCatalog();
+  const agencyWaPhone =
+    (settings.whatsapp_official_number || settings.whatsapp_support || "").replace(/\D/g, "") || "2250153638569";
 
   // Uniquement les destinations configurées côté Admin (Chine)
   const adminDestinations = useMemo(() => {
@@ -338,11 +335,12 @@ function CommandeFormContent() {
   const readImageFile = (file: File) => {
     if (!file || !file.type.startsWith("image/")) return;
     setUserProductImageName(file.name || "Image collée");
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setUserProductImage(ev.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    compressImage(file)
+      .then(setUserProductImage)
+      .catch(() => {
+        setUserProductImageName("");
+        alert("Cette image n'a pas pu être lue. Essayez une autre photo au format JPG ou PNG.");
+      });
   };
 
   const isDirectImageUrl = (s: string) =>
@@ -424,23 +422,6 @@ function CommandeFormContent() {
   const [receiptFileName, setReceiptFileName] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const fetchLiveSettings = async () => {
-      try {
-        const res = await fetch(`/api/v1/public/settings?_t=${Date.now()}`);
-        if (res.ok) {
-          const d = await res.json();
-          if (d?.settings) {
-            setSettings(d.settings);
-            localStorage.setItem("roum_company_settings", JSON.stringify(d.settings));
-          }
-        }
-      } catch {}
-    };
-    fetchLiveSettings();
-  }, []);
-
   const activePaymentMethods = useMemo(() => {
     const list: Array<{
       id: string;
@@ -453,8 +434,9 @@ function CommandeFormContent() {
       logo: React.ReactNode;
     }> = [];
 
-    const waveNum = settings.payment_wave_ci?.trim() || "+225 07 87 99 44 12";
-    list.push({
+    // Un compte vidé dans l'administration disparaît du choix proposé au client.
+    const waveNum = settings.payment_wave_ci?.trim() || "";
+    if (waveNum) list.push({
       id: "wave",
       label: "Wave Mobile Money",
       type: "Côte d'Ivoire & UEMOA (0% frais)",
@@ -465,8 +447,8 @@ function CommandeFormContent() {
       logo: <WaveLogo size={34} />,
     });
 
-    const omNum = settings.payment_orange_money_ci?.trim() || "+225 07 00 00 00 00";
-    list.push({
+    const omNum = settings.payment_orange_money_ci?.trim() || "";
+    if (omNum) list.push({
       id: "orange",
       label: "Orange Money",
       type: "Transfert direct",
@@ -478,8 +460,8 @@ function CommandeFormContent() {
     });
 
     const moroccoBank = settings.payment_morocco_bank?.trim() || "CIH Bank / Attijariwafa Bank";
-    const moroccoRib = settings.payment_morocco_rib?.trim() || "230 780 0001234567890123 45";
-    list.push({
+    const moroccoRib = settings.payment_morocco_rib?.trim() || "";
+    if (moroccoRib) list.push({
       id: "morocco",
       label: moroccoBank,
       type: "Virement bancaire Casablanca",
@@ -561,10 +543,11 @@ function CommandeFormContent() {
   const handleReceiptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 25 * 1024 * 1024) {
-      alert("Le fichier est trop volumineux (maximum 25 Mo).");
+    if (file.size > 15 * 1024 * 1024) {
+      alert("Le fichier est trop volumineux (maximum 15 Mo).");
       return;
     }
+    proofIdempotencyKey.current = newUuid();
     setReceiptFile(file);
     setReceiptFileName(file.name);
     const reader = new FileReader();
@@ -611,81 +594,125 @@ function CommandeFormContent() {
     return totalArticlesFCFA + shippingQuote;
   }, [totalArticlesFCFA, shippingQuote]);
 
-  // Synchronisation directe Base de Données ➔ Client pour l'Étape 2 Bis (?pay=RM-...)
+  // Le dossier vient uniquement de la base : aucun montant n'est lu dans l'URL ni dans le navigateur.
   const [dbPayDossier, setDbPayDossier] = useState<any | null>(null);
+  const [payLoadState, setPayLoadState] = useState<"loading" | "ready" | "error">("loading");
+  const [payLoadError, setPayLoadError] = useState("");
+
+  const loadPayDossier = async (): Promise<boolean> => {
+    if (!payRefParam) return true;
+    if (!payKeyParam) {
+      setPayLoadError("Ce lien est incomplet. Demandez à ROUM TRANSIT de vous renvoyer votre lien de paiement.");
+      setPayLoadState("error");
+      return true;
+    }
+    try {
+      const dossier = await fetchClientDossier(payRefParam, payKeyParam);
+      setDbPayDossier(dossier);
+      setPayLoadState("ready");
+      return true;
+    } catch (err: any) {
+      if (err?.status !== 0 || !dbPayDossier) {
+        setPayLoadError(err?.message || "Impossible de charger votre dossier.");
+        setPayLoadState("error");
+      }
+      return false;
+    }
+  };
+
   useEffect(() => {
-    if (!payRefParam) return;
-    fetch(`/api/v1/public/requests/${encodeURIComponent(payRefParam)}?_t=${Date.now()}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d?.request) {
-          setDbPayDossier(d.request);
-        }
-      })
-      .catch(() => {});
-  }, [payRefParam]);
+    setPayLoadState("loading");
+    setDbPayDossier(null);
+    void loadPayDossier();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payRefParam, payKeyParam]);
+
+  // Un devis modifié par l'admin s'affiche ici sans recharger la page.
+  useLiveSync({
+    endpoint: "/api/v1/public/sync",
+    scopes: ["requests"],
+    enabled: Boolean(payRefParam && payKeyParam),
+    onChange: loadPayDossier,
+  });
 
   // Données du dossier pour l'Étape 2 Bis (quand le client clique sur le lien ?pay=RM-...)
   const payDossier = useMemo(() => {
-    if (!payRefParam) return null;
-    const saved = dbPayDossier || getClientRequestByReference(payRefParam);
-    const savedItem = saved?.items && saved.items[0] ? saved.items[0] : {};
-    const cName = searchParams.get("name") || searchParams.get("client") || saved?.client_name || "Client ROUM";
-    const cPhone = searchParams.get("phone") || saved?.client_phone || "";
-    const dest = searchParams.get("dest") || saved?.destination_country || "Côte d'Ivoire — Abidjan";
-    const mode = searchParams.get("mode") || saved?.shipping_mode_name || "Voie Aérienne";
-    const weightKgParam = searchParams.get("weight");
-    const cbmParam = searchParams.get("cbm");
-    const weightVal = weightKgParam
-      ? `${weightKgParam} kg`
-      : cbmParam
-      ? `${cbmParam} m³`
-      : saved?.estimated_weight_kg
-      ? `${saved.estimated_weight_kg} kg`
-      : saved?.estimated_cbm
+    if (!payRefParam || !dbPayDossier) return null;
+    const saved = dbPayDossier;
+    const savedItem = saved.items?.[0] || {};
+    const totalFcfa = Number(saved.total_amount_fcfa) || 0;
+    const isFinished = ["CONVERTED", "CANCELLED", "CLOSED"].includes(saved.status);
+    const proofUnderReview = saved.status === "IN_REVIEW" && Boolean(saved.payment_submitted_at);
+    if (totalFcfa <= 0 || isFinished || proofUnderReview) return null;
+
+    const weightLabel = saved.estimated_cbm
       ? `${saved.estimated_cbm} m³`
+      : saved.estimated_weight_kg
+      ? `${saved.estimated_weight_kg} kg`
       : "Estimé par ROUM";
-    const goodsFcfa = Number(searchParams.get("goods") || saved?.total_goods_fcfa || 0);
-    const shipFcfa = Number(searchParams.get("ship") || saved?.shipping_fee_fcfa || 0);
-    const totalFcfa =
-      Number(searchParams.get("total") || saved?.total_amount_fcfa || 0) || goodsFcfa + shipFcfa;
-    const title = decodeHtmlEntitiesText(
-      searchParams.get("title") ||
-        saved?.product_name ||
-        savedItem?.product_name ||
-        "Article commandé"
-    );
-    const qty = Number(searchParams.get("qty") || saved?.product_quantity || savedItem?.quantity || 1);
-    const img =
-      searchParams.get("img") ||
-      saved?.product_image ||
-      savedItem?.product_image ||
-      "";
-    const url = saved?.product_url || savedItem?.product_url || "";
-    const optType =
-      searchParams.get("opt") === "avec_fournisseur" || saved?.option_type === "AVEC_FOURNISSEUR"
-        ? ("avec_fournisseur" as const)
-        : ("sans_fournisseur" as const);
-    const sMark = saved?.shipping_mark || "";
 
     return {
-      reference: payRefParam,
-      clientName: cName,
-      clientPhone: cPhone,
-      destination: dest,
-      transportMode: mode,
-      weightLabel: String(weightVal).includes("kg") || String(weightVal).includes("m³") ? String(weightVal) : `${weightVal} kg`,
-      goodsFcfa,
-      shipFcfa,
+      reference: saved.reference,
+      clientName: saved.client_name || "Client ROUM",
+      clientPhone: saved.client_phone || "",
+      destination: saved.destination_country || "",
+      transportMode: saved.shipping_mode_name || "Voie Aérienne",
+      weightLabel,
+      goodsFcfa: Number(saved.total_goods_fcfa) || 0,
+      shipFcfa: Number(saved.shipping_fee_fcfa) || 0,
       totalFcfa,
-      productTitle: title,
-      quantity: qty,
-      productImage: img,
-      productUrl: url,
-      optionType: optType,
-      shippingMark: sMark,
+      productTitle: decodeHtmlEntitiesText(saved.product_name || savedItem.product_name || "Article commandé"),
+      quantity: Number(saved.product_quantity || savedItem.quantity || 1),
+      productImage: saved.product_image || "",
+      productUrl: saved.product_url || savedItem.product_url || "",
+      optionType: saved.option_type === "AVEC_FOURNISSEUR" ? ("avec_fournisseur" as const) : ("sans_fournisseur" as const),
+      shippingMark: saved.shipping_mark || "",
     };
-  }, [payRefParam, searchParams, dbPayDossier]);
+  }, [payRefParam, dbPayDossier]);
+
+  const payStatusView = useMemo(() => {
+    if (!payRefParam || payDossier) return null;
+    if (payLoadState === "loading") {
+      return { title: "Chargement de votre dossier…", text: "Un instant, nous récupérons votre dossier." };
+    }
+    if (payLoadState === "error") {
+      return { title: "Dossier indisponible", text: payLoadError };
+    }
+    if (dbPayDossier?.status === "CONVERTED") {
+      return {
+        title: "Paiement confirmé",
+        text: "Votre règlement a bien été reçu. Vous pouvez suivre votre colis.",
+        trackingNumber: dbPayDossier.tracking_number as string | null,
+      };
+    }
+    if (dbPayDossier?.status === "CANCELLED") {
+      return {
+        title: "Dossier annulé",
+        text: "Ce dossier a été annulé par ROUM TRANSIT. Contactez-nous sur WhatsApp pour toute question.",
+      };
+    }
+    if (dbPayDossier?.status === "CLOSED") {
+      return { title: "Dossier clôturé", text: "Ce dossier est clôturé. Merci de votre confiance." };
+    }
+    if (dbPayDossier?.status === "IN_REVIEW" && dbPayDossier.payment_submitted_at) {
+      return {
+        title: "Paiement en cours de vérification",
+        text: "Nous avons bien reçu votre preuve de paiement. Votre numéro de suivi apparaîtra ici dès sa validation.",
+      };
+    }
+    return {
+      title: "Devis en préparation",
+      text: "Notre équipe estime le poids et le prix de votre commande. Cette page se mettra à jour dès que votre devis sera prêt.",
+    };
+  }, [payRefParam, payDossier, payLoadState, payLoadError, dbPayDossier]);
+
+  // L'écran de confirmation s'efface dès que le dossier évolue côté admin (devis prêt, paiement validé, annulation).
+  const dossierMovedOn = useMemo(() => {
+    if (!orderResult || !dbPayDossier || dbPayDossier.reference !== orderResult.reference) return false;
+    const finished = ["CONVERTED", "CANCELLED", "CLOSED"].includes(dbPayDossier.status);
+    if (orderResult.isPaymentStep) return finished || dbPayDossier.status === "QUOTE_SENT";
+    return finished || Number(dbPayDossier.total_amount_fcfa) > 0;
+  }, [orderResult, dbPayDossier]);
 
   // Validation Étape 2 Bis : Envoi de la preuve de paiement par le client
   const handlePaymentProofSubmit = async (e: React.FormEvent) => {
@@ -701,24 +728,13 @@ function CommandeFormContent() {
       const selectedMethodLabel =
         activePaymentMethods.find((m) => m.id === selectedPayMethod)?.label || selectedPayMethod.toUpperCase();
 
-      // Mise à jour ou création dans localStorage & Base de Données SQLite D1
-      submitClientPaymentProof(payDossier.reference, {
+      // La confirmation n'est affichée qu'une fois la preuve enregistrée en base.
+      const updatedDossier = await submitClientPaymentProof(payDossier.reference, {
+        proofId: proofIdempotencyKey.current,
+        accessKey: payKeyParam,
         paymentMethod: selectedPayMethod,
-        receiptUrl: receiptDataUrl,
-        receiptName: receiptFileName || "Preuve de paiement",
-        fallbackData: {
-          clientName: payDossier.clientName,
-          clientPhone: payDossier.clientPhone,
-          destination: payDossier.destination,
-          shippingMode: payDossier.transportMode,
-          goodsTotalFcfa: payDossier.goodsFcfa,
-          shippingFeeFcfa: payDossier.shipFcfa,
-          totalAmountFcfa: payDossier.totalFcfa,
-          productName: payDossier.productTitle,
-          productQuantity: payDossier.quantity,
-          productImage: payDossier.productImage,
-          optionType: payDossier.optionType,
-        },
+        fileName: receiptFileName || "Preuve de paiement",
+        dataUrl: receiptDataUrl,
       });
 
       const receiptData: RoumReceiptData = {
@@ -748,9 +764,9 @@ function CommandeFormContent() {
         shippingFeeFcfa: payDossier.shipFcfa,
         grandTotalFcfa: payDossier.totalFcfa,
         paymentMethodLabel: `${selectedMethodLabel} (Justificatif joint : ${receiptFileName || "Reçu"})`,
+        supportPhone: settings.whatsapp_official_number,
       };
 
-      const agencyWaPhone = settings.whatsapp_number?.trim() || "2250787994412";
       const customWaUrl = buildClientReceiptWhatsAppUrl(receiptData, agencyWaPhone);
 
       const payResultObj = {
@@ -773,11 +789,12 @@ function CommandeFormContent() {
         } catch {}
       }
 
+      proofIdempotencyKey.current = newUuid();
+      setDbPayDossier(updatedDossier);
       setOrderResult(payResultObj);
       setSubmitted(true);
-    } catch (err) {
-      console.error("Erreur envoi preuve de paiement:", err);
-      setSubmitted(true);
+    } catch (err: any) {
+      alert(`Votre preuve de paiement n'a pas été envoyée.\n\n${err?.message || "Veuillez réessayer."}`);
     } finally {
       setSubmitting(false);
     }
@@ -822,7 +839,8 @@ function CommandeFormContent() {
         cargoDescription = `Expédition Avec Fournisseur | Shipping Mark : ${clientShippingMark.trim()} | Usine : ${paidToSupplier.trim() || "Déjà réglé"} (${supplierContact.trim() || "Contact usine"}) | Colis : ${cleanTitle} | Transport choisi : ${transportModeLabel} (${transportUnitRateFormatted}) — Poids à estimer par ROUM`;
       }
 
-      const res = await saveClientRequest({
+      const res = await saveClientRequest(
+        {
         service_type: "ALIBABA",
         option_type: option === "avec_fournisseur" ? "AVEC_FOURNISSEUR" : "SANS_FOURNISSEUR",
         shipping_mark: option === "avec_fournisseur" ? clientShippingMark.trim() : undefined,
@@ -836,12 +854,6 @@ function CommandeFormContent() {
         product_url: productLink.trim(),
         product_image: userProductImage || extractedProduct?.image || undefined,
         product_name: cleanTitle,
-        unit_price: undefined,
-        unit_price_currency: undefined,
-        total_goods_fcfa: 0,
-        shipping_fee_fcfa: 0,
-        total_amount_fcfa: 0,
-        payment_method_selected: "EN_ATTENTE_DEVIS_ROUM",
         product_quantity: String(productQuantity || 1),
         product_specs:
           option === "sans_fournisseur"
@@ -850,7 +862,10 @@ function CommandeFormContent() {
         shipping_mode_type: selectedTransportMode === "SEA" ? "SEA" : "AIR",
         shipping_mode_name: transportModeLabel,
         cargo_type: cargoDescription,
-      });
+        },
+        orderIdempotencyKey.current
+      );
+      orderIdempotencyKey.current = newUuid();
 
       const receiptData: RoumReceiptData = {
         receiptTitle:
@@ -885,9 +900,9 @@ function CommandeFormContent() {
         shippingFeeFcfa: 0,
         grandTotalFcfa: 0,
         paymentMethodLabel: "Devis complet (article + poids + transport) envoyé par ROUM sur WhatsApp à l'Étape 2",
+        supportPhone: settings.whatsapp_official_number,
       };
 
-      const agencyWaPhone = settings.whatsapp_number?.trim() || "2250787994412";
       const customWaUrl = buildClientReceiptWhatsAppUrl(receiptData, agencyWaPhone);
 
       const orderResultObj = {
@@ -907,16 +922,15 @@ function CommandeFormContent() {
       if (typeof window !== "undefined") {
         try {
           sessionStorage.setItem("roum_active_submitted_result", JSON.stringify(orderResultObj));
-          const newUrl = `${window.location.pathname}?pay=${encodeURIComponent(res.reference)}`;
+          const newUrl = `${window.location.pathname}?pay=${encodeURIComponent(res.reference)}&key=${encodeURIComponent(res.accessKey)}`;
           window.history.replaceState({ path: newUrl }, "", newUrl);
         } catch {}
       }
 
       setOrderResult(orderResultObj);
       setSubmitted(true);
-    } catch (err) {
-      console.error("Erreur enregistrement commande:", err);
-      setSubmitted(true);
+    } catch (err: any) {
+      alert(`Votre commande n'a pas été enregistrée.\n\n${err?.message || "Veuillez réessayer."}`);
     } finally {
       setSubmitting(false);
     }
@@ -936,16 +950,18 @@ function CommandeFormContent() {
         {/* Titre minimaliste */}
         <div className="ios-header">
           <h1 className="ios-title">
-            {payDossier ? "Finaliser mon règlement" : "Passer une commande"}
+            {payDossier ? "Finaliser mon règlement" : payRefParam ? "Mon dossier" : "Passer une commande"}
           </h1>
           <p className="ios-subtitle">
             {payDossier
               ? `Étape 2 · Devis officiel & Poids estimés par ROUM TRANSIT (${payDossier.reference})`
+              : payRefParam
+              ? payRefParam
               : "Achats et expéditions Chine vers l'Afrique aux vrais tarifs usine"}
           </p>
         </div>
 
-        {submitted && orderResult ? (
+        {submitted && orderResult && !dossierMovedOn ? (
           <div className="ios-card ios-success-card">
             <div className="ios-success-icon">
               <CheckCircle2 size={38} color="#16A34A" />
@@ -1016,8 +1032,8 @@ function CommandeFormContent() {
                     style={{
                       fontSize: "0.75rem",
                       fontWeight: 700,
-                      color: "#92400E",
-                      background: "#FEF3C7",
+                      color: "#6B5844",
+                      background: "#F1E7D9",
                       padding: "3px 9px",
                       borderRadius: "9999px",
                     }}
@@ -1080,7 +1096,7 @@ function CommandeFormContent() {
                 className="ios-btn-pdf"
               >
                 <Download size={16} />
-                <span>Télécharger le Reçu PDF</span>
+                <span>Télécharger le reçu</span>
               </button>
               <button
                 type="button"
@@ -1088,24 +1104,16 @@ function CommandeFormContent() {
                 className="ios-btn-print"
               >
                 <Printer size={16} />
-                <span>Imprimer le Reçu (A4)</span>
+                <span>Imprimer</span>
               </button>
             </div>
 
             <div className="ios-actions-stack">
-              <a
+              <WhatsAppButton
                 href={orderResult.whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ios-btn-whatsapp-agency"
-              >
-                <MessageCircle size={18} />
-                <span>
-                  {orderResult.isPaymentStep
-                    ? "Confirmer mon paiement sur WhatsApp à l'agence"
-                    : "Envoyer ma commande sur WhatsApp à l'agence"}
-                </span>
-              </a>
+                label={orderResult.isPaymentStep ? "Confirmer mon paiement" : "Envoyer ma commande"}
+                block
+              />
 
               <button
                 type="button"
@@ -1127,7 +1135,7 @@ function CommandeFormContent() {
                   gap: "8px",
                   width: "100%",
                   height: "44px",
-                  borderRadius: "12px",
+                  borderRadius: "9999px",
                   border: "1px solid #E5E0D8",
                   background: "#FAF8F5",
                   color: "#181512",
@@ -1141,6 +1149,23 @@ function CommandeFormContent() {
                 <RotateCcw size={15} />
                 <span>Passer une autre commande</span>
               </button>
+            </div>
+          </div>
+        ) : payStatusView ? (
+          <div className="ios-card">
+            <div className="ios-section" style={{ textAlign: "center", padding: "32px 20px" }}>
+              <h2 style={{ fontSize: "1.05rem", fontWeight: 700, margin: "0 0 8px 0" }}>{payStatusView.title}</h2>
+              <p style={{ fontSize: "0.88rem", color: "#6B6459", margin: 0, lineHeight: 1.5 }}>{payStatusView.text}</p>
+              {payStatusView.trackingNumber && (
+                <Link
+                  href={`/tracking/${encodeURIComponent(payStatusView.trackingNumber)}`}
+                  className="ios-btn-primary"
+                  style={{ marginTop: "18px" }}
+                >
+                  <Package size={18} />
+                  <span>Suivre mon colis ({payStatusView.trackingNumber})</span>
+                </Link>
+              )}
             </div>
           </div>
         ) : payDossier ? (
@@ -1308,7 +1333,7 @@ function CommandeFormContent() {
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       className="ios-upload-btn"
-                      style={{ height: "54px", borderColor: "#C5A265", background: "#FFFBEB", color: "#92400E" }}
+                      style={{ height: "54px", borderColor: "#B8A488", background: "#F6F0E6", color: "#6B5844" }}
                     >
                       <Upload size={16} />
                       <span>Cliquez ici pour joindre votre preuve de paiement</span>
@@ -1890,8 +1915,8 @@ function CommandeFormContent() {
                       style={{
                         fontSize: "0.75rem",
                         fontWeight: 700,
-                        color: "#92400E",
-                        background: "#FEF3C7",
+                        color: "#6B5844",
+                        background: "#F1E7D9",
                         padding: "2px 8px",
                         borderRadius: "9999px",
                       }}
@@ -1921,7 +1946,7 @@ function CommandeFormContent() {
                 <div
                   style={{
                     background: "#F7F5F0",
-                    border: "1px solid rgba(197, 162, 101, 0.35)",
+                    border: "1px solid rgba(184, 164, 136, 0.35)",
                     borderRadius: "18px",
                     padding: "14px 16px",
                     display: "flex",
@@ -1964,7 +1989,7 @@ function CommandeFormContent() {
                         width: "22px",
                         height: "22px",
                         borderRadius: "50%",
-                        background: "#C5A265",
+                        background: "#B8A488",
                         color: "#FFFFFF",
                         fontSize: "0.72rem",
                         fontWeight: 800,
@@ -2216,8 +2241,8 @@ function CommandeFormContent() {
 
         .ios-input:focus {
           background: #FFFFFF;
-          border-color: #C5A265;
-          box-shadow: 0 0 0 3px rgba(197, 162, 101, 0.2);
+          border-color: #B8A488;
+          box-shadow: 0 0 0 3px rgba(184, 164, 136, 0.2);
         }
 
         .ios-input::placeholder {
@@ -2255,8 +2280,8 @@ function CommandeFormContent() {
 
         .ios-select:focus {
           background-color: #FFFFFF;
-          border-color: #C5A265;
-          box-shadow: 0 0 0 3px rgba(197, 162, 101, 0.2);
+          border-color: #B8A488;
+          box-shadow: 0 0 0 3px rgba(184, 164, 136, 0.2);
         }
 
         .ios-select option {
@@ -2405,7 +2430,7 @@ function CommandeFormContent() {
           flex-direction: column;
           gap: 12px;
           background: #F7F5F0;
-          border: 1.5px solid rgba(197, 162, 101, 0.35);
+          border: 1.5px solid rgba(184, 164, 136, 0.35);
           border-radius: 22px;
           padding: 16px;
           margin-top: 6px;
@@ -2548,7 +2573,7 @@ function CommandeFormContent() {
         .ios-product-preview-price-cny {
           font-size: 1.02rem;
           font-weight: 800;
-          color: #C2410C;
+          color: #1E4D5B;
         }
 
         .ios-product-preview-price-cfa {
@@ -2580,8 +2605,8 @@ function CommandeFormContent() {
         }
 
         .ios-moq-tag {
-          background: #FEF3C7;
-          color: #92400E;
+          background: #F1E7D9;
+          color: #6B5844;
           padding: 2px 8px;
           border-radius: 9999px;
           font-size: 0.68rem;
@@ -2599,8 +2624,8 @@ function CommandeFormContent() {
           flex-direction: column;
           align-items: flex-start;
           gap: 2px;
-          padding: 8px 10px;
-          border-radius: 12px;
+          padding: 8px 18px;
+          border-radius: 9999px;
           border: 1.5px solid rgba(28, 24, 21, 0.08);
           background: #FAF8F5;
           cursor: pointer;
@@ -2609,7 +2634,7 @@ function CommandeFormContent() {
         }
 
         .ios-tier-pill:hover {
-          border-color: #C5A265;
+          border-color: #B8A488;
           background: #FFFFFF;
         }
 
@@ -2824,9 +2849,9 @@ function CommandeFormContent() {
         }
 
         .ios-payment-row.selected {
-          border-color: #C5A265;
+          border-color: #B8A488;
           background: #FFFFFF;
-          box-shadow: 0 4px 16px rgba(197, 162, 101, 0.16);
+          box-shadow: 0 4px 16px rgba(184, 164, 136, 0.16);
         }
 
         .ios-pay-left {
@@ -3114,9 +3139,9 @@ function CommandeFormContent() {
 
         .ios-btn-pdf {
           height: 46px;
-          background: #FFFBEB;
-          color: #92400E;
-          border: 1.5px solid #F59E0B;
+          background: #EADDCB;
+          color: #3A2A21;
+          border: 0;
           border-radius: 9999px;
           font-size: 0.84rem;
           font-weight: 700;
@@ -3129,7 +3154,7 @@ function CommandeFormContent() {
         }
 
         .ios-btn-pdf:hover {
-          background: #FEF3C7;
+          background: #E0D1BB;
         }
 
         .ios-btn-print {
@@ -3152,26 +3177,6 @@ function CommandeFormContent() {
           background: #EAE6DE;
         }
 
-        .ios-btn-whatsapp-agency {
-          width: 100%;
-          height: 50px;
-          background: #16A34A;
-          color: #FFFFFF;
-          font-size: 0.94rem;
-          font-weight: 700;
-          border-radius: 9999px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          text-decoration: none;
-          box-shadow: 0 4px 16px rgba(22, 163, 74, 0.25);
-          transition: background-color 0.15s ease, transform 0.1s ease;
-        }
-
-        .ios-btn-whatsapp-agency:hover {
-          background: #15803D;
-        }
 
         .ios-actions-stack {
           display: flex;
@@ -3183,8 +3188,8 @@ function CommandeFormContent() {
         .ios-btn-primary {
           width: 100%;
           height: 48px;
-          background: #1C1815;
-          color: #FAF8F5;
+          background: #1E4D5B;
+          color: #FFFFFF;
           font-size: 0.92rem;
           font-weight: 600;
           border-radius: 9999px;
@@ -3198,7 +3203,7 @@ function CommandeFormContent() {
         }
 
         .ios-btn-primary:hover {
-          background: #000000;
+          background: #163B46;
         }
 
         .ios-btn-secondary {

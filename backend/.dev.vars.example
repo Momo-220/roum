@@ -1,0 +1,2 @@
+# Copier ce fichier vers backend/.dev.vars pour le développement local.
+ENVIRONMENT=development

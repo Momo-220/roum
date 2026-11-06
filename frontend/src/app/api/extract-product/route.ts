@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isPublicHttpUrl } from "@/shared/safe-url";
 
 export interface PriceTier {
   minQty: number;
@@ -560,6 +561,8 @@ export async function POST(req: NextRequest) {
     const supplier = "Fournisseur certifié Chine";
 
     try {
+      if (!isPublicHttpUrl(trimmedUrl)) throw new Error("Adresse non autorisée");
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 6500);
 

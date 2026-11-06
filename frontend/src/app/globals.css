@@ -42,9 +42,9 @@
   --state-success-text: #059669;
   --state-success-border: #A7F3D0;
 
-  --state-warning-bg: #FFFBEB;
-  --state-warning-text: #D97706;
-  --state-warning-border: #FDE68A;
+  --state-warning-bg: #F6F0E6;
+  --state-warning-text: #7D6A45;
+  --state-warning-border: #E3D4BF;
 
   --state-danger-bg: #FEF2F2;
   --state-danger-text: #DC2626;
@@ -467,9 +467,9 @@ a {
 }
 
 .ios-trend-pill-gold {
-  background: rgba(217, 119, 6, 0.09) !important;
-  color: #D97706 !important;
-  border: 1px solid rgba(217, 119, 6, 0.22) !important;
+  background: rgba(125, 106, 69, 0.09) !important;
+  color: #7D6A45 !important;
+  border: 1px solid rgba(125, 106, 69, 0.22) !important;
 }
 
 .ios-trend-pill-neutral {
@@ -672,7 +672,7 @@ select.input-clean option {
   justify-content: flex-start;
   text-align: left;
   width: 100%;
-  border-radius: 12px;
+  border-radius: 9999px;
   border: 1px solid transparent;
   background: transparent;
   color: #4B5563;
@@ -789,7 +789,7 @@ select.input-clean option {
 .hub-card-active {
   background: #FFFFFF;
   border-color: var(--brown-dark);
-  box-shadow: 0 4px 14px rgba(112, 72, 56, 0.08);
+  box-shadow: 0 4px 14px rgba(22, 59, 70, 0.08);
 }
 
 .active-row-highlight {
@@ -970,7 +970,7 @@ select.input-clean option {
 .ios-send-button {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: 9999px;
   border: none;
   background: var(--btn-primary-bg);
   color: #FAF8F5;
@@ -1106,7 +1106,7 @@ select.input-clean option {
 
 .select-pill-clean:focus {
   border-color: var(--brown-dark);
-  box-shadow: 0 0 0 3px rgba(122, 74, 40, 0.12);
+  box-shadow: 0 0 0 3px rgba(30, 77, 91, 0.12);
 }
 
 /* Custom Status Badge Select in Tables */
@@ -1134,7 +1134,7 @@ select.input-clean option {
 }
 
 .status-select-pill:focus {
-  box-shadow: 0 0 0 2px rgba(122, 74, 40, 0.22);
+  box-shadow: 0 0 0 2px rgba(30, 77, 91, 0.22);
 }
 
 .btn-icon-clean {
@@ -1336,7 +1336,7 @@ select.input-clean option {
   font-size: 0.88rem;
   letter-spacing: -0.01em;
   padding: 12px 20px;
-  border-radius: 10px;
+  border-radius: 9999px;
   border: 1px solid #111827;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 3px 8px -2px rgba(17, 24, 39, 0.16);
   cursor: pointer;
@@ -1370,7 +1370,7 @@ select.input-clean option {
   font-size: 0.84rem;
   letter-spacing: -0.01em;
   padding: 10px 18px;
-  border-radius: 10px;
+  border-radius: 9999px;
   border: 1px solid #D1D5DB;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   cursor: pointer;
@@ -1533,7 +1533,7 @@ select.input-clean option {
   --c-text-light: #8C7D75;     /* Métadonnées & sous-titres Linea */
   --c-text-dim: #B8ABA3;       /* Gris discret Linea (#b8aba3) */
 
-  --c-accent-red: #C2410C;     /* Terracotta chaleureux */
+  --c-accent: #1E4D5B;         /* Bleu pétrole, sobre, posé à côté du beige du logo */
   --c-accent-green: #25D366;   /* Vert WhatsApp */
   --c-border: #EEE5DC;         /* Filet fin élégant Linea (#eee5dc) */
   --c-border-subtle: #E8DFD5;
@@ -1544,7 +1544,7 @@ select.input-clean option {
   --c-badge-green-bg: #DCFCE7;
   --c-badge-green-text: #166534;
 
-  --c-btn-primary-bg: #140D09;
+  --c-btn-primary-bg: #1E4D5B;
   --c-btn-primary-text: #FFFFFF;
   --c-btn-secondary-bg: #FFFFFF;
   --c-btn-secondary-border: #D6D3D1;
@@ -1622,7 +1622,7 @@ select.input-clean option {
 }
 
 .client-portal .client-price-red {
-  color: var(--c-accent-red);
+  color: var(--c-accent);
   font-weight: 700;
 }
 
@@ -1637,7 +1637,7 @@ select.input-clean option {
   font-weight: 700;
   font-size: 0.86rem;
   padding: 10px 18px;
-  border-radius: 8px;
+  border-radius: 9999px;
   border: 1px solid var(--c-btn-primary-bg);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -1645,8 +1645,8 @@ select.input-clean option {
 }
 
 .client-portal .client-btn-primary:hover {
-  background-color: #292524;
-  border-color: #292524;
+  background-color: #163B46;
+  border-color: #163B46;
   color: #FFFFFF;
 }
 
@@ -1661,7 +1661,7 @@ select.input-clean option {
   font-weight: 600;
   font-size: 0.86rem;
   padding: 10px 18px;
-  border-radius: 8px;
+  border-radius: 9999px;
   border: 1px solid var(--c-btn-secondary-border);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -1726,8 +1726,13 @@ select.input-clean option {
 .bento-cta-pill {
   display: inline-flex !important;
   align-items: center !important;
-  gap: 12px !important;
-  background: transparent !important;
+  gap: 8px !important;
+  min-height: 42px !important;
+  padding: 0 16px !important;
+  border-radius: 9999px !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   color: #FFFFFF !important;
   font-size: 0.84rem !important;
   font-weight: 700 !important;
@@ -1735,15 +1740,16 @@ select.input-clean option {
   white-space: nowrap !important;
   flex-shrink: 0 !important;
   cursor: pointer !important;
-  transition: color 0.18s ease !important;
+  transition: background 0.18s ease, color 0.18s ease !important;
 }
 
 .bento-cta-pill:hover {
-  color: #FFA066 !important;
+  background: #EADDCB !important;
+  color: #3A2A21 !important;
 }
 
 .bento-cta-pill span {
-  margin-right: 8px !important;
+  margin-right: 0 !important;
 }
 
 .bento-cta-pill svg {
@@ -1756,10 +1762,290 @@ select.input-clean option {
   transform: translateX(5px) !important;
 }
 
+/* ============================================================
+   MOBILE : LISIBILITÉ, CONFORT ET NAVIGATION
+   ============================================================ */
+
+/* Un titre posé sur une photo reste blanc, quelle que soit la couleur générale des titres du site. */
+.client-portal .bento-card-title,
+.client-portal .service-title-default,
+.client-portal .service-title-stacked,
+.client-portal .service-title-expanded {
+  color: #FFFFFF;
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.35);
+}
+
+/* Le menu latéral de l'admin devient un tiroir sur téléphone. */
+.admin-mobile-bar,
+.admin-drawer-backdrop {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .admin-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0;
+    bottom: 0;
+    z-index: 1000 !important;
+    width: min(84vw, 300px) !important;
+    height: 100dvh !important;
+    padding: 20px 14px calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+    transform: translateX(-100%);
+    transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    will-change: transform;
+  }
+
+  .admin-sidebar.is-open {
+    transform: translateX(0);
+    box-shadow: 8px 0 32px rgba(28, 25, 23, 0.18);
+  }
+
+  .admin-drawer-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(28, 25, 23, 0.38);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .admin-drawer-backdrop.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .admin-main-viewport > .admin-mobile-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: -12px;
+    z-index: 30;
+    width: calc(100% + 28px);
+    max-width: none;
+    margin: -12px -14px 14px;
+    padding: 10px 14px;
+    background: rgba(250, 248, 245, 0.95);
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .admin-mobile-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 9999px;
+    border: 1px solid var(--border-light);
+    background: #FFFFFF;
+    color: #1C1917;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .admin-main-viewport {
+    max-height: 100dvh;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .btn-icon-clean {
+    min-width: 38px;
+    min-height: 38px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Safari iOS zoome sur tout champ dont le texte fait moins de 16 px. */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Admin sur téléphone : rien ne dépasse, et chaque ligne de tableau devient une carte lisible. */
+@media (max-width: 900px) {
+  .admin-main-viewport .pill-selector {
+    max-width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-main-viewport .pill-selector::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-main-viewport .pill-option {
+    flex-shrink: 0;
+  }
+
+  .admin-main-viewport .card-clean {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .admin-main-viewport .btn {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .admin-main-viewport [style*="display: grid"]:not([style*="grid-template-columns"]),
+  .admin-main-viewport [style*="display: grid"][style*="minmax("] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .admin-main-viewport [style*="display: flex"][style*="justify-content: space-between"] {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-main-viewport table {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .admin-main-viewport table thead {
+    display: none;
+  }
+
+  .admin-main-viewport table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .admin-main-viewport table tr {
+    display: block;
+    padding: 6px 14px;
+    background: #FFFFFF;
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+  }
+
+  .admin-main-viewport table td {
+    display: grid;
+    grid-template-columns: minmax(84px, 34%) minmax(0, 1fr);
+    column-gap: 12px;
+    align-items: center;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding: 9px 0 !important;
+    border-bottom: 1px solid rgba(28, 25, 23, 0.06);
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-main-viewport table td:last-child {
+    border-bottom: 0;
+  }
+
+  .admin-main-viewport table td::before {
+    content: attr(data-label);
+    grid-row: 1 / span 8;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--text-muted);
+  }
+
+  .admin-main-viewport table td > * {
+    grid-column: 2;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 900px) {
+  .admin-main-viewport div:has(> .pill-selector) {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-main-viewport table td * {
+    white-space: normal !important;
+  }
+
+  .admin-main-viewport table td[data-label^="Action"] {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .admin-main-viewport table td[data-label^="Action"]::before {
+    display: none;
+  }
+
+  /* Les fenêtres de modification utilisent presque toute la largeur de l'écran. */
+  div[style*="position: fixed"]:has(> .card-clean) {
+    padding: 10px !important;
+  }
+
+  div[style*="position: fixed"] > .card-clean {
+    padding: 18px 14px !important;
+    max-height: 100%;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Une carte de grille ne dépasse jamais de sa colonne, même avec un long intitulé. */
+  .admin-main-viewport [style*="display: grid"] > div > div {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
 
 
+/* ==========================================================================
+   Bouton pilule au logo WhatsApp
+   ========================================================================== */
+.wa-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 48px;
+  padding: 7px 20px 7px 9px;
+  border: 1px solid rgba(30, 77, 91, 0.18);
+  border-radius: 9999px;
+  background: #FFFFFF;
+  box-shadow: 0 8px 18px -12px rgba(22, 59, 70, 0.45);
+  color: #3A2A21 !important;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
 
+.wa-pill:hover {
+  border-color: rgba(37, 211, 102, 0.55);
+  box-shadow: 0 10px 20px -12px rgba(37, 211, 102, 0.55);
+  transform: translateY(-1px);
+}
 
+.wa-pill:active {
+  transform: scale(0.98);
+}
 
-
-
+.wa-pill-block {
+  display: flex;
+  width: 100%;
+}

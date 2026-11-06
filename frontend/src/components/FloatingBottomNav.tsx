@@ -47,12 +47,12 @@ export function FloatingBottomNav() {
           gap: "2px",
           padding: "4px 8px",
           height: "44px",
-          backgroundColor: "#140D09",
+          backgroundColor: "#163B46",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
           borderRadius: "9999px",
           border: "1px solid rgba(255, 255, 255, 0.15)",
-          boxShadow: "0 12px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3)",
+          boxShadow: "0 12px 28px rgba(22, 59, 70, 0.38), 0 2px 8px rgba(22, 59, 70, 0.24)",
           boxSizing: "border-box",
           whiteSpace: "nowrap",
           overflow: "hidden",
@@ -77,7 +77,7 @@ export function FloatingBottomNav() {
                 fontWeight: item.isActive ? 700 : 500,
                 letterSpacing: "-0.01em",
                 textDecoration: "none",
-                color: item.isActive ? "#140D09" : "rgba(255, 255, 255, 0.82)",
+                color: item.isActive ? "#163B46" : "rgba(255, 255, 255, 0.82)",
                 backgroundColor: item.isActive ? "#FFFFFF" : "transparent",
                 boxShadow: item.isActive ? "0 2px 8px rgba(0, 0, 0, 0.25)" : "none",
                 whiteSpace: "nowrap",
@@ -90,7 +90,7 @@ export function FloatingBottomNav() {
               <Icon
                 size={14}
                 strokeWidth={item.isActive ? 2.5 : 1.9}
-                color={item.isActive ? "#140D09" : "rgba(255, 255, 255, 0.85)"}
+                color={item.isActive ? "#163B46" : "rgba(255, 255, 255, 0.85)"}
                 style={{ flexShrink: 0 }}
               />
               <span style={{ lineHeight: 1, whiteSpace: "nowrap" }}>{item.label}</span>

@@ -114,7 +114,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         </defs>
       </svg>
 
-      {/* Halo de lumière doux aux tons terracotta Roum Transit */}
+      {/* Halo de lumière doux aux tons beige Roum Transit */}
       <div
         style={{
           position: "absolute",

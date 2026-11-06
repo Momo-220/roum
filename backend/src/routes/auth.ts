@@ -158,7 +158,7 @@ authRouter.get("/me", async (c) => {
   // Session locale de développement (uniquement hors production)
   if (token === "roum_local_admin_session" && c.env.ENVIRONMENT !== "production") {
     const devSession: UserSession = {
-      userId: "user-ceo-marouba",
+      userId: "user-superadmin-01",
       email: "ceo@roumtransit.com",
       fullName: "Madame Marouba",
       roleId: SUPER_ADMIN_ROLE_ID,
@@ -239,7 +239,7 @@ authRouter.post("/logout", (c) => {
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Le mot de passe actuel est requis"),
-  newPassword: z.string().min(6, "Le nouveau mot de passe doit comporter au moins 6 caractères").max(256),
+  newPassword: z.string().min(8, "Le nouveau mot de passe doit comporter au moins 8 caractères").max(256),
 });
 
 /**

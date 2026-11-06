@@ -24,7 +24,7 @@ export function buildWhatsAppUrl(phone: string, message?: string): string {
     ? normalized.slice(1)
     : (phone || "").replace(/[^0-9]/g, "").replace(/^00/, "");
   if (!digits) {
-    return "https://wa.me/2250787994412";
+    return "https://wa.me/2250153638569";
   }
   const text = message?.trim();
   return text ? `https://wa.me/${digits}?text=${encodeURIComponent(text)}` : `https://wa.me/${digits}`;
@@ -150,43 +150,15 @@ export function buildAdminRequestWhatsAppUrl(params: {
  * Construit le lien autonome et cliquable vers la page de règlement & upload de preuve de paiement
  * d'une commande (/services/commande?pay=RM-...).
  */
-export function getPaymentPageUrl(params: {
-  reference: string;
-  clientName?: string;
-  clientPhone?: string;
-  destination?: string;
-  shippingMode?: string;
-  weightKg?: number;
-  volumeCbm?: number;
-  goodsTotalFcfa?: number;
-  shippingFeeFcfa?: number;
-  totalAmountFcfa?: number;
-  productName?: string;
-  productQuantity?: string | number;
-  productImage?: string;
-  optionType?: string;
-}): string {
+export function getPaymentPageUrl(params: { reference: string; accessKey?: string | null }): string {
   const origin =
     typeof window !== "undefined" && window.location?.origin
       ? window.location.origin
       : "https://roum-transit.pages.dev";
+  // Le lien ne transporte aucun montant : la page lit le dossier en base, seule source de vérité.
   const sp = new URLSearchParams();
   sp.set("pay", (params.reference || "").trim());
-  if (params.clientName) sp.set("name", params.clientName.trim());
-  if (params.clientPhone) sp.set("phone", params.clientPhone.trim());
-  if (params.destination) sp.set("dest", params.destination.trim());
-  if (params.shippingMode) sp.set("mode", params.shippingMode.trim());
-  if (typeof params.weightKg === "number" && params.weightKg > 0) sp.set("weight", String(params.weightKg));
-  if (typeof params.volumeCbm === "number" && params.volumeCbm > 0) sp.set("cbm", String(params.volumeCbm));
-  if (typeof params.goodsTotalFcfa === "number" && params.goodsTotalFcfa > 0) sp.set("goods", String(Math.round(params.goodsTotalFcfa)));
-  if (typeof params.shippingFeeFcfa === "number" && params.shippingFeeFcfa > 0) sp.set("ship", String(Math.round(params.shippingFeeFcfa)));
-  if (typeof params.totalAmountFcfa === "number" && params.totalAmountFcfa > 0) sp.set("total", String(Math.round(params.totalAmountFcfa)));
-  if (params.productName) sp.set("title", params.productName.trim().substring(0, 120));
-  if (params.productQuantity) sp.set("qty", String(params.productQuantity));
-  if (params.productImage && !params.productImage.startsWith("data:")) {
-    sp.set("img", params.productImage);
-  }
-  if (params.optionType) sp.set("opt", params.optionType);
+  if (params.accessKey) sp.set("key", params.accessKey);
   return `${origin}/services/commande?${sp.toString()}`;
 }
 
@@ -211,26 +183,11 @@ export function buildAdminQuotePaymentWhatsAppUrl(params: {
   waveNumber?: string;
   orangeNumber?: string;
   moroccoRib?: string;
-  productImage?: string;
-  optionType?: string;
+  accessKey?: string | null;
 }): string {
   const cleanPhone = (params.clientPhone || "").replace(/[^0-9]/g, "").replace(/^00/, "");
-  const paymentUrl = getPaymentPageUrl({
-    reference: params.reference,
-    clientName: params.clientName,
-    clientPhone: params.clientPhone,
-    destination: params.destination,
-    shippingMode: params.shippingMode,
-    weightKg: params.estimatedWeightKg,
-    volumeCbm: params.estimatedCbm,
-    goodsTotalFcfa: params.goodsTotalFcfa,
-    shippingFeeFcfa: params.shippingFeeFcfa,
-    totalAmountFcfa: params.totalAmountFcfa,
-    productName: params.productName,
-    productQuantity: params.productQuantity,
-    productImage: params.productImage,
-    optionType: params.optionType,
-  });
+  const paymentUrl = getPaymentPageUrl({ reference: params.reference, accessKey: params.accessKey });
+
 
   const weightLabel = params.estimatedCbm
     ? `${params.estimatedCbm} m³ (Volume estimé par ROUM)`

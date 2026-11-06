@@ -12,6 +12,8 @@
  *   dans la liste des demandes du tableau de bord Admin (section "Commandes & Achats Clients").
  */
 
+import { apiRequest, newUuid } from "./api";
+
 export interface OfficialTariff {
   id: string;
   origin_country: string;
@@ -35,6 +37,10 @@ export interface OfficialTariff {
 }
 
 // 19 Tarifs Officiels extraits directement des flyers réels de ROUM TRANSIT
+/** Copie navigateur des données publiques, écrite uniquement à partir des réponses du serveur. */
+const TARIFFS_CACHE_KEY = "roum_public_tariffs_cache";
+const SETTINGS_CACHE_KEY = "roum_public_settings_cache";
+
 export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
   // --- 1. CHINE ➔ AFRIQUE (COTE D'IVOIRE) ---
   {
@@ -431,29 +437,53 @@ export const DEFAULT_OFFICIAL_TARIFFS: OfficialTariff[] = [
   },
 ];
 
-/**
- * Charge la liste des tarifs en temps réel.
- * Lit en priorité le localStorage synchronisé par l'Admin ('roum_tariffs_data').
- */
+/** Convertit une ligne de l'API vers le format des pages client. */
+export function mapApiTariff(t: any): OfficialTariff {
+  const modeType = (t.mode_type || t.shipping_mode_type || "AIR") as "AIR" | "SEA";
+  return {
+    id: t.tariff_id || t.id,
+    origin_country: t.origin_country || "",
+    origin_city: t.origin_city || "",
+    destination_country: t.destination_country || "",
+    destination_city: t.destination_city || "",
+    shipping_mode_name: t.mode_name || t.shipping_mode_name || t.service_name || "",
+    service_name: t.service_name || t.mode_name || t.shipping_mode_name || "",
+    shipping_mode_type: modeType,
+    category_tag: t.category_tag || "",
+    pricing_basis: t.pricing_basis || (modeType === "SEA" ? "PER_CBM" : "PER_KG"),
+    currency: t.currency || "FCFA",
+    price_per_unit_minor: Number(t.price_per_unit_minor) || 0,
+    minimum_charge_minor: t.minimum_charge_minor !== undefined ? Number(t.minimum_charge_minor) : undefined,
+    estimated_days_min: Number(t.estimated_days_min) || 3,
+    estimated_days_max: Number(t.estimated_days_max) || 7,
+    flyer_source: t.flyer_source || "",
+    secondary_display: t.secondary_display || "",
+    note: t.note || "",
+    is_active: t.is_active !== undefined ? Number(t.is_active) : 1,
+  } as OfficialTariff;
+}
+
+export function cachePublicCatalog(data: { tariffs?: OfficialTariff[]; settings?: Record<string, string> }): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (data.tariffs) localStorage.setItem(TARIFFS_CACHE_KEY, JSON.stringify(data.tariffs));
+    if (data.settings) localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(data.settings));
+  } catch {
+    // Le cache n'est qu'un confort d'affichage : son échec n'a aucune conséquence.
+  }
+}
+
+/** Dernière grille reçue du serveur, ou la grille officielle tant que rien n'a été reçu. */
 export function getLiveTariffs(): OfficialTariff[] {
   if (typeof window !== "undefined") {
     try {
-      const saved = localStorage.getItem("roum_tariffs_data");
+      const saved = localStorage.getItem(TARIFFS_CACHE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((t: any) => ({
-            ...t,
-            id: t.id || t.tariff_id || "",
-            shipping_mode_name: t.shipping_mode_name || t.mode_name || t.service_name || "",
-            service_name: t.service_name || t.shipping_mode_name || t.mode_name || "",
-            shipping_mode_type: (t.shipping_mode_type || t.mode_type || "AIR") as "AIR" | "SEA",
-            price_per_unit_minor: Number(t.price_per_unit_minor) || 0,
-          }));
-        }
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
-    } catch (e) {
-      console.warn("Erreur lecture roum_tariffs_data:", e);
+    } catch {
+      // Cache illisible : on retombe sur la grille officielle.
     }
   }
   return DEFAULT_OFFICIAL_TARIFFS;
@@ -570,12 +600,6 @@ export function formatTariffPrice(minorOrNum: number, currency: string = "FCFA")
   return `${val.toLocaleString("fr-FR")} ${currency}`;
 }
 
-/**
- * Enregistre une nouvelle demande / commande client à la fois dans :
- * 1. Le stockage permanent `roum_requests_data` (visible instantanément dans l'Admin)
- * 2. Déclenche l'événement global `storage` pour mise à jour sans rechargement
- * 3. L'API backend `/api/v1/public/quotes`
- */
 export function decodeHtmlEntitiesText(text?: string | null): string {
   if (!text) return "";
   return String(text)
@@ -617,410 +641,140 @@ export function decodeHtmlEntitiesText(text?: string | null): string {
     });
 }
 
-export async function saveClientRequest(data: {
-  service_type: "ALIBABA" | "FORWARDING" | "MAROC" | "FRANCE" | "DUBAI" | "GENERAL";
-  client_name: string;
-  client_phone: string;
-  client_email?: string;
-  origin_country: string;
-  destination_country: string;
-  shipping_mode_name?: string;
-  shipping_mode_type?: "AIR" | "SEA";
-  estimated_weight_kg?: number;
-  estimated_cbm?: number;
-  product_url?: string;
-  product_quantity?: string;
-  product_specs?: string;
-  cargo_type?: string;
-  option_type?: "SANS_FOURNISSEUR" | "AVEC_FOURNISSEUR" | "FORWARDING";
-  rmb_amount?: string;
-  supplier_contact?: string;
-  product_image?: string;
-  product_name?: string;
-  shipping_mark?: string;
-  paid_to_supplier?: string;
-  unit_price?: number;
-  unit_price_currency?: string;
-  total_goods_fcfa?: number;
-  shipping_fee_fcfa?: number;
-  total_amount_fcfa?: number;
-  payment_method_selected?: string;
-  payment_receipt_url?: string;
-  payment_receipt_name?: string;
-}): Promise<{
-  reference: string;
-  trackingNumber: string;
-  shippingMark: string;
-  warehouseAddress: string;
-  whatsappUrl: string;
-}> {
-  const timestamp = Date.now().toString(36).substring(2, 7).toUpperCase();
-  let prefix = "REQ";
-  if (data.service_type === "ALIBABA") {
-    prefix = data.option_type === "AVEC_FOURNISSEUR" || data.cargo_type?.includes("[PAIEMENT FOURNISSEUR RMB]") ? "RMB" : "ALI";
-  } else if (data.service_type === "DUBAI") prefix = "DUB";
-  else if (data.service_type === "MAROC") prefix = "MAR";
-  else if (data.service_type === "FRANCE") prefix = "FRA";
-  else prefix = "FWD";
-
-  const reference = `RM-${prefix}-${timestamp}`;
-  // Le numéro de suivi officiel n'est généré qu'à l'Étape 3 (après encaissement confirmé par l'Admin)
-  const trackingNumber = "";
-  const clientUpper = (data.client_name || "CLIENT").toUpperCase().trim();
-  const shippingMark = data.shipping_mark?.trim() || `ROUM / ${reference} / ${clientUpper}`;
-
-  // Adresse entrepôt selon l'origine
-  let warehouseAddress = "Guangzhou Baiyun Logistics Center, Guangzhou, Chine";
-  if (data.origin_country.toLowerCase().includes("duba") || data.origin_country.toLowerCase().includes("émirat")) {
-    warehouseAddress = "Deira Wholesale Cargo Hub, Al Sabkha Road, Dubai, UAE";
-  } else if (data.origin_country.toLowerCase().includes("maroc")) {
-    warehouseAddress = "Zone Industrielle Ain Sebaa, Casablanca, Maroc";
-  } else if (data.origin_country.toLowerCase().includes("france")) {
-    warehouseAddress = "Plateforme Logistique Roum Paris Île-de-France, Paris, France";
-  }
-
-  // Description claire pour l'administrateur (sans URL brute pour éviter tout dépassement)
-  let description = data.cargo_type || "";
-  if (data.service_type === "ALIBABA") {
-    if (data.option_type === "AVEC_FOURNISSEUR" || data.cargo_type?.includes("[PAIEMENT FOURNISSEUR RMB]")) {
-      description = data.cargo_type || `[PAIEMENT FOURNISSEUR RMB] Montant: ${data.rmb_amount || "—"} ¥ | Contact: ${data.supplier_contact || "—"}`;
-    } else {
-      description = `Achat Alibaba | Qté souhaitée : ${data.product_quantity || "1"} pcs | ${data.product_specs || "Estimation du prix & du poids par ROUM TRANSIT"}`;
-    }
-  } else {
-    description = `${data.shipping_mode_name || "Transit"} | Colis : ${data.cargo_type || "Articles divers"} | Départ : ${data.origin_country} ➔ Arrivée : ${data.destination_country}`;
-  }
+/**
+ * Enregistre une commande dans la base. Le serveur attribue la référence et la clé d'accès.
+ *
+ * La promesse n'aboutit que si la commande est réellement enregistrée. En cas d'échec, elle lève une
+ * `ApiError` : l'écran doit alors le dire et garder le formulaire. Réutiliser le même `idempotencyKey`
+ * pour un nouvel essai garantit qu'une commande ne sera jamais créée deux fois.
+ */
+export async function saveClientRequest(
+  data: {
+    service_type: "ALIBABA" | "FORWARDING" | "MAROC" | "FRANCE" | "DUBAI" | "GENERAL";
+    client_name: string;
+    client_phone: string;
+    client_email?: string;
+    origin_country: string;
+    destination_country: string;
+    shipping_mode_name?: string;
+    shipping_mode_type?: "AIR" | "SEA";
+    estimated_weight_kg?: number;
+    estimated_cbm?: number;
+    product_url?: string;
+    product_quantity?: string;
+    product_specs?: string;
+    cargo_type?: string;
+    option_type?: "SANS_FOURNISSEUR" | "AVEC_FOURNISSEUR" | "FORWARDING";
+    rmb_amount?: string;
+    supplier_contact?: string;
+    product_image?: string;
+    product_name?: string;
+    shipping_mark?: string;
+    paid_to_supplier?: string;
+    unit_price?: number;
+    unit_price_currency?: string;
+  },
+  idempotencyKey: string = newUuid(),
+): Promise<{ reference: string; accessKey: string; trackingNumber: string; shippingMark: string }> {
+  const modeName = (data.shipping_mode_name || "").toLowerCase();
+  const shippingModeId =
+    data.shipping_mode_type === "SEA"
+      ? "SEA_LCL"
+      : modeName.includes("express")
+        ? "AIR_EXPRESS"
+        : modeName.includes("spécial") || modeName.includes("batterie")
+          ? "AIR_SPECIAL"
+          : "AIR_STANDARD";
 
   const cleanProductName = decodeHtmlEntitiesText(data.product_name || "Article commandé");
 
-  const detectedOption =
-    data.option_type ||
-    (data.cargo_type?.includes("[PAIEMENT FOURNISSEUR RMB]")
-      ? "AVEC_FOURNISSEUR"
-      : data.cargo_type?.includes("[SOURCING SANS FOURNISSEUR]")
-      ? "SANS_FOURNISSEUR"
-      : "FORWARDING");
+  const description =
+    data.service_type === "ALIBABA"
+      ? data.option_type === "AVEC_FOURNISSEUR"
+        ? data.cargo_type || `[PAIEMENT FOURNISSEUR RMB] Montant: ${data.rmb_amount || "—"} ¥ | Contact: ${data.supplier_contact || "—"}`
+        : `Achat Alibaba | Qté souhaitée : ${data.product_quantity || "1"} pcs | ${data.product_specs || "Estimation du prix & du poids par ROUM TRANSIT"}`
+      : `${data.shipping_mode_name || "Transit"} | Colis : ${data.cargo_type || "Articles divers"} | Départ : ${data.origin_country} ➔ Arrivée : ${data.destination_country}`;
 
-  const resolvedModeId = data.shipping_mode_type === "SEA"
-    ? "SEA_LCL"
-    : data.shipping_mode_name?.toLowerCase().includes("express")
-    ? "AIR_EXPRESS"
-    : data.shipping_mode_name?.toLowerCase().includes("spécial") || data.shipping_mode_name?.toLowerCase().includes("batterie")
-    ? "AIR_SPECIAL"
-    : "AIR_STANDARD";
-
-  const newRequestObject = {
-    id: `req-${Date.now()}`,
-    reference,
-    client_name: data.client_name,
-    client_phone: data.client_phone,
-    client_email: data.client_email || "",
-    request_type: detectedOption === "AVEC_FOURNISSEUR" ? "SUPPLIER_PAYMENT" : data.service_type === "ALIBABA" ? "ALIBABA" : "GENERAL",
-    option_type: detectedOption,
-    rmb_amount: data.rmb_amount || (data.cargo_type?.match(/Montant:\s*([0-9\s.,]+)\s*¥/)?.[1]?.trim() ?? null),
-    supplier_contact: data.supplier_contact || (data.cargo_type?.match(/Usine:\s*([^|]+)/)?.[1]?.trim() ?? null),
-    product_url: data.product_url || "",
-    product_image: data.product_image || null,
-    product_name: cleanProductName || null,
-    product_quantity: data.product_quantity || "1",
-    unit_price: data.unit_price || null,
-    unit_price_currency: data.unit_price_currency || null,
-    total_goods_fcfa: data.total_goods_fcfa || null,
-    shipping_fee_fcfa: data.shipping_fee_fcfa || null,
-    total_amount_fcfa: data.total_amount_fcfa || null,
-    payment_method_selected: data.payment_method_selected || null,
-    payment_receipt_url: data.payment_receipt_url || null,
-    payment_receipt_name: data.payment_receipt_name || null,
-    origin_country: data.origin_country,
-    origin_city: data.origin_country === "Chine" ? "Guangzhou" : data.origin_country === "France" ? "Paris" : data.origin_country === "Maroc" ? "Casablanca" : "Dubaï",
-    destination_country: data.destination_country,
-    destination_city: data.destination_country.includes("(") ? data.destination_country.split("(")[1].replace(")", "").trim() : data.destination_country,
-    shipping_mode_id: resolvedModeId,
-    shipping_mode_name: data.shipping_mode_name || "Voie Aérienne Express",
-    shipping_mode_type: data.shipping_mode_type || "AIR",
-    description,
-    shipping_mark: shippingMark,
-    tracking_number: null,
-    paid_to_supplier: data.paid_to_supplier || null,
-    estimated_weight_kg: typeof data.estimated_weight_kg === "number" ? data.estimated_weight_kg : null,
-    estimated_cbm: typeof data.estimated_cbm === "number" ? data.estimated_cbm : null,
-    status: "NEW",
-    items_count: Number(data.product_quantity) || 1,
-    items: [
-      {
-        id: `item-${Date.now()}`,
-        product_name: cleanProductName || data.cargo_type || "Marchandises client",
-        description: cleanProductName || data.cargo_type || "Marchandises client",
-        quantity: Number(data.product_quantity) || 1,
-        unit_price: data.unit_price || null,
-        currency: data.unit_price_currency || "USD",
-        variants_description: data.product_specs || "",
-        product_url: data.product_url || "",
-      },
-    ],
-    created_at: new Date().toISOString().replace("T", " ").substring(0, 19),
-    updated_at: new Date().toISOString().replace("T", " ").substring(0, 19),
-  };
-
-  // 1. Sauvegarde dans localStorage pour le tableau de bord Admin
-  if (typeof window !== "undefined") {
-    try {
-      const saved = localStorage.getItem("roum_requests_data");
-      const currentList = saved ? JSON.parse(saved) : [];
-      const updatedRequests = [newRequestObject, ...currentList];
-      localStorage.setItem("roum_requests_data", JSON.stringify(updatedRequests));
-
-      // Déclenchement de l'événement pour avertir l'Admin sans recharger
-      window.dispatchEvent(new Event("storage"));
-      window.dispatchEvent(new CustomEvent("roum:request_created", { detail: newRequestObject }));
-    } catch (e) {
-      console.warn("Erreur sync locale requête admin:", e);
-    }
-  }
-
-  // 2. Envoi vers la Base de Données SQLite D1 (Backend Hono) avec TOUTES les métadonnées (photo, quantité, titre, etc.)
-  try {
-    await fetch("/api/v1/public/quotes", {
+  const response = await apiRequest<{ quote_reference: string; access_key: string; shipping_mark: string }>(
+    "/api/v1/public/quotes",
+    {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        reference,
-        service_type: data.service_type === "ALIBABA" ? "ALIBABA" : "FORWARDING",
+      // Rejouable sans risque grâce à la clé d'idempotence.
+      retries: 3,
+      body: {
+        idempotency_key: idempotencyKey,
+        service_type: data.service_type,
         client_name: data.client_name.trim(),
         client_phone: data.client_phone.trim(),
+        client_email: data.client_email || undefined,
         origin_country: data.origin_country,
         destination_country: data.destination_country,
-        shipping_mode_id: resolvedModeId,
-        cargo_type: description,
+        shipping_mode_id: shippingModeId,
+        estimated_weight_kg: data.estimated_weight_kg,
+        estimated_cbm: data.estimated_cbm,
+        cargo_type: description.substring(0, 2000),
         product_url: data.product_url || "",
         product_quantity: data.product_quantity || "1",
         product_specs: data.product_specs || "",
         supplier_info: data.supplier_contact || "",
-        metadata: newRequestObject,
-      }),
-    });
-  } catch (err) {
-    console.warn("Envoi API Hono asynchrone :", err);
-  }
-
-  // 3. Lien WhatsApp pré-rempli courtois (Étape 1 : Demande de commande envoyée à l'agence pour estimation du poids & devis)
-  const supportPhone = "+2250787994412";
-  const waText =
-    `Bonjour l'équipe *ROUM TRANSIT INTERNATIONAL*,\n` +
-    `Je viens d'enregistrer ma demande de commande sur votre plateforme officielle :\n\n` +
-    `• Référence Dossier : *${reference}*\n` +
-    (shippingMark ? `• Shipping Mark : *${shippingMark}*\n` : "") +
-    `• Client : ${data.client_name} (${data.client_phone})\n` +
-    `• Corridor : ${data.origin_country} -> ${data.destination_country}\n` +
-    `• Moyen de transport choisi : ${data.shipping_mode_name || "Avion Express"}\n` +
-    `• Article : ${cleanProductName || description}\n` +
-    (data.product_quantity ? `• Quantité souhaitée : ${data.product_quantity} unité(s)\n` : "") +
-    (data.product_url ? `• Lien article : ${data.product_url}\n` : "") +
-    `\nMerci de vérifier le tarif fournisseur, d'estimer le poids de mon colis et de m'envoyer le devis complet avec le lien de règlement. Cordialement !`;
-  const whatsappUrl = `https://wa.me/${supportPhone.replace(/\D/g, "")}?text=${encodeURIComponent(waText)}`;
+        shipping_mark: data.shipping_mark?.trim() || undefined,
+        metadata: {
+          option_type: data.option_type || "FORWARDING",
+          product_name: cleanProductName,
+          product_image: data.product_image,
+          shipping_mode_name: data.shipping_mode_name,
+          shipping_mode_type: data.shipping_mode_type || "AIR",
+          supplier_contact: data.supplier_contact,
+          paid_to_supplier: data.paid_to_supplier,
+          rmb_amount: data.rmb_amount,
+          unit_price: data.unit_price,
+          unit_price_currency: data.unit_price_currency,
+        },
+      },
+    },
+  );
 
   return {
-    reference,
-    trackingNumber,
-    shippingMark,
-    warehouseAddress,
-    whatsappUrl,
+    reference: response.quote_reference,
+    accessKey: response.access_key,
+    // Le numéro de suivi officiel n'est attribué qu'après confirmation de l'encaissement par l'admin.
+    trackingNumber: "",
+    shippingMark: response.shipping_mark,
   };
 }
 
-/**
- * Récupère un dossier de commande par sa référence (ex: RM-ALI-...)
- */
-export function getClientRequestByReference(reference: string): any | null {
-  if (typeof window === "undefined" || !reference) return null;
-  try {
-    const saved = localStorage.getItem("roum_requests_data");
-    if (!saved) return null;
-    const list = JSON.parse(saved);
-    if (!Array.isArray(list)) return null;
-    const cleanRef = reference.trim().toUpperCase();
-    return (
-      list.find(
-        (r: any) =>
-          (r.reference || "").toUpperCase() === cleanRef ||
-          (r.id || "").toUpperCase() === cleanRef ||
-          (r.tracking_number || "").toUpperCase() === cleanRef
-      ) || null
-    );
-  } catch {
-    return null;
-  }
+/** Lit un dossier client. Sans clé d'accès valide, le serveur refuse. */
+export async function fetchClientDossier(reference: string, accessKey: string): Promise<any> {
+  const data = await apiRequest<{ request: any }>(
+    `/api/v1/public/requests/${encodeURIComponent(reference.trim())}?key=${encodeURIComponent(accessKey)}`,
+  );
+  return data.request;
 }
 
 /**
- * ÉTAPE 2 (Admin) : Met à jour le dossier avec le poids estimé par ROUM et le devis officiel complet
- * Synchronise à la fois localStorage ET la Base de données SQLite D1 (/api/v1/admin/requests/:reference/quote)
+ * ÉTAPE 2 BIS : envoie la preuve de paiement. Ne réussit que si le fichier complet est enregistré.
+ * Le `proofId` rend l'envoi rejouable : un nouvel essai ne crée pas de seconde preuve.
  */
-export function updateClientRequestAdminQuote(
+export async function submitClientPaymentProof(
   reference: string,
-  quote: {
-    estimatedWeightKg?: number | null;
-    estimatedCbm?: number | null;
-    goodsTotalFcfa?: number;
-    shippingFeeFcfa?: number;
-    totalAmountFcfa: number;
-    shippingModeName?: string;
-    trackingNumber?: string;
-    status?: string;
-  }
-): any | null {
-  if (typeof window === "undefined" || !reference) return null;
-  try {
-    const saved = localStorage.getItem("roum_requests_data");
-    const list: any[] = saved ? JSON.parse(saved) : [];
-    const cleanRef = reference.trim().toUpperCase();
-    let updatedItem: any = null;
-    const nextList = list.map((r: any) => {
-      if ((r.reference || "").toUpperCase() === cleanRef || (r.id || "").toUpperCase() === cleanRef) {
-        updatedItem = {
-          ...r,
-          estimated_weight_kg:
-            quote.estimatedWeightKg !== undefined ? quote.estimatedWeightKg : r.estimated_weight_kg,
-          estimated_cbm: quote.estimatedCbm !== undefined ? quote.estimatedCbm : r.estimated_cbm,
-          total_goods_fcfa:
-            typeof quote.goodsTotalFcfa === "number" ? quote.goodsTotalFcfa : r.total_goods_fcfa,
-          shipping_fee_fcfa:
-            typeof quote.shippingFeeFcfa === "number" ? quote.shippingFeeFcfa : r.shipping_fee_fcfa,
-          total_amount_fcfa: quote.totalAmountFcfa,
-          shipping_mode_name: quote.shippingModeName || r.shipping_mode_name,
-          tracking_number: quote.trackingNumber || r.tracking_number,
-          status: quote.status || (r.status === "CONVERTED" ? "CONVERTED" : "QUOTE_SENT"),
-          updated_at: new Date().toISOString().replace("T", " ").substring(0, 19),
-        };
-        return updatedItem;
-      }
-      return r;
-    });
-    if (updatedItem) {
-      localStorage.setItem("roum_requests_data", JSON.stringify(nextList));
-      window.dispatchEvent(new Event("storage"));
-    }
-
-    // Synchronisation directe vers la Base de Données SQLite D1 (Admin ➔ Base de données ➔ Client)
-    const token =
-      localStorage.getItem("roum_admin_token") ||
-      sessionStorage.getItem("roum_admin_token") ||
-      localStorage.getItem("roum_auth_token") ||
-      "roum_local_admin_session";
-    fetch(`/api/v1/admin/requests/${encodeURIComponent(reference.trim())}/quote`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        ...quote,
-        metadata: updatedItem || undefined,
-      }),
-    }).catch(() => {});
-
-    return updatedItem;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * ÉTAPE 2 BIS (Client sur /services/commande?pay=RM-...) :
- * Enregistre la preuve de paiement (capture, PDF ou vidéo) et le moyen de paiement utilisé par le client
- * Synchronise à la fois localStorage ET la Base de données SQLite D1 (/api/v1/public/requests/:reference/payment-proof)
- */
-export function submitClientPaymentProof(
-  reference: string,
-  proof: {
-    paymentMethod: string;
-    receiptUrl: string;
-    receiptName: string;
-    fallbackData?: {
-      clientName?: string;
-      clientPhone?: string;
-      destination?: string;
-      shippingMode?: string;
-      weightKg?: number;
-      volumeCbm?: number;
-      goodsTotalFcfa?: number;
-      shippingFeeFcfa?: number;
-      totalAmountFcfa?: number;
-      productName?: string;
-      productQuantity?: string | number;
-      productImage?: string;
-      optionType?: string;
-    };
-  }
-): any {
-  if (typeof window === "undefined") return null;
-  try {
-    const saved = localStorage.getItem("roum_requests_data");
-    const list: any[] = saved ? JSON.parse(saved) : [];
-    const cleanRef = (reference || "").trim().toUpperCase();
-    let updatedItem: any = null;
-
-    const nextList = list.map((r: any) => {
-      if ((r.reference || "").toUpperCase() === cleanRef || (r.id || "").toUpperCase() === cleanRef) {
-        updatedItem = {
-          ...r,
-          payment_method_selected: proof.paymentMethod,
-          payment_receipt_url: proof.receiptUrl,
-          payment_receipt_name: proof.receiptName,
-          payment_submitted_at: new Date().toISOString().replace("T", " ").substring(0, 19),
-          status: r.status === "CONVERTED" ? "CONVERTED" : "IN_REVIEW",
-          updated_at: new Date().toISOString().replace("T", " ").substring(0, 19),
-        };
-        return updatedItem;
-      }
-      return r;
-    });
-
-    if (!updatedItem && proof.fallbackData) {
-      const fb = proof.fallbackData;
-      updatedItem = {
-        id: `req-${Date.now()}`,
-        reference: reference.trim(),
-        client_name: fb.clientName || "Client",
-        client_phone: fb.clientPhone || "",
-        request_type: fb.optionType === "avec_fournisseur" ? "SUPPLIER_PAYMENT" : "ALIBABA",
-        option_type: fb.optionType === "avec_fournisseur" ? "AVEC_FOURNISSEUR" : "SANS_FOURNISSEUR",
-        origin_country: "Chine",
-        destination_country: fb.destination || "Côte d'Ivoire",
-        shipping_mode_name: fb.shippingMode || "Voie Aérienne Express",
-        estimated_weight_kg: fb.weightKg || null,
-        estimated_cbm: fb.volumeCbm || null,
-        total_goods_fcfa: fb.goodsTotalFcfa || null,
-        shipping_fee_fcfa: fb.shippingFeeFcfa || null,
-        total_amount_fcfa: fb.totalAmountFcfa || null,
-        product_name: fb.productName || "Article commandé",
-        product_quantity: String(fb.productQuantity || 1),
-        product_image: fb.productImage || null,
-        payment_method_selected: proof.paymentMethod,
-        payment_receipt_url: proof.receiptUrl,
-        payment_receipt_name: proof.receiptName,
-        payment_submitted_at: new Date().toISOString().replace("T", " ").substring(0, 19),
-        status: "IN_REVIEW",
-        created_at: new Date().toISOString().replace("T", " ").substring(0, 19),
-        updated_at: new Date().toISOString().replace("T", " ").substring(0, 19),
-      };
-      nextList.unshift(updatedItem);
-    }
-
-    localStorage.setItem("roum_requests_data", JSON.stringify(nextList));
-    window.dispatchEvent(new Event("storage"));
-
-    // Synchronisation directe vers la Base de Données SQLite D1 (Client ➔ Base de données ➔ Admin)
-    fetch(`/api/v1/public/requests/${encodeURIComponent(reference.trim())}/payment-proof`, {
+  proof: { proofId: string; accessKey: string; paymentMethod: string; fileName: string; dataUrl: string },
+): Promise<any> {
+  const data = await apiRequest<{ request: any }>(
+    `/api/v1/public/requests/${encodeURIComponent(reference.trim())}/payment-proof`,
+    {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(proof),
-    }).catch(() => {});
-
-    return updatedItem;
-  } catch {
-    return null;
-  }
+      retries: 3,
+      timeoutMs: 120000,
+      body: {
+        proof_id: proof.proofId,
+        access_key: proof.accessKey,
+        payment_method: proof.paymentMethod,
+        file_name: proof.fileName,
+        data_url: proof.dataUrl,
+      },
+    },
+  );
+  return data.request;
 }
 
 /**
@@ -1037,10 +791,12 @@ export const DEFAULT_COMPANY_SETTINGS: Record<string, string> = {
   // Adresses de réception
   warehouse_china_address: "Entrepôt Central Baiyun, Guangzhou, Guangdong, Chine",
   warehouse_china_contact: "+86 138 0000 0000 (WhatsApp Chine)",
+  warehouse_china_shipping_mark: "ROUM TRANSIT / [Votre Nom]",
   warehouse_dubai_address: "Al Sabkha Road, Deira Wholesale Market, Dubaï, Émirats Arabes Unis",
   warehouse_dubai_contact: "+971 50 892 4110 (WhatsApp Dubaï)",
   agency_paris_address: "Plateforme Cargo Roissy CDG / Dépôt Île-de-France, France",
   agency_paris_contact: "+33 6 52 90 14 30 (Liaison Paris)",
+  hub_casablanca_address: "Zone Industrielle Ain Sebaa, Casablanca, Maroc",
 
   // Moyens de paiement & Comptes officiels configurés par l'administration (Wave, Orange Money, Maroc UNIQUEMENT)
   payment_wave_ci: "+225 01 53 63 85 69",
@@ -1056,10 +812,11 @@ export const DEFAULT_COMPANY_SETTINGS: Record<string, string> = {
   payment_receipt_terms: "Tout règlement donne lieu à un reçu officiel numéroté pour retrait de vos colis.",
 };
 
+/** Coordonnées officielles : dernière réponse du serveur, sinon valeurs par défaut. */
 export function getLiveCompanySettings(): Record<string, string> {
   if (typeof window !== "undefined") {
     try {
-      const saved = localStorage.getItem("roum_company_settings");
+      const saved = localStorage.getItem(SETTINGS_CACHE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === "object") {
@@ -1082,4 +839,47 @@ export function getLiveCompanySettings(): Record<string, string> {
   return DEFAULT_COMPANY_SETTINGS;
 }
 
+/** Numéro WhatsApp de l'agence tel que configuré dans l'administration, en chiffres. */
+export function getSupportPhoneDigits(settings: Record<string, string>): string {
+  return (settings.whatsapp_official_number || settings.whatsapp_support || "").replace(/\D/g, "") || "2250153638569";
+}
 
+/** Entrepôts ajoutés depuis l'administration. */
+export function getCustomHubs(settings: Record<string, string>): any[] {
+  try {
+    const hubs = JSON.parse(settings.custom_hubs_json || "[]");
+    return Array.isArray(hubs) ? hubs : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Prix « à partir de » et délais calculés depuis la vraie grille, jamais écrits à la main. */
+export function getStartingOffers(tariffs: OfficialTariff[]) {
+  const usable = tariffs.filter(
+    (t) => (t.currency === "FCFA" || t.currency === "XOF") && t.price_per_unit_minor > 0 && t.is_active !== 0
+  );
+  const cheapest = (list: OfficialTariff[]) =>
+    list.reduce<OfficialTariff | undefined>(
+      (best, t) => (!best || t.price_per_unit_minor < best.price_per_unit_minor ? t : best),
+      undefined
+    );
+  const describe = (t?: OfficialTariff) =>
+    t
+      ? {
+          price: Math.round(t.price_per_unit_minor / 100).toLocaleString("fr-FR"),
+          delay: `${t.estimated_days_min} à ${t.estimated_days_max}`,
+        }
+      : null;
+
+  const name = (t: OfficialTariff) => `${t.service_name || ""} ${t.shipping_mode_name || ""}`.toLowerCase();
+  const perKg = usable.filter((t) => t.shipping_mode_type === "AIR" && t.pricing_basis === "PER_KG");
+
+  return {
+    sea: describe(cheapest(usable.filter((t) => t.shipping_mode_type === "SEA" && t.pricing_basis === "PER_CBM"))),
+    air: describe(cheapest(perKg)),
+    france: describe(cheapest(perKg.filter((t) => (t.origin_country || "").toLowerCase().includes("france")))),
+    express: describe(cheapest(perKg.filter((t) => name(t).includes("express")))),
+    normal: describe(cheapest(perKg.filter((t) => /normal|standard/.test(name(t))))),
+  };
+}

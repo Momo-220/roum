@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { FloatingBottomNav } from "@/components/FloatingBottomNav";
 import { WhatsAppFloatingButton } from "@/components/WhatsAppFloatingButton";
+import { CompanyName } from "@/components/CompanyName";
+import { PublicCatalogProvider } from "@/shared/usePublicCatalog";
 
 export default function PublicLayout({
   children,
@@ -8,6 +10,7 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
+    <PublicCatalogProvider>
     <div className="client-portal" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       {/* ========================================================
           HEADER ROUM TRANSIT : LOGO SOBRE ET PRESTIGIEUX
@@ -52,8 +55,8 @@ export default function PublicLayout({
         </div>
       </header>
 
-      {/* Contenu principal : Marge basse de 110px pour que rien ne soit jamais masqué par la barre flottante */}
-      <main style={{ flex: 1, paddingBottom: "110px" }}>{children}</main>
+      {/* Contenu principal : le pied de page réserve la place du menu flottant du bas */}
+      <main style={{ flex: 1, paddingBottom: "40px" }}>{children}</main>
 
       {/* Navigation Flottante en Bas pour mobile et desktop */}
       <FloatingBottomNav />
@@ -66,7 +69,7 @@ export default function PublicLayout({
         style={{
           borderTop: "1px solid rgba(28, 25, 23, 0.08)",
           backgroundColor: "#F7F5F0",
-          padding: "36px 24px 28px 24px",
+          padding: "36px 24px 112px 24px",
         }}
       >
         <div style={{ maxWidth: "1160px", margin: "0 auto" }}>
@@ -124,11 +127,12 @@ export default function PublicLayout({
               fontFamily: "var(--c-font-mono)",
             }}
           >
-            <div>© 2026 ROUM TRANSIT INTERNATIONAL</div>
+            <div>© 2026 <CompanyName /></div>
             <div>DÉDOUANEMENT COMPRIS · PESÉE CERTIFIÉE · LIVRAISON JUSQU&apos;À DESTINATION</div>
           </div>
         </div>
       </footer>
     </div>
+    </PublicCatalogProvider>
   );
 }

@@ -9,6 +9,7 @@ database_name = "roum-db"
 database_id = "102db612-0c02-4b85-bc26-ff82f8280e93"
 migrations_dir = "migrations"
 
+# Production par défaut : le mode développement ne s'active que via backend/.dev.vars (local, non versionné).
 [vars]
-ENVIRONMENT = "development"
+ENVIRONMENT = "production"
 APP_NAME = "ROUM_TRANSIT_API"

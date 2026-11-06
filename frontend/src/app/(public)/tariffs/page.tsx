@@ -1,31 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { usePublicCatalog } from "@/shared/usePublicCatalog";
+import { getSupportPhoneDigits } from "@/shared";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Plane,
   Ship,
-  MessageCircle,
-  Scale,
-  ShieldCheck,
-  Zap,
   BatteryCharging,
   Laptop,
   FileText,
-  CheckCircle2,
   Download,
   Printer,
   ArrowRight,
-  MapPin,
-  Clock,
   Package,
 } from "lucide-react";
 import { CircularFlag } from "@/components/CircularFlag";
+import { GaugeControl } from "@/components/GaugeControl";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import {
-  getLiveTariffs,
   findTariff,
-  getLiveCompanySettings,
   getAdminDestinations,
   OfficialTariff,
 } from "@/shared";
@@ -37,76 +32,7 @@ import {
 } from "@/utils/receiptPdf";
 
 export default function TariffsPage() {
-  const [tariffs, setTariffs] = useState<OfficialTariff[]>(() => getLiveTariffs());
-  const [settings, setSettings] = useState<Record<string, string>>(() => getLiveCompanySettings());
-
-  // Synchronisation temps réel avec le Dashboard Admin & la Base de Données SQLite D1
-  useEffect(() => {
-    // 1. Paramètres entreprise (Wave, Orange Money, Maroc) depuis SQLite D1
-    fetch("/api/v1/public/settings")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.settings) {
-          setSettings((prev) => ({ ...prev, ...d.settings }));
-          localStorage.setItem("roum_company_settings", JSON.stringify(d.settings));
-        }
-      })
-      .catch(() => {});
-
-    // 2. Grille tarifaire officielle en direct depuis SQLite D1
-    const loadApiTariffs = () => {
-      fetch("/api/v1/public/tariffs")
-        .then((r) => r.json())
-        .then((d) => {
-          if (d.tariffs && Array.isArray(d.tariffs) && d.tariffs.length > 0) {
-            const mapped: OfficialTariff[] = d.tariffs.map((t: any) => ({
-              id: t.tariff_id || t.id,
-              origin_country: t.origin_country || "",
-              origin_city: t.origin_city || "",
-              destination_country: t.destination_country || "",
-              destination_city: t.destination_city || "",
-              shipping_mode_name: t.mode_name || t.shipping_mode_name || t.service_name || "",
-              service_name: t.service_name || t.mode_name || t.shipping_mode_name || "",
-              shipping_mode_type: (t.mode_type || t.shipping_mode_type || "AIR") as "AIR" | "SEA",
-              category_tag: t.category_tag || "",
-              pricing_basis:
-                t.pricing_basis ||
-                (t.mode_type === "SEA" || t.shipping_mode_type === "SEA" ? "PER_CBM" : "PER_KG"),
-              currency: t.currency || "FCFA",
-              price_per_unit_minor: Number(t.price_per_unit_minor) || 0,
-              minimum_charge_minor:
-                t.minimum_charge_minor !== undefined ? Number(t.minimum_charge_minor) : undefined,
-              estimated_days_min: Number(t.estimated_days_min) || 3,
-              estimated_days_max: Number(t.estimated_days_max) || 7,
-              flyer_source: t.flyer_source || "",
-              secondary_display: t.secondary_display || "",
-              note: t.note || "",
-              is_active: t.is_active !== undefined ? Number(t.is_active) : 1,
-            }));
-            setTariffs(mapped);
-            localStorage.setItem("roum_tariffs_data", JSON.stringify(mapped));
-          }
-        })
-        .catch(() => {});
-    };
-
-    loadApiTariffs();
-
-    const handleSync = () => {
-      setTariffs(getLiveTariffs());
-      setSettings(getLiveCompanySettings());
-      loadApiTariffs();
-    };
-
-    window.addEventListener("storage", handleSync);
-    window.addEventListener("roum_tariffs_updated", handleSync);
-    window.addEventListener("focus", handleSync);
-    return () => {
-      window.removeEventListener("storage", handleSync);
-      window.removeEventListener("roum_tariffs_updated", handleSync);
-      window.removeEventListener("focus", handleSync);
-    };
-  }, []);
+  const { tariffs, settings } = usePublicCatalog();
 
   const [origin, setOrigin] = useState("Chine");
   const [destination, setDestination] = useState("Côte d'Ivoire");
@@ -114,7 +40,7 @@ export default function TariffsPage() {
   const [weight, setWeight] = useState(5);
   const [cbm, setCbm] = useState(0.5);
   const [docCount, setDocCount] = useState(1);
-  const [catalogHub, setCatalogHub] = useState<"all" | "chine" | "dubai" | "maroc" | "france">("all");
+  const [catalogHub, setCatalogHub] = useState<"chine" | "dubai" | "maroc" | "france">("chine");
 
   const getDestinationsForOrigin = (orig: string) => {
     return getAdminDestinations(tariffs, orig);
@@ -331,7 +257,7 @@ export default function TariffsPage() {
 
     return {
       receiptTitle: "DEVIS OFFICIEL DE TRANSIT & DÉDOUANEMENT",
-      reference: `DEVIS-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`,
+      reference: `DEVIS-${new Date().toISOString().slice(0, 16).replace(/\D/g, "")}`,
       date: new Date().toLocaleDateString("fr-FR", {
         day: "2-digit",
         month: "long",
@@ -339,8 +265,8 @@ export default function TariffsPage() {
         hour: "2-digit",
         minute: "2-digit",
       }),
-      clientName: "Client ROUM TRANSIT",
-      clientPhone: "Confirmation via WhatsApp",
+      clientName: "",
+      clientPhone: "",
       origin,
       destination,
       optionType: "devis_tarif",
@@ -349,13 +275,21 @@ export default function TariffsPage() {
       shippingFeeFcfa: estimate.amountFcfa,
       grandTotalFcfa: estimate.amountFcfa,
       paymentMethodLabel: "Wave / Orange Money / Virement bancaire (100% Douane comprise)",
+      supportPhone: settings.whatsapp_official_number,
     };
+  };
+
+  // Le formulaire d'envoi reprend ce que le client vient de régler sur la jauge.
+  const getSendParcelLink = () => {
+    const params = new URLSearchParams({ depart: origin, arrivee: destination, mode: estimate.mode });
+    if (estimate.mode === "SEA") params.set("volume", String(cbm));
+    else if (formulaKey !== "doc" && formulaKey !== "tech") params.set("poids", String(weight));
+    return `/services/envoi?${params.toString()}`;
   };
 
   const getWaLink = () => {
     const receiptData = getQuoteReceiptData();
-    const agencyPhone = settings.whatsapp_number?.trim() || "2250153638569";
-    return buildClientReceiptWhatsAppUrl(receiptData, agencyPhone);
+    return buildClientReceiptWhatsAppUrl(receiptData, getSupportPhoneDigits(settings));
   };
 
   const ORIGIN_HUBS = [
@@ -516,7 +450,6 @@ export default function TariffsPage() {
   };
 
   const filteredCatalogTariffs = tariffs.filter((t) => {
-    if (catalogHub === "all") return true;
     const o = (t.origin_country || "").toLowerCase();
     if (catalogHub === "chine") return o.includes("chine");
     if (catalogHub === "dubai") return o.includes("duba") || o.includes("émirat");
@@ -524,85 +457,70 @@ export default function TariffsPage() {
     return o.includes("france") || (t.destination_country || "").toLowerCase().includes("france");
   });
 
+  // Une seule ligne par service, regroupée par trajet : le trajet n'est plus répété sur chaque tarif.
+  const catalogGroups = filteredCatalogTariffs.reduce<Array<{ route: string; items: OfficialTariff[] }>>(
+    (groups, tariff) => {
+      const from = tariff.origin_country?.includes("Émirats") ? "Dubaï" : tariff.origin_country;
+      const route = `${from} → ${tariff.destination_country}`;
+      const group = groups.find((entry) => entry.route === route);
+      if (group) group.items.push(tariff);
+      else groups.push({ route, items: [tariff] });
+      return groups;
+    },
+    []
+  );
+
+  const quantityUnit = formulaKey === "sea" ? "m³" : formulaKey === "doc" || formulaKey === "tech" ? "unité(s)" : "kg";
+
   return (
-    <div className="tariffs-minimal-root">
-      <div className="tariffs-minimal-container">
+    <div className="tz-root">
+      <div className="tz-container">
         <ScrollReveal>
-          {/* EN-TÊTE ÉDITORIAL LUXE (STYLE PAGE SERVICES) */}
-          <header className="tariffs-minimal-header">
-            <div className="services-badge-category">
-              <span className="dot" style={{ color: "#181512" }}>●</span>
-              <span>02 / GRILLE TARIFAIRE OFFICIELLE &amp; SIMULATEUR</span>
-            </div>
-            <h1 className="services-title">Tarifs de Transit &amp; Dédouanement.</h1>
-            <p className="services-desc">
-              Calculez le coût exact de votre expédition ou consultez la grille officielle synchronisée en direct avec l&apos;agence.
-              <strong> Dédouanement 100 % inclus</strong>, sans frais cachés.
-            </p>
+          <header className="tz-header">
+            <span className="tz-eyebrow">Tarifs</span>
+            <h1 className="tz-title">Combien coûte votre envoi&nbsp;?</h1>
+            <p className="tz-lead">Choisissez votre trajet, réglez le poids, et le prix s&apos;affiche. Douane comprise.</p>
           </header>
 
-          {/* GRILLE PRINCIPALE : SIMULATEUR (GAUCHE) + RÉCAPITULATIF DEVIS SOBRE (DROITE) */}
-          <div className="tariffs-minimal-layout">
-            {/* PANNEAU GAUCHE : CONFIGURATEUR */}
-            <section className="tariffs-config-card">
-              {/* 1. Hub de départ */}
-              <div className="t-step-group">
-                <div className="t-step-label-row">
-                  <span className="t-step-index">01</span>
-                  <span className="t-step-title">Pays de départ</span>
-                </div>
-                <div className="t-hubs-grid">
-                  {ORIGIN_HUBS.map((hub) => {
-                    const isSelected = origin === hub.name;
-                    return (
-                      <button
-                        key={hub.name}
-                        type="button"
-                        onClick={() => handleOriginChange(hub.name)}
-                        className={`t-hub-btn ${isSelected ? "active" : ""}`}
-                      >
-                        <div className="t-hub-btn-top">
-                          <CircularFlag code={hub.flag} size={16} />
-                          <span className="t-hub-btn-name">{hub.shortLabel}</span>
-                        </div>
-                        <span className="t-hub-btn-sub">{hub.sub}</span>
-                      </button>
-                    );
-                  })}
+          <div className="tz-layout">
+            <section className="tz-config" aria-label="Calculateur de tarif">
+              <div className="tz-step">
+                <h2 className="tz-step-title">D&apos;où part votre colis&nbsp;?</h2>
+                <div className="tz-tabs">
+                  {ORIGIN_HUBS.map((hub) => (
+                    <button
+                      key={hub.name}
+                      type="button"
+                      onClick={() => handleOriginChange(hub.name)}
+                      className={`tz-tab ${origin === hub.name ? "active" : ""}`}
+                    >
+                      <CircularFlag code={hub.flag} size={18} />
+                      <span>{hub.shortLabel}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* 2. Destination */}
-              <div className="t-step-group">
-                <div className="t-step-label-row">
-                  <span className="t-step-index">02</span>
-                  <span className="t-step-title">Destination</span>
-                </div>
-                <div className="t-dest-list">
-                  {getDestinationsForOrigin(origin).map((dst) => {
-                    const isSelected = destination === dst;
-                    return (
-                      <button
-                        key={dst}
-                        type="button"
-                        onClick={() => setDestination(dst)}
-                        className={`t-dest-btn ${isSelected ? "active" : ""}`}
-                      >
-                        <CircularFlag countryName={dst} size={14} />
-                        <span>{dst}</span>
-                      </button>
-                    );
-                  })}
+              <div className="tz-step">
+                <h2 className="tz-step-title">Où va-t-il&nbsp;?</h2>
+                <div className="tz-tabs">
+                  {getDestinationsForOrigin(origin).map((dst) => (
+                    <button
+                      key={dst}
+                      type="button"
+                      onClick={() => setDestination(dst)}
+                      className={`tz-tab ${destination === dst ? "active" : ""}`}
+                    >
+                      <CircularFlag countryName={dst} size={18} />
+                      <span>{dst}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* 3. Mode de transport */}
-              <div className="t-step-group">
-                <div className="t-step-label-row">
-                  <span className="t-step-index">03</span>
-                  <span className="t-step-title">Formule d&apos;expédition</span>
-                </div>
-                <div className="t-formula-list">
+              <div className="tz-step">
+                <h2 className="tz-step-title">Quelle formule&nbsp;?</h2>
+                <div className="tz-formulas" role="radiogroup" aria-label="Formule d'expédition">
                   {getFormulasForOrigin().map((f) => {
                     const isSelected = formulaKey === f.key;
                     const IconComp =
@@ -619,1045 +537,647 @@ export default function TariffsPage() {
                       <button
                         key={f.key}
                         type="button"
+                        role="radio"
+                        aria-checked={isSelected}
                         onClick={() => setFormulaKey(f.key)}
-                        className={`t-formula-item ${isSelected ? "active" : ""}`}
+                        className={`tz-formula ${isSelected ? "active" : ""}`}
                       >
-                        <div className="t-formula-left">
-                          <div className="t-formula-icon">
-                            <IconComp size={15} />
-                          </div>
-                          <div style={{ minWidth: 0 }}>
-                            <div className="t-formula-name">{f.label}</div>
-                            <div className="t-formula-delay">Délai : {f.delay}</div>
-                          </div>
-                        </div>
-                        <div className="t-formula-rate">{f.price}</div>
+                        <IconComp size={19} strokeWidth={1.9} className="tz-formula-icon" />
+                        <span className="tz-formula-text">
+                          <span className="tz-formula-name">{f.label}</span>
+                          <span className="tz-formula-delay">{f.delay}</span>
+                        </span>
+                        <span className="tz-formula-price">{f.price}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* 4. Quantité / Poids / Volume */}
-              <div className="t-step-group" style={{ marginBottom: 0 }}>
-                <div className="t-step-label-row">
-                  <span className="t-step-index">04</span>
-                  <span className="t-step-title">
-                    {formulaKey === "sea"
-                      ? "Volume estimé (m³)"
-                      : formulaKey === "doc" || formulaKey === "tech"
-                      ? "Nombre d'unités / plis"
-                      : "Poids estimé (kg)"}
-                  </span>
-                </div>
-
+              <div className="tz-step">
                 {formulaKey === "sea" ? (
-                  <div className="t-qty-box">
-                    <div className="t-qty-input-wrap">
-                      <input
-                        type="number"
-                        min="0.1"
-                        step="0.1"
-                        value={cbm || ""}
-                        onChange={(e) => {
-                          const cleaned = e.target.value.replace(/^0+(?=\d)/, "");
-                          const v = parseFloat(cleaned);
-                          setCbm(Number.isFinite(v) && v > 0 ? v : 0.1);
-                        }}
-                        className="t-qty-input tabular-nums"
-                      />
-                      <span className="t-qty-unit">m³ (CBM)</span>
-                    </div>
-                    <div className="t-qty-presets">
-                      {[0.5, 1, 2, 5, 10].map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setCbm(preset)}
-                          className={`t-preset-chip ${cbm === preset ? "active" : ""}`}
-                        >
-                          {preset} m³
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <GaugeControl
+                    label="Volume estimé"
+                    value={cbm}
+                    min={0.1}
+                    max={20}
+                    step={0.1}
+                    unit="m³"
+                    ticks={[1, 5, 10, 15, 20]}
+                    onChange={setCbm}
+                  />
                 ) : formulaKey === "doc" || formulaKey === "tech" ? (
-                  <div className="t-qty-box">
-                    <div className="t-qty-input-wrap">
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={docCount || ""}
-                        onChange={(e) => {
-                          const cleaned = e.target.value.replace(/^0+(?=\d)/, "");
-                          const v = parseInt(cleaned, 10);
-                          setDocCount(Number.isFinite(v) && v >= 1 ? v : 1);
-                        }}
-                        className="t-qty-input tabular-nums"
-                      />
-                      <span className="t-qty-unit">unité(s)</span>
-                    </div>
-                    <div className="t-qty-presets">
-                      {[1, 2, 3, 5, 10].map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setDocCount(preset)}
-                          className={`t-preset-chip ${docCount === preset ? "active" : ""}`}
-                        >
-                          {preset} {preset > 1 ? "unités" : "unité"}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <GaugeControl
+                    label="Nombre d'unités"
+                    value={docCount}
+                    min={1}
+                    max={50}
+                    step={1}
+                    unit="unité(s)"
+                    ticks={[1, 10, 20, 30, 40, 50]}
+                    onChange={setDocCount}
+                  />
                 ) : (
-                  <div className="t-qty-box">
-                    <div className="t-qty-input-wrap">
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={weight || ""}
-                        onChange={(e) => {
-                          const cleaned = e.target.value.replace(/^0+(?=\d)/, "");
-                          const v = parseFloat(cleaned);
-                          setWeight(Number.isFinite(v) && v > 0 ? v : 1);
-                        }}
-                        className="t-qty-input tabular-nums"
-                      />
-                      <span className="t-qty-unit">Kilogrammes (kg)</span>
-                    </div>
-                    <div className="t-qty-presets">
-                      {[1, 5, 10, 25, 50, 100].map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setWeight(preset)}
-                          className={`t-preset-chip ${weight === preset ? "active" : ""}`}
-                        >
-                          {preset} kg
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <GaugeControl
+                    label="Poids estimé"
+                    value={weight}
+                    min={1}
+                    max={200}
+                    step={1}
+                    unit="kg"
+                    ticks={[1, 50, 100, 150, 200]}
+                    onChange={setWeight}
+                  />
                 )}
               </div>
+
+              <p className="tz-inline-total">
+                <span>Estimation pour {formulaKey === "sea" ? cbm : formulaKey === "doc" || formulaKey === "tech" ? docCount : weight} {quantityUnit}</span>
+                <strong className="tabular-nums">{Math.round(estimate.amountFcfa).toLocaleString("fr-FR")} FCFA</strong>
+              </p>
             </section>
 
-            {/* PANNEAU DROIT : CARTE DE DEVIS MINIMALISTE CLAIRE (ZÉRO ORANGE, ZÉRO LUEUR) */}
-            <aside className="tariffs-summary-card">
-              <div>
-                <div className="t-summary-top-tag">
-                  <ShieldCheck size={14} />
-                  <span>ESTIMATION OFFICIELLE · DOUANE INCLUSE</span>
-                </div>
-
-                <div className="t-summary-amount-block">
-                  <span className="t-summary-caption">Montant total estimé</span>
-                  <div className="t-summary-price tabular-nums">
-                    {estimate.amountFcfa.toLocaleString("fr-FR")} <span className="t-summary-currency">FCFA</span>
-                  </div>
-                  <p className="t-summary-service-label">{estimate.label}</p>
-                </div>
-
-                <div className="t-summary-specs">
-                  <div className="t-spec-row">
-                    <span className="t-spec-key">Corridor</span>
-                    <span className="t-spec-val">
-                      <CircularFlag countryName={origin} size={13} />
-                      <span>{origin.includes("Dubaï") ? "Dubaï" : origin}</span>
-                      <ArrowRight size={12} />
-                      <CircularFlag countryName={destination} size={13} />
-                      <strong>{destination}</strong>
-                    </span>
-                  </div>
-                  <div className="t-spec-row">
-                    <span className="t-spec-key">Tarif unitaire</span>
-                    <span className="t-spec-val tabular-nums">{estimate.rateFormatted}</span>
-                  </div>
-                  <div className="t-spec-row">
-                    <span className="t-spec-key">Délai estimé</span>
-                    <span className="t-spec-val">{estimate.duration}</span>
-                  </div>
-                  <div className="t-spec-row">
-                    <span className="t-spec-key">Règlement</span>
-                    <span className="t-spec-val">Wave · Orange Money · Virement</span>
-                  </div>
-                </div>
+            <aside className="tz-ticket" aria-label="Estimation">
+              <span className="tz-ticket-label">Votre estimation</span>
+              <div className="tz-ticket-price tabular-nums">
+                {Math.round(estimate.amountFcfa).toLocaleString("fr-FR")}
+                <span>FCFA</span>
               </div>
+              <p className="tz-ticket-note">Douane incluse, aucun frais caché.</p>
 
-              <div className="t-summary-actions">
-                <a
-                  href={getWaLink()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="t-btn-primary"
-                >
-                  <MessageCircle size={16} />
-                  <span>Envoyer ce devis sur WhatsApp</span>
-                </a>
-
-                <div className="t-btn-secondary-grid">
-                  <button
-                    type="button"
-                    onClick={() => downloadOfficialReceiptPdf(getQuoteReceiptData())}
-                    className="t-btn-outline"
-                  >
-                    <Download size={14} />
-                    <span>Télécharger PDF</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => printOfficialReceipt(getQuoteReceiptData())}
-                    className="t-btn-outline"
-                  >
-                    <Printer size={14} />
-                    <span>Imprimer</span>
-                  </button>
-                </div>
-
-                <div className="t-summary-footer-link">
-                  <span>Commander un article sur Alibaba / 1688 ?</span>
-                  <Link href="/services/commande" className="t-inline-link">
-                    <span>Ouvrir le formulaire</span>
+              <dl className="tz-ticket-facts">
+                <div>
+                  <dt>Trajet</dt>
+                  <dd>
+                    <CircularFlag countryName={origin} size={15} />
+                    {origin.includes("Dubaï") ? "Dubaï" : origin}
                     <ArrowRight size={13} />
-                  </Link>
+                    <CircularFlag countryName={destination} size={15} />
+                    {destination}
+                  </dd>
                 </div>
+                <div>
+                  <dt>Tarif</dt>
+                  <dd className="tabular-nums">{estimate.rateFormatted}</dd>
+                </div>
+                <div>
+                  <dt>Délai</dt>
+                  <dd>{estimate.duration}</dd>
+                </div>
+              </dl>
+
+              <Link href={getSendParcelLink()} className="tz-send">
+                <Package size={18} />
+                <span>Envoyer un colis</span>
+              </Link>
+
+              <WhatsAppButton href={getWaLink()} label="Recevoir ce devis" block />
+
+              <div className="tz-ticket-links">
+                <button type="button" onClick={() => downloadOfficialReceiptPdf(getQuoteReceiptData())}>
+                  <Download size={15} />
+                  <span>PDF</span>
+                </button>
+                <button type="button" onClick={() => printOfficialReceipt(getQuoteReceiptData())}>
+                  <Printer size={15} />
+                  <span>Imprimer</span>
+                </button>
+                <Link href="/services/commande">
+                  <span>Commander</span>
+                  <ArrowRight size={15} />
+                </Link>
               </div>
             </aside>
           </div>
 
-          {/* GRILLE COMPLÈTE DES TARIFS OFFICIELS (SYNCHRONISÉE À 100 % AVEC L'ADMIN) */}
-          <section className="tariffs-directory-section">
-            <div className="tariffs-directory-header">
-              <div>
-                <span className="tariffs-directory-eyebrow">
-                   BASE DE DONNÉES SYNCHRONISÉE ({filteredCatalogTariffs.length} TARIFS)
-                </span>
-                <h2 className="tariffs-directory-title">Grille Tarifaire Officielle</h2>
-              </div>
+          <section className="tz-catalog">
+            <div className="tz-catalog-head">
+              <h2>Grille tarifaire</h2>
+              <p>Tous nos prix incluent le dédouanement.</p>
+            </div>
 
-              <div className="tariffs-filter-tabs">
+            <div className="tz-tabs tz-catalog-tabs">
+              {(
+                [
+                  { key: "chine", label: "Chine", flag: "cn", originName: "Chine" },
+                  { key: "dubai", label: "Dubaï", flag: "ae", originName: "Émirats Arabes Unis (Dubaï)" },
+                  { key: "maroc", label: "Maroc", flag: "ma", originName: "Maroc" },
+                  { key: "france", label: "France", flag: "fr", originName: "France" },
+                ] as const
+              ).map((hub) => (
                 <button
+                  key={hub.key}
                   type="button"
-                  onClick={() => setCatalogHub("all")}
-                  className={`t-filter-tab ${catalogHub === "all" ? "active" : ""}`}
+                  onClick={() => {
+                    setCatalogHub(hub.key);
+                    handleOriginChange(hub.originName);
+                  }}
+                  className={`tz-tab ${catalogHub === hub.key ? "active" : ""}`}
                 >
-                  <span>Tous ({tariffs.length})</span>
+                  <CircularFlag code={hub.flag} size={18} />
+                  <span>{hub.label}</span>
                 </button>
-                {(
-                  [
-                    { key: "chine", label: "Chine", flag: "cn", originName: "Chine" },
-                    { key: "dubai", label: "Dubaï", flag: "ae", originName: "Émirats Arabes Unis (Dubaï)" },
-                    { key: "maroc", label: "Maroc", flag: "ma", originName: "Maroc" },
-                    { key: "france", label: "France", flag: "fr", originName: "France" },
-                  ] as const
-                ).map((hub) => (
-                  <button
-                    key={hub.key}
-                    type="button"
-                    onClick={() => {
-                      setCatalogHub(hub.key);
-                      handleOriginChange(hub.originName);
-                    }}
-                    className={`t-filter-tab ${catalogHub === hub.key ? "active" : ""}`}
-                  >
-                    <CircularFlag code={hub.flag} size={13} />
-                    <span>{hub.label}</span>
-                  </button>
-                ))}
-              </div>
+              ))}
             </div>
 
-            <div className="tariffs-cards-grid">
-              {filteredCatalogTariffs.map((t) => {
-                const isSea = t.shipping_mode_type === "SEA" || t.pricing_basis === "PER_CBM";
-                const unitLabel =
-                  t.pricing_basis === "PER_CBM"
-                    ? "/ m³"
-                    : t.pricing_basis === "PER_UNIT"
-                    ? "/ unité"
-                    : "/ kg";
-                const priceMajor = Math.round((t.price_per_unit_minor || 0) / 100);
-                return (
-                  <div key={t.id} className="t-rate-card">
-                    <div className="t-rate-card-head">
-                      <div className="t-rate-corridor">
-                        <CircularFlag countryName={t.origin_country || "Chine"} size={14} />
-                        <span>{t.origin_country?.includes("Émirats") ? "Dubaï" : t.origin_country}</span>
-                        <ArrowRight size={12} color="#6E675F" />
-                        <CircularFlag countryName={t.destination_country || "Côte d'Ivoire"} size={14} />
-                        <strong>{t.destination_country}</strong>
-                      </div>
-                      <span className="t-rate-badge">
-                        {isSea ? <Ship size={11} /> : <Plane size={11} />}
-                        <span>{isSea ? "Maritime" : "Aérien"}</span>
-                      </span>
-                    </div>
-
-                    <div className="t-rate-service">
-                      {t.service_name || t.shipping_mode_name}
-                    </div>
-
-                    <div className="t-rate-price-line tabular-nums">
-                      <span className="t-rate-price-val">
-                        {priceMajor.toLocaleString("fr-FR")} {t.currency || "FCFA"}
-                      </span>
-                      <span className="t-rate-price-unit">{unitLabel}</span>
-                      {t.secondary_display && (
-                        <span className="t-rate-secondary">{t.secondary_display}</span>
-                      )}
-                    </div>
-
-                    <div className="t-rate-card-foot">
-                      <span className="t-rate-meta">
-                        <Clock size={12} />
-                        <span>
-                          {t.estimated_days_min} à {t.estimated_days_max} jours
+            {catalogGroups.map((group) => (
+              <div key={group.route} className="tz-group">
+                <h3 className="tz-group-title">{group.route}</h3>
+                <ul className="tz-rates">
+                  {group.items.map((t) => {
+                    const isSea = t.shipping_mode_type === "SEA" || t.pricing_basis === "PER_CBM";
+                    const basis = String(t.pricing_basis);
+                    const unitLabel = basis === "PER_CBM" ? "m³" : basis === "PER_KG" ? "kg" : "unité";
+                    const name = (t.service_name || t.shipping_mode_name || "")
+                      .replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, "")
+                      .trim();
+                    return (
+                      <li key={t.id} className="tz-rate">
+                        {isSea ? <Ship size={17} strokeWidth={1.9} /> : <Plane size={17} strokeWidth={1.9} />}
+                        <span className="tz-rate-name">
+                          {name}
+                          <small>
+                            {t.estimated_days_min === t.estimated_days_max
+                              ? `${t.estimated_days_min} jours`
+                              : `${t.estimated_days_min} à ${t.estimated_days_max} jours`}
+                          </small>
                         </span>
-                      </span>
-                      <span className="t-rate-meta">
-                        <CheckCircle2 size={12} />
-                        <span>Douane incluse</span>
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                        <span className="tz-rate-price tabular-nums">
+                          {Math.round((t.price_per_unit_minor || 0) / 100).toLocaleString("fr-FR")} {t.currency || "FCFA"}
+                          <small>/ {unitLabel}</small>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
           </section>
         </ScrollReveal>
       </div>
 
-      {/* STYLES MINIMALISTES ÉPURÉS — ZÉRO ORANGE, ZÉRO LUEUR, ZÉRO DÉPASSEMENT */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
-        .tariffs-minimal-root {
-          color: #181512;
-          min-height: calc(100vh - 110px);
-          padding: 36px 18px 110px 18px;
+        .tz-root {
+          --tz-ink: #3A2A21;
+          --tz-muted: #7D6E64;
+          --tz-faint: #A99A90;
+          --tz-line: #EADFD3;
+          --tz-accent: #1E4D5B;
+          --tz-accent-deep: #163B46;
+          --tz-tint: #F3EBDF;
+          --tz-sand: #EFE6D9;
+          color: var(--tz-ink);
+          padding: 44px 20px 40px;
           box-sizing: border-box;
           overflow-x: hidden;
         }
 
-        .tariffs-minimal-container {
-          max-width: 1120px;
+        .tz-container {
+          max-width: 1080px;
           margin: 0 auto;
-          box-sizing: border-box;
         }
 
-        .tariffs-minimal-header {
-          text-align: center;
-          margin-bottom: 38px;
+        .tz-header {
+          max-width: 620px;
+          margin-bottom: 44px;
         }
 
-        .services-badge-category {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-family: var(--c-font-mono);
-          font-size: 0.74rem;
+        .tz-eyebrow {
+          display: block;
+          margin-bottom: 10px;
+          color: var(--tz-accent);
+          font-size: 0.86rem;
           font-weight: 700;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          color: #6E675F;
-          background: #F2EFE9;
-          border: 1px solid #E5E0D8;
-          padding: 5px 14px;
-          border-radius: 9999px;
-          margin-bottom: 14px;
         }
 
-        .services-badge-category .dot {
-          color: #181512;
-        }
-
-        .services-title {
+        .client-portal .tz-title {
+          margin: 0 0 12px;
+          color: var(--tz-ink);
           font-family: var(--c-font-display);
-          font-size: clamp(1.85rem, 4vw, 2.75rem);
+          font-size: clamp(2rem, 5vw, 3.1rem);
           font-weight: 800;
           letter-spacing: -0.035em;
-          line-height: 1.12;
-          color: #181512;
-          margin: 0 auto 12px auto;
-          max-width: 780px;
+          line-height: 1.08;
         }
 
-        .services-desc {
-          font-size: 0.98rem;
-          color: #6E675F;
-          max-width: 640px;
-          margin: 0 auto;
-          line-height: 1.55;
+        .tz-lead {
+          margin: 0;
+          color: var(--tz-muted);
+          font-size: 1.05rem;
+          line-height: 1.5;
         }
 
-        .tariffs-minimal-layout {
+        .tz-layout {
           display: grid;
-          grid-template-columns: repeat(12, 1fr);
-          gap: 20px;
-          margin-bottom: 28px;
+          grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+          gap: 64px;
           align-items: start;
         }
 
-        .tariffs-config-card {
-          grid-column: span 7;
-          background: #FFFFFF;
-          border: 1px solid #E5E0D8;
-          border-radius: 16px;
-          padding: 26px;
+        .tz-config {
           display: flex;
           flex-direction: column;
-          gap: 22px;
-          box-sizing: border-box;
+          gap: 34px;
           min-width: 0;
         }
 
-        .t-step-group {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
+        .tz-step {
           min-width: 0;
         }
 
-        .t-step-label-row {
+        .client-portal .tz-step-title {
+          margin: 0 0 12px;
+          color: var(--tz-ink);
+          font-family: var(--c-font-sans);
+          font-size: 0.95rem;
+          font-weight: 700;
+          letter-spacing: 0;
+        }
+
+        .tz-tabs {
           display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+
+        .tz-tab {
+          display: inline-flex;
           align-items: center;
           gap: 8px;
+          min-height: 42px;
+          padding: 0 14px 0 10px;
+          border: 0;
+          border-radius: 9999px;
+          background: transparent;
+          color: var(--tz-muted);
+          font-size: 0.93rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.18s ease, color 0.18s ease;
         }
 
-        .t-step-index {
-          font-family: var(--c-font-mono);
-          font-size: 0.7rem;
+        .tz-tab:hover {
+          background: var(--tz-sand);
+        }
+
+        .tz-tab.active {
+          background: var(--tz-accent);
+          color: #FFFFFF;
           font-weight: 700;
-          color: #181512;
-          background: #F2EFE9;
-          border: 1px solid #E5E0D8;
-          padding: 2px 7px;
-          border-radius: 6px;
         }
 
-        .t-step-title {
-          font-size: 0.86rem;
-          font-weight: 700;
-          color: #181512;
+        .tz-formulas {
+          display: flex;
+          flex-direction: column;
         }
 
-        .t-hubs-grid {
+        .tz-formula {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-          gap: 8px;
-        }
-
-        .t-hub-btn {
-          padding: 10px 12px;
-          border-radius: 10px;
-          border: 1px solid #E5E0D8;
-          background: #FAF8F5;
-          color: #181512;
-          cursor: pointer;
-          text-align: left;
-          transition: all 0.15s ease;
-          display: flex;
-          flex-direction: column;
-          gap: 3px;
-          min-width: 0;
-          box-sizing: border-box;
-        }
-
-        .t-hub-btn:hover {
-          border-color: #181512;
-        }
-
-        .t-hub-btn.active {
-          background: #181512;
-          color: #FFFFFF;
-          border-color: #181512;
-        }
-
-        .t-hub-btn-top {
-          display: flex;
+          grid-template-columns: auto minmax(0, 1fr) auto;
           align-items: center;
-          gap: 7px;
-          min-width: 0;
-        }
-
-        .t-hub-btn-name {
-          font-size: 0.82rem;
-          font-weight: 700;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .t-hub-btn-sub {
-          font-size: 0.68rem;
-          color: #6E675F;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .t-hub-btn.active .t-hub-btn-sub {
-          color: rgba(255, 255, 255, 0.72);
-        }
-
-        .t-dest-list {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .t-dest-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 7px 13px;
-          border-radius: 8px;
-          border: 1px solid #E5E0D8;
-          background: #FAF8F5;
-          color: #181512;
-          font-size: 0.8rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.15s ease;
-        }
-
-        .t-dest-btn:hover {
-          border-color: #181512;
-        }
-
-        .t-dest-btn.active {
-          background: #181512;
-          color: #FFFFFF;
-          border-color: #181512;
-        }
-
-        .t-formula-list {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .t-formula-item {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          padding: 11px 14px;
-          border-radius: 10px;
-          border: 1px solid #E5E0D8;
-          background: #FAF8F5;
-          color: #181512;
-          cursor: pointer;
-          text-align: left;
-          transition: all 0.15s ease;
-          box-sizing: border-box;
-          min-width: 0;
-        }
-
-        .t-formula-item:hover {
-          border-color: #181512;
-        }
-
-        .t-formula-item.active {
-          background: #FFFFFF;
-          border: 1.5px solid #181512;
-        }
-
-        .t-formula-left {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          min-width: 0;
-        }
-
-        .t-formula-icon {
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
-          background: #F2EFE9;
-          color: #181512;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-
-        .t-formula-item.active .t-formula-icon {
-          background: #181512;
-          color: #FFFFFF;
-        }
-
-        .t-formula-name {
-          font-size: 0.84rem;
-          font-weight: 700;
-          color: #181512;
-        }
-
-        .t-formula-delay {
-          font-size: 0.72rem;
-          color: #6E675F;
-        }
-
-        .t-formula-rate {
-          font-family: var(--c-font-mono);
-          font-size: 0.76rem;
-          font-weight: 700;
-          color: #181512;
-          background: #F2EFE9;
-          border: 1px solid #E5E0D8;
-          padding: 4px 10px;
-          border-radius: 6px;
-          white-space: nowrap;
-          flex-shrink: 0;
-        }
-
-        .t-formula-item.active .t-formula-rate {
-          background: #181512;
-          color: #FFFFFF;
-          border-color: #181512;
-        }
-
-        .t-qty-box {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .t-qty-input-wrap {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .t-qty-input {
-          flex: 1;
-          height: 42px;
-          padding: 0 12px;
-          border-radius: 8px;
-          border: 1px solid #D5CFC5;
-          background: #FAF8F5;
-          font-size: 1rem;
-          font-weight: 700;
-          color: #181512;
-          box-sizing: border-box;
-          min-width: 0;
-        }
-
-        .t-qty-input:focus {
-          outline: none;
-          border-color: #181512;
-          background: #FFFFFF;
-        }
-
-        .t-qty-unit {
-          font-family: var(--c-font-mono);
-          font-size: 0.75rem;
-          font-weight: 600;
-          color: #6E675F;
-          background: #FAF8F5;
-          padding: 10px 12px;
-          border-radius: 8px;
-          border: 1px solid #E5E0D8;
-          white-space: nowrap;
-        }
-
-        .t-qty-presets {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-        }
-
-        .t-preset-chip {
-          padding: 5px 11px;
-          border-radius: 6px;
-          border: 1px solid #E5E0D8;
-          background: #FFFFFF;
-          color: #6E675F;
-          font-size: 0.74rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.15s ease;
-        }
-
-        .t-preset-chip.active {
-          background: #181512;
-          color: #FFFFFF;
-          border-color: #181512;
-        }
-
-        /* CARTE RÉCAPITULATIF DEVIS (DROITE - 5 COLONNES) */
-        .tariffs-summary-card {
-          grid-column: span 5;
-          background: #FFFFFF;
-          border: 1px solid #E5E0D8;
-          border-radius: 16px;
-          padding: 26px;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          gap: 22px;
-          box-sizing: border-box;
-          min-width: 0;
-        }
-
-        .t-summary-top-tag {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          font-family: var(--c-font-mono);
-          font-size: 0.68rem;
-          font-weight: 700;
-          letter-spacing: 0.06em;
-          color: #181512;
-          background: #F2EFE9;
-          border: 1px solid #E5E0D8;
-          padding: 5px 10px;
-          border-radius: 6px;
-        }
-
-        .t-summary-amount-block {
-          margin-top: 18px;
-          padding-bottom: 18px;
-          border-bottom: 1px solid #EDEAE4;
-        }
-
-        .t-summary-caption {
-          font-family: var(--c-font-mono);
-          font-size: 0.7rem;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          color: #6E675F;
-          display: block;
-        }
-
-        .t-summary-price {
-          font-family: var(--c-font-display);
-          font-size: clamp(1.9rem, 3.2vw, 2.5rem);
-          font-weight: 800;
-          color: #181512;
-          letter-spacing: -0.03em;
-          line-height: 1.1;
-          margin: 6px 0;
-        }
-
-        .t-summary-currency {
-          font-size: 1.1rem;
-          font-weight: 700;
-          color: #6E675F;
-        }
-
-        .t-summary-service-label {
-          font-size: 0.84rem;
-          color: #6E675F;
-          margin: 0;
-          line-height: 1.4;
-        }
-
-        .t-summary-specs {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          margin-top: 16px;
-        }
-
-        .t-spec-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          font-size: 0.8rem;
-          padding-bottom: 8px;
-          border-bottom: 1px dashed #EDEAE4;
-          flex-wrap: wrap;
-        }
-
-        .t-spec-key {
-          color: #6E675F;
-          font-weight: 500;
-        }
-
-        .t-spec-val {
-          color: #181512;
-          font-weight: 600;
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          flex-wrap: wrap;
-        }
-
-        .t-summary-actions {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        .t-btn-primary {
-          height: 44px;
-          border-radius: 10px;
-          background: #181512;
-          color: #FFFFFF;
-          font-size: 0.84rem;
-          font-weight: 700;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          text-decoration: none;
-          transition: opacity 0.15s ease;
-        }
-
-        .t-btn-primary:hover {
-          opacity: 0.9;
-        }
-
-        .t-btn-secondary-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 8px;
-        }
-
-        .t-btn-outline {
-          height: 38px;
-          border-radius: 8px;
-          border: 1px solid #E5E0D8;
-          background: #FAF8F5;
-          color: #181512;
-          font-size: 0.78rem;
-          font-weight: 600;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-          cursor: pointer;
-          transition: border-color 0.15s ease;
-        }
-
-        .t-btn-outline:hover {
-          border-color: #181512;
-          background: #FFFFFF;
-        }
-
-        .t-summary-footer-link {
-          margin-top: 4px;
-          padding-top: 12px;
-          border-top: 1px solid #EDEAE4;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 8px;
-          flex-wrap: wrap;
-          font-size: 0.76rem;
-          color: #6E675F;
-        }
-
-        .t-inline-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          color: #181512;
-          font-weight: 700;
-          text-decoration: underline;
-          text-underline-offset: 3px;
-        }
-
-        /* GRILLE COMPLÈTE DES TARIFS */
-        .tariffs-directory-section {
-          background: #FFFFFF;
-          border: 1px solid #E5E0D8;
-          border-radius: 16px;
-          padding: 26px;
-          box-sizing: border-box;
-        }
-
-        .tariffs-directory-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          flex-wrap: wrap;
           gap: 14px;
-          padding-bottom: 18px;
-          border-bottom: 1px solid #EDEAE4;
-          margin-bottom: 20px;
-        }
-
-        .tariffs-directory-eyebrow {
-          font-family: var(--c-font-mono);
-          font-size: 0.68rem;
-          font-weight: 700;
-          letter-spacing: 0.08em;
-          color: #6E675F;
-          display: block;
-          margin-bottom: 4px;
-        }
-
-        .tariffs-directory-title {
-          font-family: var(--c-font-display);
-          font-size: 1.25rem;
-          font-weight: 800;
-          color: #181512;
-          margin: 0;
-          letter-spacing: -0.02em;
-        }
-
-        .tariffs-filter-tabs {
-          display: flex;
-          gap: 6px;
-          flex-wrap: wrap;
-        }
-
-        .t-filter-tab {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 7px 13px;
-          border-radius: 8px;
-          font-size: 0.78rem;
-          font-weight: 600;
-          border: 1px solid #E5E0D8;
-          background: #FAF8F5;
-          color: #6E675F;
+          width: 100%;
+          padding: 14px 12px;
+          border: 0;
+          border-bottom: 1px solid var(--tz-line);
+          background: transparent;
+          color: var(--tz-ink);
+          text-align: left;
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: background 0.18s ease;
         }
 
-        .t-filter-tab:hover {
-          color: #181512;
-          border-color: #181512;
+        .tz-formula:last-child {
+          border-bottom: 0;
         }
 
-        .t-filter-tab.active {
-          background: #181512;
-          color: #FFFFFF;
-          border-color: #181512;
+        .tz-formula:hover {
+          background: rgba(245, 234, 223, 0.5);
         }
 
-        .tariffs-cards-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
-          gap: 12px;
+        .tz-formula.active {
+          border-bottom-color: transparent;
+          border-radius: 9999px;
+          background: var(--tz-tint);
         }
 
-        .t-rate-card {
-          background: #FAF8F5;
-          border: 1px solid #E5E0D8;
-          border-radius: 12px;
-          padding: 15px;
+        .tz-formula-icon {
+          color: var(--tz-faint);
+        }
+
+        .tz-formula.active .tz-formula-icon,
+        .tz-formula.active .tz-formula-price {
+          color: var(--tz-accent);
+        }
+
+        .tz-formula-text {
           display: flex;
           flex-direction: column;
-          justify-content: space-between;
-          gap: 10px;
-          box-sizing: border-box;
+          gap: 1px;
           min-width: 0;
         }
 
-        .t-rate-card-head {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .t-rate-corridor {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-          font-size: 0.76rem;
-          font-weight: 600;
-          color: #181512;
-          min-width: 0;
-          flex-wrap: wrap;
-        }
-
-        .t-rate-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 0.68rem;
-          font-weight: 600;
-          padding: 2px 8px;
-          border-radius: 6px;
-          background: #FFFFFF;
-          border: 1px solid #E5E0D8;
-          color: #181512;
-        }
-
-        .t-rate-service {
-          font-size: 0.85rem;
+        .tz-formula-name {
+          font-size: 0.97rem;
           font-weight: 700;
-          color: #181512;
-          line-height: 1.35;
         }
 
-        .t-rate-price-line {
+        .tz-formula-delay {
+          color: var(--tz-muted);
+          font-size: 0.83rem;
+        }
+
+        .tz-formula-price {
+          color: var(--tz-ink);
+          font-size: 0.93rem;
+          font-weight: 700;
+          white-space: nowrap;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .tz-inline-total {
+          display: none;
+        }
+
+        .tz-ticket {
+          position: sticky;
+          top: 28px;
+          padding: 30px;
+          border-radius: 28px;
+          background: linear-gradient(165deg, #245B6A 0%, #163B46 100%);
+          box-shadow: 0 22px 44px -26px rgba(22, 59, 70, 0.7);
+          color: #FFFFFF;
+          min-width: 0;
+        }
+
+        .tz-ticket-label {
+          color: #EADDCB;
+          font-size: 0.9rem;
+          font-weight: 700;
+        }
+
+        .tz-ticket-price {
           display: flex;
+          flex-wrap: wrap;
           align-items: baseline;
-          gap: 5px;
-          flex-wrap: wrap;
-        }
-
-        .t-rate-price-val {
+          gap: 2px 8px;
+          margin-top: 6px;
+          color: #FFFFFF;
           font-family: var(--c-font-display);
-          font-size: 1.2rem;
+          font-size: clamp(2.5rem, 5vw, 3.4rem);
           font-weight: 800;
-          color: #181512;
+          letter-spacing: -0.04em;
+          line-height: 1.02;
         }
 
-        .t-rate-price-unit {
-          font-size: 0.76rem;
-          font-weight: 600;
-          color: #6E675F;
+        .tz-ticket-price span {
+          color: #EADDCB;
+          font-size: 1.1rem;
+          letter-spacing: 0;
         }
 
-        .t-rate-secondary {
-          font-family: var(--c-font-mono);
-          font-size: 0.68rem;
-          font-weight: 600;
-          color: #6E675F;
-          background: #FFFFFF;
-          border: 1px solid #E5E0D8;
-          padding: 1px 6px;
-          border-radius: 4px;
+        .tz-ticket-note {
+          margin: 8px 0 22px;
+          color: rgba(255, 255, 255, 0.78);
+          font-size: 0.9rem;
         }
 
-        .t-rate-card-foot {
+        .tz-ticket-facts {
+          margin: 0 0 22px;
+        }
+
+        .tz-ticket-facts > div {
           display: flex;
-          align-items: center;
           justify-content: space-between;
-          gap: 8px;
-          padding-top: 8px;
-          border-top: 1px solid #EAE5DC;
-          font-size: 0.72rem;
-          color: #6E675F;
-          flex-wrap: wrap;
+          align-items: baseline;
+          gap: 14px;
+          padding: 11px 0;
+          border-top: 1px solid rgba(255, 255, 255, 0.16);
         }
 
-        .t-rate-meta {
+        .tz-ticket-facts dt {
+          flex-shrink: 0;
+          color: rgba(255, 255, 255, 0.72);
+          font-size: 0.87rem;
+        }
+
+        .tz-ticket-facts dd {
+          display: inline-flex;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 5px;
+          margin: 0;
+          color: #FFFFFF;
+          font-size: 0.9rem;
+          font-weight: 700;
+          text-align: right;
+        }
+
+
+        .tz-ticket-links {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 10px;
+        }
+
+        .tz-ticket-links button,
+        .tz-ticket-links a {
+          flex: 1 1 0;
           display: inline-flex;
           align-items: center;
-          gap: 4px;
+          justify-content: center;
+          gap: 6px;
+          min-height: 44px;
+          padding: 0 14px;
+          border: 0;
+          border-radius: 9999px;
+          background: rgba(255, 255, 255, 0.12);
+          color: #FFFFFF;
+          font-size: 0.88rem;
+          font-weight: 700;
+          white-space: nowrap;
+          text-decoration: none;
+          cursor: pointer;
+          transition: background 0.15s ease;
+        }
+
+        .tz-ticket-links button:hover,
+        .tz-ticket-links a:hover {
+          background: rgba(255, 255, 255, 0.22);
+        }
+
+        .tz-send {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 9px;
+          min-height: 52px;
+          margin-bottom: 10px;
+          padding: 0 20px;
+          border-radius: 9999px;
+          background: #EADDCB;
+          color: #163B46;
+          font-size: 0.97rem;
+          font-weight: 800;
+          text-decoration: none;
+          transition: background 0.15s ease, transform 0.15s ease;
+        }
+
+        .tz-send:hover {
+          background: #F3EBDF;
+          transform: translateY(-1px);
+        }
+
+        .tz-send:active {
+          transform: scale(0.98);
+        }
+
+        .tz-catalog {
+          max-width: 760px;
+          margin: 84px auto 0;
+        }
+
+        .tz-catalog-head {
+          margin-bottom: 18px;
+        }
+
+        .client-portal .tz-catalog-head h2 {
+          margin: 0 0 4px;
+          color: var(--tz-ink);
+          font-family: var(--c-font-display);
+          font-size: clamp(1.6rem, 4vw, 2.1rem);
+          font-weight: 800;
+          letter-spacing: -0.03em;
+        }
+
+        .tz-catalog-head p {
+          margin: 0;
+          color: var(--tz-muted);
+        }
+
+        .tz-catalog-tabs {
+          margin-bottom: 26px;
+        }
+
+        .tz-group {
+          margin-bottom: 30px;
+        }
+
+        .client-portal .tz-group-title {
+          margin: 0 0 4px;
+          color: var(--tz-accent-deep);
+          font-family: var(--c-font-sans);
+          font-size: 0.9rem;
+          font-weight: 700;
+          letter-spacing: 0;
+        }
+
+        .tz-rates {
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+
+        .tz-rate {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 14px;
+          padding: 14px 0;
+          border-bottom: 1px solid var(--tz-line);
+          color: var(--tz-faint);
+        }
+
+        .tz-rate:last-child {
+          border-bottom: 0;
+        }
+
+        .tz-rate-name {
+          color: var(--tz-ink);
+          font-size: 0.97rem;
+          font-weight: 600;
+        }
+
+        .tz-rate-name small {
+          display: block;
+          margin-top: 1px;
+          color: var(--tz-muted);
+          font-size: 0.82rem;
+          font-weight: 400;
+        }
+
+        .tz-rate-price {
+          color: var(--tz-ink);
+          font-size: 1rem;
+          font-weight: 800;
+          text-align: right;
+          white-space: nowrap;
+        }
+
+        .tz-rate-price small {
+          margin-left: 3px;
+          color: var(--tz-muted);
+          font-size: 0.8rem;
           font-weight: 500;
         }
 
-        @media (max-width: 960px) {
-          .tariffs-config-card,
-          .tariffs-summary-card {
-            grid-column: span 12;
+        @media (max-width: 900px) {
+          .tz-root {
+            padding-top: 30px;
+          }
+
+          .tz-header {
+            margin-bottom: 30px;
+          }
+
+          .tz-layout {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 26px;
+          }
+
+          .tz-ticket {
+            position: static;
+            padding: 24px 20px;
+            border-radius: 24px;
+          }
+
+          .tz-inline-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+            margin: -14px 0 0;
+            color: var(--tz-muted);
+            font-size: 0.9rem;
+          }
+
+          .tz-inline-total strong {
+            color: var(--tz-accent);
+            font-size: 1.05rem;
+            white-space: nowrap;
+          }
+
+          .tz-catalog {
+            margin-top: 60px;
           }
         }
 
-        @media (max-width: 600px) {
-          .tariffs-config-card,
-          .tariffs-summary-card,
-          .tariffs-directory-section {
-            padding: 18px;
+        @media (max-width: 520px) {
+          .tz-formula {
+            grid-template-columns: auto minmax(0, 1fr);
+            row-gap: 3px;
           }
-          .t-btn-secondary-grid {
-            grid-template-columns: 1fr;
+
+          .tz-formula-price {
+            grid-column: 2;
+          }
+
+          .tz-rate {
+            gap: 10px;
           }
         }
       `,

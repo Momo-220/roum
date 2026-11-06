@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check, MapPin, MessageCircle } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import { CircularFlag } from "@/components/CircularFlag";
 import { ScrollReveal } from "@/components/ScrollReveal";
+import { getCustomHubs } from "@/shared";
+import { usePublicCatalog } from "@/shared/usePublicCatalog";
 
 export default function WarehousesPage() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const { settings } = usePublicCatalog();
 
   const handleCopy = (key: string, text: string) => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -16,15 +19,18 @@ export default function WarehousesPage() {
     }
   };
 
+  const withContact = (address: string, contact?: string) => (contact ? `${address} — ${contact}` : address);
+
+  // Adresses et marquages viennent de la base : l'administration les modifie sans toucher au site.
   const warehouses = [
     {
       id: "cn",
       country: "Chine",
       city: "Guangzhou",
       countryCode: "CN",
-      description: "Pour toutes vos commandes passées sur 1688, Taobao ou auprès d'usines en Chine.",
-      shippingMark: "ROUM TRANSIT / [Votre Nom]",
-      addressToCopy: "Guangzhou Warehouse, Baiyun District, Guangzhou City, Guangdong Province, China — ROUM TRANSIT",
+      description: "Pour vos commandes sur 1688, Taobao ou auprès d'usines en Chine.",
+      shippingMark: settings.warehouse_china_shipping_mark || "ROUM TRANSIT / [Votre Nom]",
+      addressToCopy: withContact(settings.warehouse_china_address, settings.warehouse_china_contact),
     },
     {
       id: "ae",
@@ -33,160 +39,289 @@ export default function WarehousesPage() {
       countryCode: "AE",
       description: "Pour vos achats de parfumerie, cosmétiques, téléphones et électronique à Deira.",
       shippingMark: "ROUM TRANSIT DUBAI / [Votre Nom]",
-      addressToCopy: "Deira Wholesale Market, Dubai, UAE — ROUM TRANSIT DUBAI",
+      addressToCopy: withContact(settings.warehouse_dubai_address, settings.warehouse_dubai_contact),
     },
     {
       id: "ma",
       country: "Maroc",
       city: "Casablanca",
       countryCode: "MA",
-      description: "Pour vos marchandises au Maroc avec départ express garanti en 5 jours chrono.",
+      description: "Pour vos marchandises au Maroc, avec un départ express.",
       shippingMark: "ROUM TRANSIT MAROC / [Votre Nom]",
-      addressToCopy: "Zone Industrielle Ain Sebaa, Casablanca, Maroc — ROUM TRANSIT",
+      addressToCopy: settings.hub_casablanca_address,
     },
     {
       id: "fr",
       country: "France",
       city: "Paris",
       countryCode: "FR",
-      description: "Pour vos colis personnels, produits de beauté et plis administratifs depuis la France.",
+      description: "Pour vos colis personnels, produits de beauté et plis administratifs.",
       shippingMark: "ROUM TRANSIT PARIS / [Votre Nom]",
-      addressToCopy: "Plateforme Logistique Paris Île-de-France — ROUM TRANSIT PARIS",
+      addressToCopy: withContact(settings.agency_paris_address, settings.agency_paris_contact),
     },
+    ...getCustomHubs(settings).map((hub) => ({
+      id: String(hub.id),
+      country: String(hub.country || ""),
+      city: String(hub.city || ""),
+      countryCode: String(hub.countryCode || "").toUpperCase(),
+      description: String(hub.name || "Entrepôt ROUM TRANSIT"),
+      shippingMark: String(hub.shipping_mark || "ROUM TRANSIT / [Votre Nom]"),
+      addressToCopy: withContact(String(hub.address || ""), hub.contact ? String(hub.contact) : undefined),
+    })),
   ];
 
+  const copyButton = (key: string, text: string, label: string, ghost = false) => {
+    const copied = copiedKey === key;
+    return (
+      <button
+        type="button"
+        onClick={() => handleCopy(key, text)}
+        className={`dp-pill ${ghost ? "dp-pill-ghost" : ""} ${copied ? "copied" : ""}`}
+      >
+        {copied ? <Check size={15} /> : <Copy size={15} />}
+        <span>{copied ? "Copié" : label}</span>
+      </button>
+    );
+  };
+
   return (
-    <div
-      style={{
-        backgroundColor: "transparent",
-        color: "var(--c-text-main)",
-        minHeight: "calc(100vh - 110px)",
-        padding: "24px 16px 110px 16px",
-        boxSizing: "border-box",
-      }}
-    >
-      <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+    <div className="dp-root">
+      <div className="dp-container">
         <ScrollReveal>
-          <div style={{ textAlign: "center", marginBottom: "36px" }}>
-            <div className="client-eyebrow" style={{ justifyContent: "center", marginBottom: "12px" }}>
-              <span style={{ color: "var(--c-accent-red)" }}>●</span>
-              <span>ENTREPÔTS MONDIAUX & GROUPAGE SÉCURISÉ</span>
-            </div>
-
-            <h1
-              style={{
-                fontFamily: "var(--c-font-display)",
-                fontSize: "clamp(1.4rem, 4.4vw, 2.8rem)",
-                fontWeight: 700,
-                letterSpacing: "-0.035em",
-                color: "var(--c-text-main)",
-                margin: "0 0 12px 0",
-              }}
-            >
-              Adresses de Réception pour vos Fournisseurs
-            </h1>
-
-            <p style={{ fontSize: "1.02rem", color: "var(--c-text-muted)", maxWidth: "660px", margin: "0 auto", lineHeight: 1.55 }}>
-              Copiez simplement l&apos;adresse du pays où vous achetez et donnez-la à votre fournisseur avec votre code client.
+          <header className="dp-head">
+            <h1>Nos dépôts</h1>
+            <p>
+              Copiez l&apos;adresse du pays où vous achetez et donnez-la à votre fournisseur, avec le marquage à
+              inscrire sur le carton.
             </p>
-          </div>
+          </header>
 
-          {/* Grille des 4 entrepôts */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-              gap: "24px",
-              marginBottom: "36px",
-            }}
-          >
+          <ul className="dp-list">
             {warehouses.map((wh) => (
-              <div
-                key={wh.id}
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "14px",
-                  padding: "24px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-                    <CircularFlag countryCode={wh.countryCode} size={22} />
-                    <div>
-                      <h2 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#111827", margin: 0 }}>
-                        {wh.city} ({wh.country})
-                      </h2>
-                    </div>
-                  </div>
-
-                  <p style={{ fontSize: "0.85rem", color: "#4B5563", lineHeight: 1.55, margin: "0 0 14px 0" }}>
-                    {wh.description}
-                  </p>
-
-                  <div
-                    style={{
-                      backgroundColor: "#F9FAFB",
-                      border: "1px dashed #D1D5DB",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      fontSize: "0.78rem",
-                      color: "#111827",
-                      fontWeight: 700,
-                      marginBottom: "20px",
-                    }}
-                  >
-                    Marquage à inscrire :<br />
-                    <span style={{ color: "#1E40AF" }}>{wh.shippingMark}</span>
+              <li key={wh.id} className="dp-row">
+                <div className="dp-place">
+                  <CircularFlag countryCode={wh.countryCode} size={34} />
+                  <div>
+                    <h2>{wh.city}</h2>
+                    <span>{wh.country}</span>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleCopy(wh.id, wh.addressToCopy)}
-                  className="roum-btn-secondary"
-                  style={{
-                    width: "100%",
-                    fontSize: "0.82rem",
-                    padding: "10px 14px",
-                    borderColor: copiedKey === wh.id ? "#86EFAC" : "#D1D5DB",
-                    backgroundColor: copiedKey === wh.id ? "#F0FDF4" : "#FFFFFF",
-                    color: copiedKey === wh.id ? "#15803D !important" : "#111827",
-                  }}
-                >
-                  {copiedKey === wh.id ? <Check size={14} color="#15803D" /> : <Copy size={14} />}
-                  <span>{copiedKey === wh.id ? "Adresse copiée !" : `Copier l'adresse ${wh.city}`}</span>
-                </button>
-              </div>
-            ))}
-          </div>
+                <div className="dp-info">
+                  <p className="dp-address">{wh.addressToCopy}</p>
+                  <p className="dp-description">{wh.description}</p>
+                  <p className="dp-mark">
+                    <span>Marquage</span>
+                    <code>{wh.shippingMark}</code>
+                  </p>
+                </div>
 
-          {/* Règle d'or simple */}
-          <div
-            style={{
-              backgroundColor: "#F9FAFB",
-              border: "1px solid #E5E7EB",
-              borderRadius: "12px",
-              padding: "20px",
-              textAlign: "center",
-              maxWidth: "760px",
-              margin: "0 auto",
-            }}
-          >
-            <strong style={{ fontSize: "0.95rem", color: "#111827", display: "block", marginBottom: "6px" }}>
-              Conseil important :
-            </strong>
-            <p style={{ fontSize: "0.88rem", color: "#4B5563", margin: 0, lineHeight: 1.5 }}>
-              Demandez toujours à votre expéditeur d&apos;inscrire votre nom et votre numéro de téléphone sur le carton. Cela permet à notre équipe de vous attribuer le colis dès son entrée en magasin.
-            </p>
-          </div>
+                <div className="dp-actions">
+                  {copyButton(`${wh.id}-address`, wh.addressToCopy, "Copier l'adresse")}
+                  {copyButton(`${wh.id}-mark`, wh.shippingMark, "Copier le marquage", true)}
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <p className="dp-tip">
+            Demandez à votre expéditeur d&apos;inscrire votre nom et votre numéro de téléphone sur le carton : notre
+            équipe vous attribue ainsi le colis dès son entrée au dépôt.
+          </p>
         </ScrollReveal>
       </div>
+
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        .dp-root {
+          min-height: calc(100vh - 110px);
+          padding: 34px 20px 120px;
+          box-sizing: border-box;
+          color: var(--c-text-main);
+        }
+
+        .dp-container {
+          max-width: 1040px;
+          margin: 0 auto;
+        }
+
+        .dp-head {
+          max-width: 620px;
+          margin-bottom: 40px;
+        }
+
+        .dp-head h1 {
+          margin: 0 0 10px;
+          color: var(--c-text-main);
+          font-family: var(--c-font-display);
+          font-size: clamp(2.1rem, 5vw, 3.2rem);
+          font-weight: 800;
+          letter-spacing: -0.04em;
+          line-height: 1.05;
+        }
+
+        .dp-head p {
+          margin: 0;
+          color: var(--c-text-muted);
+          font-size: 1.05rem;
+          line-height: 1.55;
+        }
+
+        .dp-list {
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+
+        .dp-row {
+          display: grid;
+          grid-template-columns: 190px minmax(0, 1fr) auto;
+          align-items: start;
+          gap: 16px 36px;
+          padding: 30px 0;
+          border-top: 1px solid #EADFD3;
+        }
+
+        .dp-row:last-child {
+          border-bottom: 1px solid #EADFD3;
+        }
+
+        .dp-place {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-width: 0;
+        }
+
+        .dp-place h2 {
+          margin: 0;
+          color: var(--c-text-main);
+          font-family: var(--c-font-display);
+          font-size: 1.3rem;
+          font-weight: 800;
+          letter-spacing: -0.025em;
+          line-height: 1.15;
+        }
+
+        .dp-place span {
+          color: var(--c-text-light);
+          font-size: 0.9rem;
+        }
+
+        .dp-info {
+          min-width: 0;
+        }
+
+        .dp-address {
+          margin: 0 0 6px;
+          color: var(--c-text-main);
+          font-size: 1.05rem;
+          font-weight: 700;
+          line-height: 1.45;
+          overflow-wrap: anywhere;
+        }
+
+        .dp-description {
+          margin: 0 0 12px;
+          color: var(--c-text-muted);
+          font-size: 0.93rem;
+          line-height: 1.5;
+        }
+
+        .dp-mark {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          gap: 2px 10px;
+          margin: 0;
+        }
+
+        .dp-mark span {
+          color: var(--c-accent);
+          font-size: 0.87rem;
+          font-weight: 700;
+        }
+
+        .dp-mark code {
+          color: var(--c-text-main);
+          font-family: var(--c-font-mono);
+          font-size: 0.9rem;
+          font-weight: 700;
+          overflow-wrap: anywhere;
+        }
+
+        .dp-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .dp-pill {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          min-height: 44px;
+          padding: 0 20px;
+          border: 1px solid transparent;
+          border-radius: 9999px;
+          background: #EADDCB;
+          color: #3A2A21;
+          font-size: 0.9rem;
+          font-weight: 700;
+          white-space: nowrap;
+          cursor: pointer;
+          touch-action: manipulation;
+          transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        }
+
+        .dp-pill:hover {
+          background: #E0D1BB;
+        }
+
+        .dp-pill-ghost {
+          border-color: #DCCDB6;
+          background: transparent;
+        }
+
+        .dp-pill-ghost:hover {
+          background: #F3EBDF;
+        }
+
+        .dp-pill.copied,
+        .dp-pill.copied:hover {
+          border-color: transparent;
+          background: #E6F4EA;
+          color: #1E7A43;
+        }
+
+        .dp-tip {
+          max-width: 620px;
+          margin: 30px 0 0;
+          color: var(--c-text-muted);
+          font-size: 0.95rem;
+          line-height: 1.55;
+        }
+
+        @media (max-width: 860px) {
+          .dp-row {
+            grid-template-columns: minmax(0, 1fr);
+            padding: 26px 0;
+          }
+
+          .dp-actions {
+            flex-direction: row;
+            flex-wrap: wrap;
+          }
+
+          .dp-pill {
+            flex: 1 1 150px;
+          }
+        }
+      `,
+        }}
+      />
     </div>
   );
 }
-

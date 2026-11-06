@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { WORLD_COUNTRIES_PATH } from "./worldCountriesPath";
 
 export interface MapDot {
@@ -10,273 +10,281 @@ export interface MapDot {
 
 export interface WorldMapProps {
   dots?: MapDot[];
-  lineColor?: string;
   className?: string;
 }
 
 // Routes cargo internationales convergeant vers les capitales d'Afrique de l'Ouest
 const DEFAULT_DOTS: MapDot[] = [
-  // 1. Chine (Guangzhou & Yiwu) vers Côte d'Ivoire & Sénégal
-  {
-    start: { lat: 23.13, lng: 113.26, label: "Guangzhou" },
-    end: { lat: 5.36, lng: -4.00, label: "Abidjan" },
-  },
-  {
-    start: { lat: 29.31, lng: 120.07, label: "Yiwu" },
-    end: { lat: 14.69, lng: -17.44, label: "Dakar" },
-  },
-  // 2. Dubaï vers Abidjan & Bamako
-  {
-    start: { lat: 25.20, lng: 55.27, label: "Dubaï" },
-    end: { lat: 5.36, lng: -4.00, label: "Abidjan" },
-  },
-  {
-    start: { lat: 25.20, lng: 55.27 },
-    end: { lat: 12.63, lng: -8.00, label: "Bamako" },
-  },
-  // 3. Maroc (Casablanca) vers Abidjan & Ouagadougou
-  {
-    start: { lat: 33.57, lng: -7.58, label: "Casablanca" },
-    end: { lat: 5.36, lng: -4.00, label: "Abidjan" },
-  },
-  {
-    start: { lat: 33.57, lng: -7.58 },
-    end: { lat: 12.37, lng: -1.52, label: "Ouaga" },
-  },
-  // 4. France (Paris) vers Abidjan
-  {
-    start: { lat: 48.85, lng: 2.35, label: "Paris" },
-    end: { lat: 5.36, lng: -4.00, label: "Abidjan" },
-  },
+  { start: { lat: 23.13, lng: 113.26 }, end: { lat: 5.36, lng: -4.0 } },
+  { start: { lat: 29.31, lng: 120.07 }, end: { lat: 14.69, lng: -17.44 } },
+  { start: { lat: 25.2, lng: 55.27 }, end: { lat: 5.36, lng: -4.0 } },
+  { start: { lat: 25.2, lng: 55.27 }, end: { lat: 12.63, lng: -8.0 } },
+  { start: { lat: 33.57, lng: -7.58 }, end: { lat: 5.36, lng: -4.0 } },
+  { start: { lat: 33.57, lng: -7.58 }, end: { lat: 12.37, lng: -1.52 } },
+  { start: { lat: 48.85, lng: 2.35 }, end: { lat: 5.36, lng: -4.0 } },
 ];
 
-// Hubs d'arrivée en Afrique de l'Ouest
-const WEST_AFRICA_HUBS = [
-  { id: "ci", lat: 5.36, lng: -4.00, label: "Abidjan", isMain: true },
-  { id: "sn", lat: 14.69, lng: -17.44, label: "Dakar", isMain: false },
-  { id: "ml", lat: 12.63, lng: -8.00, label: "Bamako", isMain: false },
-  { id: "bf", lat: 12.37, lng: -1.52, label: "Ouaga", isMain: false },
+interface Hub {
+  lat: number;
+  lng: number;
+  label: string;
+  /** Décalage du nom, en pixels d'écran. */
+  dx: number;
+  dy: number;
+  align: CanvasTextAlign;
+  /** Nom conservé sur les petits écrans. */
+  essential?: boolean;
+  main?: boolean;
+  arrival?: boolean;
+}
+
+const HUBS: Hub[] = [
+  { lat: 23.13, lng: 113.26, label: "Guangzhou", dx: -8, dy: 14, align: "right", essential: true },
+  { lat: 29.31, lng: 120.07, label: "Yiwu", dx: 8, dy: -6, align: "left" },
+  { lat: 25.2, lng: 55.27, label: "Dubaï", dx: 8, dy: -6, align: "left", essential: true },
+  { lat: 33.57, lng: -7.58, label: "Casablanca", dx: -8, dy: -2, align: "right" },
+  { lat: 48.85, lng: 2.35, label: "Paris", dx: 8, dy: -6, align: "left", essential: true },
+  { lat: 5.36, lng: -4.0, label: "Abidjan", dx: 0, dy: 19, align: "center", essential: true, main: true, arrival: true },
+  { lat: 14.69, lng: -17.44, label: "Dakar", dx: -8, dy: 3, align: "right", arrival: true },
+  { lat: 12.63, lng: -8.0, label: "", dx: 0, dy: 0, align: "left", arrival: true },
+  { lat: 12.37, lng: -1.52, label: "", dx: 0, dy: 0, align: "left", arrival: true },
 ];
 
-// Formule de projection standard équirectangulaire (800x400)
-function projectPoint(lat: number, lng: number) {
-  const x = (lng + 180) * (800 / 360);
-  const y = (90 - lat) * (400 / 180);
-  return { x, y };
+const MAP_WIDTH = 800;
+const MAP_HEIGHT = 400;
+
+// Couleurs de la marque : beige du logo et bleu pétrole, sur la carte couleur sable.
+const TAIL_RGB = [150, 186, 190];
+const HEAD_RGB = [30, 77, 91];
+const INK = "rgba(74, 60, 46, 0.92)";
+const HALO = "rgba(250, 245, 240, 0.9)";
+
+const FLIGHT = 3.8;
+const REST = 1.6;
+const CYCLE = FLIGHT + REST;
+const TAIL_LENGTH = 0.24;
+const TAIL_STEPS = 30;
+
+function project(lat: number, lng: number) {
+  return {
+    x: (lng + 180) * (MAP_WIDTH / 360),
+    y: (90 - lat) * (MAP_HEIGHT / 180),
+  };
 }
 
-// Génération de 49 points le long de l'arc en courbe de Bézier quadratique
-function getCurvedPoints(
-  start: { x: number; y: number },
-  end: { x: number; y: number },
-  count: number = 49
-) {
-  const midX = (start.x + end.x) / 2;
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const dist = Math.hypot(dx, dy);
-  const curvature = Math.min(Math.max(dist * 0.22, 26), 56);
-  const midY = Math.min(start.y, end.y) - curvature;
-
-  const pts: Array<{ x: number; y: number }> = [];
-  for (let i = 0; i < count; i++) {
-    const t = i / (count - 1);
-    const oneMinusT = 1 - t;
-    const x = oneMinusT * oneMinusT * start.x + 2 * oneMinusT * t * midX + t * t * end.x;
-    const y = oneMinusT * oneMinusT * start.y + 2 * oneMinusT * t * midY + t * t * end.y;
-    pts.push({ x, y });
-  }
-  return pts;
+function easeInOut(u: number) {
+  return 0.5 - 0.5 * Math.cos(Math.PI * u);
 }
 
-export function WorldMap({
-  dots = DEFAULT_DOTS,
-  lineColor = "#0EA5E9",
-  className = "",
-}: WorldMapProps) {
+function mix(from: number[], to: number[], t: number) {
+  return from.map((value, i) => Math.round(value + (to[i]! - value) * t)).join(",");
+}
+
+export function WorldMap({ dots = DEFAULT_DOTS, className = "" }: WorldMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Précalcul des coordonnées des trajectoires
-  const routes = useMemo(() => {
-    return dots.map((dot) => {
-      const start = projectPoint(dot.start.lat, dot.start.lng);
-      const end = projectPoint(dot.end.lat, dot.end.lng);
-      return {
-        start,
-        end,
-        pts: getCurvedPoints(start, end, 49),
-      };
-    });
-  }, [dots]);
+  const routes = useMemo(
+    () =>
+      dots.map((dot) => {
+        const start = project(dot.start.lat, dot.start.lng);
+        const end = project(dot.end.lat, dot.end.lng);
+        const distance = Math.hypot(end.x - start.x, end.y - start.y);
+        const lift = Math.min(Math.max(distance * 0.3, 28), 92);
+        const control = { x: (start.x + end.x) / 2, y: Math.min(start.y, end.y) - lift };
+        return { start, end, control };
+      }),
+    [dots]
+  );
 
-  // Animation exacte des comètes du RouteGlobe (Globe 3D admin dashboard)
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const wrapper = wrapperRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !wrapper || !ctx) return;
 
-    let animId: number;
-    const tailLen = 11;
-    const flightDuration = 1.35;
-    const absorbDuration = 0.32;
-    const pauseDuration = 0.65;
-    const totalCycle = flightDuration + absorbDuration + pauseDuration;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let frame = 0;
+    let visible = true;
+    let cssWidth = wrapper.clientWidth || MAP_WIDTH;
 
-    const render = () => {
-      const dpr = window.devicePixelRatio || 1;
-      if (canvas.width !== 800 * dpr || canvas.height !== 400 * dpr) {
-        canvas.width = 800 * dpr;
-        canvas.height = 400 * dpr;
-      }
-
-      ctx.save();
-      ctx.scale(dpr, dpr);
-      ctx.clearRect(0, 0, 800, 400);
-
-      const now = performance.now() / 1000;
-
-      // 1. Tracé sous-jacent discret pour chaque ligne de vol
-      ctx.lineWidth = 0.8;
-      ctx.strokeStyle = "rgba(14, 165, 233, 0.16)";
-      for (const route of routes) {
-        ctx.beginPath();
-        for (let k = 0; k < route.pts.length; k++) {
-          const p = route.pts[k];
-          if (k === 0) ctx.moveTo(p.x, p.y);
-          else ctx.lineTo(p.x, p.y);
-        }
-        ctx.stroke();
-      }
-
-      // 2. Hubs d'origine : balise bleue avec anneau respiratoire soyeux
-      for (let i = 0; i < routes.length; i++) {
-        const p = routes[i].start;
-        const pulse = (Math.sin(now * 3 + i * 0.7) + 1) / 2; // 0..1
-
-        // Anneau pulsant
-        ctx.globalAlpha = 0.3 * (1 - pulse);
-        ctx.lineWidth = 0.9;
-        ctx.strokeStyle = lineColor;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 2 + pulse * 5.5, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Point central
-        ctx.globalAlpha = 0.95;
-        ctx.fillStyle = lineColor;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 2.0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // 3. Comètes fluides (Mathématique exacte du globe RouteGlobe)
-      for (let i = 0; i < routes.length; i++) {
-        const route = routes[i];
-        const pts = route.pts;
-        const ph = (now + i * 0.42) % totalCycle;
-
-        let headPos = 0;
-        let tailStartPos = 0;
-        let landingFade = 1;
-
-        if (ph <= flightDuration) {
-          const u = ph / flightDuration;
-          // Décélération cubique douce sur le dernier tiers
-          const eased =
-            u < 0.6
-              ? (u / 0.6) * 0.64
-              : 0.64 + (1 - Math.pow(1 - (u - 0.6) / 0.4, 2.1)) * 0.36;
-          headPos = eased * 48;
-          tailStartPos = Math.max(0, headPos - tailLen);
-          landingFade = Math.min(1, u / 0.08); // Apparition progressive au décollage
-        } else if (ph <= flightDuration + absorbDuration) {
-          // La tête est posée à destination et la traînée s'absorbe doucement
-          const absorbU = (ph - flightDuration) / absorbDuration;
-          const easedAbsorb = 1 - Math.pow(1 - absorbU, 2.2);
-          headPos = 48;
-          tailStartPos = Math.min(48, 48 - tailLen + easedAbsorb * tailLen);
-          landingFade = Math.pow(1 - absorbU, 1.5);
-        } else {
-          headPos = 48;
-          tailStartPos = 48;
-          landingFade = 0;
-        }
-
-        if (landingFade > 0.01 && headPos > tailStartPos) {
-          const startIdx = Math.max(0, Math.floor(tailStartPos));
-          const endIdx = Math.min(48, Math.ceil(headPos));
-          const currentSpan = Math.max(0.5, headPos - tailStartPos);
-
-          for (let k = startIdx; k < endIdx; k++) {
-            const a = pts[k];
-            const b = pts[k + 1];
-            if (!a || !b) continue;
-
-            const segEnd = k + 1 > headPos ? headPos - k : 1;
-            const bx = a.x + (b.x - a.x) * segEnd;
-            const by = a.y + (b.y - a.y) * segEnd;
-
-            const progressAlongTail = Math.max(
-              0,
-              Math.min(1, (k + segEnd - tailStartPos) / currentSpan)
-            );
-            const smoothAlpha =
-              Math.pow(progressAlongTail, 1.4) * 0.95 * landingFade;
-
-            ctx.globalAlpha = smoothAlpha;
-            ctx.lineWidth = 1.0 + progressAlongTail * 1.5;
-            ctx.strokeStyle = lineColor; // Bleu royal éclatant
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(bx, by);
-            ctx.stroke();
-          }
-        }
-
-        // Onde d'atterrissage douce à l'arrivée (Afrique de l'Ouest)
-        const end = pts[48];
-        const isTouchingDown =
-          ph >= flightDuration - 0.05 && ph <= flightDuration + 0.32;
-        if (isTouchingDown) {
-          const touchProgress = (ph - (flightDuration - 0.05)) / 0.37;
-          const easeOutRipple = 1 - Math.pow(1 - touchProgress, 3);
-          const rippleAlpha = Math.pow(1 - touchProgress, 1.85) * 0.75;
-          ctx.globalAlpha = rippleAlpha;
-          ctx.lineWidth = 1.25 * (1 - touchProgress * 0.4);
-          ctx.strokeStyle = "#38BDF8"; // Bleu ciel lumineux pour l'onde d'impact
-          ctx.beginPath();
-          ctx.arc(end.x, end.y, 2.8 + easeOutRipple * 14, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-      }
-
-      // 4. Balises d'arrivée en Afrique de l'Ouest
-      for (const hub of WEST_AFRICA_HUBS) {
-        const p = projectPoint(hub.lat, hub.lng);
-        const isMain = hub.isMain;
-
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = isMain ? "#0284C7" : "#0EA5E9";
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, isMain ? 2.8 : 2.0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.lineWidth = 0.8;
-        ctx.strokeStyle = "#FAF5F0";
-        ctx.stroke();
-      }
-
-      ctx.restore();
-      animId = requestAnimationFrame(render);
+    const pointAt = (route: (typeof routes)[number], t: number) => {
+      const m = 1 - t;
+      return {
+        x: m * m * route.start.x + 2 * m * t * route.control.x + t * t * route.end.x,
+        y: m * m * route.start.y + 2 * m * t * route.control.y + t * t * route.end.y,
+      };
     };
 
-    animId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(animId);
-  }, [routes, lineColor]);
+    const resize = () => {
+      cssWidth = wrapper.clientWidth || MAP_WIDTH;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(cssWidth * dpr);
+      canvas.height = Math.round((cssWidth * MAP_HEIGHT * dpr) / MAP_WIDTH);
+    };
+
+    const draw = (now: number) => {
+      const dpr = canvas.width / cssWidth;
+      const scale = cssWidth / MAP_WIDTH;
+      // Sur téléphone, les traits gardent une épaisseur visible.
+      const stroke = 1 / Math.max(scale, 0.62);
+
+      ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+      ctx.clearRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+      ctx.lineCap = "round";
+
+      // Routes : pointillés fins qui avancent doucement vers l'Afrique.
+      ctx.setLineDash([0.1, 5.4 * stroke]);
+      ctx.lineDashOffset = -now * 4;
+      ctx.lineWidth = 1.15 * stroke;
+      ctx.strokeStyle = "rgba(47, 107, 120, 0.4)";
+      for (const route of routes) {
+        ctx.beginPath();
+        ctx.moveTo(route.start.x, route.start.y);
+        ctx.quadraticCurveTo(route.control.x, route.control.y, route.end.x, route.end.y);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+
+      if (!reducedMotion) {
+        routes.forEach((route, index) => {
+          const phase = (now + (index * CYCLE) / routes.length) % CYCLE;
+
+          if (phase <= FLIGHT) {
+            const u = phase / FLIGHT;
+            const head = easeInOut(u);
+            const tailStart = Math.max(0, head - TAIL_LENGTH * Math.sin(Math.PI * Math.min(1, u * 1.15 + 0.05)));
+            const fade = Math.min(1, u / 0.1) * Math.min(1, (1 - u) / 0.05);
+
+            // Traînée effilée : fine et claire derrière, dense et cuivrée vers la tête.
+            for (let step = 0; step < TAIL_STEPS; step += 1) {
+              const a = step / TAIL_STEPS;
+              const b = (step + 1) / TAIL_STEPS;
+              const from = pointAt(route, tailStart + (head - tailStart) * a);
+              const to = pointAt(route, tailStart + (head - tailStart) * b);
+              ctx.strokeStyle = `rgba(${mix(TAIL_RGB, HEAD_RGB, b)},${Math.pow(b, 1.5) * 0.95 * fade})`;
+              ctx.lineWidth = (0.3 + Math.pow(b, 1.3) * 2.3) * stroke;
+              ctx.beginPath();
+              ctx.moveTo(from.x, from.y);
+              ctx.lineTo(to.x, to.y);
+              ctx.stroke();
+            }
+
+            // Tête lumineuse : halo chaud et cœur clair.
+            const tip = pointAt(route, head);
+            const radius = 10 * stroke;
+            const glow = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, radius);
+            glow.addColorStop(0, `rgba(47, 107, 120, ${0.55 * fade})`);
+            glow.addColorStop(0.45, `rgba(47, 107, 120, ${0.16 * fade})`);
+            glow.addColorStop(1, "rgba(47, 107, 120, 0)");
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(tip.x, tip.y, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = `rgba(255, 243, 230, ${fade})`;
+            ctx.beginPath();
+            ctx.arc(tip.x, tip.y, 1.5 * stroke, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            // Onde douce à l'arrivée.
+            const landed = (phase - FLIGHT) / 1.15;
+            if (landed < 1) {
+              const eased = 1 - Math.pow(1 - landed, 3);
+              ctx.strokeStyle = `rgba(30, 77, 91, ${Math.pow(1 - landed, 2) * 0.6})`;
+              ctx.lineWidth = 1.1 * stroke;
+              ctx.beginPath();
+              ctx.arc(route.end.x, route.end.y, (3 + eased * 15) * stroke, 0, Math.PI * 2);
+              ctx.stroke();
+            }
+          }
+        });
+      }
+
+      // Plateformes et villes.
+      const fontSize = 11 / scale;
+      ctx.font = `600 ${fontSize}px "Host Grotesk", -apple-system, BlinkMacSystemFont, sans-serif`;
+      ctx.textBaseline = "middle";
+
+      for (const hub of HUBS) {
+        const point = project(hub.lat, hub.lng);
+        const radius = (hub.main ? 3.1 : hub.arrival ? 2 : 2.4) * stroke;
+
+        ctx.fillStyle = hub.arrival ? "rgba(30, 77, 91, 0.14)" : "rgba(47, 107, 120, 0.14)";
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, radius * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = hub.arrival ? "#1E4D5B" : "#1E4D5B";
+        ctx.strokeStyle = "#FAF5F0";
+        ctx.lineWidth = 1 * stroke;
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        if (hub.label && (cssWidth >= 620 || hub.essential)) {
+          const x = point.x + hub.dx / scale;
+          const y = point.y + hub.dy / scale;
+          ctx.textAlign = hub.align;
+          ctx.lineJoin = "round";
+          ctx.lineWidth = 3.4 / scale;
+          ctx.strokeStyle = HALO;
+          ctx.strokeText(hub.label, x, y);
+          ctx.fillStyle = INK;
+          ctx.fillText(hub.label, x, y);
+        }
+      }
+    };
+
+    const loop = () => {
+      frame = 0;
+      if (!visible) return;
+      draw(performance.now() / 1000);
+      frame = requestAnimationFrame(loop);
+    };
+
+    const start = () => {
+      if (reducedMotion) {
+        draw(0);
+        return;
+      }
+      if (!frame && visible) frame = requestAnimationFrame(loop);
+    };
+
+    // L'animation s'arrête hors de l'écran pour ménager la batterie des téléphones.
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = Boolean(entry?.isIntersecting) && !document.hidden;
+      start();
+    });
+    observer.observe(wrapper);
+
+    const handleVisibility = () => {
+      visible = !document.hidden;
+      start();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    const resizeObserver = new ResizeObserver(() => {
+      resize();
+      if (reducedMotion) draw(0);
+    });
+    resizeObserver.observe(wrapper);
+
+    resize();
+    start();
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      resizeObserver.disconnect();
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [routes]);
 
   return (
     <div
+      ref={wrapperRef}
       className={className}
       style={{
         width: "100%",
@@ -284,32 +292,19 @@ export function WorldMap({
         margin: "0 auto",
         position: "relative",
         backgroundColor: "transparent",
-        border: "none",
-        boxShadow: "none",
       }}
     >
-      {/* 1. Carte vectorielle réelle des continents en fond */}
       <svg
-        viewBox="0 0 800 400"
-        style={{
-          width: "100%",
-          height: "auto",
-          display: "block",
-          userSelect: "none",
-        }}
+        viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
+        style={{ width: "100%", height: "auto", display: "block", userSelect: "none" }}
+        aria-hidden="true"
       >
-        <path
-          d={WORLD_COUNTRIES_PATH}
-          fill="#E7DFD4"
-          stroke="#D8CFBE"
-          strokeWidth="0.5"
-          strokeLinejoin="round"
-        />
+        <path d={WORLD_COUNTRIES_PATH} fill="#E9E0D4" stroke="#DCD1C1" strokeWidth="0.5" strokeLinejoin="round" />
       </svg>
 
-      {/* 2. Canvas HiDPI superposé pour l'animation exacte des comètes du globe admin */}
       <canvas
         ref={canvasRef}
+        aria-hidden="true"
         style={{
           position: "absolute",
           inset: 0,

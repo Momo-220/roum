@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isPublicHttpUrl } from "@/shared/safe-url";
 
 export async function GET(req: NextRequest) {
   const rawUrl = req.nextUrl.searchParams.get("url");
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest) {
     targetUrl = "https:" + targetUrl;
   }
 
-  if (!/^https?:\/\//i.test(targetUrl)) {
+  if (!isPublicHttpUrl(targetUrl)) {
     return new NextResponse("Invalid url", { status: 400 });
   }
 
@@ -44,7 +45,11 @@ export async function GET(req: NextRequest) {
       return new NextResponse("Upstream image fetch failed", { status: resp.status });
     }
 
-    const contentType = resp.headers.get("content-type") || "image/jpeg";
+    // Seules de vraies images sont relayées : un HTML servi depuis notre domaine serait une faille.
+    const contentType = (resp.headers.get("content-type") || "").split(";")[0]!.trim().toLowerCase();
+    if (!contentType.startsWith("image/") || contentType === "image/svg+xml") {
+      return new NextResponse("Unsupported content", { status: 415 });
+    }
     const buffer = await resp.arrayBuffer();
 
     return new NextResponse(buffer, {
@@ -52,7 +57,7 @@ export async function GET(req: NextRequest) {
       headers: {
         "Content-Type": contentType,
         "Cache-Control": "public, max-age=86400, s-maxage=86400",
-        "Access-Control-Allow-Origin": "*",
+        "X-Content-Type-Options": "nosniff",
       },
     });
   } catch {

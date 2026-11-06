@@ -9,6 +9,7 @@
     "dev": "wrangler dev",
     "typecheck": "tsc -p tsconfig.json",
     "d1:local:migrate": "wrangler d1 migrations apply roum-db --local",
+    "d1:local:seed": "wrangler d1 execute roum-db --local --file=seeds/demo_operational.sql",
     "d1:local:list": "wrangler d1 migrations list roum-db --local",
     "test": "vitest run"
   },

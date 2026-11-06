@@ -7,10 +7,22 @@ import {
   SUPER_ADMIN_ROLE_ID,
   isPermissionCode,
   generateTrackingNumber,
-  phoneSchema,
   type TransportType,
 } from "../shared";
 import { hashPassword, verifyJwt, resolveJwtSecret, sanitizeCsvCell } from "../crypto";
+import {
+  cancelRequestOfShipment,
+  cancelShipmentOfRequest,
+  findOrCreateRoute,
+  mirrorClientToRequests,
+  mirrorShipmentToRequest,
+  parseDestination,
+  parseMeta,
+  paymentMethodFromSelection,
+  paymentStatusStatement,
+  singleParcelWeightStatement,
+  toAdminRequest,
+} from "../requests";
 import type { Env, UserSession } from "../types";
 
 export const adminRouter = new Hono<{ Bindings: Env; Variables: { user: UserSession } }>();
@@ -107,6 +119,31 @@ function checkPermission(c: { get: (k: "user") => UserSession }, requiredPermiss
   if (user.isSuperAdmin) return true;
   return user.permissions.includes(requiredPermission) || user.permissions.includes("*");
 }
+
+function hasAnyPermission(c: { get: (k: "user") => UserSession }, ...codes: string[]): boolean {
+  return codes.some((code) => checkPermission(c, code));
+}
+
+function auditStatement(
+  c: { env: Env },
+  user: UserSession,
+  action: string,
+  entityType: string,
+  entityId: string,
+  details: unknown,
+): D1PreparedStatement {
+  return c.env.DB.prepare(`
+    INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).bind(crypto.randomUUID(), user.userId, action, entityType, entityId, JSON.stringify(details));
+}
+
+/** Compteurs de tous les domaines : l'admin ne recharge que ce qui a réellement changé. */
+adminRouter.get("/sync", async (c) => {
+  const { results } = await c.env.DB.prepare(`SELECT scope, version FROM sync_versions`).all<{ scope: string; version: number }>();
+  c.header("Cache-Control", "no-store");
+  return c.json({ versions: Object.fromEntries(results.map((r) => [r.scope, r.version])) });
+});
 
 /* ==========================================================================
    1. GESTION DES PERMISSIONS & RÔLES DYNAMIQUES (Super Admin Uniquement)
@@ -317,7 +354,7 @@ adminRouter.get("/shipments", async (c) => {
       COALESCE(r.destination_city, 'Abidjan') as destination_city,
       COALESCE(sm.name, 'Voie Aérienne Express') as shipping_mode_name,
       COALESCE(sm.type, 'AIR') as shipping_mode_type,
-      s.shipping_mode_id, s.route_id, s.client_id
+      s.shipping_mode_id, s.route_id, s.client_id, s.sender_name, s.sender_phone
     FROM shipments s
     LEFT JOIN shipment_statuses st ON s.current_status = st.code
     LEFT JOIN clients c ON s.client_id = c.id
@@ -338,7 +375,7 @@ adminRouter.get("/shipments", async (c) => {
     params.push(term, term, term);
   }
 
-  query += ` ORDER BY s.created_at DESC LIMIT 50`;
+  query += ` ORDER BY s.created_at DESC LIMIT 1000`;
 
   const { results: shipments } = await c.env.DB.prepare(query).bind(...params).all();
 
@@ -481,7 +518,7 @@ adminRouter.post("/shipments", zValidator("json", createShipmentSchema), async (
   statements.push(
     c.env.DB.prepare(`
       INSERT INTO tracking_events (id, shipment_id, status, location, comment, recorded_by_user_id)
-      VALUES (?, ?, 'DRAFT', ?, 'Dossier créé', ?)
+      VALUES (?, ?, 'RECEIVED_AT_HUB', ?, 'Dossier créé', ?)
     `).bind(
       crypto.randomUUID(),
       shipmentId,
@@ -489,6 +526,8 @@ adminRouter.post("/shipments", zValidator("json", createShipmentSchema), async (
       user.userId
     )
   );
+
+  statements.push(auditStatement(c, user, "shipment.create", "shipment", shipmentId, { tracking_number: trackingNumber }));
 
   // Exécution atomique
   await c.env.DB.batch(statements);
@@ -533,6 +572,11 @@ adminRouter.patch("/shipments/:id/status", zValidator("json", updateStatusSchema
     return c.json({ error: "Statut inexistant ou inactif." }, 400);
   }
 
+  const shipmentExists = await c.env.DB.prepare(`SELECT id FROM shipments WHERE id = ?`).bind(shipmentId).first();
+  if (!shipmentExists) {
+    return c.json({ error: "Expédition introuvable." }, 404);
+  }
+
   const statements: D1PreparedStatement[] = [
     c.env.DB.prepare(`
       UPDATE shipments 
@@ -562,93 +606,212 @@ adminRouter.patch("/shipments/:id/status", zValidator("json", updateStatusSchema
     ),
   ];
 
+  if (new_status === "CANCELLED") {
+    statements.push(cancelRequestOfShipment(c.env.DB, shipmentId));
+  }
+
   await c.env.DB.batch(statements);
 
   return c.json({ success: true, message: `Statut mis à jour vers ${new_status}.` });
 });
 
 /**
- * Modification complète d'une expédition (Admin -> SQLite D1 -> Client Tracking)
+ * Modification d'une expédition (Admin -> SQLite D1 -> Client Tracking)
+ * Un changement de statut est tracé dans la timeline pour que le client voie la même chose que l'admin.
  */
 adminRouter.patch("/shipments/:id", async (c) => {
-  if (!checkPermission(c, "shipments.status.update") && !checkPermission(c, "shipments.create")) {
-    return c.json({ error: "Permission insuffisante." }, 403);
+  if (!hasAnyPermission(c, "shipments.edit", "shipments.status.update", "shipments.create")) {
+    return c.json({ error: "Permission insuffisante (shipments.edit requise)." }, 403);
   }
+  const user = c.get("user");
   const shipmentId = c.req.param("id");
   const body = await c.req.json<any>().catch(() => ({}));
 
   const existing = await c.env.DB.prepare(`
     SELECT * FROM shipments WHERE id = ? OR UPPER(tracking_number) = UPPER(?) LIMIT 1
-  `).bind(shipmentId, body.tracking_number || shipmentId).first<any>();
+  `).bind(shipmentId, shipmentId).first<any>();
+  if (!existing) {
+    return c.json({ error: "Expédition introuvable." }, 404);
+  }
 
-  const nextStatus = body.current_status || body.current_status_code || existing?.current_status || "RECEIVED_AT_HUB";
-  const weightKg = body.total_weight_kg !== undefined ? Number(body.total_weight_kg) : existing?.total_weight_kg ?? 1;
-  const volCbm = body.total_volume_cbm !== undefined ? Number(body.total_volume_cbm) : existing?.total_volume_cbm ?? 0;
-  const priceMinor = body.estimated_price_minor !== undefined ? Number(body.estimated_price_minor) : existing?.estimated_price_minor ?? 0;
-  const finalMinor = body.final_price_minor !== undefined ? Number(body.final_price_minor) : existing?.final_price_minor ?? priceMinor;
-  const payStatus = body.payment_status || existing?.payment_status || "PENDING";
-  const currency = body.currency || existing?.currency || "FCFA";
+  const toNumber = (value: unknown, fallback: number) => {
+    if (value === undefined || value === null || value === "") return fallback;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+  };
 
-  if (existing) {
-    await c.env.DB.prepare(`
+  const nextStatus: string = body.current_status || existing.current_status;
+  const priceMinor = Math.round(toNumber(body.estimated_price_minor, existing.estimated_price_minor ?? 0));
+  const finalMinor = Math.round(toNumber(body.final_price_minor, existing.final_price_minor ?? 0));
+  const payStatus: string = body.payment_status || existing.payment_status;
+  if (!["PENDING", "PARTIAL", "PAID", "ON_DELIVERY"].includes(payStatus)) {
+    return c.json({ error: "État de paiement inconnu." }, 400);
+  }
+
+  const moneyChanged =
+    priceMinor !== (existing.estimated_price_minor ?? 0) ||
+    finalMinor !== (existing.final_price_minor ?? 0) ||
+    payStatus !== existing.payment_status;
+  if (moneyChanged && !checkPermission(c, "finance.edit")) {
+    return c.json({ error: "Permission insuffisante (finance.edit requise pour modifier un montant)." }, 403);
+  }
+
+  const statusChanged = nextStatus !== existing.current_status;
+  if (statusChanged) {
+    if (!user.isSuperAdmin && !user.allowedStatuses.includes(nextStatus) && !user.allowedStatuses.includes("*")) {
+      return c.json({ error: `Votre rôle (${user.roleName}) n'est pas autorisé à appliquer le statut : ${nextStatus}` }, 403);
+    }
+    const statusRow = await c.env.DB.prepare(`SELECT code FROM shipment_statuses WHERE code = ? AND is_active = 1`).bind(nextStatus).first();
+    if (!statusRow) {
+      return c.json({ error: "Statut inexistant ou inactif." }, 400);
+    }
+  }
+
+  const weightKg = toNumber(body.total_weight_kg, existing.total_weight_kg ?? 0);
+  const volumeCbm = toNumber(body.total_volume_cbm, existing.total_volume_cbm ?? 0);
+
+  // Un changement d'origine ou de destination rattache l'expédition à la bonne liaison.
+  let routeId: string = existing.route_id;
+  let destinationLabel: string | null = null;
+  const route = await c.env.DB.prepare(`SELECT * FROM routes WHERE id = ?`).bind(existing.route_id).first<any>();
+  const originCountry = String(body.origin_country || route?.origin_country || "").trim();
+  const destination = parseDestination(body.destination_country || route?.destination_country);
+  if (originCountry !== route?.origin_country || destination.country !== route?.destination_country) {
+    routeId = await findOrCreateRoute(c.env.DB, {
+      originCountry,
+      originCity: originCountry === route?.origin_country ? route?.origin_city : null,
+      destinationCountry: destination.country,
+      destinationCity: destination.city,
+    });
+    destinationLabel = destination.city ? `${destination.country} — ${destination.city}` : destination.country;
+  }
+
+  const priceChanged = priceMinor !== (existing.estimated_price_minor ?? 0) || finalMinor !== (existing.final_price_minor ?? 0);
+  const effectivePriceMinor = finalMinor || priceMinor;
+
+  const statements: D1PreparedStatement[] = [
+    c.env.DB.prepare(`
       UPDATE shipments
-      SET tracking_number = COALESCE(?, tracking_number),
-          current_status = ?,
+      SET current_status = ?,
+          route_id = ?,
           total_weight_kg = ?,
           total_volume_cbm = ?,
           estimated_price_minor = ?,
           final_price_minor = ?,
           payment_status = ?,
           currency = ?,
+          sender_name = COALESCE(?, sender_name),
+          sender_phone = COALESCE(?, sender_phone),
           updated_at = datetime('now')
       WHERE id = ?
     `).bind(
-      body.tracking_number || null,
       nextStatus,
+      routeId,
       weightKg,
-      volCbm,
+      volumeCbm,
       priceMinor,
       finalMinor,
       payStatus,
-      currency,
+      body.currency || existing.currency,
+      body.sender_name ?? null,
+      body.sender_phone ?? null,
       existing.id
-    ).run();
+    ),
+    singleParcelWeightStatement(c.env.DB, existing.id, weightKg),
+    mirrorShipmentToRequest(c.env.DB, existing.id, {
+      weightKg: weightKg !== (existing.total_weight_kg ?? 0) ? weightKg : null,
+      volumeCbm: volumeCbm !== (existing.total_volume_cbm ?? 0) ? volumeCbm : null,
+      clientName: body.client_name || null,
+      clientPhone: body.client_phone || null,
+      destination: destinationLabel,
+      totalFcfa: priceChanged ? effectivePriceMinor / 100 : null,
+    }),
+    auditStatement(c, user, "shipment.update", "shipment", existing.id, { current_status: nextStatus, final_price_minor: finalMinor }),
+  ];
 
-    if (existing.client_id && (body.client_name || body.client_phone)) {
-      await c.env.DB.prepare(`
+  // Un nouveau prix change ce qui reste à payer, sauf si l'admin vient de fixer lui-même l'état du paiement.
+  if (priceChanged && payStatus === existing.payment_status) {
+    statements.push(paymentStatusStatement(c.env.DB, existing.id));
+  }
+  if (nextStatus === "CANCELLED") {
+    statements.push(cancelRequestOfShipment(c.env.DB, existing.id));
+  }
+
+  if (statusChanged) {
+    statements.push(
+      c.env.DB.prepare(`
+        INSERT INTO tracking_events (id, shipment_id, status, location, comment, recorded_by_user_id)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).bind(
+        crypto.randomUUID(),
+        existing.id,
+        nextStatus,
+        user.hubLocation || "Bureau Central",
+        body.status_comment || null,
+        user.userId
+      )
+    );
+  }
+
+  if (existing.client_id && (body.client_name || body.client_phone)) {
+    statements.push(
+      c.env.DB.prepare(`
         UPDATE clients
         SET full_name = COALESCE(?, full_name),
             phone_whatsapp = COALESCE(?, phone_whatsapp),
             city = COALESCE(?, city),
-            country = COALESCE(?, country)
+            country = COALESCE(?, country),
+            updated_at = datetime('now')
         WHERE id = ?
       `).bind(
         body.client_name || null,
         body.client_phone || null,
-        body.client_city || body.destination_city || null,
-        body.client_country || body.destination_country || null,
+        body.client_city || null,
+        body.client_country || null,
         existing.client_id
-      ).run();
-    }
-
-    return c.json({ success: true, shipment_id: existing.id, message: "Expédition mise à jour en base." });
+      ),
+      mirrorClientToRequests(c.env.DB, existing.client_id, body.client_name, body.client_phone)
+    );
   }
 
-  return c.json({ success: true, message: "Expédition traitée." });
+  await c.env.DB.batch(statements);
+  return c.json({ success: true, shipment_id: existing.id, message: "Expédition mise à jour en base." });
 });
 
 adminRouter.delete("/shipments/:id", async (c) => {
+  if (!hasAnyPermission(c, "shipments.cancel", "shipments.edit")) {
+    return c.json({ error: "Permission insuffisante (shipments.cancel requise)." }, 403);
+  }
+  const user = c.get("user");
   const shipmentId = c.req.param("id");
   const existing = await c.env.DB.prepare(`
-    SELECT id FROM shipments WHERE id = ? OR UPPER(tracking_number) = UPPER(?) LIMIT 1
-  `).bind(shipmentId, shipmentId).first<{ id: string }>();
-  if (existing) {
-    await c.env.DB.batch([
-      c.env.DB.prepare(`DELETE FROM tracking_events WHERE shipment_id = ?`).bind(existing.id),
-      c.env.DB.prepare(`DELETE FROM parcels WHERE shipment_id = ?`).bind(existing.id),
-      c.env.DB.prepare(`DELETE FROM shipments WHERE id = ?`).bind(existing.id),
-    ]);
+    SELECT id, tracking_number FROM shipments WHERE id = ? OR UPPER(tracking_number) = UPPER(?) LIMIT 1
+  `).bind(shipmentId, shipmentId).first<{ id: string; tracking_number: string }>();
+  if (!existing) {
+    return c.json({ error: "Expédition introuvable." }, 404);
   }
+
+  const linkedPayments = await c.env.DB.prepare(`SELECT COUNT(*) as total FROM payments WHERE shipment_id = ?`)
+    .bind(existing.id)
+    .first<{ total: number }>();
+  if ((linkedPayments?.total || 0) > 0) {
+    return c.json(
+      { error: "Cette expédition a des paiements enregistrés. Annulez-la plutôt que de la supprimer afin de conserver la comptabilité." },
+      409
+    );
+  }
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(`DELETE FROM tracking_events WHERE shipment_id = ?`).bind(existing.id),
+    c.env.DB.prepare(`DELETE FROM parcels WHERE shipment_id = ?`).bind(existing.id),
+    c.env.DB.prepare(`DELETE FROM shipments WHERE id = ?`).bind(existing.id),
+    c.env.DB.prepare(`
+      UPDATE customer_requests
+      SET shipment_id = NULL, tracking_number = NULL, status = 'IN_REVIEW', updated_at = datetime('now')
+      WHERE shipment_id = ?
+    `).bind(existing.id),
+    auditStatement(c, user, "shipment.delete", "shipment", existing.id, { tracking_number: existing.tracking_number }),
+  ]);
   return c.json({ success: true, message: "Expédition supprimée." });
 });
 
@@ -783,7 +946,20 @@ adminRouter.patch("/shipments/:id/intake", zValidator("json", shipmentIntakeSche
       shipmentId,
       JSON.stringify({ total_weight_kg: data.total_weight_kg, status: data.status, final_price_minor: data.final_price_minor })
     ),
+    singleParcelWeightStatement(c.env.DB, shipmentId, Math.round(data.total_weight_kg * 100) / 100),
+    mirrorShipmentToRequest(c.env.DB, shipmentId, {
+      weightKg: Math.round(data.total_weight_kg * 100) / 100,
+      volumeCbm: data.total_volume_cbm ?? null,
+      totalFcfa: data.final_price_minor ? data.final_price_minor / 100 : null,
+    }),
   ];
+
+  if (data.final_price_minor) {
+    statements.push(paymentStatusStatement(c.env.DB, shipmentId));
+  }
+  if (data.status === "CANCELLED") {
+    statements.push(cancelRequestOfShipment(c.env.DB, shipmentId));
+  }
 
   await c.env.DB.batch(statements);
 
@@ -842,41 +1018,26 @@ adminRouter.get("/stats", async (c) => {
    6. DEMANDES CLIENTS REÇUES (Alibaba, Transit Fournisseur, Expéditions)
    ========================================================================== */
 
-function unpackAdminRequestRow(row: any, items: any[] = []) {
-  if (!row) return null;
-  let meta: Record<string, any> = {};
-  if (typeof row.admin_notes === "string" && row.admin_notes.trim().startsWith("{")) {
-    try {
-      const parsed = JSON.parse(row.admin_notes);
-      if (parsed && typeof parsed === "object" && parsed.__roum_meta) {
-        meta = parsed;
-      }
-    } catch {}
-  }
-  const firstItem = items[0] || {};
-  return {
-    ...row,
-    ...meta,
-    id: row.id,
-    reference: row.reference,
-    request_type: row.request_type,
-    client_name: row.client_name,
-    client_phone: row.client_phone,
-    client_email: row.client_email,
-    origin_country: row.origin_country,
-    destination_country: row.destination_country,
-    status: row.status,
-    created_at: row.created_at,
-    estimated_weight_kg: row.estimated_weight_kg ?? meta.estimated_weight_kg ?? null,
-    estimated_cbm: row.estimated_cbm ?? meta.estimated_cbm ?? null,
-    description: row.description,
-    shipping_mark: row.shipping_mark || meta.shipping_mark || null,
-    product_name: meta.product_name || firstItem.product_name || null,
-    product_url: meta.product_url || firstItem.product_url || "",
-    product_quantity: meta.product_quantity || (firstItem.quantity ? String(firstItem.quantity) : "1"),
-    product_image: meta.product_image || null,
-    items: items.length > 0 ? items : meta.items || [],
-  };
+const REQUEST_STATUSES = ["NEW", "IN_REVIEW", "QUOTE_SENT", "CONVERTED", "CLOSED", "CANCELLED"] as const;
+
+const VERSION_CONFLICT_ERROR =
+  "Ce dossier vient d'être modifié par ailleurs. Les données ont été actualisées : vérifiez-les puis réessayez.";
+
+async function findRequest(c: { env: Env }, identifier: string) {
+  return c.env.DB.prepare(`
+    SELECT r.*, u.full_name as assigned_to_name
+    FROM customer_requests r
+    LEFT JOIN users u ON r.assigned_to_user_id = u.id
+    WHERE r.id = ? OR UPPER(r.reference) = UPPER(?)
+    LIMIT 1
+  `).bind(identifier, identifier).first<any>();
+}
+
+async function loadLatestProof(c: { env: Env }, requestId: string) {
+  return c.env.DB.prepare(`
+    SELECT id, file_name, mime_type, chunk_count FROM payment_proofs
+    WHERE request_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1
+  `).bind(requestId).first<{ id: string; file_name: string; mime_type: string; chunk_count: number }>();
 }
 
 adminRouter.get("/requests", async (c) => {
@@ -889,9 +1050,11 @@ adminRouter.get("/requests", async (c) => {
   const search = c.req.query("search");
 
   let query = `
-    SELECT 
+    SELECT
       r.*,
-      u.full_name as assigned_to_name
+      u.full_name as assigned_to_name,
+      (SELECT p.file_name FROM payment_proofs p WHERE p.request_id = r.id ORDER BY p.created_at DESC, p.rowid DESC LIMIT 1) as proof_name,
+      (SELECT p.mime_type FROM payment_proofs p WHERE p.request_id = r.id ORDER BY p.created_at DESC, p.rowid DESC LIMIT 1) as proof_mime
     FROM customer_requests r
     LEFT JOIN users u ON r.assigned_to_user_id = u.id
     WHERE 1=1
@@ -912,17 +1075,28 @@ adminRouter.get("/requests", async (c) => {
     params.push(term, term, term);
   }
 
-  query += ` ORDER BY r.created_at DESC LIMIT 100`;
+  query += ` ORDER BY r.created_at DESC LIMIT 1000`;
 
-  const { results: rows } = await c.env.DB.prepare(query).bind(...params).all();
-  const requests = await Promise.all(
-    ((rows as any[]) || []).map(async (r) => {
-      const { results: items } = await c.env.DB.prepare(
-        `SELECT * FROM request_items WHERE request_id = ? ORDER BY item_index ASC`
-      ).bind(r.id).all();
-      return unpackAdminRequestRow(r, items as any[]);
-    })
-  );
+  const [{ results: rows }, { results: allItems }] = await Promise.all([
+    c.env.DB.prepare(query).bind(...params).all<any>(),
+    c.env.DB.prepare(`SELECT * FROM request_items ORDER BY request_id, item_index ASC`).all<any>(),
+  ]);
+
+  const itemsByRequest = new Map<string, any[]>();
+  for (const item of allItems) {
+    const bucket = itemsByRequest.get(item.request_id) || [];
+    bucket.push(item);
+    itemsByRequest.set(item.request_id, bucket);
+  }
+
+  const requests = rows.map((row) => {
+    const { proof_name, proof_mime, ...rest } = row;
+    return toAdminRequest(rest, itemsByRequest.get(row.id) || [], {
+      has_proof: Boolean(proof_name),
+      name: proof_name,
+      mime: proof_mime,
+    });
+  });
   return c.json({ requests });
 });
 
@@ -931,15 +1105,7 @@ adminRouter.get("/requests/:id", async (c) => {
     return c.json({ error: "Permission insuffisante." }, 403);
   }
 
-  const id = c.req.param("id");
-  const request = await c.env.DB.prepare(`
-    SELECT r.*, u.full_name as assigned_to_name
-    FROM customer_requests r
-    LEFT JOIN users u ON r.assigned_to_user_id = u.id
-    WHERE r.id = ? OR UPPER(r.reference) = UPPER(?)
-    LIMIT 1
-  `).bind(id, id).first<any>();
-
+  const request = await findRequest(c, c.req.param("id"));
   if (!request) {
     return c.json({ error: "Demande introuvable." }, 404);
   }
@@ -948,237 +1114,357 @@ adminRouter.get("/requests/:id", async (c) => {
     SELECT * FROM request_items WHERE request_id = ? ORDER BY item_index ASC
   `).bind(request.id).all();
 
-  return c.json({ request: unpackAdminRequestRow(request, items as any[]), items });
+  const proof = await loadLatestProof(c, request.id);
+  const dto = toAdminRequest(request, items as any[], { has_proof: Boolean(proof), name: proof?.file_name, mime: proof?.mime_type });
+
+  if (proof) {
+    const { results: chunks } = await c.env.DB.prepare(`
+      SELECT data FROM payment_proof_chunks WHERE proof_id = ? ORDER BY chunk_index ASC
+    `).bind(proof.id).all<{ data: string }>();
+    dto.payment_receipt_url = `data:${proof.mime_type};base64,${chunks.map((chunk) => chunk.data).join("")}`;
+  }
+
+  return c.json({ request: dto, items });
+});
+
+const quoteSchema = z.object({
+  estimatedWeightKg: z.number().nonnegative().nullish(),
+  estimatedCbm: z.number().nonnegative().nullish(),
+  goodsTotalFcfa: z.number().nonnegative().optional(),
+  shippingFeeFcfa: z.number().nonnegative().optional(),
+  totalAmountFcfa: z.number().positive("Le total du devis doit être supérieur à 0."),
+  shippingModeName: z.string().max(160).nullish(),
+  expectedVersion: z.number().int().optional(),
 });
 
 /**
  * ÉTAPE 2 (Admin ➔ Base de données ➔ Client) :
- * Enregistre le poids estimé, le prix marchandise, le fret et le total devis dans SQLite D1
+ * Enregistre le poids estimé et le devis. Un dossier déjà converti garde son statut.
  */
-adminRouter.patch("/requests/:reference/quote", async (c) => {
-  const ref = (c.req.param("reference") || "").trim();
-  if (!ref) return c.json({ error: "Référence requise." }, 400);
-
-  const body = await c.req.json<any>().catch(() => ({}));
-  const existing = await c.env.DB.prepare(`
-    SELECT * FROM customer_requests WHERE UPPER(reference) = UPPER(?) OR id = ? LIMIT 1
-  `).bind(ref, ref).first<any>();
-
-  let currentMeta: Record<string, any> = { __roum_meta: true };
-  if (existing && typeof existing.admin_notes === "string" && existing.admin_notes.trim().startsWith("{")) {
-    try {
-      const parsed = JSON.parse(existing.admin_notes);
-      if (parsed && typeof parsed === "object") {
-        currentMeta = { ...parsed, __roum_meta: true };
-      }
-    } catch {}
+adminRouter.patch("/requests/:reference/quote", zValidator("json", quoteSchema), async (c) => {
+  if (!hasAnyPermission(c, "requests.process", "quotes.process")) {
+    return c.json({ error: "Permission insuffisante (requests.process requise)." }, 403);
   }
 
+  const user = c.get("user");
+  const body = c.req.valid("json");
+  const existing = await findRequest(c, (c.req.param("reference") || "").trim());
+  if (!existing) {
+    return c.json({ error: "Demande introuvable." }, 404);
+  }
+  if (body.expectedVersion !== undefined && body.expectedVersion !== existing.row_version) {
+    return c.json({ error: VERSION_CONFLICT_ERROR, conflict: true }, 409);
+  }
+
+  const currentMeta = parseMeta(existing);
   const nextMeta = {
     ...currentMeta,
-    ...(body.metadata || {}),
-    total_goods_fcfa: body.goodsTotalFcfa !== undefined ? Number(body.goodsTotalFcfa) : currentMeta.total_goods_fcfa,
-    shipping_fee_fcfa: body.shippingFeeFcfa !== undefined ? Number(body.shippingFeeFcfa) : currentMeta.shipping_fee_fcfa,
-    total_amount_fcfa: body.totalAmountFcfa !== undefined ? Number(body.totalAmountFcfa) : currentMeta.total_amount_fcfa,
+    __roum_meta: true,
+    total_goods_fcfa: body.goodsTotalFcfa ?? currentMeta.total_goods_fcfa ?? 0,
+    shipping_fee_fcfa: body.shippingFeeFcfa ?? currentMeta.shipping_fee_fcfa ?? 0,
+    total_amount_fcfa: body.totalAmountFcfa,
     shipping_mode_name: body.shippingModeName || currentMeta.shipping_mode_name,
-    tracking_number: body.trackingNumber || currentMeta.tracking_number || null,
   };
 
-  const nextStatus = body.status || (existing?.status === "CONVERTED" ? "CONVERTED" : "QUOTE_SENT");
-  const weightKg = body.estimatedWeightKg !== undefined ? body.estimatedWeightKg : existing?.estimated_weight_kg ?? null;
-  const cbmVal = body.estimatedCbm !== undefined ? body.estimatedCbm : existing?.estimated_cbm ?? null;
+  const nextStatus = existing.status === "CONVERTED" ? "CONVERTED" : "QUOTE_SENT";
 
-  if (existing) {
-    await c.env.DB.prepare(`
+  const statements: D1PreparedStatement[] = [
+    c.env.DB.prepare(`
       UPDATE customer_requests
       SET estimated_weight_kg = ?,
           estimated_cbm = ?,
           status = ?,
-          admin_notes = ?,
+          metadata_json = ?,
           updated_at = datetime('now')
       WHERE id = ?
-    `).bind(weightKg, cbmVal, nextStatus, JSON.stringify(nextMeta), existing.id).run();
-
-    const updated = await c.env.DB.prepare(`SELECT * FROM customer_requests WHERE id = ?`).bind(existing.id).first<any>();
-    return c.json({ success: true, request: unpackAdminRequestRow(updated) });
-  } else {
-    const id = crypto.randomUUID();
-    const fb = body.metadata || {};
-    await c.env.DB.prepare(`
-      INSERT INTO customer_requests (
-        id, reference, client_name, client_phone, request_type,
-        origin_country, destination_country, description,
-        estimated_weight_kg, estimated_cbm, status, admin_notes
-      ) VALUES (?, ?, ?, ?, 'ALIBABA', ?, ?, ?, ?, ?, ?, ?)
     `).bind(
-      id,
-      ref,
-      fb.client_name || "Client ROUM",
-      fb.client_phone || "+22500000000",
-      fb.origin_country || "Chine",
-      fb.destination_country || "Côte d'Ivoire",
-      fb.description || fb.product_name || "Commande client",
-      weightKg,
-      cbmVal,
+      body.estimatedWeightKg !== undefined ? body.estimatedWeightKg : existing.estimated_weight_kg,
+      body.estimatedCbm !== undefined ? body.estimatedCbm : existing.estimated_cbm,
       nextStatus,
-      JSON.stringify(nextMeta)
-    ).run();
-
-    const created = await c.env.DB.prepare(`SELECT * FROM customer_requests WHERE id = ?`).bind(id).first<any>();
-    return c.json({ success: true, request: unpackAdminRequestRow(created) }, 201);
-  }
-});
-
-/**
- * ÉTAPE 3 (Admin ➔ Base de données ➔ Client Tracking) :
- * Confirme l'encaissement, attribue le Tracking Number officiel et crée l'expédition active dans SQLite D1
- */
-adminRouter.post("/requests/:reference/confirm-tracking", async (c) => {
-  const user = c.get("user");
-  const ref = (c.req.param("reference") || "").trim();
-  if (!ref) return c.json({ error: "Référence requise." }, 400);
-
-  const body = await c.req.json<any>().catch(() => ({}));
-  const trackingNumber = (body.trackingNumber || "").trim();
-  if (!trackingNumber) return c.json({ error: "Numéro de suivi requis." }, 400);
-
-  const existingReq = await c.env.DB.prepare(`
-    SELECT * FROM customer_requests WHERE UPPER(reference) = UPPER(?) OR id = ? LIMIT 1
-  `).bind(ref, ref).first<any>();
-
-  let currentMeta: Record<string, any> = { __roum_meta: true };
-  if (existingReq && typeof existingReq.admin_notes === "string" && existingReq.admin_notes.trim().startsWith("{")) {
-    try {
-      const parsed = JSON.parse(existingReq.admin_notes);
-      if (parsed && typeof parsed === "object") {
-        currentMeta = { ...parsed, __roum_meta: true };
-      }
-    } catch {}
-  }
-
-  const nextMeta = {
-    ...currentMeta,
-    ...(body.metadata || {}),
-    tracking_number: trackingNumber,
-    total_goods_fcfa: body.goodsTotalFcfa ?? currentMeta.total_goods_fcfa ?? 0,
-    shipping_fee_fcfa: body.shippingFeeFcfa ?? currentMeta.shipping_fee_fcfa ?? 0,
-    total_amount_fcfa: body.totalAmountFcfa ?? currentMeta.total_amount_fcfa ?? 0,
-  };
-
-  if (existingReq) {
-    await c.env.DB.prepare(`
-      UPDATE customer_requests
-      SET status = 'CONVERTED',
-          estimated_weight_kg = COALESCE(?, estimated_weight_kg),
-          estimated_cbm = COALESCE(?, estimated_cbm),
-          admin_notes = ?,
-          updated_at = datetime('now')
-      WHERE id = ?
-    `).bind(
-      body.weightKg ?? null,
-      body.volumeCbm ?? null,
       JSON.stringify(nextMeta),
-      existingReq.id
-    ).run();
-  }
+      existing.id
+    ),
+    auditStatement(c, user, "request.quote", "request", existing.id, { total_amount_fcfa: body.totalAmountFcfa }),
+  ];
 
-  // Création ou mise à jour de l'expédition active dans `shipments` pour que /tracking/RM-... fonctionne en base
-  const clientName = body.clientName || existingReq?.client_name || "Client ROUM";
-  const clientPhone = body.clientPhone || existingReq?.client_phone || "+22500000000";
-  const destRaw = String(body.destination || existingReq?.destination_country || "Côte d'Ivoire — Abidjan");
-  const destCountry = destRaw.split("—")[0]?.trim() || "Côte d'Ivoire";
-  const destCity = destRaw.split("—")[1]?.trim() || "Abidjan";
-  const origCountry = String(body.origin || existingReq?.origin_country || "Chine").trim();
-  const isSea = body.isSea === true || trackingNumber.includes("-SEA-");
-  const modeId = isSea ? "SEA_LCL" : "AIR_EXPRESS";
-
-  // 1. Client
-  let clientId = existingReq?.client_id || null;
-  if (!clientId) {
-    const foundClient = await c.env.DB.prepare(`SELECT id FROM clients WHERE phone_whatsapp = ? LIMIT 1`).bind(clientPhone).first<{ id: string }>();
-    if (foundClient?.id) {
-      clientId = foundClient.id;
-    } else {
-      clientId = crypto.randomUUID();
-      await c.env.DB.prepare(`
-        INSERT INTO clients (id, full_name, phone_whatsapp, city, country)
-        VALUES (?, ?, ?, ?, ?)
-      `).bind(clientId, clientName, clientPhone, destCity, destCountry).run();
+  // Dossier déjà en expédition : le suivi, le prix et ce qui reste à payer suivent le devis.
+  if (existing.shipment_id) {
+    const priceMinor = Math.round(body.totalAmountFcfa * 100);
+    statements.push(
+      c.env.DB.prepare(`
+        UPDATE shipments
+        SET total_weight_kg = COALESCE(?, total_weight_kg),
+            total_volume_cbm = COALESCE(?, total_volume_cbm),
+            estimated_price_minor = ?,
+            final_price_minor = ?,
+            updated_at = datetime('now')
+        WHERE id = ?
+      `).bind(body.estimatedWeightKg ?? null, body.estimatedCbm ?? null, priceMinor, priceMinor, existing.shipment_id),
+      paymentStatusStatement(c.env.DB, existing.shipment_id)
+    );
+    if (body.estimatedWeightKg) {
+      statements.push(singleParcelWeightStatement(c.env.DB, existing.shipment_id, body.estimatedWeightKg));
     }
   }
 
-  // 2. Route
-  let routeId = "route-cn-ci-gz";
-  const foundRoute = await c.env.DB.prepare(`
-    SELECT id FROM routes WHERE LOWER(origin_country) = LOWER(?) AND LOWER(destination_country) = LOWER(?) LIMIT 1
-  `).bind(origCountry, destCountry).first<{ id: string }>();
-  if (foundRoute?.id) {
-    routeId = foundRoute.id;
-  } else {
-    const anyRoute = await c.env.DB.prepare(`SELECT id FROM routes LIMIT 1`).first<{ id: string }>();
-    if (anyRoute?.id) routeId = anyRoute.id;
+  await c.env.DB.batch(statements);
+
+  const updated = await findRequest(c, existing.id);
+  return c.json({ success: true, request: toAdminRequest(updated) });
+});
+
+interface ShipmentFromRequest {
+  shippingModeId: string;
+  routeId: string;
+  weightKg: number;
+  volumeCbm: number;
+  priceMinor: number;
+  currency: string;
+  packageLabel: string;
+  description: string | null;
+  status: "RECEIVED_AT_HUB" | "DRAFT";
+  location: string;
+  comment: string;
+  paid: boolean;
+  metadata: Record<string, any>;
+}
+
+/**
+ * Crée l'expédition d'un dossier en une seule transaction : client, expédition, colis, suivi, paiement
+ * et mise à jour du dossier réussissent ou échouent ensemble. L'index unique `source_request_id` garantit
+ * qu'un dossier ne produit jamais deux expéditions, même si deux personnes confirment au même moment.
+ */
+async function createShipmentFromRequest(c: { env: Env }, user: UserSession, request: any, input: ShipmentFromRequest) {
+  const db = c.env.DB;
+  const destination = parseDestination(request.destination_country);
+
+  let clientId: string | null = request.client_id || null;
+  const statements: D1PreparedStatement[] = [];
+
+  if (!clientId) {
+    const found = await db.prepare(`SELECT id FROM clients WHERE phone_whatsapp = ? LIMIT 1`)
+      .bind(request.client_phone)
+      .first<{ id: string }>();
+    if (found?.id) {
+      clientId = found.id;
+    } else {
+      clientId = crypto.randomUUID();
+      statements.push(
+        db.prepare(`
+          INSERT INTO clients (id, full_name, phone_whatsapp, email, city, country)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).bind(
+          clientId,
+          request.client_name,
+          request.client_phone,
+          request.client_email || null,
+          destination.city,
+          destination.country || "Non précisé"
+        )
+      );
+    }
   }
 
-  // 3. Shipment
-  const existingShip = await c.env.DB.prepare(`SELECT id FROM shipments WHERE UPPER(tracking_number) = UPPER(?) LIMIT 1`).bind(trackingNumber).first<{ id: string }>();
-  const weightVal = Number(body.weightKg) || 2;
-  const volVal = Number(body.volumeCbm) || 0.05;
-  const priceMinor = Math.round((Number(body.totalAmountFcfa) || 0) * 100);
+  const mode = await db.prepare(`SELECT type FROM shipping_modes WHERE id = ?`).bind(input.shippingModeId).first<{ type: TransportType }>();
+  if (!mode) throw new Error("Mode de transport inconnu.");
 
-  if (!existingShip) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     const shipmentId = crypto.randomUUID();
-    await c.env.DB.batch([
-      c.env.DB.prepare(`
+    const trackingNumber = generateTrackingNumber(mode.type);
+    const batch = [...statements];
+
+    batch.push(
+      db.prepare(`
         INSERT INTO shipments (
           id, tracking_number, client_id, route_id, shipping_mode_id,
           current_status, total_parcels_count, total_weight_kg, total_volume_cbm,
-          estimated_price_minor, final_price_minor, currency, payment_status, created_by_user_id
-        ) VALUES (?, ?, ?, ?, ?, 'RECEIVED_AT_HUB', 1, ?, ?, ?, ?, 'FCFA', 'PAID', ?)
+          estimated_price_minor, final_price_minor, currency, payment_status, created_by_user_id, source_request_id
+        ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         shipmentId,
         trackingNumber,
         clientId,
-        routeId,
-        modeId,
-        weightVal,
-        volVal,
-        priceMinor,
-        priceMinor,
-        user?.userId || "user-superadmin-01"
+        input.routeId,
+        input.shippingModeId,
+        input.status,
+        input.weightKg,
+        input.volumeCbm,
+        input.priceMinor,
+        input.paid ? input.priceMinor : null,
+        input.currency,
+        input.paid ? "PAID" : "PENDING",
+        user.userId,
+        request.id
       ),
-      c.env.DB.prepare(`
-        INSERT INTO parcels (id, shipment_id, parcel_index, package_label, weight_kg, length_cm, width_cm, height_cm, description)
-        VALUES (?, ?, 1, ?, ?, null, null, null, ?)
-      `).bind(
-        crypto.randomUUID(),
-        shipmentId,
-        body.productName || `Colis ${ref}`,
-        weightVal,
-        body.description || body.productName || "Marchandise commandée"
-      ),
-      c.env.DB.prepare(`
+      db.prepare(`
+        INSERT INTO parcels (id, shipment_id, parcel_index, package_label, weight_kg, description)
+        VALUES (?, ?, 1, ?, ?, ?)
+      `).bind(crypto.randomUUID(), shipmentId, input.packageLabel, input.weightKg, input.description),
+      db.prepare(`
         INSERT INTO tracking_events (id, shipment_id, status, location, comment, recorded_by_user_id)
-        VALUES (?, ?, 'RECEIVED_AT_HUB', ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).bind(crypto.randomUUID(), shipmentId, input.status, input.location, input.comment, user.userId)
+    );
+
+    if (input.paid) {
+      batch.push(
+        db.prepare(`
+          INSERT INTO payments (
+            id, shipment_id, client_id, amount_minor, currency, payment_method, payment_type,
+            reference_code, status, receipt_notes, recorded_by_user_id
+          ) VALUES (?, ?, ?, ?, ?, ?, 'FULL', ?, 'CONFIRMED', ?, ?)
+        `).bind(
+          crypto.randomUUID(),
+          shipmentId,
+          clientId,
+          input.priceMinor,
+          input.currency,
+          paymentMethodFromSelection(input.metadata.payment_method_selected),
+          request.reference,
+          `Encaissement confirmé pour le dossier ${request.reference}`,
+          user.userId
+        )
+      );
+    }
+
+    batch.push(
+      db.prepare(`
+        UPDATE customer_requests
+        SET status = 'CONVERTED',
+            client_id = ?,
+            shipment_id = ?,
+            tracking_number = ?,
+            estimated_weight_kg = COALESCE(?, estimated_weight_kg),
+            estimated_cbm = COALESCE(?, estimated_cbm),
+            metadata_json = ?,
+            updated_at = datetime('now')
+        WHERE id = ?
       `).bind(
-        crypto.randomUUID(),
+        clientId,
         shipmentId,
-        isSea ? "Entrepôt Yiwu (Chine)" : "Entrepôt Guangzhou Baiyun (Chine)",
-        `Paiement confirmé · Dossier ${ref} activé et pris en charge à l'entrepôt ROUM TRANSIT`,
-        user?.userId || "user-superadmin-01"
+        trackingNumber,
+        input.weightKg || null,
+        input.volumeCbm || null,
+        JSON.stringify({ ...input.metadata, __roum_meta: true, tracking_number: trackingNumber }),
+        request.id
       ),
-    ]);
+      auditStatement(c, user, "request.convert", "request", request.id, {
+        tracking_number: trackingNumber,
+        paid: input.paid,
+        price_minor: input.priceMinor,
+      })
+    );
+
+    try {
+      await db.batch(batch);
+      return { shipmentId, trackingNumber };
+    } catch (err: any) {
+      const message = String(err?.message || "");
+      if (message.includes("source_request_id")) {
+        const winner = await db.prepare(`SELECT id, tracking_number FROM shipments WHERE source_request_id = ?`)
+          .bind(request.id)
+          .first<{ id: string; tracking_number: string }>();
+        if (winner) return { shipmentId: winner.id, trackingNumber: winner.tracking_number };
+      }
+      if (!message.includes("shipments.tracking_number")) throw err;
+    }
   }
 
+  throw new Error("Impossible de générer un numéro de suivi unique.");
+}
+
+const confirmTrackingSchema = z.object({
+  weightKg: z.number().nonnegative().nullish(),
+  volumeCbm: z.number().nonnegative().nullish(),
+  goodsTotalFcfa: z.number().nonnegative().optional(),
+  shippingFeeFcfa: z.number().nonnegative().optional(),
+  totalAmountFcfa: z.number().positive("Enregistrez d'abord un devis avec un montant.").optional(),
+  expectedVersion: z.number().int().optional(),
+});
+
+/**
+ * ÉTAPE 3 (Admin ➔ Base de données ➔ Client Tracking) :
+ * Confirme l'encaissement. Le numéro de suivi est attribué ici par le serveur, et l'appel est rejouable :
+ * un second clic renvoie le même numéro sans créer ni expédition ni paiement supplémentaire.
+ */
+adminRouter.post("/requests/:reference/confirm-tracking", zValidator("json", confirmTrackingSchema), async (c) => {
+  if (!checkPermission(c, "finance.edit")) {
+    return c.json({ error: "Permission insuffisante (finance.edit requise)." }, 403);
+  }
+
+  const user = c.get("user");
+  const body = c.req.valid("json");
+  const request = await findRequest(c, (c.req.param("reference") || "").trim());
+  if (!request) {
+    return c.json({ error: "Demande introuvable." }, 404);
+  }
+
+  if (request.shipment_id && request.tracking_number) {
+    return c.json({
+      success: true,
+      already_confirmed: true,
+      tracking_number: request.tracking_number,
+      request: toAdminRequest(request),
+      message: `Encaissement déjà confirmé : suivi ${request.tracking_number}.`,
+    });
+  }
+
+  if (body.expectedVersion !== undefined && body.expectedVersion !== request.row_version) {
+    return c.json({ error: VERSION_CONFLICT_ERROR, conflict: true }, 409);
+  }
+
+  const meta = parseMeta(request);
+  const totalFcfa = Number(body.totalAmountFcfa ?? meta.total_amount_fcfa) || 0;
+  if (totalFcfa <= 0) {
+    return c.json({ error: "Enregistrez d'abord un devis avec un montant avant de confirmer l'encaissement." }, 400);
+  }
+
+  const destination = parseDestination(request.destination_country);
+  const routeId = await findOrCreateRoute(c.env.DB, {
+    originCountry: request.origin_country || "Chine",
+    originCity: request.origin_city,
+    destinationCountry: destination.country || "Côte d'Ivoire",
+    destinationCity: destination.city,
+  });
+
+  const isSea = meta.shipping_mode_type === "SEA" || String(meta.shipping_mode_name || "").toLowerCase().includes("maritime");
+  const shippingModeId = request.shipping_mode_id || (isSea ? "SEA_LCL" : "AIR_EXPRESS");
+  const productName = meta.product_name || `Colis ${request.reference}`;
+
+  const created = await createShipmentFromRequest(c, user, request, {
+    shippingModeId,
+    routeId,
+    weightKg: Number(body.weightKg ?? request.estimated_weight_kg) || 0,
+    volumeCbm: Number(body.volumeCbm ?? request.estimated_cbm) || 0,
+    priceMinor: Math.round(totalFcfa * 100),
+    currency: "FCFA",
+    packageLabel: productName,
+    description: request.description || productName,
+    status: "RECEIVED_AT_HUB",
+    location: isSea ? "Entrepôt Yiwu (Chine)" : "Entrepôt Guangzhou Baiyun (Chine)",
+    comment: `Paiement confirmé · Dossier ${request.reference} activé et pris en charge à l'entrepôt ROUM TRANSIT`,
+    paid: true,
+    metadata: {
+      ...meta,
+      total_goods_fcfa: body.goodsTotalFcfa ?? meta.total_goods_fcfa ?? 0,
+      shipping_fee_fcfa: body.shippingFeeFcfa ?? meta.shipping_fee_fcfa ?? 0,
+      total_amount_fcfa: totalFcfa,
+    },
+  });
+
+  const updated = await findRequest(c, request.id);
   return c.json({
     success: true,
-    tracking_number: trackingNumber,
-    message: `Encaissement confirmé et numéro de suivi ${trackingNumber} enregistré en base de données.`,
+    tracking_number: created.trackingNumber,
+    shipment_id: created.shipmentId,
+    request: toAdminRequest(updated),
+    message: `Encaissement confirmé et numéro de suivi ${created.trackingNumber} enregistré en base de données.`,
   });
 });
 
 const updateRequestStatusSchema = z.object({
-  status: z.string().min(1, "Statut requis").max(60),
-  admin_notes: z.string().optional(),
+  status: z.enum(REQUEST_STATUSES, { message: "Statut de dossier inconnu." }),
+  admin_notes: z.string().max(4000).optional(),
 });
 
 adminRouter.patch("/requests/:id/status", zValidator("json", updateRequestStatusSchema), async (c) => {
@@ -1186,41 +1472,34 @@ adminRouter.patch("/requests/:id/status", zValidator("json", updateRequestStatus
     return c.json({ error: "Permission insuffisante (requests.process requise)." }, 403);
   }
 
-  const id = c.req.param("id");
+  const user = c.get("user");
   const data = c.req.valid("json");
-
-  const existing = await c.env.DB.prepare(`
-    SELECT id, reference, status, admin_notes FROM customer_requests WHERE id = ? OR UPPER(reference) = UPPER(?) LIMIT 1
-  `).bind(id, id).first<any>();
-
+  const existing = await findRequest(c, c.req.param("id"));
   if (!existing) {
     return c.json({ error: "Demande introuvable." }, 404);
   }
 
-  let updatedNotes = existing.admin_notes;
-  if (data.admin_notes) {
-    updatedNotes = data.admin_notes;
-  } else if (typeof existing.admin_notes === "string" && existing.admin_notes.trim().startsWith("{")) {
-    try {
-      const parsed = JSON.parse(existing.admin_notes);
-      if (parsed && typeof parsed === "object") {
-        parsed.status = data.status;
-        updatedNotes = JSON.stringify(parsed);
-      }
-    } catch {}
+  if (data.status === "CONVERTED" && !existing.shipment_id) {
+    return c.json(
+      { error: "Pour passer ce dossier en « payé », utilisez « Confirmer l'encaissement » : c'est ce qui crée l'expédition et le numéro de suivi." },
+      409
+    );
   }
 
-  await c.env.DB.prepare(`
-    UPDATE customer_requests
-    SET status = ?, admin_notes = ?, updated_at = datetime('now')
-    WHERE id = ?
-  `).bind(data.status, updatedNotes, existing.id).run();
+  const statements: D1PreparedStatement[] = [
+    c.env.DB.prepare(`
+      UPDATE customer_requests
+      SET status = ?, admin_notes = COALESCE(?, admin_notes), updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(data.status, data.admin_notes ?? null, existing.id),
+    auditStatement(c, user, "request.status", "request", existing.id, { from: existing.status, to: data.status }),
+  ];
 
-  await c.env.DB.prepare(`
-    UPDATE quote_requests
-    SET status = ?, updated_at = datetime('now')
-    WHERE UPPER(quote_reference) = UPPER(?) OR id = ?
-  `).bind(data.status, existing.reference, existing.id).run().catch(() => {});
+  if (data.status === "CANCELLED" && existing.shipment_id) {
+    statements.push(...cancelShipmentOfRequest(c.env.DB, existing.shipment_id, user.userId, user.hubLocation || "Bureau Central"));
+  }
+
+  await c.env.DB.batch(statements);
 
   return c.json({ success: true, message: `Demande ${existing.reference} mise à jour vers le statut ${data.status}.` });
 });
@@ -1233,86 +1512,127 @@ adminRouter.patch("/requests/:id", async (c) => {
     return c.json({ error: "Permission insuffisante (requests.process requise)." }, 403);
   }
 
-  const id = c.req.param("id");
+  const user = c.get("user");
   const body = await c.req.json<any>().catch(() => ({}));
-
-  const existing = await c.env.DB.prepare(`
-    SELECT * FROM customer_requests WHERE id = ? OR UPPER(reference) = UPPER(?) LIMIT 1
-  `).bind(id, id).first<any>();
-
+  const existing = await findRequest(c, c.req.param("id"));
   if (!existing) {
     return c.json({ error: "Demande introuvable." }, 404);
   }
-
-  let currentMeta: Record<string, any> = { __roum_meta: true };
-  if (existing && typeof existing.admin_notes === "string" && existing.admin_notes.trim().startsWith("{")) {
-    try {
-      const parsed = JSON.parse(existing.admin_notes);
-      if (parsed && typeof parsed === "object") {
-        currentMeta = { ...parsed, __roum_meta: true };
-      }
-    } catch {}
+  if (body.expected_version !== undefined && Number(body.expected_version) !== existing.row_version) {
+    return c.json({ error: VERSION_CONFLICT_ERROR, conflict: true }, 409);
   }
+
+  const nextStatus: string = body.status || existing.status;
+  if (!(REQUEST_STATUSES as readonly string[]).includes(nextStatus)) {
+    return c.json({ error: "Statut de dossier inconnu." }, 400);
+  }
+  if (nextStatus === "CONVERTED" && !existing.shipment_id) {
+    return c.json({ error: "Utilisez « Confirmer l'encaissement » pour créer l'expédition et le numéro de suivi." }, 409);
+  }
+
+  const currentMeta = parseMeta(existing);
+  const numberOr = (value: unknown, fallback: unknown) => {
+    if (value === undefined || value === null || value === "") return fallback;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+  };
 
   const nextMeta = {
     ...currentMeta,
-    ...(body.metadata || {}),
+    __roum_meta: true,
     product_name: body.product_name || currentMeta.product_name,
     product_image: body.product_image || currentMeta.product_image,
     product_url: body.product_url || currentMeta.product_url,
-    total_goods_fcfa: body.total_goods_fcfa !== undefined ? Number(body.total_goods_fcfa) : currentMeta.total_goods_fcfa,
-    shipping_fee_fcfa: body.shipping_fee_fcfa !== undefined ? Number(body.shipping_fee_fcfa) : currentMeta.shipping_fee_fcfa,
-    total_amount_fcfa: body.total_amount_fcfa !== undefined ? Number(body.total_amount_fcfa) : currentMeta.total_amount_fcfa,
+    total_goods_fcfa: numberOr(body.total_goods_fcfa, currentMeta.total_goods_fcfa),
+    shipping_fee_fcfa: numberOr(body.shipping_fee_fcfa, currentMeta.shipping_fee_fcfa),
+    total_amount_fcfa: numberOr(body.total_amount_fcfa, currentMeta.total_amount_fcfa),
     shipping_mode_name: body.shipping_mode_name || currentMeta.shipping_mode_name,
-    tracking_number: body.tracking_number || currentMeta.tracking_number || null,
   };
 
-  const nextStatus = body.status || existing.status;
-  const weightKg = body.estimated_weight_kg !== undefined ? Number(body.estimated_weight_kg) : existing.estimated_weight_kg;
-  const cbmVal = body.estimated_cbm !== undefined ? Number(body.estimated_cbm) : existing.estimated_cbm;
-
-  await c.env.DB.prepare(`
-    UPDATE customer_requests
-    SET 
-      client_name = COALESCE(?, client_name),
-      client_phone = COALESCE(?, client_phone),
-      client_email = COALESCE(?, client_email),
-      origin_country = COALESCE(?, origin_country),
-      destination_country = COALESCE(?, destination_country),
-      status = ?,
-      description = COALESCE(?, description),
-      shipping_mark = COALESCE(?, shipping_mark),
-      estimated_weight_kg = ?,
-      estimated_cbm = ?,
-      admin_notes = ?,
-      updated_at = datetime('now')
-    WHERE id = ?
-  `).bind(
-    body.client_name?.trim() || null,
-    body.client_phone?.trim() || null,
-    body.client_email !== undefined ? (body.client_email?.trim() || null) : null,
-    body.origin_country?.trim() || null,
-    body.destination_country?.trim() || null,
-    nextStatus,
-    body.description || null,
-    body.shipping_mark || null,
-    weightKg,
-    cbmVal,
-    JSON.stringify(nextMeta),
-    existing.id
-  ).run();
+  const statements: D1PreparedStatement[] = [
+    c.env.DB.prepare(`
+      UPDATE customer_requests
+      SET
+        client_name = COALESCE(?, client_name),
+        client_phone = COALESCE(?, client_phone),
+        client_email = COALESCE(?, client_email),
+        origin_country = COALESCE(?, origin_country),
+        destination_country = COALESCE(?, destination_country),
+        status = ?,
+        description = COALESCE(?, description),
+        shipping_mark = COALESCE(?, shipping_mark),
+        estimated_weight_kg = ?,
+        estimated_cbm = ?,
+        metadata_json = ?,
+        updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(
+      body.client_name?.trim() || null,
+      body.client_phone?.trim() || null,
+      body.client_email?.trim() || null,
+      body.origin_country?.trim() || null,
+      body.destination_country?.trim() || null,
+      nextStatus,
+      body.description || null,
+      body.shipping_mark || null,
+      numberOr(body.estimated_weight_kg, existing.estimated_weight_kg ?? null),
+      numberOr(body.estimated_cbm, existing.estimated_cbm ?? null),
+      JSON.stringify(nextMeta),
+      existing.id
+    ),
+    auditStatement(c, user, "request.update", "request", existing.id, { status: nextStatus }),
+  ];
 
   if (body.product_name || body.product_url) {
-    const existingItem = await c.env.DB.prepare(`SELECT id FROM request_items WHERE request_id = ? LIMIT 1`).bind(existing.id).first<any>();
-    if (existingItem) {
-      await c.env.DB.prepare(`
+    statements.push(
+      c.env.DB.prepare(`
         UPDATE request_items
         SET product_name = COALESCE(?, product_name), product_url = COALESCE(?, product_url)
+        WHERE id = (SELECT id FROM request_items WHERE request_id = ? ORDER BY item_index ASC LIMIT 1)
+      `).bind(body.product_name?.trim() || null, body.product_url?.trim() || null, existing.id)
+    );
+  }
+
+  const nextName = body.client_name?.trim() || null;
+  const nextPhone = body.client_phone?.trim() || null;
+  if (existing.client_id && (nextName || nextPhone)) {
+    statements.push(
+      c.env.DB.prepare(`
+        UPDATE clients
+        SET full_name = COALESCE(?, full_name), phone_whatsapp = COALESCE(?, phone_whatsapp), updated_at = datetime('now')
         WHERE id = ?
-      `).bind(body.product_name?.trim() || null, body.product_url?.trim() || null, existingItem.id).run();
+      `).bind(nextName, nextPhone, existing.client_id)
+    );
+  }
+
+  if (existing.shipment_id) {
+    const nextWeight = numberOr(body.estimated_weight_kg, null) as number | null;
+    if (nextWeight !== null) {
+      statements.push(
+        c.env.DB.prepare(`UPDATE shipments SET total_weight_kg = ?, updated_at = datetime('now') WHERE id = ?`).bind(nextWeight, existing.shipment_id),
+        singleParcelWeightStatement(c.env.DB, existing.shipment_id, nextWeight)
+      );
+    }
+
+    const nextDestination = body.destination_country?.trim();
+    if (nextDestination && nextDestination !== existing.destination_country) {
+      const parsed = parseDestination(nextDestination);
+      const routeId = await findOrCreateRoute(c.env.DB, {
+        originCountry: body.origin_country?.trim() || existing.origin_country || "Chine",
+        destinationCountry: parsed.country,
+        destinationCity: parsed.city,
+      });
+      statements.push(
+        c.env.DB.prepare(`UPDATE shipments SET route_id = ?, updated_at = datetime('now') WHERE id = ?`).bind(routeId, existing.shipment_id)
+      );
+    }
+
+    if (nextStatus === "CANCELLED") {
+      statements.push(...cancelShipmentOfRequest(c.env.DB, existing.shipment_id, user.userId, user.hubLocation || "Bureau Central"));
     }
   }
 
+  await c.env.DB.batch(statements);
   return c.json({ success: true, message: "Demande mise à jour avec succès dans SQLite D1." });
 });
 
@@ -1324,26 +1644,31 @@ adminRouter.delete("/requests/:id", async (c) => {
     return c.json({ error: "Permission insuffisante (requests.process requise)." }, 403);
   }
 
-  const id = c.req.param("id");
-  const existing = await c.env.DB.prepare(`
-    SELECT id, reference FROM customer_requests WHERE id = ? OR UPPER(reference) = UPPER(?) LIMIT 1
-  `).bind(id, id).first<any>();
-
+  const user = c.get("user");
+  const existing = await findRequest(c, c.req.param("id"));
   if (!existing) {
     return c.json({ error: "Demande introuvable." }, 404);
   }
+  if (existing.shipment_id) {
+    return c.json({ error: "Ce dossier a déjà une expédition active : il ne peut pas être supprimé." }, 409);
+  }
 
   await c.env.DB.batch([
+    c.env.DB.prepare(`
+      DELETE FROM payment_proof_chunks
+      WHERE proof_id IN (SELECT id FROM payment_proofs WHERE request_id = ?)
+    `).bind(existing.id),
+    c.env.DB.prepare(`DELETE FROM payment_proofs WHERE request_id = ?`).bind(existing.id),
     c.env.DB.prepare(`DELETE FROM request_items WHERE request_id = ?`).bind(existing.id),
     c.env.DB.prepare(`DELETE FROM customer_requests WHERE id = ?`).bind(existing.id),
-    c.env.DB.prepare(`DELETE FROM quote_requests WHERE id = ? OR UPPER(quote_reference) = UPPER(?)`).bind(existing.id, existing.reference),
+    auditStatement(c, user, "request.delete", "request", existing.id, { reference: existing.reference }),
   ]);
 
   return c.json({ success: true, message: "Demande supprimée avec succès de SQLite D1." });
 });
 
 /**
- * Conversion d'une demande acceptée en expédition officielle
+ * Conversion d'une demande acceptée en expédition non encore payée
  */
 const convertRequestSchema = z.object({
   shipping_mode_id: z.string().min(1, "Mode de transport requis"),
@@ -1362,96 +1687,45 @@ adminRouter.post("/requests/:id/convert", zValidator("json", convertRequestSchem
   }
 
   const user = c.get("user");
-  const requestId = c.req.param("id");
   const data = c.req.valid("json");
-
-  const reqRow = await c.env.DB.prepare(`
-    SELECT * FROM customer_requests WHERE id = ? OR UPPER(reference) = UPPER(?) LIMIT 1
-  `).bind(requestId, requestId).first<any>();
-  if (!reqRow) {
+  const request = await findRequest(c, c.req.param("id"));
+  if (!request) {
     return c.json({ error: "Demande introuvable." }, 404);
   }
+  if (request.shipment_id && request.tracking_number) {
+    return c.json({ success: true, shipment_id: request.shipment_id, tracking_number: request.tracking_number, message: "Dossier déjà converti." });
+  }
 
-  const mode = await c.env.DB.prepare(`SELECT type FROM shipping_modes WHERE id = ?`).bind(data.shipping_mode_id).first<{ type: TransportType }>();
-  if (!mode) {
+  const routeExists = await c.env.DB.prepare(`SELECT id FROM routes WHERE id = ?`).bind(data.route_id).first();
+  if (!routeExists) {
+    return c.json({ error: "Liaison inconnue." }, 400);
+  }
+  const modeExists = await c.env.DB.prepare(`SELECT id FROM shipping_modes WHERE id = ?`).bind(data.shipping_mode_id).first();
+  if (!modeExists) {
     return c.json({ error: "Mode de transport inconnu." }, 400);
   }
 
-  const trackingNumber = generateTrackingNumber(mode.type);
-  const shipmentId = crypto.randomUUID();
-  let clientId = reqRow.client_id;
-
-  if (!clientId) {
-    const existingClient = await c.env.DB.prepare(`SELECT id FROM clients WHERE phone_whatsapp = ?`).bind(reqRow.client_phone).first<{ id: string }>();
-    if (existingClient) {
-      clientId = existingClient.id;
-    } else {
-      clientId = crypto.randomUUID();
-      await c.env.DB.prepare(`
-        INSERT INTO clients (id, full_name, phone_whatsapp, email, country)
-        VALUES (?, ?, ?, ?, ?)
-      `).bind(clientId, reqRow.client_name, reqRow.client_phone, reqRow.client_email || null, reqRow.destination_country || "Mali").run();
-    }
-  }
-
-  const statements: D1PreparedStatement[] = [
-    c.env.DB.prepare(`
-      INSERT INTO shipments (
-        id, tracking_number, client_id, route_id, shipping_mode_id,
-        current_status, total_parcels_count, total_weight_kg, total_volume_cbm,
-        estimated_price_minor, currency, payment_status, created_by_user_id
-      ) VALUES (?, ?, ?, ?, ?, 'DRAFT', 1, ?, ?, ?, ?, 'PENDING', ?)
-    `).bind(
-      shipmentId,
-      trackingNumber,
-      clientId,
-      data.route_id,
-      data.shipping_mode_id,
-      Math.round(data.weight_kg * 100) / 100,
-      data.volume_cbm ? Math.round(data.volume_cbm * 10000) / 10000 : 0,
-      data.estimated_price_minor || 0,
-      data.currency,
-      user.userId
-    ),
-    c.env.DB.prepare(`
-      INSERT INTO parcels (id, shipment_id, parcel_index, package_label, weight_kg, length_cm, width_cm, height_cm, description)
-      VALUES (?, ?, 1, ?, ?, null, null, null, ?)
-    `).bind(
-      crypto.randomUUID(),
-      shipmentId,
-      data.package_label || `Colis Demande ${reqRow.reference}`,
-      Math.round(data.weight_kg * 100) / 100,
-      data.description || reqRow.description || null
-    ),
-    c.env.DB.prepare(`
-      INSERT INTO tracking_events (id, shipment_id, status, location, comment, recorded_by_user_id)
-      VALUES (?, ?, 'DRAFT', ?, ?, ?)
-    `).bind(
-      crypto.randomUUID(),
-      shipmentId,
-      user.hubLocation || "Bureau Central",
-      `Dossier créé suite à la conversion de la demande ${reqRow.reference}`,
-      user.userId
-    ),
-    c.env.DB.prepare(`
-      UPDATE customer_requests
-      SET status = 'CONVERTED', admin_notes = COALESCE(admin_notes || ' | ', '') || 'Converti en expédition ' || ?, updated_at = datetime('now')
-      WHERE id = ?
-    `).bind(trackingNumber, reqRow.id),
-    c.env.DB.prepare(`
-      UPDATE quote_requests
-      SET status = 'CONVERTED', updated_at = datetime('now')
-      WHERE UPPER(quote_reference) = UPPER(?) OR id = ?
-    `).bind(reqRow.reference, reqRow.id),
-  ];
-
-  await c.env.DB.batch(statements);
+  const created = await createShipmentFromRequest(c, user, request, {
+    shippingModeId: data.shipping_mode_id,
+    routeId: data.route_id,
+    weightKg: Math.round(data.weight_kg * 100) / 100,
+    volumeCbm: data.volume_cbm ? Math.round(data.volume_cbm * 10000) / 10000 : 0,
+    priceMinor: data.estimated_price_minor || 0,
+    currency: data.currency,
+    packageLabel: data.package_label || `Colis Demande ${request.reference}`,
+    description: data.description || request.description || null,
+    status: "DRAFT",
+    location: user.hubLocation || "Bureau Central",
+    comment: `Dossier créé suite à la conversion de la demande ${request.reference}`,
+    paid: false,
+    metadata: parseMeta(request),
+  });
 
   return c.json({
     success: true,
-    shipment_id: shipmentId,
-    tracking_number: trackingNumber,
-    message: `Demande ${reqRow.reference} convertie avec succès en expédition ${trackingNumber}.`,
+    shipment_id: created.shipmentId,
+    tracking_number: created.trackingNumber,
+    message: `Demande ${request.reference} convertie avec succès en expédition ${created.trackingNumber}.`,
   }, 201);
 });
 
@@ -1481,7 +1755,7 @@ adminRouter.get("/clients", async (c) => {
     params.push(term, term, term);
   }
 
-  query += ` ORDER BY c.created_at DESC LIMIT 50`;
+  query += ` ORDER BY c.created_at DESC LIMIT 1000`;
 
   const { results: clients } = await c.env.DB.prepare(query).bind(...params).all();
   return c.json({ clients });
@@ -1526,8 +1800,8 @@ adminRouter.post("/clients", zValidator("json", createClientSchema), async (c) =
  * Modification d'une fiche client (Admin ➔ SQLite D1)
  */
 adminRouter.put("/clients/:id", async (c) => {
-  if (!checkPermission(c, "clients.create") && !checkPermission(c, "clients.view")) {
-    return c.json({ error: "Permission insuffisante." }, 403);
+  if (!hasAnyPermission(c, "clients.edit", "clients.create")) {
+    return c.json({ error: "Permission insuffisante (clients.edit requise)." }, 403);
   }
 
   const id = c.req.param("id");
@@ -1536,46 +1810,34 @@ adminRouter.put("/clients/:id", async (c) => {
 
   const existing = await c.env.DB.prepare(`SELECT id FROM clients WHERE id = ?`).bind(id).first<any>();
   if (!existing) {
-    // Si l'ID n'existe pas encore en base, l'insérer proprement
-    await c.env.DB.prepare(`
-      INSERT INTO clients (id, full_name, phone_whatsapp, email, address, city, country, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      id,
-      data.full_name?.trim() || "Client Sans Nom",
-      phone?.trim() || "",
-      data.email?.trim() || null,
-      data.address?.trim() || null,
-      data.city?.trim() || "Abidjan",
-      data.country?.trim() || "Côte d'Ivoire",
-      data.notes?.trim() || null
-    ).run();
-
-    return c.json({ success: true, message: "Client enregistré avec succès dans SQLite D1." });
+    return c.json({ error: "Client introuvable." }, 404);
   }
 
-  await c.env.DB.prepare(`
-    UPDATE clients
-    SET 
-      full_name = COALESCE(?, full_name),
-      phone_whatsapp = COALESCE(?, phone_whatsapp),
-      email = COALESCE(?, email),
-      address = COALESCE(?, address),
-      city = COALESCE(?, city),
-      country = COALESCE(?, country),
-      notes = COALESCE(?, notes),
-      updated_at = datetime('now')
-    WHERE id = ?
-  `).bind(
-    data.full_name?.trim() || null,
-    phone?.trim() || null,
-    data.email !== undefined ? (data.email?.trim() || null) : null,
-    data.address !== undefined ? (data.address?.trim() || null) : null,
-    data.city !== undefined ? (data.city?.trim() || null) : null,
-    data.country?.trim() || null,
-    data.notes !== undefined ? (data.notes?.trim() || null) : null,
-    id
-  ).run();
+  await c.env.DB.batch([
+    c.env.DB.prepare(`
+      UPDATE clients
+      SET
+        full_name = COALESCE(?, full_name),
+        phone_whatsapp = COALESCE(?, phone_whatsapp),
+        email = COALESCE(?, email),
+        address = COALESCE(?, address),
+        city = COALESCE(?, city),
+        country = COALESCE(?, country),
+        notes = COALESCE(?, notes),
+        updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(
+      data.full_name?.trim() || null,
+      phone?.trim() || null,
+      data.email?.trim() || null,
+      data.address?.trim() || null,
+      data.city?.trim() || null,
+      data.country?.trim() || null,
+      data.notes?.trim() || null,
+      id
+    ),
+    mirrorClientToRequests(c.env.DB, id, data.full_name?.trim() || null, phone?.trim() || null),
+  ]);
 
   return c.json({ success: true, message: "Client mis à jour avec succès dans SQLite D1." });
 });
@@ -1584,11 +1846,20 @@ adminRouter.put("/clients/:id", async (c) => {
  * Suppression d'un client (Admin ➔ SQLite D1)
  */
 adminRouter.delete("/clients/:id", async (c) => {
-  if (!checkPermission(c, "clients.create") && !checkPermission(c, "clients.view")) {
-    return c.json({ error: "Permission insuffisante." }, 403);
+  if (!hasAnyPermission(c, "clients.edit")) {
+    return c.json({ error: "Permission insuffisante (clients.edit requise)." }, 403);
   }
 
   const id = c.req.param("id");
+  const links = await c.env.DB.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM shipments WHERE client_id = ?1) +
+      (SELECT COUNT(*) FROM payments WHERE client_id = ?1) AS total
+  `).bind(id).first<{ total: number }>();
+  if ((links?.total || 0) > 0) {
+    return c.json({ error: "Ce client a des expéditions ou des paiements : il ne peut pas être supprimé." }, 409);
+  }
+
   await c.env.DB.prepare(`DELETE FROM clients WHERE id = ?`).bind(id).run();
   return c.json({ success: true, message: "Client supprimé de SQLite D1." });
 });
@@ -1640,20 +1911,54 @@ adminRouter.get("/tariffs", async (c) => {
 });
 
 const createTariffSchema = z.object({
-  route_id: z.string().optional(),
-  origin_country: z.string().optional(),
-  origin_city: z.string().optional(),
-  destination_country: z.string().optional(),
-  destination_city: z.string().optional(),
-  shipping_mode_id: z.string().min(1, "Mode de transport requis"),
+  route_id: z.string().nullish(),
+  origin_country: z.string().nullish(),
+  origin_city: z.string().nullish(),
+  destination_country: z.string().nullish(),
+  destination_city: z.string().nullish(),
+  shipping_mode_id: z.string().nullish(),
+  transport_mode: z.string().nullish(),
+  shipping_mode_type: z.string().nullish(),
   currency: z.string().default("FCFA"),
   price_per_unit_minor: z.number().int().positive("Prix unitaire requis"),
-  minimum_charge_minor: z.number().int().nonnegative().optional(),
-  estimated_days_min: z.number().int().positive().optional(),
-  estimated_days_max: z.number().int().positive().optional(),
-  category_tag: z.string().optional(),
-  note: z.string().optional(),
+  minimum_charge_minor: z.number().int().nonnegative().nullish(),
+  estimated_days_min: z.number().int().positive().nullish(),
+  estimated_days_max: z.number().int().positive().nullish(),
+  category_tag: z.string().nullish(),
+  service_name: z.string().nullish(),
+  note: z.string().nullish(),
 });
+
+/** Traduit un mode demandé vers un mode existant, ou `null` si la demande ne précise rien. */
+async function resolveTariffMode(db: D1Database, requested: unknown): Promise<string | null> {
+  if (!requested || typeof requested !== "string") return null;
+  if (requested === "SEA" || requested === "SEA_LCL" || requested === "SEA_GROUPAGE") return "SEA_LCL";
+  const row = await db.prepare("SELECT id FROM shipping_modes WHERE id = ?").bind(requested).first<{ id: string }>();
+  return row?.id || null;
+}
+
+const LEGACY_TARIFF_IDS: Record<string, string> = {
+  "tariff-flyer-cn-express": "tariff-cn-ci-express",
+  "tariff-flyer-cn-normal": "tariff-cn-ci-normal",
+  "tariff-flyer-cn-special": "tariff-cn-ci-special",
+  "tariff-flyer-cn-tech": "tariff-cn-ci-tech",
+  "tariff-flyer-cn-sea": "tariff-cn-ci-sea",
+  "tariff-flyer-ae-express": "tariff-ae-ci-express",
+  "tariff-flyer-ae-normal": "tariff-ae-ci-normal",
+  "tariff-flyer-ae-special": "tariff-ae-ci-special",
+  "tariff-flyer-ae-sea": "tariff-ae-ci-sea",
+  "tariff-flyer-ma-ci": "tariff-ma-ci-sub",
+  "tariff-flyer-ma-sn": "tariff-ma-sn-sub",
+  "tariff-flyer-ma-ml": "tariff-ma-ml-sub",
+  "tariff-flyer-ma-bf": "tariff-ma-bf-sub",
+  "tariff-flyer-ma-ga": "tariff-ma-ga-sub",
+  "tariff-flyer-fr-ci-divers": "tariff-fr-ci-divers",
+  "tariff-flyer-fr-ci-cosm": "tariff-fr-ci-cosmetic",
+  "tariff-flyer-fr-ci-doc": "tariff-fr-ci-doc",
+  "tariff-flyer-ci-fr-divers": "tariff-ci-fr-divers",
+  "tariff-flyer-ci-fr-cosm": "tariff-ci-fr-cosmetic",
+  "tariff-flyer-ci-fr-doc": "tariff-ci-fr-doc",
+};
 
 adminRouter.post("/tariffs", zValidator("json", createTariffSchema), async (c) => {
   if (!checkPermission(c, "config.tariffs")) {
@@ -1661,56 +1966,25 @@ adminRouter.post("/tariffs", zValidator("json", createTariffSchema), async (c) =
   }
 
   const data = c.req.valid("json");
-  let routeId = data.route_id;
+  let routeId = data.route_id || undefined;
 
-  // Si pays de départ et pays d'arrivée sont saisis directement, on trouve ou crée la liaison
+  // Si pays de départ et pays d'arrivée sont saisis directement, on trouve ou crée la liaison exacte
   if (!routeId && data.origin_country && data.destination_country) {
-    const origCountry = data.origin_country.trim();
-    const destCountry = data.destination_country.trim();
-    const origCity = data.origin_city?.trim() || null;
-    const destCity = data.destination_city?.trim() || null;
-
-    const existing = await c.env.DB.prepare(`
-      SELECT id FROM routes 
-      WHERE LOWER(origin_country) = LOWER(?) AND LOWER(destination_country) = LOWER(?)
-      LIMIT 1
-    `).bind(origCountry, destCountry).first<{ id: string }>();
-
-    if (existing?.id) {
-      routeId = existing.id;
-    } else {
-      routeId = `route-${crypto.randomUUID().slice(0, 8)}`;
-      await c.env.DB.prepare(`
-        INSERT INTO routes (id, origin_country, origin_city, destination_country, destination_city, is_active)
-        VALUES (?, ?, ?, ?, ?, 1)
-      `).bind(routeId, origCountry, origCity, destCountry, destCity).run();
-    }
+    routeId = await findOrCreateRoute(c.env.DB, {
+      originCountry: data.origin_country.trim(),
+      originCity: data.origin_city?.trim() || null,
+      destinationCountry: data.destination_country.trim(),
+      destinationCity: data.destination_city?.trim() || null,
+    });
   }
 
   if (!routeId) {
     return c.json({ error: "Veuillez sélectionner ou renseigner un pays de départ et un pays de destination." }, 400);
   }
 
-  let validModeId = "AIR_STANDARD";
-  if (data.shipping_mode_id) {
-    const requestedMode = data.shipping_mode_id;
-    if (requestedMode === "SEA" || requestedMode === "SEA_LCL" || requestedMode === "SEA_GROUPAGE") {
-      validModeId = "SEA_LCL";
-    } else if (requestedMode === "AIR_EXPRESS") {
-      validModeId = "AIR_EXPRESS";
-    } else if (requestedMode === "AIR_SPECIAL") {
-      validModeId = "AIR_SPECIAL";
-    } else if (requestedMode === "AIR_TECH") {
-      validModeId = "AIR_TECH";
-    } else if (requestedMode === "AIR_COSMETIC") {
-      validModeId = "AIR_COSMETIC";
-    } else if (requestedMode === "AIR_DOC") {
-      validModeId = "AIR_DOC";
-    } else {
-      const modeRow = await c.env.DB.prepare("SELECT id FROM shipping_modes WHERE id = ?").bind(requestedMode).first<{ id: string }>();
-      if (modeRow?.id) validModeId = modeRow.id;
-    }
-  }
+  const validModeId =
+    (await resolveTariffMode(c.env.DB, data.shipping_mode_id || data.transport_mode || data.shipping_mode_type)) ||
+    (data.shipping_mode_type === "SEA" ? "SEA_LCL" : "AIR_STANDARD");
 
   const tariffId = crypto.randomUUID();
 
@@ -1730,7 +2004,7 @@ adminRouter.post("/tariffs", zValidator("json", createTariffSchema), async (c) =
       data.minimum_charge_minor || 0,
       data.estimated_days_min || null,
       data.estimated_days_max || null,
-      data.category_tag || null,
+      data.service_name || data.category_tag || null,
       data.note || null
     ).run();
 
@@ -1753,33 +2027,10 @@ adminRouter.put("/tariffs/batch", async (c) => {
     return c.json({ success: true, count: 0, message: "Aucune modification à enregistrer." });
   }
 
-  const legacyMap: Record<string, string> = {
-    "tariff-flyer-cn-express": "tariff-cn-ci-express",
-    "tariff-flyer-cn-normal": "tariff-cn-ci-normal",
-    "tariff-flyer-cn-special": "tariff-cn-ci-special",
-    "tariff-flyer-cn-tech": "tariff-cn-ci-tech",
-    "tariff-flyer-cn-sea": "tariff-cn-ci-sea",
-    "tariff-flyer-ae-express": "tariff-ae-ci-express",
-    "tariff-flyer-ae-normal": "tariff-ae-ci-normal",
-    "tariff-flyer-ae-special": "tariff-ae-ci-special",
-    "tariff-flyer-ae-sea": "tariff-ae-ci-sea",
-    "tariff-flyer-ma-ci": "tariff-ma-ci-sub",
-    "tariff-flyer-ma-sn": "tariff-ma-sn-sub",
-    "tariff-flyer-ma-ml": "tariff-ma-ml-sub",
-    "tariff-flyer-ma-bf": "tariff-ma-bf-sub",
-    "tariff-flyer-ma-ga": "tariff-ma-ga-sub",
-    "tariff-flyer-fr-ci-divers": "tariff-fr-ci-divers",
-    "tariff-flyer-fr-ci-cosm": "tariff-fr-ci-cosmetic",
-    "tariff-flyer-fr-ci-doc": "tariff-fr-ci-doc",
-    "tariff-flyer-ci-fr-divers": "tariff-ci-fr-divers",
-    "tariff-flyer-ci-fr-cosm": "tariff-ci-fr-cosmetic",
-    "tariff-flyer-ci-fr-doc": "tariff-ci-fr-doc",
-  };
-
   const statements: any[] = [];
   for (const item of items) {
     if (!item.id) continue;
-    const resolvedId = legacyMap[item.id] || item.id;
+    const resolvedId = LEGACY_TARIFF_IDS[item.id] || item.id;
     statements.push(
       c.env.DB.prepare(`
         UPDATE tariffs 
@@ -1799,7 +2050,7 @@ adminRouter.put("/tariffs/batch", async (c) => {
         item.estimated_days_min !== undefined ? Number(item.estimated_days_min) : null,
         item.estimated_days_max !== undefined ? Number(item.estimated_days_max) : null,
         item.note !== undefined ? String(item.note) : null,
-        item.category_tag !== undefined ? String(item.category_tag) : null,
+        item.service_name ? String(item.service_name) : item.category_tag !== undefined ? String(item.category_tag) : null,
         resolvedId
       )
     );
@@ -1825,51 +2076,11 @@ adminRouter.put("/tariffs/:id", async (c) => {
 
   const user = c.get("user");
   const rawId = c.req.param("id");
-  const legacyMap: Record<string, string> = {
-    "tariff-flyer-cn-express": "tariff-cn-ci-express",
-    "tariff-flyer-cn-normal": "tariff-cn-ci-normal",
-    "tariff-flyer-cn-special": "tariff-cn-ci-special",
-    "tariff-flyer-cn-tech": "tariff-cn-ci-tech",
-    "tariff-flyer-cn-sea": "tariff-cn-ci-sea",
-    "tariff-flyer-ae-express": "tariff-ae-ci-express",
-    "tariff-flyer-ae-normal": "tariff-ae-ci-normal",
-    "tariff-flyer-ae-special": "tariff-ae-ci-special",
-    "tariff-flyer-ae-sea": "tariff-ae-ci-sea",
-    "tariff-flyer-ma-ci": "tariff-ma-ci-sub",
-    "tariff-flyer-ma-sn": "tariff-ma-sn-sub",
-    "tariff-flyer-ma-ml": "tariff-ma-ml-sub",
-    "tariff-flyer-ma-bf": "tariff-ma-bf-sub",
-    "tariff-flyer-ma-ga": "tariff-ma-ga-sub",
-    "tariff-flyer-fr-ci-divers": "tariff-fr-ci-divers",
-    "tariff-flyer-fr-ci-cosm": "tariff-fr-ci-cosmetic",
-    "tariff-flyer-fr-ci-doc": "tariff-fr-ci-doc",
-    "tariff-flyer-ci-fr-divers": "tariff-ci-fr-divers",
-    "tariff-flyer-ci-fr-cosm": "tariff-ci-fr-cosmetic",
-    "tariff-flyer-ci-fr-doc": "tariff-ci-fr-doc",
-  };
-  const tariffId = legacyMap[rawId] || rawId;
+  const tariffId = LEGACY_TARIFF_IDS[rawId] || rawId;
   const body = await c.req.json<any>().catch(() => ({}));
 
-  let validModeId = "AIR_STANDARD";
-  const requestedMode = body.shipping_mode_id || body.transport_mode;
-  if (requestedMode) {
-    if (requestedMode === "SEA" || requestedMode === "SEA_LCL" || requestedMode === "SEA_GROUPAGE") {
-      validModeId = "SEA_LCL";
-    } else if (requestedMode === "AIR_EXPRESS") {
-      validModeId = "AIR_EXPRESS";
-    } else if (requestedMode === "AIR_SPECIAL") {
-      validModeId = "AIR_SPECIAL";
-    } else if (requestedMode === "AIR_TECH") {
-      validModeId = "AIR_TECH";
-    } else if (requestedMode === "AIR_COSMETIC") {
-      validModeId = "AIR_COSMETIC";
-    } else if (requestedMode === "AIR_DOC") {
-      validModeId = "AIR_DOC";
-    } else {
-      const modeRow = await c.env.DB.prepare("SELECT id FROM shipping_modes WHERE id = ?").bind(requestedMode).first<{ id: string }>();
-      if (modeRow?.id) validModeId = modeRow.id;
-    }
-  }
+  // `null` conserve le mode actuel : modifier un prix ne doit jamais changer un tarif maritime en aérien.
+  const validModeId = await resolveTariffMode(c.env.DB, body.shipping_mode_id || body.transport_mode);
 
   try {
     const existing = await c.env.DB.prepare("SELECT id, route_id FROM tariffs WHERE id = ?").bind(tariffId).first<{ id: string; route_id: string }>();
@@ -1891,7 +2102,7 @@ adminRouter.put("/tariffs/:id", async (c) => {
         `).bind(
           body.price_per_unit_minor !== undefined ? Number(body.price_per_unit_minor) : null,
           body.minimum_charge_minor !== undefined ? Number(body.minimum_charge_minor) : null,
-          body.currency || "FCFA",
+          body.currency || null,
           body.estimated_days_min !== undefined ? Number(body.estimated_days_min) : null,
           body.estimated_days_max !== undefined ? Number(body.estimated_days_max) : null,
           body.note !== undefined ? String(body.note) : null,
@@ -1905,56 +2116,20 @@ adminRouter.put("/tariffs/:id", async (c) => {
         `).bind(crypto.randomUUID(), user?.userId || "admin", tariffId, JSON.stringify(body)),
       ]);
 
+      // Une liaison peut servir à plusieurs tarifs : on rattache ce tarif à la bonne liaison sans toucher aux autres.
       if (body.origin_country || body.destination_country) {
-        await c.env.DB.prepare(`
-          UPDATE routes
-          SET origin_country = COALESCE(?, origin_country),
-              destination_country = COALESCE(?, destination_country)
-          WHERE id = ?
-        `).bind(body.origin_country || null, body.destination_country || null, existing.route_id).run();
+        const currentRoute = await c.env.DB.prepare(`SELECT origin_country, destination_country FROM routes WHERE id = ?`)
+          .bind(existing.route_id)
+          .first<{ origin_country: string; destination_country: string }>();
+        const origin = (body.origin_country || currentRoute?.origin_country || "").trim();
+        const destination = (body.destination_country || currentRoute?.destination_country || "").trim();
+        if (origin !== currentRoute?.origin_country || destination !== currentRoute?.destination_country) {
+          const routeId = await findOrCreateRoute(c.env.DB, { originCountry: origin, destinationCountry: destination });
+          await c.env.DB.prepare(`UPDATE tariffs SET route_id = ? WHERE id = ?`).bind(routeId, tariffId).run();
+        }
       }
     } else {
-      // Upsert pour les tarifs par défaut / créés côté interface
-      let routeId = "route-default";
-      const origCountry = (body.origin_country || "Chine").trim();
-      const destCountry = (body.destination_country || "Côte d'Ivoire").trim();
-      const existingRoute = await c.env.DB.prepare(`
-        SELECT id FROM routes WHERE LOWER(origin_country) = LOWER(?) AND LOWER(destination_country) = LOWER(?) LIMIT 1
-      `).bind(origCountry, destCountry).first<{ id: string }>();
-
-      if (existingRoute?.id) {
-        routeId = existingRoute.id;
-      } else {
-        routeId = `route-${crypto.randomUUID().slice(0, 8)}`;
-        await c.env.DB.prepare(`
-          INSERT INTO routes (id, origin_country, origin_city, destination_country, destination_city, is_active)
-          VALUES (?, ?, ?, ?, ?, 1)
-        `).bind(routeId, origCountry, body.origin_city || null, destCountry, body.destination_city || null).run();
-      }
-
-      await c.env.DB.prepare(`
-        INSERT INTO tariffs (
-          id, route_id, shipping_mode_id, currency, price_per_unit_minor,
-          minimum_charge_minor, estimated_days_min, estimated_days_max,
-          category_tag, note, is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-      `).bind(
-        tariffId,
-        routeId,
-        validModeId,
-        body.currency || "FCFA",
-        body.price_per_unit_minor || 0,
-        body.minimum_charge_minor || 0,
-        body.estimated_days_min || null,
-        body.estimated_days_max || null,
-        body.category_tag || body.service_name || null,
-        body.note || null
-      ).run();
-
-      await c.env.DB.prepare(`
-        INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
-        VALUES (?, ?, 'tariff.create_upsert', 'tariff', ?, ?)
-      `).bind(crypto.randomUUID(), user?.userId || "admin", tariffId, JSON.stringify(body)).run();
+      return c.json({ error: "Tarif introuvable." }, 404);
     }
 
     return c.json({ success: true, message: "Tarif mis à jour avec succès." });
@@ -2005,7 +2180,7 @@ adminRouter.get("/payments", async (c) => {
     JOIN clients c ON p.client_id = c.id
     LEFT JOIN shipments s ON p.shipment_id = s.id
     JOIN users u ON p.recorded_by_user_id = u.id
-    ORDER BY p.recorded_at DESC LIMIT 50
+    ORDER BY p.recorded_at DESC LIMIT 1000
   `).all();
 
   return c.json({ payments });
@@ -2064,21 +2239,8 @@ adminRouter.post("/payments", zValidator("json", recordPaymentSchema), async (c)
     ),
   ];
 
-  // Si le paiement est d'emblée confirmé et associé à une expédition
-  if (paymentStatus === "CONFIRMED" && data.shipment_id) {
-    if (data.payment_type === "FULL") {
-      statements.push(
-        c.env.DB.prepare(`
-          UPDATE shipments SET payment_status = 'PAID', updated_at = datetime('now') WHERE id = ?
-        `).bind(data.shipment_id)
-      );
-    } else if (data.payment_type === "ADVANCE") {
-      statements.push(
-        c.env.DB.prepare(`
-          UPDATE shipments SET payment_status = 'PARTIAL', updated_at = datetime('now') WHERE id = ?
-        `).bind(data.shipment_id)
-      );
-    }
+  if (data.shipment_id) {
+    statements.push(paymentStatusStatement(c.env.DB, data.shipment_id));
   }
 
   await c.env.DB.batch(statements);
@@ -2129,17 +2291,8 @@ adminRouter.patch("/payments/:id/status", zValidator("json", updatePaymentStatus
     ),
   ];
 
-  // Si le paiement devient confirmé et est rattaché à une expédition
-  if (status === "CONFIRMED" && payment.shipment_id) {
-    if (payment.payment_type === "FULL") {
-      statements.push(
-        c.env.DB.prepare(`UPDATE shipments SET payment_status = 'PAID', updated_at = datetime('now') WHERE id = ?`).bind(payment.shipment_id)
-      );
-    } else if (payment.payment_type === "ADVANCE") {
-      statements.push(
-        c.env.DB.prepare(`UPDATE shipments SET payment_status = 'PARTIAL', updated_at = datetime('now') WHERE id = ?`).bind(payment.shipment_id)
-      );
-    }
+  if (payment.shipment_id) {
+    statements.push(paymentStatusStatement(c.env.DB, payment.shipment_id));
   }
 
   await c.env.DB.batch(statements);
@@ -2167,9 +2320,22 @@ adminRouter.patch("/payments/:id", async (c) => {
     return c.json({ error: "Paiement introuvable." }, 404);
   }
 
-  await c.env.DB.prepare(`
+  let nextShipmentId: string | null = existing.shipment_id;
+  const requestedTracking = typeof data.shipment_tracking === "string" ? data.shipment_tracking.trim() : undefined;
+  if (requestedTracking) {
+    const target = await c.env.DB.prepare(`SELECT id FROM shipments WHERE UPPER(tracking_number) = UPPER(?) LIMIT 1`)
+      .bind(requestedTracking)
+      .first<{ id: string }>();
+    if (!target) {
+      return c.json({ error: `Aucune expédition ne porte le numéro ${requestedTracking}.` }, 404);
+    }
+    nextShipmentId = target.id;
+  }
+
+  const paymentUpdate = c.env.DB.prepare(`
     UPDATE payments
     SET
+      shipment_id = ?,
       amount_minor = COALESCE(?, amount_minor),
       currency = COALESCE(?, currency),
       payment_method = COALESCE(?, payment_method),
@@ -2179,6 +2345,7 @@ adminRouter.patch("/payments/:id", async (c) => {
       receipt_notes = COALESCE(?, receipt_notes)
     WHERE id = ?
   `).bind(
+    nextShipmentId,
     amountMinor,
     data.currency || null,
     data.payment_method || null,
@@ -2187,7 +2354,13 @@ adminRouter.patch("/payments/:id", async (c) => {
     data.status || null,
     data.receipt_notes || null,
     id
-  ).run();
+  );
+
+  const affectedShipments = new Set([existing.shipment_id, nextShipmentId].filter(Boolean) as string[]);
+  await c.env.DB.batch([
+    paymentUpdate,
+    ...[...affectedShipments].map((shipmentId) => paymentStatusStatement(c.env.DB, shipmentId)),
+  ]);
 
   return c.json({ success: true, message: "Paiement mis à jour avec succès dans SQLite D1." });
 });
@@ -2201,7 +2374,15 @@ adminRouter.delete("/payments/:id", async (c) => {
   }
 
   const id = c.req.param("id");
-  await c.env.DB.prepare(`DELETE FROM payments WHERE id = ?`).bind(id).run();
+  const existing = await c.env.DB.prepare(`SELECT shipment_id FROM payments WHERE id = ?`).bind(id).first<{ shipment_id: string | null }>();
+  if (!existing) {
+    return c.json({ error: "Paiement introuvable." }, 404);
+  }
+
+  const paymentDelete = c.env.DB.prepare(`DELETE FROM payments WHERE id = ?`).bind(id);
+  await c.env.DB.batch(
+    existing.shipment_id ? [paymentDelete, paymentStatusStatement(c.env.DB, existing.shipment_id)] : [paymentDelete]
+  );
   return c.json({ success: true, message: "Paiement supprimé de SQLite D1." });
 });
 
@@ -2343,7 +2524,7 @@ adminRouter.get("/settings", async (c) => {
   return c.json({ settings: map });
 });
 
-adminRouter.put("/settings", zValidator("json", z.record(z.string().max(80), z.string().max(1000))), async (c) => {
+adminRouter.put("/settings", zValidator("json", z.record(z.string().max(80), z.string().max(20000))), async (c) => {
   const user = c.get("user");
   if (!user.isSuperAdmin && !checkPermission(c, "settings.manage")) {
     return c.json({ error: "Permission insuffisante (settings.manage requise)." }, 403);
@@ -2357,7 +2538,7 @@ adminRouter.put("/settings", zValidator("json", z.record(z.string().max(80), z.s
       c.env.DB.prepare(`
         INSERT INTO business_settings (key, value, updated_by_user_id, updated_at)
         VALUES (?, ?, ?, datetime('now'))
-        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_by_user_id = excluded.updated_by_user_id, updated_at = excluded.updated_at
       `).bind(key, value, user.userId)
     );
   }
