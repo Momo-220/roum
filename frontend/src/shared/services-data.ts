@@ -781,6 +781,9 @@ export async function submitClientPaymentProof(
  * Coordonnées de paiement et paramètres officiels synchronisés avec l'Admin
  */
 export const DEFAULT_COMPANY_SETTINGS: Record<string, string> = {
+  exchange_rate_rmb: "88",
+  exchange_rate_usd: "610",
+  exchange_rate_eur: "656",
   company_name: "ROUM TRANSIT INTERNATIONAL SARL",
   company_headquarters: "Abidjan, Côte d'Ivoire",
   company_email: "contact@roumtransit.com",
@@ -842,6 +845,31 @@ export function getLiveCompanySettings(): Record<string, string> {
 /** Numéro WhatsApp de l'agence tel que configuré dans l'administration, en chiffres. */
 export function getSupportPhoneDigits(settings: Record<string, string>): string {
   return (settings.whatsapp_official_number || settings.whatsapp_support || "").replace(/\D/g, "") || "2250153638569";
+}
+
+export interface ExchangeRates {
+  rmb: number;
+  usd: number;
+  eur: number;
+}
+
+/** Taux en FCFA réglés dans l'administration. Une valeur illisible retombe sur le taux par défaut. */
+export function getExchangeRates(settings: Record<string, string>): ExchangeRates {
+  const read = (key: "exchange_rate_rmb" | "exchange_rate_usd" | "exchange_rate_eur") => {
+    const value = Number(settings[key]);
+    return Number.isFinite(value) && value > 0 ? value : Number(DEFAULT_COMPANY_SETTINGS[key]);
+  };
+  return { rmb: read("exchange_rate_rmb"), usd: read("exchange_rate_usd"), eur: read("exchange_rate_eur") };
+}
+
+/** Convertit un prix fournisseur en FCFA. Sans devise connue, il s'agit de dollars (Alibaba.com). */
+export function convertToFcfa(amount: number, currency: string | undefined, rates: ExchangeRates): number {
+  const value = Number(amount) || 0;
+  const code = (currency || "USD").toUpperCase();
+  if (code === "RMB" || code === "CNY" || code === "¥") return Math.round(value * rates.rmb);
+  if (code === "EUR" || code === "€") return Math.round(value * rates.eur);
+  if (code === "FCFA" || code === "XOF" || code === "XAF") return Math.round(value);
+  return Math.round(value * rates.usd);
 }
 
 /** Entrepôts ajoutés depuis l'administration. */

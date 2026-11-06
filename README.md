@@ -96,8 +96,8 @@ Le compte `user-superadmin-01` créé par les migrations n'a aucun mot de passe 
 `/admin` n'existe pas pour le public : sans le cookie déposé par le lien secret, il répond 404 comme n'importe quelle adresse inconnue (`frontend/src/proxy.ts`).
 
 - Définissez `ADMIN_ACCESS_KEY` (32 caractères minimum) dans `frontend/.env.local` et chez l'hébergeur du site. Sans cette clé, l'espace reste fermé pour tout le monde.
-- L'équipe ouvre une fois `/acces/<clé>` sur chaque appareil, puis se connecte avec son compte.
-- Cette porte cache l'interface. Les données restent protégées par l'API, qui exige un compte de l'équipe à chaque requête.
+- Le gérant ouvre une fois `/acces/<clé>` sur chaque appareil, puis se connecte avec son compte.
+- Cette porte cache l'interface. Les données restent protégées par l'API, qui exige le compte du gérant à chaque requête.
 
 ## Sécurité
 

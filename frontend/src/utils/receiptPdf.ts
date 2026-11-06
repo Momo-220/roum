@@ -1,4 +1,4 @@
-import { getTrackingPageUrl } from "@/shared/whatsapp";
+import { formatFcfaText, getTrackingPageUrl, joinMessageLines } from "@/shared/whatsapp";
 import { buildInvoicePdf, INVOICE_BACKGROUND, type InvoiceData, type InvoiceLine } from "./invoicePdf";
 import { buildShippingLabelPdf, PAGE_BACKGROUND, type PdfImage, type ShippingLabelData } from "./shippingLabelPdf";
 
@@ -280,80 +280,65 @@ export async function printOfficialReceipt(rawData: RoumReceiptData): Promise<vo
 }
 
 /**
- * Construit le message WhatsApp courtois, structuré et complet permettant au client
- * d'envoyer son reçu officiel + lien de suivi cliquable directement à l'agence ROUM TRANSIT
+ * Message du client à l'agence. Il reste court : le dossier complet est déjà dans l'admin,
+ * la référence suffit pour le retrouver.
  */
 export function buildClientReceiptWhatsAppUrl(
   rawData: RoumReceiptData,
   agencyPhone = "2250153638569"
 ): string {
   const data = normalizeReceiptData(rawData);
-  const hasActiveTracking = Boolean(data.trackingNumber && data.trackingNumber.trim());
-  const trackingCode = (data.trackingNumber || data.reference || "").trim();
-  const trackingUrl = getTrackingPageUrl(trackingCode);
-  const cleanPhone = agencyPhone.replace(/[^0-9]/g, "");
+  const tracking = data.trackingNumber?.trim();
+  const route = `${data.originCountry || "Chine"} → ${data.destination}`;
+  const isTariffQuote = data.optionType === "devis_tarif";
+  const isParcel = data.optionType === "envoi_colis";
+  const isTracking = data.optionType === "suivi" || data.optionType === "suivi_colis";
+  const quantity = Number(data.quantity);
+  const article = rawData.productTitle
+    ? `${rawData.productTitle}${quantity > 1 ? ` (${quantity} pièces)` : ""}`
+    : undefined;
+  const client = data.clientName?.trim() ? `Nom : ${data.clientName.trim()}` : null;
 
-  const headerTitle =
-    data.optionType === "avec_fournisseur"
-      ? `*FICHE DE DOSSIER D'EXPÉDITION N° ${data.reference}*`
-      : data.optionType === "devis" || data.optionType === "devis_tarif"
-      ? `*CONFIRMATION DE DEVIS TRANSIT N° ${data.reference}*`
-      : data.optionType === "suivi" || data.optionType === "suivi_colis"
-      ? `*DEMANDE D'ASSISTANCE SUIVI COLIS N° ${trackingCode}*`
-      : data.optionType === "envoi_colis"
-      ? `*DEMANDE D'ENVOI DE COLIS — DOSSIER N° ${data.reference}*`
-      : data.receiptAttachedName
-      ? `*CONFIRMATION DE PAIEMENT & PREUVE JOINTE — DOSSIER N° ${data.reference}*`
-      : `*DEMANDE DE COMMANDE & DEVIS POIDS — DOSSIER N° ${data.reference}*`;
+  const intro = isTariffQuote
+    ? "Je souhaite un devis pour cet envoi :"
+    : isParcel
+    ? `Je viens de faire une demande d'envoi de colis : *${data.reference}*.`
+    : isTracking || tracking
+    ? `J'ai une question sur mon colis *${tracking || data.reference}*.`
+    : data.receiptAttachedName
+    ? `Je viens d'envoyer ma preuve de paiement pour le dossier *${data.reference}*.`
+    : data.optionType === "devis"
+    ? `J'ai bien reçu mon devis *${data.reference}*.`
+    : `Je viens d'envoyer ma commande *${data.reference}*.`;
 
-  const lines = [
-    `Bonjour l'équipe *ROUM TRANSIT INTERNATIONAL*,`,
-    `Je vous transmets le récapitulatif officiel de mon dossier enregistré sur votre plateforme :`,
-    ``,
-    headerTitle,
-    `• Référence Dossier : *${data.reference}*`,
-    hasActiveTracking ? `• N° de Suivi Officiel : *${data.trackingNumber}*` : null,
-    data.shippingMark ? `• Shipping Mark : *${data.shippingMark}*` : null,
-    data.clientName ? `• Client : ${data.clientName} (${data.clientPhone})` : null,
-    `• Corridor : ${data.originCountry || "Chine"} ➔ ${data.destination}`,
-    `• Mode de transport choisi : ${data.transportMode}${data.weightOrVolume ? ` (${data.weightOrVolume})` : ""}`,
-    ``,
-    `*DÉTAILS DE LA MARCHANDISE :*`,
-    `• Article : ${data.productTitle}`,
-    data.quantity ? `• Quantité : ${data.quantity} unité(s)` : null,
-    data.unitPriceFormatted
-      ? `• Prix unitaire fournisseur : ${data.unitPriceFormatted}${data.activeTierLabel ? ` (Tranche ${data.activeTierLabel})` : ""}`
-      : null,
-    data.supplierInfo ? `• Infos fournisseur : ${data.supplierInfo}` : null,
-    data.productUrl ? `• Lien article : ${data.productUrl}` : null,
-    ``,
-    `*RÉCAPITULATIF FINANCIER :*`,
-    data.goodsTotalFcfa && data.goodsTotalFcfa > 0
-      ? `• Sous-total Marchandises : ${formatNumberFr(data.goodsTotalFcfa)} FCFA`
-      : null,
-    data.shippingFeeFcfa && data.shippingFeeFcfa > 0
-      ? `• Fret & Douane : ${formatNumberFr(data.shippingFeeFcfa)} FCFA`
-      : `• Fret & Douane : À estimer par ROUM TRANSIT selon le poids réel du colis`,
-    data.totalAmountFcfa && data.totalAmountFcfa > 0
-      ? `• *${data.shippingFeeFcfa && data.shippingFeeFcfa > 0 ? "TOTAL À RÉGLER" : "SOUS-TOTAL MARCHANDISE"} : ${formatNumberFr(data.totalAmountFcfa)} FCFA*`
-      : null,
-    data.paymentMethodLabel ? `• Moyen de paiement : ${data.paymentMethodLabel}` : null,
-    data.receiptAttachedName ? `• Preuve de paiement jointe : Oui (${data.receiptAttachedName})` : null,
-    ...(hasActiveTracking
-      ? [
-          ``,
-          `*Lien direct de suivi du colis (${trackingCode}) :*`,
-          `${trackingUrl}`,
-        ]
-      : []),
-    ``,
-    data.receiptAttachedName
-      ? `J'ai joint ma preuve de paiement sur la plateforme. Merci de confirmer l'encaissement et de m'envoyer mon Numéro de Suivi Officiel. Cordialement !`
-      : hasActiveTracking
-      ? `Merci de bien vouloir me confirmer la bonne réception de ce reçu. Cordialement !`
-      : `Merci d'estimer le poids de mon colis et de m'envoyer le devis complet avec le lien de paiement. Cordialement !`,
-  ].filter((l) => l !== null);
+  const closing = isTariffQuote
+    ? "Merci de me confirmer le prix et la marche à suivre."
+    : data.receiptAttachedName
+    ? "Merci de confirmer la réception et de m'envoyer mon numéro de suivi."
+    : isTracking || tracking
+    ? "Merci de me répondre dès que possible."
+    : "Merci de m'envoyer mon devis.";
 
-  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(lines.join("\n"))}`;
+  const total = data.totalAmountFcfa && data.totalAmountFcfa > 0 ? formatFcfaText(data.totalAmountFcfa) : null;
+
+  const lines = joinMessageLines([
+    "Bonjour ROUM TRANSIT,",
+    "",
+    intro,
+    "",
+    client,
+    article && `${isParcel ? "Colis" : "Article"} : ${article}`,
+    data.productUrl && `Lien : ${data.productUrl}`,
+    `Trajet : ${route}`,
+    `Transport : ${data.transportMode}`,
+    data.weightOrVolume && !/attente/i.test(data.weightOrVolume) && `Quantité : ${data.weightOrVolume}`,
+    data.shippingMark && `Marquage : ${data.shippingMark}`,
+    total && `${isTariffQuote ? "Estimation" : "Montant"} : ${total}`,
+    data.receiptAttachedName && data.paymentMethodLabel && `Paiement : ${data.paymentMethodLabel}`,
+    tracking && `Suivi : ${getTrackingPageUrl(tracking)}`,
+    "",
+    closing,
+  ]);
+
+  return `https://wa.me/${agencyPhone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(lines)}`;
 }
-

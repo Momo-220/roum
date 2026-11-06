@@ -65,7 +65,7 @@ export default function HomePage() {
                   setTrackingInput(e.target.value);
                   if (trackingError) setTrackingError("");
                 }}
-                placeholder="Numéro de bordereau (Ex : RM-AIR-2610-K8P9Q2)"
+                placeholder="Votre numéro de suivi"
                 className="hero-search-input"
               />
               <button type="submit" className="hero-search-submit">
@@ -251,6 +251,23 @@ export default function HomePage() {
           .hero-search-submit {
             padding: 10px 22px;
             font-size: 0.86rem;
+          }
+        }
+
+        /* Sur téléphone, la carte passe sous le titre au lieu de le recouvrir. */
+        @media (max-width: 640px) {
+          .hero-title-container {
+            z-index: 3;
+          }
+
+          .hero-map-wrapper {
+            margin-top: 8px;
+            mask-image: linear-gradient(to bottom, #000000 0%, #000000 84%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, #000000 0%, #000000 84%, transparent 100%);
+          }
+
+          .hero-search-wrapper {
+            margin-top: 6px;
           }
         }
       `,

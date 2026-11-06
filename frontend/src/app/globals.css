@@ -2012,6 +2012,150 @@ select.input-clean option {
 
 
 /* ==========================================================================
+   Admin sur téléphone : une seule colonne, des mots entiers, des boutons faciles à toucher
+   ========================================================================== */
+@media (max-width: 900px) {
+  /* La barre du haut reste nette : le contenu ne se devine plus derrière en défilant. */
+  .admin-main-viewport > .admin-mobile-bar {
+    background: #FAF8F5;
+  }
+
+  /* Centrée, une liste de filtres trop longue perdait son début, impossible à atteindre. */
+  .admin-main-viewport .pill-selector {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .admin-main-viewport .pill-option {
+    min-height: 38px;
+    padding: 0 14px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Deux colonnes côte à côte écrasent le texte : tout passe l'une sous l'autre. */
+  .admin-main-viewport [style*="grid-template-columns"],
+  .modal-card-scrollable [style*="grid-template-columns"],
+  div[style*="position: fixed"] [style*="grid-template-columns"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  /* Dans une fenêtre, un long bouton n'élargit plus le formulaire au-delà de l'écran. */
+  div[style*="position: fixed"] form[style*="display: grid"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  div[style*="position: fixed"] [style*="justify-content: flex-end"] {
+    flex-wrap: wrap;
+  }
+
+  div[style*="position: fixed"] [style*="justify-content: flex-end"] .btn {
+    flex: 1 1 auto;
+    min-height: 44px;
+    white-space: normal;
+  }
+
+  /* Un intitulé s'affiche en entier plutôt que coupé par des points de suspension. */
+  .admin-main-viewport [style*="text-overflow: ellipsis"] {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+  }
+
+  .admin-main-viewport table tr {
+    padding: 8px 16px;
+    background: #FFFFFF !important;
+    border-radius: 20px;
+  }
+
+  .admin-main-viewport table td {
+    grid-template-columns: minmax(78px, 30%) minmax(0, 1fr);
+    overflow-wrap: break-word;
+  }
+
+  /* Message « aucun dossier » : il occupe toute la largeur, sans étiquette vide à gauche. */
+  .admin-main-viewport table td:not([data-label]),
+  .admin-main-viewport table td[data-label=""],
+  .admin-main-viewport table td[colspan] {
+    display: block;
+  }
+
+  .admin-main-viewport table td:not([data-label])::before,
+  .admin-main-viewport table td[data-label=""]::before,
+  .admin-main-viewport table td[colspan]::before {
+    display: none;
+  }
+
+  /* Une action se lit d'un coup : jamais « Pes-ée » sur deux lignes. */
+  .admin-main-viewport table td[data-label^="Action"] {
+    justify-content: flex-start;
+    padding-top: 12px !important;
+  }
+
+  .admin-main-viewport table td[data-label^="Action"] > div {
+    flex-wrap: wrap;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    width: 100%;
+  }
+
+  .admin-main-viewport table td[data-label^="Action"] * {
+    overflow-wrap: normal;
+    white-space: nowrap !important;
+  }
+
+  .admin-main-viewport table td[data-label^="Action"] .btn {
+    height: auto !important;
+    min-height: 40px;
+    padding: 0 16px !important;
+    font-size: 0.84rem !important;
+  }
+
+  .admin-main-viewport table td[data-label^="Action"] .btn-icon-clean {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Un trajet sur plusieurs lignes garde une forme nette. */
+  .admin-main-viewport table td div[style*="9999px"],
+  .admin-main-viewport table td span[style*="9999px"] {
+    border-radius: 16px !important;
+  }
+
+  /* Tarifs : le nom garde toute la ligne, le prix passe juste en dessous. */
+  .admin-tariff-row {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .admin-tariff-row > div:first-child {
+    flex: 1 1 100% !important;
+  }
+
+  .admin-tariff-row > div:last-child {
+    justify-content: space-between;
+    width: 100%;
+    padding-left: 35px;
+    box-sizing: border-box;
+  }
+
+  /* Le statut tient sur une ligne, dans une pilule à la taille de son texte. */
+  .admin-main-viewport table .status-select-pill {
+    justify-self: start;
+    width: auto;
+    max-width: 100%;
+    min-height: 40px;
+    padding: 6px 30px 6px 14px;
+    font-size: 16px;
+    letter-spacing: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap !important;
+  }
+}
+
+
+/* ==========================================================================
    Bouton pilule au logo WhatsApp
    ========================================================================== */
 .wa-pill {

@@ -72,6 +72,9 @@ import {
   Menu,
 } from "lucide-react";
 import { AdminLogin } from "@/components/AdminLogin";
+import { AssistantWorkspace } from "@/components/AssistantWorkspace";
+import { ExchangeRatesCard } from "@/components/ExchangeRatesCard";
+import { ShipmentPhotosManager } from "@/components/ShipmentPhotosManager";
 import RouteGlobe from "@/components/RouteGlobe";
 import { CircularFlag } from "@/components/CircularFlag";
 import { BillsIcon } from "@/components/icons/BillsIcon";
@@ -97,6 +100,8 @@ import {
   buildAdminRequestWhatsAppUrl,
   buildAdminQuotePaymentWhatsAppUrl,
   buildAdminPaymentConfirmedTrackingWhatsAppUrl,
+  buildWhatsAppUrl,
+  getExchangeRates,
   getPaymentPageUrl,
   getTrackingPageUrl,
   decodeHtmlEntitiesText,
@@ -228,6 +233,13 @@ function getShipmentPhase(status?: string): number {
     default:
       return 3;
   }
+}
+
+/** Le compte Maroc n'apparaît dans un devis que s'il est réellement renseigné. */
+function moroccoAccountLabel(settings: Record<string, string>): string | undefined {
+  const rib = (settings.payment_morocco_rib || "").trim();
+  if (!rib) return undefined;
+  return [settings.payment_morocco_bank, rib].filter(Boolean).join(" · ");
 }
 
 function getWhatsAppUrl(
@@ -548,7 +560,7 @@ const PERMISSION_LABELS_MAP: Record<string, string> = {
   "config.statuses": "Gérer les étapes de suivi",
   "requests.view": "Consulter les demandes reçues",
   "requests.process": "Traiter et convertir les demandes",
-  "tasks.manage": "Gérer les tâches d'équipe",
+  "tasks.manage": "Gérer les tâches",
   "exports.run": "Exporter les données",
   "settings.manage": "Gérer les coordonnées d'agences",
   "audit.view": "Consulter l'historique d'audit",
@@ -1308,7 +1320,7 @@ export default function AdminPage() {
       qLower.includes("bilan") ||
       qLower.includes("jour")
     ) {
-      reply = `${boss}, voici les ${totalAgentAlerts} tâche(s) qui requièrent votre exécution immédiate :\n1. Validation Caisse : ${pendingPaymentsList.length} règlement(s) en attente d'approbation (${formatCurrencyPrice(pendingAmount, "FCFA")}).\n2. Commandes Clients : ${pendingRequestsList.length} commande(s) d'achats à chiffrer (${pendingRequestsList.slice(0, 2).map((r) => r.reference).join(", ") || "aucun"}).\n3. Pesées en Magasin : ${pendingWeighingsList.length} colis à peser avant départ (${pendingWeighingsList.slice(0, 2).map((s) => s.tracking_number).join(", ") || "aucun"}).\n4. Directives d'Équipe : ${urgentTasksList.length} tâche(s) urgente(s) (${urgentTasksList.slice(0, 2).map((t) => t.title).join(" ; ") || "aucune"}).`;
+      reply = `${boss}, voici les ${totalAgentAlerts} tâche(s) qui requièrent votre exécution immédiate :\n1. Validation Caisse : ${pendingPaymentsList.length} règlement(s) en attente d'approbation (${formatCurrencyPrice(pendingAmount, "FCFA")}).\n2. Commandes Clients : ${pendingRequestsList.length} commande(s) d'achats à chiffrer (${pendingRequestsList.slice(0, 2).map((r) => r.reference).join(", ") || "aucun"}).\n3. Pesées en Magasin : ${pendingWeighingsList.length} colis à peser avant départ (${pendingWeighingsList.slice(0, 2).map((s) => s.tracking_number).join(", ") || "aucun"}).\n4. Tâches prioritaires : ${urgentTasksList.length} tâche(s) urgente(s) (${urgentTasksList.slice(0, 2).map((t) => t.title).join(" ; ") || "aucune"}).`;
       msgActions = [
         { label: `Exécuter Caisse (${pendingPaymentsList.length})`, tab: "finances" },
         { label: `Traiter Commandes (${pendingRequestsList.length})`, tab: "requests" },
@@ -1346,7 +1358,7 @@ export default function AdminPage() {
         .join("\n");
       reply =
         pendingWeighingsList.length > 0
-          ? `Tâches CEO — Pesées en Magasin (${pendingWeighingsList.length} colis à peser) :\n${details}\nExécutez la pesée dans la colonne de gauche ou dans Expéditions.`
+          ? `Tâches CEO — Pesées en Magasin (${pendingWeighingsList.length} colis à peser) :\n${details}\nFaites la pesée depuis « À faire » ou dans Expéditions.`
           : `Tous les colis au magasin de départ disposent d'une pesée officielle validée.`;
       msgActions = [{ label: "Peser les Colis au Magasin", tab: "shipments" }];
     } else if (
@@ -1536,6 +1548,7 @@ export default function AdminPage() {
   // Modales
   const [showCreateShipmentModal, setShowCreateShipmentModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState<any | null>(null);
+  const [showPhotosModal, setShowPhotosModal] = useState<any | null>(null);
   const [showPrintLabelModal, setShowPrintLabelModal] = useState<any | null>(null);
   const [showCreateClientModal, setShowCreateClientModal] = useState(false);
   const [showRecordPaymentModal, setShowRecordPaymentModal] = useState<any | null>(null);
@@ -2225,7 +2238,7 @@ export default function AdminPage() {
         totalAmountFcfa: Number(adminQuoteForm.total_fcfa) || 0,
         waveNumber: companySettings.payment_wave_ci,
         orangeNumber: companySettings.payment_orange_money_ci,
-        moroccoRib: `${companySettings.payment_morocco_bank || ""} (${companySettings.payment_morocco_rib || ""})`,
+        moroccoRib: moroccoAccountLabel(companySettings),
       });
       window.open(waUrl, "_blank", "noopener,noreferrer");
     }
@@ -2923,7 +2936,7 @@ export default function AdminPage() {
     if (saved) setEditingTask(null);
   };
 
-  // ÉCRAN 1 : CONNEXION DE L'ÉQUIPE
+  // ÉCRAN 1 : CONNEXION
   if (!token || !user) {
     return (
       <AdminLogin
@@ -3401,6 +3414,7 @@ export default function AdminPage() {
         {/* En-tête de page sobre (Masqué en mode plein cadre de la sphère) */}
         {!(isGlobeExpanded && activeTab === "dashboard") && (
           <div
+            className="admin-page-head"
             style={{
             display: "flex",
             justifyContent: "space-between",
@@ -3484,850 +3498,100 @@ export default function AdminPage() {
         </div>
         )}
 
-        {/* 0. ASSISTANT ROUM : VUE INTÉGRALE AVEC KPI, ACTIONS REQUISES & NOUVELLE CONSOLE CHATBOT */}
+        {/* 0. ASSISTANT ROUM : LA DISCUSSION ET CE QU'IL RESTE À FAIRE */}
         {activeTab === "assistant" && (
-          <div key="assistant" className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            {/* LIGNE DE SYNTHÈSE OPÉRATIONNELLE SOBRE (4 Cartes KPI Minimalistes) */}
-            <div className="kpi-grid-4">
-              {/* Carte 1 : Contrôle Caisse */}
-              <div
-                className="ios-metric-card"
-                onClick={() => setActiveTab("finances")}
-                style={{ cursor: "pointer" }}
-              >
-                <div className="metric-card-header">
-                  <div className="metric-card-label">
-                    <span className="metric-icon-box">
-                      <ClipboardCheck size={17} strokeWidth={2} />
-                    </span>
-                    <span className="metric-card-title">
-                      Contrôle Caisse
-                    </span>
-                  </div>
-                  <span className={`ios-trend-pill ${pendingPaymentsList.length > 0 ? "ios-trend-pill-gold" : "ios-trend-pill-up"}`}>
-                    {pendingPaymentsList.length > 0 ? "À vérifier" : "À jour"}
-                  </span>
-                </div>
-                <div className="metric-card-body">
-                  <div className="metric-card-value">
-                    {pendingPaymentsList.length} {pendingPaymentsList.length > 1 ? "paiements" : "paiement"}
-                  </div>
-                  <div className="metric-card-sub">
-                    {formatCurrencyPrice(pendingPaymentsList.reduce((acc, p) => acc + (p.amount_minor || 0), 0), "FCFA")} à contrôler
-                  </div>
-                </div>
-              </div>
-
-              {/* Carte 2 : Pesées au Magasin */}
-              <div
-                className="ios-metric-card"
-                onClick={() => setActiveTab("shipments")}
-                style={{ cursor: "pointer" }}
-              >
-                <div className="metric-card-header">
-                  <div className="metric-card-label">
-                    <span className="metric-icon-box">
-                      <Scale size={17} strokeWidth={2} />
-                    </span>
-                    <span className="metric-card-title">
-                      Pesées au Magasin
-                    </span>
-                  </div>
-                  <span className="ios-trend-pill ios-trend-pill-neutral">
-                    Magasin
-                  </span>
-                </div>
-                <div className="metric-card-body">
-                  <div className="metric-card-value">
-                    {pendingWeighingsList.length} colis
-                  </div>
-                  <div className="metric-card-sub">
-                    Sans pesée officielle enregistrée
-                  </div>
-                </div>
-              </div>
-
-              {/* Carte 3 : Demandes Reçues */}
-              <div
-                className="ios-metric-card"
-                onClick={() => setActiveTab("requests")}
-                style={{ cursor: "pointer" }}
-              >
-                <div className="metric-card-header">
-                  <div className="metric-card-label">
-                    <span className="metric-icon-box">
-                      <ShoppingBag size={17} strokeWidth={2} />
-                    </span>
-                    <span className="metric-card-title">
-                      Commandes Clients
-                    </span>
-                  </div>
-                  <span className="ios-trend-pill ios-trend-pill-gold">
-                    Cotation
-                  </span>
-                </div>
-                <div className="metric-card-body">
-                  <div className="metric-card-value">
-                    {pendingRequestsList.length} {pendingRequestsList.length > 1 ? "dossiers" : "dossier"}
-                  </div>
-                  <div className="metric-card-sub">
-                    Achats en ligne & commandes clients
-                  </div>
-                </div>
-              </div>
-
-              {/* Carte 4 : Actions Internes */}
-              <div
-                className="ios-metric-card"
-                onClick={() => setActiveTab("tasks")}
-                style={{ cursor: "pointer" }}
-              >
-                <div className="metric-card-header">
-                  <div className="metric-card-label">
-                    <span className="metric-icon-box">
-                      <Flame size={17} strokeWidth={2} />
-                    </span>
-                    <span className="metric-card-title">
-                      Tâches Urgentes
-                    </span>
-                  </div>
-                  <span className="ios-trend-pill ios-trend-pill-neutral">
-                    Priorités
-                  </span>
-                </div>
-                <div className="metric-card-body">
-                  <div className="metric-card-value">
-                    {urgentTasksList.length} {urgentTasksList.length > 1 ? "tâches" : "tâche"}
-                  </div>
-                  <div className="metric-card-sub">
-                    Opérations prioritaires d&apos;équipe
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* CORPS PRINCIPAL : 2 COLONNES (Actions Prioritaires VS Nouvelle Console Chatbot) */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1.05fr 0.95fr",
-                gap: "20px",
-                alignItems: "start",
-              }}
-            >
-              {/* COLONNE GAUCHE : ACTIONS REQUISES (SANS DÉPASSEMENT) */}
-              <div
-                className="card-clean"
-                style={{
-                  background: "#FFFFFF",
-                  borderRadius: "22px",
-                  padding: "22px 24px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "18px",
-                  minWidth: 0,
-                  overflow: "hidden",
-                }}
-              >
-                {/* En-tête sobre Actions Requises */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    borderBottom: "1px solid rgba(42, 24, 16, 0.07)",
-                    paddingBottom: "14px",
-                    gap: "10px",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
-                    <span className="metric-icon-box">
-                      <AlertCircle size={17} strokeWidth={2} />
-                    </span>
-                    <h3 style={{ fontSize: "0.96rem", fontWeight: "800", color: "var(--text-main)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      Actions Requises
-                    </h3>
-                    {totalAgentAlerts > 0 && (
-                      <span
-                        style={{
-                          color: "#000000",
-                          fontSize: "0.82rem",
-                          fontWeight: "700",
-                          flexShrink: 0,
-                        }}
-                      >
-                        ({totalAgentAlerts})
-                      </span>
-                    )}
-                  </div>
-
-                  <span className="ios-trend-pill ios-trend-pill-neutral">
-                    Trié par priorité
-                  </span>
-                </div>
-
-                {/* VUE ACTIONS REQUISES */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  {totalAgentAlerts === 0 ? (
-                    <div
-                      style={{
-                        padding: "36px 20px",
-                        textAlign: "center",
-                        background: "var(--bg-subtle)",
-                        borderRadius: "14px",
-                        border: "1px solid var(--border-light)",
-                      }}
-                    >
-                      <CheckCircle2 size={36} color="var(--brown-dark)" style={{ margin: "0 auto 10px auto" }} />
-                      <div style={{ fontSize: "0.95rem", fontWeight: "700", color: "var(--text-main)", marginBottom: "4px" }}>
-                        Toutes les opérations sont à jour
-                      </div>
-                      <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: 0 }}>
-                        Aucun paiement en attente, aucune pesée en suspens, aucune demande non traitée.
-                      </p>
-                    </div>
-                  ) : (
+          <AssistantWorkspace
+            stats={[
+              { key: "caisse", label: "à valider", value: pendingPaymentsList.length, icon: <ClipboardCheck size={18} />, onClick: () => setActiveTab("finances") },
+              { key: "pesees", label: "à peser", value: pendingWeighingsList.length, icon: <Scale size={18} />, onClick: () => setActiveTab("shipments") },
+              { key: "commandes", label: "à chiffrer", value: pendingRequestsList.length, icon: <ShoppingBag size={18} />, onClick: () => setActiveTab("requests") },
+              { key: "taches", label: "urgentes", value: urgentTasksList.length, icon: <CheckSquare size={18} />, onClick: () => setActiveTab("tasks") },
+            ]}
+            suggestions={[
+              { label: "Bilan du jour", prompt: "Fais-moi un récapitulatif exécutif complet des opérations en cours." },
+              { label: "Point caisse", prompt: "Fais-moi le point complet de la trésorerie et des encaissements en attente." },
+              { label: "Pesées", prompt: "Quels sont les colis arrivés au magasin sans pesée officielle ?" },
+              { label: "Devis", prompt: "Quelles sont les demandes clients en attente de cotation ?" },
+            ]}
+            groups={[
+              {
+                key: "paiements",
+                title: "Paiements à valider",
+                icon: <DollarSign size={14} />,
+                items: pendingPaymentsList.map((p) => ({
+                  id: p.id,
+                  title: `${p.client_name || "Client"} · ${formatCurrencyPrice(p.amount_minor || 0, "FCFA")}`,
+                  subtitle: `${p.payment_method} · Réf : ${p.transaction_reference || p.reference || "—"}`,
+                  actions: [
+                    { label: "Valider", primary: true, onClick: () => handleConfirmPayment(p.id) },
+                    { label: "Rejeter", onClick: () => handleCancelPayment(p.id) },
+                  ],
+                })),
+              },
+              {
+                key: "pesees",
+                title: "Colis à peser",
+                icon: <Scale size={14} />,
+                items: pendingWeighingsList.map((s) => ({
+                  id: s.id,
+                  title: `${s.tracking_number} · ${s.client_name}`,
+                  subtitle: (
                     <>
-                      {/* 1. Paiements caisse en attente */}
-                      {pendingPaymentsList.length > 0 && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                          <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
-                            <DollarSign size={14} color="var(--brown-dark)" />
-                            Paiements en attente de validation ({pendingPaymentsList.length})
-                          </div>
-                          <div style={{ display: "grid", gap: "8px" }}>
-                            {pendingPaymentsList.map((p) => (
-                              <div
-                                key={p.id}
-                                style={{
-                                  padding: "12px 14px",
-                                  borderRadius: "12px",
-                                  border: "1px solid var(--border-light)",
-                                  background: "#FFFFFF",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  gap: "12px",
-                                }}
-                              >
-                                <div style={{ minWidth: 0, flex: 1 }}>
-                                  <div style={{ fontWeight: "700", fontSize: "0.85rem", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                    {p.client_name || "Client"} · {formatCurrencyPrice(p.amount_minor || 0, "FCFA")}
-                                  </div>
-                                  <div style={{ fontSize: "0.73rem", color: "var(--text-secondary)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                    Mode : <strong>{p.payment_method}</strong> · Réf : {p.transaction_reference || p.reference || "N/A"}
-                                  </div>
-                                </div>
-                                <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleConfirmPayment(p.id)}
-                                    className="btn btn-primary"
-                                    style={{ padding: "5px 12px", fontSize: "0.75rem" }}
-                                  >
-                                    Valider
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleCancelPayment(p.id)}
-                                    className="btn btn-secondary"
-                                    style={{ padding: "5px 10px", fontSize: "0.75rem" }}
-                                  >
-                                    Rejeter
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 2. Pesées magasin */}
-                      {pendingWeighingsList.length > 0 && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                          <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
-                            <Scale size={14} color="var(--brown-dark)" />
-                            Colis au magasin sans pesée officielle ({pendingWeighingsList.length})
-                          </div>
-                          <div style={{ display: "grid", gap: "8px" }}>
-                            {pendingWeighingsList.map((s) => (
-                              <div
-                                key={s.id}
-                                style={{
-                                  padding: "12px 14px",
-                                  borderRadius: "12px",
-                                  border: "1px solid var(--border-light)",
-                                  background: "#FFFFFF",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  gap: "12px",
-                                }}
-                              >
-                                <div style={{ minWidth: 0, flex: 1 }}>
-                                  <div style={{ fontWeight: "700", fontSize: "0.85rem", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                    {s.tracking_number} · {s.client_name}
-                                  </div>
-                                  <div style={{ fontSize: "0.73rem", color: "var(--text-secondary)", marginTop: "2px", display: "flex", alignItems: "center", gap: "5px", flexWrap: "wrap" }}>
-                                    <span>Trajet :</span>
-                                    <CircularFlag countryName={s.origin_country} size={13} />
-                                    <span>{s.origin_country}</span>
-                                    <span style={{ color: "var(--brown-light)", fontSize: "0.7rem" }}>➔</span>
-                                    <CircularFlag countryName={s.destination_country} size={13} />
-                                    <span>{s.destination_country}</span>
-                                    <span>({formatShippingModeShort(s.shipping_mode_name, s.shipping_mode_id)})</span>
-                                  </div>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenIntakeModal(s)}
-                                  className="btn btn-secondary"
-                                  style={{ padding: "5px 12px", fontSize: "0.75rem", gap: "5px", flexShrink: 0, background: "#FFFFFF" }}
-                                >
-                                  <Scale size={13} /> Peser
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 3. Demandes de commandes reçues */}
-                      {pendingRequestsList.length > 0 && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                          <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
-                            <Inbox size={14} color="var(--brown-dark)" />
-                            Demandes en attente de cotation ({pendingRequestsList.length})
-                          </div>
-                          <div style={{ display: "grid", gap: "8px" }}>
-                            {pendingRequestsList.map((r) => (
-                              <div
-                                key={r.id}
-                                style={{
-                                  padding: "12px 14px",
-                                  borderRadius: "12px",
-                                  border: "1px solid var(--border-light)",
-                                  background: "#FFFFFF",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  gap: "12px",
-                                }}
-                              >
-                                <div style={{ minWidth: 0, flex: 1 }}>
-                                  <div style={{ fontWeight: "700", fontSize: "0.85rem", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                    {r.reference} · {r.client_name}
-                                  </div>
-                                  <div style={{ fontSize: "0.73rem", color: "var(--text-secondary)", marginTop: "2px", display: "flex", alignItems: "center", gap: "5px", flexWrap: "wrap" }}>
-                                    <span>Type : <strong>{formatRequestType(r.request_type)}</strong> ·</span>
-                                    <CircularFlag countryName={r.origin_country || "Chine"} size={13} />
-                                    <span>{r.origin_country || "Chine"}</span>
-                                    <span style={{ color: "var(--brown-light)", fontSize: "0.7rem" }}>➔</span>
-                                    <CircularFlag countryName={r.destination_country || "Afrique"} size={13} />
-                                    <span>{r.destination_country || "Afrique"}</span>
-                                  </div>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenRequestDetail(r)}
-                                  className="btn btn-primary"
-                                  style={{ padding: "5px 12px", fontSize: "0.75rem", flexShrink: 0 }}
-                                >
-                                  Traiter
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 4. Tâches urgentes */}
-                      {urgentTasksList.length > 0 && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                          <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
-                            <CheckSquare size={14} color="var(--brown-dark)" />
-                            Tâches prioritaires d&apos;équipe ({urgentTasksList.length})
-                          </div>
-                          <div style={{ display: "grid", gap: "8px" }}>
-                            {urgentTasksList.map((t) => (
-                              <div
-                                key={t.id}
-                                style={{
-                                  padding: "10px 14px",
-                                  borderRadius: "12px",
-                                  border: "1px solid var(--border-light)",
-                                  background: "#FFFFFF",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                  gap: "12px",
-                                }}
-                              >
-                                <div style={{ minWidth: 0, flex: 1 }}>
-                                  <div style={{ fontWeight: "700", fontSize: "0.85rem", color: "var(--text-main)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                    {t.title}
-                                  </div>
-                                  <div style={{ fontSize: "0.73rem", color: "var(--text-secondary)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                    Assigné à : {t.assigned_to_name || "Équipe"}
-                                  </div>
-                                </div>
-                                <span
-                                  style={{
-                                    fontSize: "0.68rem",
-                                    padding: "2px 8px",
-                                    borderRadius: "9999px",
-                                    background: "#FFFFFF",
-                                    color: "var(--brown-dark)",
-                                    fontWeight: "700",
-                                    border: "1px solid rgba(42, 24, 16, 0.1)",
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  {formatTaskPriority(t.priority)}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      <CircularFlag countryName={s.origin_country} size={13} />
+                      {s.origin_country} →
+                      <CircularFlag countryName={s.destination_country} size={13} />
+                      {s.destination_country}
                     </>
-                  )}
-                </div>
-              </div>
-
-              {/* COLONNE DROITE : NOUVEAU DESIGN CHATBOT (Inspiré de la maquette media_1793304447943_bf5cab8b.png) */}
-              <div
-                className="ios-chat-wrapper"
-                style={{
-                  padding: "20px 22px",
-                  display: "flex",
-                  flexDirection: "column",
-                  minHeight: "680px",
-                  height: "740px",
-                  background: "#FFFFFF",
-                  borderRadius: "22px",
-                  border: "1px solid rgba(28, 25, 23, 0.1)",
-                  boxShadow: "0 8px 28px -6px rgba(28, 25, 23, 0.06)",
-                }}
-              >
-                {/* 1. Entête Exécutif Épuré (Salutation Personnalisée inspirée de la maquette) */}
-                <div style={{ textAlign: "center", marginBottom: "16px", flexShrink: 0, paddingTop: "4px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  <div
-                    style={{
-                      width: "38px",
-                      height: "38px",
-                      borderRadius: "50%",
-                      background: "rgba(28, 25, 23, 0.08)",
-                      border: "1px solid rgba(28, 25, 23, 0.16)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "var(--brown-dark)",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    <UserCheck size={18} strokeWidth={2} />
-                  </div>
-                  <h3
-                    style={{
-                      fontSize: "1.26rem",
-                      fontWeight: "800",
-                      color: "var(--text-main)",
-                      margin: "0 0 4px 0",
-                      letterSpacing: "-0.015em",
-                    }}
-                  >
-                    Bonjour, {user?.fullName || "Madame Marouba"}
-                  </h3>
-                  <p
-                    style={{
-                      fontSize: "0.78rem",
-                      color: "var(--text-muted)",
-                      margin: 0,
-                    }}
-                  >
-                    Que puis-je faire pour vos opérations aujourd&apos;hui ?
-                  </p>
-                </div>
-
-                {/* 2. Les 3 Cartes de Suggestions / Actions Immédiates (Style exact de la maquette) */}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: "10px",
-                    marginBottom: "16px",
-                    flexShrink: 0,
-                  }}
-                >
-                  {/* Carte 1 : Trésorerie */}
-                  <div
-                    className="executive-prompt-card"
-                    style={{
-                      background: "#FAFAFA",
-                      border: "1px solid rgba(42, 24, 16, 0.08)",
-                      borderRadius: "16px",
-                      padding: "12px 10px",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      minHeight: "135px",
-                    }}
-                  >
-                    <div>
-                      <div
-                        style={{
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "8px",
-                          background: "rgba(28, 25, 23, 0.09)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          marginBottom: "8px",
-                        }}
-                      >
-                        <TrendingUp size={14} color="var(--brown-dark)" />
-                      </div>
-                      <div style={{ fontSize: "0.78rem", fontWeight: "700", color: "var(--text-main)", lineHeight: 1.25 }}>
-                        Point Caisse
-                      </div>
-                      <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)", marginTop: "4px", lineHeight: 1.3 }}>
-                        {pendingPaymentsList.length} paiement(s) à valider.
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleAskAgent("Fais-moi le point complet de la trésorerie et des encaissements en attente.")}
-                      className="prompt-card-btn"
-                      style={{
-                        marginTop: "10px",
-                        width: "100%",
-                        padding: "5px 6px",
-                        borderRadius: "9999px",
-                        border: "1px solid rgba(28, 25, 23, 0.16)",
-                        background: "#FFFFFF",
-                        color: "var(--brown-dark)",
-                        fontSize: "0.70rem",
-                        fontWeight: "700",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Voir Caisse
-                    </button>
-                  </div>
-
-                  {/* Carte 2 : Pesées Magasin */}
-                  <div
-                    className="executive-prompt-card"
-                    style={{
-                      background: "#FAFAFA",
-                      border: "1px solid rgba(42, 24, 16, 0.08)",
-                      borderRadius: "16px",
-                      padding: "12px 10px",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      minHeight: "135px",
-                    }}
-                  >
-                    <div>
-                      <div
-                        style={{
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "8px",
-                          background: "rgba(28, 25, 23, 0.09)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          marginBottom: "8px",
-                        }}
-                      >
-                        <Scale size={14} color="var(--brown-dark)" />
-                      </div>
-                      <div style={{ fontSize: "0.78rem", fontWeight: "700", color: "var(--text-main)", lineHeight: 1.25 }}>
-                        Pesées au Magasin
-                      </div>
-                      <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)", marginTop: "4px", lineHeight: 1.3 }}>
-                        {pendingWeighingsList.length} colis en attente de pesée.
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleAskAgent("Quels sont les colis arrivés au magasin sans pesée officielle ?")}
-                      className="prompt-card-btn"
-                      style={{
-                        marginTop: "10px",
-                        width: "100%",
-                        padding: "5px 6px",
-                        borderRadius: "9999px",
-                        border: "1px solid rgba(28, 25, 23, 0.16)",
-                        background: "#FFFFFF",
-                        color: "var(--brown-dark)",
-                        fontSize: "0.70rem",
-                        fontWeight: "700",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Voir Pesées
-                    </button>
-                  </div>
-
-                  {/* Carte 3 : Commandes & Devis */}
-                  <div
-                    className="executive-prompt-card"
-                    style={{
-                      background: "#FAFAFA",
-                      border: "1px solid rgba(42, 24, 16, 0.08)",
-                      borderRadius: "16px",
-                      padding: "12px 10px",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      minHeight: "135px",
-                    }}
-                  >
-                    <div>
-                      <div
-                        style={{
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "8px",
-                          background: "rgba(28, 25, 23, 0.09)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          marginBottom: "8px",
-                        }}
-                      >
-                        <Inbox size={14} color="var(--brown-dark)" />
-                      </div>
-                      <div style={{ fontSize: "0.78rem", fontWeight: "700", color: "var(--text-main)", lineHeight: 1.25 }}>
-                        Commandes Clients
-                      </div>
-                      <div style={{ fontSize: "0.68rem", color: "var(--text-secondary)", marginTop: "4px", lineHeight: 1.3 }}>
-                        {pendingRequestsList.length} commande(s) à chiffrer.
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleAskAgent("Quelles sont les demandes clients en attente de cotation ?")}
-                      className="prompt-card-btn"
-                      style={{
-                        marginTop: "10px",
-                        width: "100%",
-                        padding: "5px 6px",
-                        borderRadius: "9999px",
-                        border: "1px solid rgba(28, 25, 23, 0.16)",
-                        background: "#FFFFFF",
-                        color: "var(--brown-dark)",
-                        fontSize: "0.70rem",
-                        fontWeight: "700",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Voir Devis
-                    </button>
-                  </div>
-                </div>
-
-                {/* 3. Flux de messages (Scrollable avec bulles soignées & pas de saut d'écran) */}
-                <div
-                  className="ios-messages-scroll"
-                  style={{
-                    flex: 1,
-                    overflowY: "auto",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "10px",
-                    padding: "6px 2px",
-                    minHeight: "160px",
-                  }}
-                >
-                  {chatMessages.map((msg, i) => {
-                    const isLatestAgent = msg.sender === "agent" && i === chatMessages.length - 1;
-                    return (
-                      <div
-                        key={i}
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: msg.sender === "user" ? "flex-end" : "flex-start",
-                          gap: "3px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: "0.66rem",
-                            color: "#8E8E93",
-                            padding: "0 6px",
-                            fontWeight: "500",
-                          }}
-                        >
-                          {msg.sender === "user" ? "Vous" : "Assistante Roum"} · {msg.time}
-                        </div>
-
-                        {msg.sender === "user" ? (
-                          <div className="ios-bubble-user" style={{ background: "var(--btn-primary-bg)", color: "#FFFFFF" }}>
-                            {msg.text}
-                          </div>
-                        ) : (
-                          <div
-                            className="ios-bubble-agent"
-                            style={{
-                              background: "#FFFFFF",
-                              border: "1px solid var(--border-light)",
-                              color: "var(--text-main)",
-                              borderRadius: "16px 16px 16px 4px",
-                              padding: "10px 14px",
-                              lineHeight: 1.45,
-                              fontSize: "0.82rem",
-                            }}
-                          >
-                            <IOSTypingMessage
-                              text={msg.text}
-                              isNew={isLatestAgent}
-                              onTick={() => scrollToChatBottom()}
-                            />
-
-                            {msg.actions && msg.actions.length > 0 && (
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "10px" }}>
-                                {msg.actions.map((act, actIdx) => (
-                                  <button
-                                    key={actIdx}
-                                    type="button"
-                                    onClick={() => {
-                                      if (act.tab) setActiveTab(act.tab as any);
-                                    }}
-                                    className="btn btn-secondary"
-                                    style={{
-                                      padding: "4px 10px",
-                                      fontSize: "0.72rem",
-                                      borderRadius: "9999px",
-                                      background: "#FFFFFF",
-                                      border: "1px solid rgba(28, 25, 23, 0.2)",
-                                      color: "var(--brown-dark)",
-                                      fontWeight: "700",
-                                    }}
-                                  >
-                                    {act.label}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-
-                  {/* Animation 3 points si l'agent réfléchit */}
-                  {isAgentThinking && (
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "3px" }}>
-                      <div style={{ fontSize: "0.66rem", color: "#8E8E93", padding: "0 6px", fontWeight: "500" }}>
-                        Assistante Roum prépare votre rapport...
-                      </div>
-                      <div className="ios-typing-indicator" style={{ background: "#FFFFFF", border: "1px solid var(--border-light)" }}>
-                        <span className="ios-typing-dot" style={{ background: "var(--brown-dark)" }} />
-                        <span className="ios-typing-dot" style={{ background: "var(--brown-dark)" }} />
-                        <span className="ios-typing-dot" style={{ background: "var(--brown-dark)" }} />
-                      </div>
-                    </div>
-                  )}
-
-                  <div ref={chatMessagesEndRef} style={{ height: "1px" }} />
-                </div>
-
-                {/* 4. Barre de Saisie Capsule Flottante (Exactement inspirée de la maquette) */}
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!chatInput.trim() || isAgentThinking) return;
-                    handleAskAgent(chatInput);
-                  }}
-                  style={{
-                    position: "relative",
-                    display: "flex",
-                    alignItems: "center",
-                    background: "#FFFFFF",
-                    borderRadius: "9999px",
-                    border: "1px solid rgba(28, 25, 23, 0.2)",
-                    boxShadow: "0 2px 14px rgba(28, 25, 23, 0.06)",
-                    padding: "6px 8px 6px 10px",
-                    gap: "8px",
-                    marginTop: "12px",
-                    flexShrink: 0,
-                  }}
-                >
-                  {/* Bouton Plus / Options à gauche (comme sur la maquette) */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setChatInput("Fais-moi un récapitulatif exécutif complet des opérations en cours.");
-                    }}
-                    title="Suggestions de synthèse"
-                    style={{
-                      width: "28px",
-                      height: "28px",
-                      borderRadius: "50%",
-                      border: "1px solid var(--border-light)",
-                      background: "#FFFFFF",
-                      color: "var(--brown-dark)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Plus size={14} />
-                  </button>
-
-                  {/* Champ de saisie */}
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    placeholder="Écrivez un message ici..."
-                    disabled={isAgentThinking}
-                    style={{
-                      flex: 1,
-                      border: "none",
-                      outline: "none",
-                      background: "transparent",
-                      fontSize: "0.85rem",
-                      color: "var(--text-main)",
-                      padding: "4px 0",
-                    }}
-                  />
-
-                  {/* Bouton d'envoi rond flèche vers le haut */}
-                  <button
-                    type="submit"
-                    disabled={!chatInput.trim() || isAgentThinking}
-                    title="Envoyer"
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "50%",
-                      border: "none",
-                      background: !chatInput.trim() || isAgentThinking ? "rgba(55, 65, 81, 0.35)" : "var(--btn-primary-bg)",
-                      color: "#FFFFFF",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: !chatInput.trim() || isAgentThinking ? "default" : "pointer",
-                      transition: "all 0.15s ease",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <ArrowUp size={15} strokeWidth={2.4} />
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
+                  ),
+                  actions: [
+                    { label: "Peser", icon: <Scale size={13} />, primary: true, onClick: () => handleOpenIntakeModal(s) },
+                    { label: "Photos", icon: <Camera size={13} />, onClick: () => setShowPhotosModal(s) },
+                  ],
+                })),
+              },
+              {
+                key: "demandes",
+                title: "Demandes à chiffrer",
+                icon: <Inbox size={14} />,
+                items: pendingRequestsList.map((r) => ({
+                  id: r.id,
+                  title: `${r.reference} · ${r.client_name}`,
+                  subtitle: (
+                    <>
+                      {formatRequestType(r.request_type)} ·
+                      <CircularFlag countryName={r.origin_country || "Chine"} size={13} />
+                      {r.origin_country || "Chine"} →
+                      <CircularFlag countryName={r.destination_country || "Afrique"} size={13} />
+                      {r.destination_country || "Afrique"}
+                    </>
+                  ),
+                  actions: [{ label: "Traiter", primary: true, onClick: () => handleOpenRequestDetail(r) }],
+                })),
+              },
+              {
+                key: "taches",
+                title: "Tâches prioritaires",
+                icon: <CheckSquare size={14} />,
+                items: urgentTasksList.map((task) => ({
+                  id: task.id,
+                  title: task.title,
+                  subtitle: formatTaskPriority(task.priority),
+                  actions: [{ label: "Voir", onClick: () => setActiveTab("tasks") }],
+                })),
+              },
+            ]}
+            messages={chatMessages}
+            thinking={isAgentThinking}
+            input={chatInput}
+            onInputChange={setChatInput}
+            onAsk={handleAskAgent}
+            onOpenTab={(tab) => setActiveTab(tab as any)}
+            scrollRef={chatScrollContainerRef}
+            endRef={chatMessagesEndRef}
+            renderAgentText={(message, isLatest) => (
+              <IOSTypingMessage text={message.text} isNew={isLatest} onTick={() => scrollToChatBottom()} />
+            )}
+          />
         )}
 
         {/* 1. TABLEAU DE BORD : CONSOLE HAUTE LOGISTIQUE & THÉÂTRE OPÉRATIONNEL SYNCHRONISÉ */}
@@ -4754,6 +4018,16 @@ export default function AdminPage() {
                           style={{ flex: 1, padding: "9px", fontSize: "0.8rem", justifyContent: "center", borderRadius: "12px" }}
                         >
                           Changer le statut
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowPhotosModal(activeShipment)}
+                          className="btn btn-secondary"
+                          style={{ padding: "9px 14px", fontSize: "0.8rem", borderRadius: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                          title="Ajouter les photos du colis, visibles par le client dans son suivi"
+                        >
+                          <Camera size={14} />
+                          Photos
                         </button>
                         <button
                           type="button"
@@ -5473,9 +4747,9 @@ export default function AdminPage() {
                                       goodsTotalFcfa: Number(r.total_goods_fcfa || 0),
                                       shippingFeeFcfa: Number(r.shipping_fee_fcfa || 0),
                                       totalAmountFcfa: Number(r.total_amount_fcfa || 0),
-                                      waveNumber: companySettings.payment_wave_ci || "+225 07 87 99 44 12",
-                                      orangeNumber: companySettings.payment_orange_money_ci || "+225 07 00 00 00 00",
-                                      moroccoRib: `${companySettings.payment_morocco_bank || "CIH Bank"} (${companySettings.payment_morocco_rib || "230 780 0001234567890123 45"})`,
+                                      waveNumber: companySettings.payment_wave_ci,
+                                      orangeNumber: companySettings.payment_orange_money_ci,
+                                      moroccoRib: moroccoAccountLabel(companySettings),
                                     })
                               }
                               onClick={(e) => {
@@ -5526,7 +4800,7 @@ export default function AdminPage() {
               return sum + val;
             }, 0);
 
-          const estimatedCfaTotal = Math.round(totalRmbToPay * 88);
+          const estimatedCfaTotal = Math.round(totalRmbToPay * getExchangeRates(companySettings).rmb);
 
           const filteredPayments = supplierPaymentsList.filter((r) => {
             if (supplierPaymentFilter === "NEW" && r.status !== "NEW") return false;
@@ -5767,7 +5041,7 @@ export default function AdminPage() {
                           "Marchandises Chine";
 
                         const parsedRmbNum = parseFloat(rmbAmountVal.replace(/\s/g, "").replace(",", ".")) || 0;
-                        const cfaEquivalent = Math.round(parsedRmbNum * 88);
+                        const cfaEquivalent = Math.round(parsedRmbNum * getExchangeRates(companySettings).rmb);
 
                         const productImg = r.product_image || "";
 
@@ -6264,6 +5538,16 @@ export default function AdminPage() {
                               </button>
                               <button
                                 type="button"
+                                onClick={() => setShowPhotosModal(s)}
+                                className="btn btn-secondary"
+                                style={{ padding: "4px 9px", fontSize: "0.72rem", height: "28px", display: "inline-flex", alignItems: "center", gap: "5px" }}
+                                title="Ajouter les photos du colis, visibles par le client dans son suivi"
+                              >
+                                <Camera size={13} />
+                                Photos{s.photos_count > 0 ? ` (${s.photos_count})` : ""}
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => setShowPrintLabelModal(s)}
                                 className="btn-icon-clean"
                                 title="Imprimer bordereau"
@@ -6386,9 +5670,7 @@ export default function AdminPage() {
                               <Edit3 size={13} />
                             </button>
                             <a
-                              href={`https://wa.me/${(c.phone_whatsapp || c.phone || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-                                `Bonjour ${c.full_name},\n\nIci la Direction de *ROUM TRANSIT INTERNATIONAL*.\nNous prenons contact avec vous concernant vos opérations d'achat et de transit Chine ➔ ${c.country || "Afrique"}.\n\nVous pouvez consulter vos expéditions en direct sur :\n${getTrackingPageUrl("")}\n\nCordialement,\n*Service Clientèle ROUM TRANSIT*`
-                              )}`}
+                              href={buildWhatsAppUrl(c.phone_whatsapp || c.phone || "", `Bonjour ${c.full_name},\n\nC'est ROUM TRANSIT. Comment pouvons-nous vous aider ?`)}
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none", flexShrink: 0 }}
@@ -6572,7 +5854,7 @@ export default function AdminPage() {
                         const ItemIcon = item.icon;
 
                         return (
-                          <div
+                          <div className="admin-tariff-row"
                             key={item.key}
                             style={{
                               display: "flex",
@@ -6705,7 +5987,7 @@ export default function AdminPage() {
                         const ItemIcon = item.icon;
 
                         return (
-                          <div
+                          <div className="admin-tariff-row"
                             key={item.key}
                             style={{
                               display: "flex",
@@ -6872,7 +6154,7 @@ export default function AdminPage() {
                             const isLast = idx === baseRoutes.length - 1 && customMoroccoTariffs.length === 0;
 
                             return (
-                              <div
+                              <div className="admin-tariff-row"
                                 key={route.dest}
                                 style={{
                                   display: "flex",
@@ -6932,7 +6214,7 @@ export default function AdminPage() {
                             const currentPrice = formatCurrencyPrice(t.price_per_unit_minor, t.currency);
 
                             return (
-                              <div
+                              <div className="admin-tariff-row"
                                 key={t.id}
                                 style={{
                                   display: "flex",
@@ -7064,7 +6346,7 @@ export default function AdminPage() {
                       return (
                         <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "260px", overflowY: "auto", paddingRight: "2px" }}>
                           {customAirTariffs.slice(0, 5).map((t, idx, arr) => (
-                            <div
+                            <div className="admin-tariff-row"
                               key={t.id}
                               style={{
                                 display: "flex",
@@ -7763,7 +7045,7 @@ export default function AdminPage() {
           );
         })()}
 
-        {/* 7. TÂCHES D'ÉQUIPE (DESIGN EXÉCUTIF & ESPACEMENTS AÉRÉS) */}
+        {/* 7. TÂCHES */}
         {activeTab === "tasks" && (() => {
           const urgentCount = tasksList.filter((t) => t.status !== "DONE" && (t.priority === "URGENT" || t.priority === "HIGH")).length;
           const pendingCount = tasksList.filter((t) => t.status !== "DONE").length;
@@ -7792,7 +7074,7 @@ export default function AdminPage() {
                   </div>
                   <div className="metric-card-body">
                     <div className="metric-card-value">{pendingCount} {pendingCount > 1 ? "tâches" : "tâche"}</div>
-                    <div className="metric-card-sub">Opérations assignées à l&apos;équipe</div>
+                    <div className="metric-card-sub">Opérations à suivre</div>
                   </div>
                 </div>
 
@@ -8013,6 +7295,26 @@ export default function AdminPage() {
         {/* 8. PARAMÈTRES & AUDIT */}
         {activeTab === "settings" && (
           <div key="settings" className="animate-fade-in" style={{ display: "grid", gap: "24px", maxWidth: "1280px", margin: "0 auto", width: "100%" }}>
+            {/* TAUX DE CHANGE : ILS S'APPLIQUENT AUSSITÔT AUX PRIX AFFICHÉS AUX CLIENTS */}
+            <ExchangeRatesCard
+              settings={companySettings}
+              onChange={(key, value) => setCompanySettings({ ...companySettings, [key]: value })}
+              onSave={() =>
+                adminCall(
+                  "/settings",
+                  {
+                    method: "PUT",
+                    body: {
+                      exchange_rate_rmb: String(companySettings.exchange_rate_rmb ?? ""),
+                      exchange_rate_usd: String(companySettings.exchange_rate_usd ?? ""),
+                      exchange_rate_eur: String(companySettings.exchange_rate_eur ?? ""),
+                    },
+                  },
+                  { scopes: [], success: "Les nouveaux taux sont appliqués sur le site.", successTitle: "Taux enregistrés" },
+                )
+              }
+            />
+
             {/* CARTE 1 : IDENTITÉ LÉGALE & SIÈGE SOCIAL DE L'ENTREPRISE */}
             <div className="card-clean" style={{ padding: "26px", borderRadius: "20px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px", borderBottom: "1px solid var(--border-light)", paddingBottom: "14px" }}>
@@ -8177,7 +7479,7 @@ export default function AdminPage() {
                     </div>
                     <div>
                       <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>
-                        Contact Équipe Réception Chine
+                        Contact Réception Chine
                       </label>
                       <input
                         type="text"
@@ -8245,7 +7547,7 @@ export default function AdminPage() {
                     </div>
                     <div>
                       <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>
-                        Contact Responsable Magasin Paris
+                        Contact Magasin Paris
                       </label>
                       <input
                         type="text"
@@ -8323,7 +7625,7 @@ export default function AdminPage() {
                         </div>
                         <div>
                           <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: "600" }}>
-                            Contact Équipe Réception Magasin
+                            Contact Réception Magasin
                           </label>
                           <input
                             type="text"
@@ -9094,6 +8396,37 @@ export default function AdminPage() {
       )}
 
       {/* MODALE : CHANGEMENT STATUT (AMÉLIORÉE & SIMPLE) */}
+      {showPhotosModal && (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100, padding: "20px" }}
+          onClick={() => setShowPhotosModal(null)}
+        >
+          <div
+            className="card-clean"
+            style={{ maxWidth: "520px", width: "100%", padding: "24px", maxHeight: "90vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
+              <div style={{ minWidth: 0 }}>
+                <h3 style={{ fontSize: "1.15rem", margin: 0, overflowWrap: "anywhere" }}>{showPhotosModal.tracking_number}</h3>
+                <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "3px" }}>
+                  {showPhotosModal.client_name}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPhotosModal(null)}
+                className="btn-icon-clean"
+                aria-label="Fermer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <ShipmentPhotosManager shipmentId={showPhotosModal.id} token={token} />
+          </div>
+        </div>
+      )}
+
       {showStatusModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(28, 24, 21, 0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
           <div className="card-clean" style={{ maxWidth: "480px", width: "100%", padding: "28px", boxShadow: "0 20px 40px rgba(0,0,0,0.2)" }}>
@@ -10431,6 +9764,10 @@ export default function AdminPage() {
                 </button>
               </div>
             </form>
+
+            <div style={{ marginTop: "16px" }}>
+              <ShipmentPhotosManager shipmentId={showIntakeModal.id} token={token} />
+            </div>
           </div>
         </div>
       )}
@@ -10458,6 +9795,10 @@ export default function AdminPage() {
               >
                 <X size={20} />
               </button>
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <ShipmentPhotosManager shipmentId={showShipmentDetailModal.id} token={token} />
             </div>
 
             {/* Résumé Mesures et Liaison */}

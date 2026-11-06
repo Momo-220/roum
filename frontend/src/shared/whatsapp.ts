@@ -30,10 +30,37 @@ export function buildWhatsAppUrl(phone: string, message?: string): string {
   return text ? `https://wa.me/${digits}?text=${encodeURIComponent(text)}` : `https://wa.me/${digits}`;
 }
 
-/**
- * Message WhatsApp courtois, détaillé et direct : Admin ➔ Client (pour une expédition / colis actif)
- * Inclut le lien de suivi cliquable qui renvoie directement vers /tracking/[trackingNumber].
- */
+type MessageLine = string | null | undefined | false;
+
+const SIGNATURE = "ROUM TRANSIT";
+const REPLY_HINT = "Une question ? Répondez simplement à ce message.";
+
+/** Assemble un message : les lignes vides en trop disparaissent quand une information manque. */
+export function joinMessageLines(lines: MessageLine[]): string {
+  return lines
+    .filter((line): line is string => typeof line === "string")
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** Ouvre la conversation avec un client. Sans numéro valide, WhatsApp laisse choisir le contact. */
+function clientChatUrl(phone: string | undefined, lines: MessageLine[]): string {
+  const normalized = normalizePhone(phone || "");
+  const digits = normalized ? normalized.slice(1) : (phone || "").replace(/[^0-9]/g, "").replace(/^00/, "");
+  return `https://wa.me/${digits}?text=${encodeURIComponent(joinMessageLines(lines))}`;
+}
+
+function greeting(clientName?: string): string {
+  const name = (clientName || "").trim();
+  return !name || /^(cher\(e\) )?client(e)?$|^cher client$/i.test(name) ? "Bonjour," : `Bonjour ${name},`;
+}
+
+export function formatFcfaText(amount: number): string {
+  return `${Math.round(amount).toLocaleString("fr-FR").replace(/[\u202f\u00a0]/g, " ")} FCFA`;
+}
+
+/** Message de l'agence au client : où en est son colis. */
 export function buildAdminShipmentWhatsAppUrl(params: {
   phone?: string;
   clientPhone?: string;
@@ -49,50 +76,37 @@ export function buildAdminShipmentWhatsAppUrl(params: {
   amountLabel?: string;
   shippingMark?: string;
 }): string {
-  const rawPhone = params.phone || params.clientPhone || "";
-  const cleanPhone = rawPhone.replace(/[^0-9]/g, "").replace(/^00/, "");
   const trackingCode = (params.trackingNumber || "").trim();
-  const trackingUrl = getTrackingPageUrl(trackingCode);
   const weightVol =
     params.weightOrVolume ||
     [
-      params.weightKg ? `${params.weightKg} kg` : null,
-      params.volumeCbm ? `${params.volumeCbm} m³` : null,
+      params.weightKg ? `${String(params.weightKg).replace(".", ",")} kg` : null,
+      params.volumeCbm ? `${String(params.volumeCbm).replace(".", ",")} m³` : null,
     ]
       .filter(Boolean)
       .join(" · ");
 
-  const lines = [
-    `Bonjour ${params.clientName || "cher(e) client(e)"},`,
-    ``,
-    `Ici le service logistique *ROUM TRANSIT INTERNATIONAL* concernant le suivi de votre expédition :`,
-    ``,
-    `• N° de Suivi : *${trackingCode || "En cours"}*`,
-    params.shippingMark ? `• Shipping Mark : *${params.shippingMark}*` : null,
-    params.statusLabel ? `• Statut actuel : *${params.statusLabel}*` : null,
-    params.origin || params.destination
-      ? `• Corridor : ${params.origin || "Chine"} ➔ ${params.destination || "Afrique"}`
-      : null,
-    params.shippingMode
-      ? `• Mode d'acheminement : ${params.shippingMode}${weightVol ? ` (${weightVol})` : ""}`
-      : null,
-    params.amountLabel ? `• Montant : *${params.amountLabel}*` : null,
-    ``,
-    `*Cliquez sur votre numéro de suivi pour voir l'avancement en direct :*`,
-    `${trackingUrl}`,
-    ``,
-    `Nous restons à votre entière disposition pour toute question.`,
-    `Cordialement,`,
-    `*L'équipe ROUM TRANSIT*`,
-  ].filter((l) => l !== null);
-
-  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(lines.join("\n"))}`;
+  return clientChatUrl(params.phone || params.clientPhone, [
+    greeting(params.clientName),
+    "",
+    params.statusLabel
+      ? `Votre colis *${trackingCode}* : *${params.statusLabel}*.`
+      : `Voici le suivi de votre colis *${trackingCode}*.`,
+    "",
+    (params.origin || params.destination) && `Trajet : ${params.origin || "Chine"} → ${params.destination || "Afrique"}`,
+    params.shippingMode && `Transport : ${params.shippingMode}${weightVol ? ` (${weightVol})` : ""}`,
+    params.shippingMark && `Marquage : ${params.shippingMark}`,
+    params.amountLabel && `Montant : *${params.amountLabel}*`,
+    "",
+    "Suivre mon colis :",
+    getTrackingPageUrl(trackingCode),
+    "",
+    REPLY_HINT,
+    SIGNATURE,
+  ]);
 }
 
-/**
- * Message WhatsApp courtois, détaillé et direct : Admin ➔ Client (pour une commande / sourcing / virement RMB)
- * Inclut le lien cliquable vers la page Tracking.
- */
+/** Message de l'agence au client : où en est son dossier (commande, virement en Chine). */
 export function buildAdminRequestWhatsAppUrl(params: {
   phone?: string;
   clientPhone?: string;
@@ -109,41 +123,35 @@ export function buildAdminRequestWhatsAppUrl(params: {
   shippingMark?: string;
   statusLabel?: string;
 }): string {
-  const rawPhone = params.phone || params.clientPhone || "";
-  const cleanPhone = rawPhone.replace(/[^0-9]/g, "").replace(/^00/, "");
-  const codeForTracking = (params.trackingNumber || params.reference || "").trim();
-  const trackingUrl = getTrackingPageUrl(codeForTracking);
+  const code = (params.trackingNumber || params.reference || "").trim();
   const amountText =
     params.amountFormatted ||
     (typeof params.totalAmountFcfa === "number" && params.totalAmountFcfa > 0
-      ? `${params.totalAmountFcfa.toLocaleString("fr-FR")} FCFA`
+      ? formatFcfaText(params.totalAmountFcfa)
       : undefined);
   const rmbText = params.rmbFormatted || params.rmbAmount;
 
-  const lines = [
-    `Bonjour ${params.clientName || "cher(e) client(e)"},`,
-    ``,
-    `Ici la direction *ROUM TRANSIT INTERNATIONAL* concernant votre dossier :`,
-    ``,
-    `• Référence dossier : *${params.reference}*`,
-    params.trackingNumber ? `• N° de Suivi Officiel : *${params.trackingNumber}*` : null,
-    params.shippingMark ? `• Shipping Mark : *${params.shippingMark}*` : null,
-    params.serviceLabel ? `• Opération : ${params.serviceLabel}` : null,
-    params.productName ? `• Marchandise : ${params.productName}` : null,
-    params.destination ? `• Destination : ${params.destination}` : null,
-    rmbText ? `• Montant Usine : *${rmbText}*` : null,
-    amountText ? `• Montant Total : *${amountText}*` : null,
-    params.statusLabel ? `• Statut du dossier : *${params.statusLabel}*` : null,
-    ``,
-    `*Cliquez ici pour suivre votre dossier en direct (${codeForTracking}) :*`,
-    `${trackingUrl}`,
-    ``,
-    `Merci pour votre confiance. Nous restons à votre écoute pour la suite des opérations.`,
-    `Cordialement,`,
-    `*La Direction ROUM TRANSIT*`,
-  ].filter((l) => l !== null);
-
-  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(lines.join("\n"))}`;
+  return clientChatUrl(params.phone || params.clientPhone, [
+    greeting(params.clientName),
+    "",
+    params.statusLabel
+      ? `Votre dossier *${params.reference}* : *${params.statusLabel}*.`
+      : `Voici où en est votre dossier *${params.reference}*.`,
+    "",
+    params.trackingNumber && `Numéro de suivi : *${params.trackingNumber}*`,
+    params.serviceLabel && `Service : ${params.serviceLabel}`,
+    params.productName && `Article : ${params.productName}`,
+    params.destination && `Destination : ${params.destination}`,
+    params.shippingMark && `Marquage : ${params.shippingMark}`,
+    rmbText && `Montant usine : ${rmbText}`,
+    amountText && `Total : *${amountText}*`,
+    "",
+    "Suivre mon dossier :",
+    getTrackingPageUrl(code),
+    "",
+    REPLY_HINT,
+    SIGNATURE,
+  ]);
 }
 
 /**
@@ -162,11 +170,7 @@ export function getPaymentPageUrl(params: { reference: string; accessKey?: strin
   return `${origin}/services/commande?${sp.toString()}`;
 }
 
-/**
- * ÉTAPE 2 (Admin ➔ Client) :
- * Message WhatsApp courtois et détaillé envoyant le Devis Officiel (après estimation du poids par ROUM)
- * + les numéros de paiement + le LIEN DE REDIRECTION CLIQUABLE vers les moyens de paiement & preuve.
- */
+/** Étape 2 : l'agence envoie le devis, le lien de paiement et ses comptes officiels. */
 export function buildAdminQuotePaymentWhatsAppUrl(params: {
   clientPhone: string;
   clientName?: string;
@@ -185,62 +189,41 @@ export function buildAdminQuotePaymentWhatsAppUrl(params: {
   moroccoRib?: string;
   accessKey?: string | null;
 }): string {
-  const cleanPhone = (params.clientPhone || "").replace(/[^0-9]/g, "").replace(/^00/, "");
   const paymentUrl = getPaymentPageUrl({ reference: params.reference, accessKey: params.accessKey });
+  const quantity = Number(params.productQuantity);
+  const hasGoods = typeof params.goodsTotalFcfa === "number" && params.goodsTotalFcfa > 0;
+  const hasShipping = typeof params.shippingFeeFcfa === "number" && params.shippingFeeFcfa > 0;
 
-
-  const weightLabel = params.estimatedCbm
-    ? `${params.estimatedCbm} m³ (Volume estimé par ROUM)`
-    : `${params.estimatedWeightKg || 1} kg (Poids estimé par ROUM)`;
-
-  const waveNum = params.waveNumber || "+225 01 53 63 85 69";
-  const orangeNum = params.orangeNumber || "#144*389278# / +225 07 48 29 11 00";
-  const moroccoRib = params.moroccoRib || "230 780 0001234567890123 45";
-
-  const lines = [
-    `Bonjour ${params.clientName || "cher(e) client(e)"},`,
-    ``,
-    `Ici la Direction *ROUM TRANSIT INTERNATIONAL*.`,
-    `Suite à l'analyse de votre commande *${params.reference}* et à l'estimation du poids de votre marchandise, voici votre *Devis Officiel* :`,
-    ``,
-    `*DÉTAIL DU DOSSIER :*`,
-    `• Référence : *${params.reference}*`,
-    params.productName ? `• Article : ${params.productName}` : null,
-    params.productQuantity ? `• Quantité : ${params.productQuantity} unité(s)` : null,
-    params.destination ? `• Destination : ${params.destination}` : null,
-    params.shippingMode ? `• Mode d'acheminement : ${params.shippingMode}` : null,
-    `• Poids / Volume estimé : *${weightLabel}*`,
-    ``,
-    `*DEVIS OFFICIEL À RÉGLER :*`,
-    typeof params.goodsTotalFcfa === "number" && params.goodsTotalFcfa > 0
-      ? `• Achat Marchandises : *${Math.round(params.goodsTotalFcfa).toLocaleString("fr-FR")} FCFA*`
-      : null,
-    typeof params.shippingFeeFcfa === "number" && params.shippingFeeFcfa > 0
-      ? `• Transport & Douane (${weightLabel}) : *${Math.round(params.shippingFeeFcfa).toLocaleString("fr-FR")} FCFA*`
-      : null,
-    `• *TOTAL À PAYER : ${Math.round(params.totalAmountFcfa).toLocaleString("fr-FR")} FCFA*`,
-    ``,
-    `*COMPTES OFFICIELS DE RÈGLEMENT :*`,
-    `• Wave Mobile Money : *${waveNum}*`,
-    `• Orange Money : *${orangeNum}*`,
-    `• Compte Maroc (RIB) : *${moroccoRib}*`,
-    ``,
-    `*Cliquez sur ce lien pour ouvrir votre moyen de paiement et joindre votre preuve de règlement :*`,
-    `${paymentUrl}`,
-    ``,
-    `Dès confirmation de votre paiement, nous vous transmettrons votre *Numéro de Suivi Officiel* pour suivre votre colis en direct.`,
-    `Cordialement,`,
-    `*La Direction ROUM TRANSIT*`,
-  ].filter((l) => l !== null);
-
-  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(lines.join("\n"))}`;
+  return clientChatUrl(params.clientPhone, [
+    greeting(params.clientName),
+    "",
+    `Votre devis est prêt pour le dossier *${params.reference}*.`,
+    "",
+    params.productName && `Article : ${params.productName}${quantity > 1 ? ` (${quantity} pièces)` : ""}`,
+    params.destination && `Destination : ${params.destination}`,
+    params.shippingMode && `Transport : ${params.shippingMode}`,
+    params.estimatedCbm
+      ? `Volume estimé : ${params.estimatedCbm} m³`
+      : `Poids estimé : ${params.estimatedWeightKg || 1} kg`,
+    "",
+    hasGoods && `Marchandises : ${formatFcfaText(params.goodsTotalFcfa!)}`,
+    hasShipping && `Transport et douane : ${formatFcfaText(params.shippingFeeFcfa!)}`,
+    `*Total à régler : ${formatFcfaText(params.totalAmountFcfa)}*`,
+    "",
+    "Payez et envoyez votre preuve de paiement ici :",
+    paymentUrl,
+    "",
+    params.waveNumber && `Wave : ${params.waveNumber}`,
+    params.orangeNumber && `Orange Money : ${params.orangeNumber}`,
+    params.moroccoRib && `Compte Maroc : ${params.moroccoRib}`,
+    "",
+    "Dès que votre paiement est confirmé, vous recevez votre numéro de suivi.",
+    REPLY_HINT,
+    SIGNATURE,
+  ]);
 }
 
-/**
- * ÉTAPE 3 (Admin ➔ Client) :
- * Message WhatsApp confirmant l'encaissement du paiement et transmettant le NUMÉRO DE SUIVI CLIQUABLE
- * qui renvoie directement vers la page /tracking/[trackingNumber].
- */
+/** Étape 3 : l'agence confirme le paiement et donne le numéro de suivi. */
 export function buildAdminPaymentConfirmedTrackingWhatsAppUrl(params: {
   clientPhone: string;
   clientName?: string;
@@ -253,33 +236,27 @@ export function buildAdminPaymentConfirmedTrackingWhatsAppUrl(params: {
   totalAmountFcfa?: number;
   shippingMark?: string;
 }): string {
-  const cleanPhone = (params.clientPhone || "").replace(/[^0-9]/g, "").replace(/^00/, "");
-  const trackingUrl = getTrackingPageUrl(params.trackingNumber);
+  const paid = typeof params.totalAmountFcfa === "number" && params.totalAmountFcfa > 0;
 
-  const lines = [
-    `Bonjour ${params.clientName || "cher(e) client(e)"},`,
-    ``,
-    `*CONFIRMATION D'ENCAISSEMENT & ATTRIBUTION DU NUMÉRO DE SUIVI*`,
-    `La Direction *ROUM TRANSIT INTERNATIONAL* vous confirme la bonne réception de votre paiement pour le dossier *${params.reference}*.`,
-    ``,
-    `*VOTRE EXPÉDITION EST ACTIVÉE :*`,
-    `• N° de Suivi Officiel : *${params.trackingNumber}*`,
-    params.shippingMark ? `• Shipping Mark : *${params.shippingMark}*` : null,
-    params.productName ? `• Marchandise : ${params.productName}` : null,
-    params.destination ? `• Destination : ${params.destination}` : null,
-    params.shippingMode
-      ? `• Acheminement : ${params.shippingMode}${params.weightOrVolume ? ` (${params.weightOrVolume})` : ""}`
-      : null,
-    typeof params.totalAmountFcfa === "number" && params.totalAmountFcfa > 0
-      ? `• Montant encaissé : *${Math.round(params.totalAmountFcfa).toLocaleString("fr-FR")} FCFA* (Réglé)`
-      : null,
-    ``,
-    `*Cliquez directement sur ce lien pour suivre votre colis en temps réel (${params.trackingNumber}) :*`,
-    `${trackingUrl}`,
-    ``,
-    `Merci pour votre confiance !`,
-    `*L'équipe ROUM TRANSIT INTERNATIONAL*`,
-  ].filter((l) => l !== null);
-
-  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(lines.join("\n"))}`;
+  return clientChatUrl(params.clientPhone, [
+    greeting(params.clientName),
+    "",
+    paid
+      ? `Votre paiement de *${formatFcfaText(params.totalAmountFcfa!)}* est bien reçu, merci !`
+      : "Votre paiement est bien reçu, merci !",
+    "",
+    `Votre numéro de suivi : *${params.trackingNumber}*`,
+    "",
+    params.productName && `Article : ${params.productName}`,
+    params.destination && `Destination : ${params.destination}`,
+    params.shippingMode &&
+      `Transport : ${params.shippingMode}${params.weightOrVolume ? ` (${params.weightOrVolume})` : ""}`,
+    params.shippingMark && `Marquage : ${params.shippingMark}`,
+    "",
+    "Suivre mon colis :",
+    getTrackingPageUrl(params.trackingNumber),
+    "",
+    REPLY_HINT,
+    SIGNATURE,
+  ]);
 }

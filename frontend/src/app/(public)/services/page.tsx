@@ -234,7 +234,7 @@ function ServicesContent() {
               through={`${offers.express?.delay || "4 à 5"} jours`}
               to={{ label: "Vers", value: "L'Afrique" }}
               highlight={offers.express ? `Dès ${offers.express.price} FCFA / kg` : undefined}
-              chips={["Douane incluse", "Pesée vidéo"]}
+              chips={["Douane incluse", "Photos et pesée"]}
               href="/tariffs?mode=AIR"
               cta="Voir les tarifs"
             />

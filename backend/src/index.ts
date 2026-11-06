@@ -70,7 +70,7 @@ app.onError((err, c) => {
   return c.json(
     {
       error: isProd
-        ? "Une erreur interne est survenue. L'équipe technique a été notifiée."
+        ? "Une erreur interne est survenue. Veuillez réessayer."
         : err.message || "Une erreur inattendue est survenue.",
     },
     500

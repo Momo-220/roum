@@ -4,11 +4,11 @@ import { NextResponse, type NextRequest } from "next/server";
  * Porte de l'espace de gestion.
  *
  * Pour un client, /admin n'existe pas : même page introuvable que n'importe quelle adresse inconnue.
- * L'équipe entre une fois par le lien secret /acces/<clé>, qui dépose un cookie sur son appareil.
+ * La direction entre une fois par le lien secret /acces/<clé>, qui dépose un cookie sur son appareil.
  * Sans clé configurée sur le serveur, la porte reste fermée pour tout le monde.
  *
  * Cette porte cache l'interface ; la protection des données reste assurée par l'API, qui exige
- * un compte de l'équipe pour chaque requête.
+ * le compte de la direction pour chaque requête.
  */
 
 const GATE_COOKIE = "roum_espace_gestion";

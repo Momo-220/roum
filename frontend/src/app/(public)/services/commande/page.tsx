@@ -20,8 +20,11 @@ import {
   ZoomIn,
   X,
   RotateCcw,
+  Link2,
 } from "lucide-react";
-import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { compressImage } from "@/shared/compressImage";
+import { WhatsAppButton, WhatsAppGlyph } from "@/components/WhatsAppButton";
+import { GaugeControl } from "@/components/GaugeControl";
 import { newUuid } from "@/shared/api";
 import { useLiveSync } from "@/shared/useLiveSync";
 import { usePublicCatalog } from "@/shared/usePublicCatalog";
@@ -34,6 +37,8 @@ import {
   OfficialTariff,
   getTrackingPageUrl,
   decodeHtmlEntitiesText,
+  convertToFcfa,
+  getExchangeRates,
 } from "@/shared";
 import {
   WaveLogo,
@@ -68,46 +73,15 @@ interface ExtractedProduct {
   originalUrl: string;
 }
 
-/**
- * Réduit une photo avant envoi : un cliché de téléphone pèse plusieurs Mo, trop pour un dossier en base.
- * Un fichier que le navigateur ne sait pas décoder est refusé plutôt que perdu en silence.
- */
-function compressImage(file: File, maxSide = 1200, quality = 0.8): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const objectUrl = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * ratio);
-      canvas.height = Math.round(img.height * ratio);
-      const ctx = canvas.getContext("2d");
-      URL.revokeObjectURL(objectUrl);
-      if (!ctx) {
-        reject(new Error("Image illisible."));
-        return;
-      }
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL("image/jpeg", quality));
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      reject(new Error("Image illisible."));
-    };
-    img.src = objectUrl;
-  });
+/** D'où vient l'article affiché : lien détecté ou simple photo du client. */
+function productSourceLabel(product: { platform?: string } | null): string {
+  const platform = (product?.platform || "").replace(/\s*\(.*\)/, "").trim();
+  return !platform || platform === "Image Produit" ? "Votre photo" : `Trouvé sur ${platform}`;
 }
 
-function convertToFcfa(amount: number, currency?: string): number {
-  const num = Number(amount) || 0;
-  const curr = (currency || "USD").toUpperCase();
-  if (curr === "RMB" || curr === "CNY" || curr === "¥") return Math.round(num * 88);
-  if (curr === "EUR" || curr === "€") return Math.round(num * 656);
-  if (curr === "FCFA" || curr === "XOF" || curr === "XAF") return Math.round(num);
-  // Default USD ($ on Alibaba.com)
-  return Math.round(num * 610);
+/** Les titres des sites chinois collent souvent leurs mots-clés après une virgule. */
+function readableTitle(title: string): string {
+  return decodeHtmlEntitiesText(title).replace(/,(?=\S)/g, ", ");
 }
 
 function CommandeFormContent() {
@@ -386,17 +360,33 @@ function CommandeFormContent() {
     }
   };
 
-  const handleRemoveProductImage = () => {
+  const productTitleText = extractedProduct?.title || productQuery || goodsDescription;
+
+  // Retire tout l'article : le client repart d'un champ vide et peut recoller le même lien.
+  const handleRemoveProduct = () => {
+    const detectedTitle = extractedProduct?.title;
     setUserProductImage(null);
     setUserProductImageName("");
     if (productImageInputRef.current) productImageInputRef.current.value = "";
+    setExtractedProduct(null);
+    setExtractError(null);
+    setProductLink("");
+    lastExtractedUrlRef.current = "";
+    if (detectedTitle && productQuery === detectedTitle) setProductQuery("");
+    if (detectedTitle && goodsDescription === detectedTitle) setGoodsDescription("");
+    setProductUnitPrice(15);
+    setProductCurrency("USD");
   };
 
   // Extraction automatique sur collage ou saisie avec debounce
   useEffect(() => {
-    if (!productLink || typeof productLink !== "string") return;
+    if (typeof productLink !== "string") return;
     const trimmed = productLink.trim();
-    if (!trimmed || trimmed === lastExtractedUrlRef.current) return;
+    if (!trimmed) {
+      if (lastExtractedUrlRef.current) handleRemoveProduct();
+      return;
+    }
+    if (trimmed === lastExtractedUrlRef.current) return;
 
     if (
       trimmed.startsWith("http://") ||
@@ -583,7 +573,7 @@ function CommandeFormContent() {
 
   // Calcul des conversions aux taux réels
   const unitPriceFCFA = useMemo(() => {
-    return convertToFcfa(productUnitPrice, productCurrency);
+    return convertToFcfa(productUnitPrice, productCurrency, getExchangeRates(settings));
   }, [productUnitPrice, productCurrency]);
 
   const totalArticlesFCFA = useMemo(() => {
@@ -702,7 +692,7 @@ function CommandeFormContent() {
     }
     return {
       title: "Devis en préparation",
-      text: "Notre équipe estime le poids et le prix de votre commande. Cette page se mettra à jour dès que votre devis sera prêt.",
+      text: "Nous estimons le poids et le prix de votre commande. Cette page se mettra à jour dès que votre devis sera prêt.",
     };
   }, [payRefParam, payDossier, payLoadState, payLoadError, dbPayDossier]);
 
@@ -975,7 +965,7 @@ function CommandeFormContent() {
             </h2>
             <p className="ios-success-desc">
               {orderResult.isPaymentStep
-                ? "Votre justificatif a été transmis à ROUM TRANSIT. Dès confirmation de l'encaissement par notre équipe, vous recevrez votre Numéro de Suivi (Tracking Number) officiel sur WhatsApp."
+                ? "Votre justificatif a été transmis à ROUM TRANSIT. Dès confirmation de l'encaissement, vous recevrez votre Numéro de Suivi (Tracking Number) officiel sur WhatsApp."
                 : "Téléchargez votre fiche PDF ci-dessous et envoyez-la sur WhatsApp à l'agence. ROUM TRANSIT estimera le poids de votre colis et vous enverra votre lien de paiement officiel."}
             </p>
 
@@ -1475,8 +1465,7 @@ function CommandeFormContent() {
                   </select>
                   <p className="ios-note-subtle" style={{ marginTop: "4px", color: "#524B43" }}>
                     <Check size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "3px" }} />
-                    Vous n&apos;avez pas besoin de connaître le poids de votre article :{" "}
-                    <strong>ROUM TRANSIT l&apos;estimera pour vous</strong> ({transportUnitRateFormatted}) avant de vous envoyer votre lien de règlement.
+                    Nous estimons le poids pour vous · {transportUnitRateFormatted}
                   </p>
                 </div>
               </div>
@@ -1492,12 +1481,14 @@ function CommandeFormContent() {
                 {option === "sans_fournisseur" ? (
                   <>
                     <div className="ios-field">
-                      <label htmlFor="productLink">Lien Alibaba, 1688 ou Taobao</label>
+                      <label htmlFor="productLink">Lien de l&apos;article</label>
                       <div className="ios-input-action-group">
+                        <Link2 size={17} className="ios-link-icon" />
                         <input
                           id="productLink"
                           type="url"
-                          placeholder="Collez le lien Alibaba ou 1688 (détection instantanée)"
+                          inputMode="url"
+                          placeholder="Collez le lien"
                           value={productLink}
                           onChange={(e) => setProductLink(e.target.value)}
                           className="ios-input"
@@ -1510,9 +1501,16 @@ function CommandeFormContent() {
                           title="Rechercher / actualiser"
                         >
                           <Search size={15} />
+                          <span>{extracting ? "Recherche..." : "Détecter"}</span>
                         </button>
                       </div>
-                      {extractError && <span className="ios-error-msg">{extractError}</span>}
+                      {extractError ? (
+                        <span className="ios-error-msg">{extractError}</span>
+                      ) : (
+                        !extractedProduct && (
+                          <span className="ios-field-hint">Le nom et la photo s&apos;ajoutent tout seuls.</span>
+                        )
+                      )}
                     </div>
 
                     {/* Aperçu instantané et photo agrandie du produit détecté depuis le lien + Tranches de prix */}
@@ -1578,45 +1576,16 @@ function CommandeFormContent() {
                           </div>
 
                           <div className="ios-product-preview-body">
-                            <div className="ios-product-preview-header">
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                                <span className="ios-product-preview-platform">
-                                  {extractedProduct?.platform || "ALIBABA"}
-                                </span>
-                                <span className="ios-product-preview-badge">
-                                  <Check size={11} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "3px" }} />
-                                  Article &amp; Photo détectés
-                                </span>
-                              </div>
-                              <div className="ios-preview-top-actions">
-                                <button
-                                  type="button"
-                                  onClick={() => productImageInputRef.current?.click()}
-                                  className="ios-preview-mini-pill"
-                                  title="Changer la photo"
-                                >
-                                  <Camera size={11} />
-                                  <span>Photo</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleRemoveProductImage}
-                                  className="ios-preview-remove-btn"
-                                  title="Retirer l'aperçu"
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                              </div>
-                            </div>
+                            <span className="ios-product-preview-source">
+                              <Check size={13} strokeWidth={3} />
+                              {productSourceLabel(extractedProduct)}
+                            </span>
 
-                            <div className="ios-product-preview-title" title={decodeHtmlEntitiesText(extractedProduct?.title || productQuery)}>
-                              {decodeHtmlEntitiesText(extractedProduct?.title || productQuery || "Article sélectionné")}
-                            </div>
-
-                            <div className="ios-product-preview-price-row">
-                              <span style={{ fontSize: "0.78rem", color: "#524B43", fontWeight: 600 }}>
-                                Indiquez votre quantité ci-dessous · ROUM TRANSIT s&apos;occupe du tarif usine &amp; du poids
-                              </span>
+                            <div
+                              className={`ios-product-preview-title${productTitleText ? "" : " empty"}`}
+                              title={decodeHtmlEntitiesText(productTitleText)}
+                            >
+                              {productTitleText ? readableTitle(productTitleText) : "Décrivez l'article ci-dessous"}
                             </div>
                           </div>
                         </div>
@@ -1629,63 +1598,47 @@ function CommandeFormContent() {
                         onDrop={handleDropImage}
                         className="ios-article-upload-zone"
                       >
-                        <Camera size={15} />
-                        <span>Ou joindre / coller une photo directement</span>
+                        <Camera size={17} />
+                        <span>Ajouter une photo de l&apos;article</span>
                       </button>
                     )}
 
                     <div className="ios-field">
-                      <label htmlFor="productQuery">Description de l&apos;article (modèle, couleur, taille)</label>
+                      <label htmlFor="productQuery">Description (modèle, couleur, taille)</label>
                       <input
                         id="productQuery"
                         type="text"
                         required
-                        placeholder="Ex: Écrans iPhone, Vêtements taille L, Pièces auto..."
+                        placeholder="Ex : écrans iPhone, vêtements taille L"
                         value={decodeHtmlEntitiesText(productQuery)}
                         onChange={(e) => setProductQuery(e.target.value)}
                         className="ios-input"
                       />
                     </div>
 
-                    <div className="ios-field">
-                      <label htmlFor="productQuantity">Quantité souhaitée</label>
-                      <div className="ios-stepper" style={{ maxWidth: "240px" }}>
-                        <button
-                          type="button"
-                          onClick={() => setProductQuantity((q) => Math.max(1, q - 1))}
-                          className="ios-stepper-btn"
-                        >
-                          –
-                        </button>
-                        <input
-                          id="productQuantity"
-                          type="number"
-                          min="1"
-                          required
-                          value={productQuantity === 0 ? "" : productQuantity}
-                          onChange={(e) => setProductQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                          className="ios-stepper-input"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setProductQuantity((q) => q + 1)}
-                          className="ios-stepper-btn"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
+                    <GaugeControl
+                      label="Quantité souhaitée"
+                      value={productQuantity}
+                      min={1}
+                      max={100}
+                      step={1}
+                      unit={productQuantity > 1 ? "pièces" : "pièce"}
+                      ticks={[1, 25, 50, 75, 100]}
+                      onChange={setProductQuantity}
+                    />
                   </>
                 ) : (
                   <>
                     {/* OPTION 2 : LIEN ARTICLE ALIBABA / 1688 AVEC AUTO-EXTRACTION & PHOTO */}
                     <div className="ios-field">
-                      <label htmlFor="productLink">Lien de l&apos;article Alibaba, 1688 ou Taobao</label>
+                      <label htmlFor="productLink">Lien de l&apos;article</label>
                       <div className="ios-input-action-group">
+                        <Link2 size={17} className="ios-link-icon" />
                         <input
                           id="productLink"
                           type="url"
-                          placeholder="Collez le lien Alibaba du produit payé chez votre fournisseur"
+                          inputMode="url"
+                          placeholder="Collez le lien"
                           value={productLink}
                           onChange={(e) => setProductLink(e.target.value)}
                           className="ios-input"
@@ -1698,9 +1651,16 @@ function CommandeFormContent() {
                           title="Rechercher / actualiser"
                         >
                           <Search size={15} />
+                          <span>{extracting ? "Recherche..." : "Détecter"}</span>
                         </button>
                       </div>
-                      {extractError && <span className="ios-error-msg">{extractError}</span>}
+                      {extractError ? (
+                        <span className="ios-error-msg">{extractError}</span>
+                      ) : (
+                        !extractedProduct && (
+                          <span className="ios-field-hint">Le nom et la photo s&apos;ajoutent tout seuls.</span>
+                        )
+                      )}
                     </div>
 
                     {/* Aperçu instantané et photo agrandie du produit détecté depuis le lien */}
@@ -1766,45 +1726,16 @@ function CommandeFormContent() {
                           </div>
 
                           <div className="ios-product-preview-body">
-                            <div className="ios-product-preview-header">
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                                <span className="ios-product-preview-platform">
-                                  {extractedProduct?.platform || "ALIBABA"}
-                                </span>
-                                <span className="ios-product-preview-badge">
-                                  <Check size={11} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "3px" }} />
-                                  Article &amp; Photo détectés
-                                </span>
-                              </div>
-                              <div className="ios-preview-top-actions">
-                                <button
-                                  type="button"
-                                  onClick={() => productImageInputRef.current?.click()}
-                                  className="ios-preview-mini-pill"
-                                  title="Changer la photo"
-                                >
-                                  <Camera size={11} />
-                                  <span>Photo</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleRemoveProductImage}
-                                  className="ios-preview-remove-btn"
-                                  title="Retirer l'aperçu"
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                              </div>
-                            </div>
+                            <span className="ios-product-preview-source">
+                              <Check size={13} strokeWidth={3} />
+                              {productSourceLabel(extractedProduct)}
+                            </span>
 
-                            <div className="ios-product-preview-title" title={decodeHtmlEntitiesText(extractedProduct?.title || goodsDescription)}>
-                              {decodeHtmlEntitiesText(extractedProduct?.title || goodsDescription || "Article sélectionné")}
-                            </div>
-
-                            <div className="ios-product-preview-price-row">
-                              <span style={{ fontSize: "0.78rem", color: "#524B43", fontWeight: 600 }}>
-                                Expédition &amp; poids calculés par ROUM TRANSIT
-                              </span>
+                            <div
+                              className={`ios-product-preview-title${productTitleText ? "" : " empty"}`}
+                              title={decodeHtmlEntitiesText(productTitleText)}
+                            >
+                              {productTitleText ? readableTitle(productTitleText) : "Décrivez l'article ci-dessous"}
                             </div>
                           </div>
                         </div>
@@ -1817,8 +1748,8 @@ function CommandeFormContent() {
                         onDrop={handleDropImage}
                         className="ios-article-upload-zone"
                       >
-                        <Camera size={15} />
-                        <span>Ou joindre / coller une photo directement</span>
+                        <Camera size={17} />
+                        <span>Ajouter une photo de l&apos;article</span>
                       </button>
                     )}
 
@@ -1882,58 +1813,43 @@ function CommandeFormContent() {
 
               {/* SECTION 3 : RÉCAPITULATIF MARCHANDISES & MODALITÉS DE TRANSPORT */}
               <div className="ios-section">
-                <div className="ios-section-caption">Récapitulatif de votre commande</div>
+                <div className="ios-section-caption">Récapitulatif</div>
 
-                <div className="ios-receipt">
-                  {option === "sans_fournisseur" ? (
-                    <div className="ios-receipt-row">
-                      <span>Quantité souhaitée</span>
-                      <span className="mono" style={{ fontWeight: 700, color: "#1C1815" }}>
-                        {productQuantity} unité(s)
-                      </span>
+                <div className="ios-summary">
+                  <dl>
+                    {option === "sans_fournisseur" ? (
+                      <div>
+                        <dt>Quantité</dt>
+                        <dd>
+                          {productQuantity} {productQuantity > 1 ? "pièces" : "pièce"}
+                        </dd>
+                      </div>
+                    ) : (
+                      <div>
+                        <dt>Réglé à l&apos;usine</dt>
+                        <dd>{paidToSupplier || "À préciser"}</dd>
+                      </div>
+                    )}
+                    <div>
+                      <dt>Transport</dt>
+                      <dd>{transportModeLabel}</dd>
                     </div>
-                  ) : (
-                    <div className="ios-receipt-row">
-                      <span>Marchandise réglée fournisseur</span>
-                      <span className="mono">{paidToSupplier || "Réglé à l'usine"}</span>
+                    <div>
+                      <dt>Tarif du transport</dt>
+                      <dd>{transportUnitRateFormatted}</dd>
                     </div>
-                  )}
+                    <div>
+                      <dt>Prix et poids</dt>
+                      <dd>Calculés par ROUM TRANSIT</dd>
+                    </div>
+                  </dl>
 
-                  <div className="ios-receipt-row">
-                    <span>Moyen de transport souhaité</span>
-                    <span style={{ fontWeight: 600, color: "#1C1815" }}>{transportModeLabel}</span>
-                  </div>
-
-                  <div className="ios-receipt-row">
-                    <span>Tarif officiel du transport</span>
-                    <span className="mono">{transportUnitRateFormatted}</span>
-                  </div>
-
-                  <div className="ios-receipt-row">
-                    <span>Prix article &amp; Poids du colis</span>
-                    <span
-                      style={{
-                        fontSize: "0.75rem",
-                        fontWeight: 700,
-                        color: "#6B5844",
-                        background: "#F1E7D9",
-                        padding: "2px 8px",
-                        borderRadius: "9999px",
-                      }}
-                    >
-                      Calculés par ROUM TRANSIT
-                    </span>
-                  </div>
-
-                  <div className="ios-receipt-divider" />
-
-                  <div className="ios-receipt-row total">
-                    <span>Montant total à régler</span>
-                    <span className="bold">
-                      <small style={{ fontSize: "0.84rem", fontWeight: 700, color: "#166534" }}>
-                        Devis complet envoyé par ROUM sur WhatsApp
-                      </small>
-                    </span>
+                  <div className="ios-summary-total">
+                    <span>Montant total</span>
+                    <strong>
+                      <WhatsAppGlyph size={22} />
+                      Devis envoyé sur WhatsApp
+                    </strong>
                   </div>
                 </div>
               </div>
@@ -1942,103 +1858,31 @@ function CommandeFormContent() {
 
               {/* SECTION 4 : PROCESSUS EN 3 ÉTAPES (AUCUN PAIEMENT IMMÉDIAT REQUIS ICI) */}
               <div className="ios-section">
-                <div className="ios-section-caption">Comment fonctionne la validation &amp; le règlement ?</div>
-                <div
-                  style={{
-                    background: "#F7F5F0",
-                    border: "1px solid rgba(184, 164, 136, 0.35)",
-                    borderRadius: "18px",
-                    padding: "14px 16px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "10px",
-                    fontSize: "0.82rem",
-                    color: "#3F3A34",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-                    <span
-                      style={{
-                        width: "22px",
-                        height: "22px",
-                        borderRadius: "50%",
-                        background: "#1C1815",
-                        color: "#FFFFFF",
-                        fontSize: "0.72rem",
-                        fontWeight: 800,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        marginTop: "1px",
-                      }}
-                    >
-                      1
-                    </span>
-                    <div>
-                      <strong style={{ color: "#1C1815" }}>Envoi de votre commande (Sans paiement immédiat)</strong>
-                      <div style={{ color: "#716C65", fontSize: "0.78rem", marginTop: "1px" }}>
-                        Validez votre demande ci-dessous pour obtenir votre fiche PDF et l&apos;envoyer sur WhatsApp à ROUM TRANSIT.
-                      </div>
-                    </div>
-                  </div>
+                <div className="ios-section-caption">Et ensuite ?</div>
 
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-                    <span
-                      style={{
-                        width: "22px",
-                        height: "22px",
-                        borderRadius: "50%",
-                        background: "#B8A488",
-                        color: "#FFFFFF",
-                        fontSize: "0.72rem",
-                        fontWeight: 800,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        marginTop: "1px",
-                      }}
-                    >
-                      2
-                    </span>
+                <ol className="ios-steps">
+                  <li>
+                    <span>1</span>
                     <div>
-                      <strong style={{ color: "#1C1815" }}>Estimation du poids &amp; Lien de paiement sur WhatsApp</strong>
-                      <div style={{ color: "#716C65", fontSize: "0.78rem", marginTop: "1px" }}>
-                        Notre équipe estime le poids réel de votre article, calcule le devis exact et vous envoie sur WhatsApp un{" "}
-                        <strong>lien de paiement officiel</strong> (Wave, Orange Money ou Compte Maroc) pour joindre votre reçu.
-                      </div>
+                      <strong>Vous envoyez votre commande</strong>
+                      <p>Aucun paiement maintenant.</p>
                     </div>
-                  </div>
-
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-                    <span
-                      style={{
-                        width: "22px",
-                        height: "22px",
-                        borderRadius: "50%",
-                        background: "#16A34A",
-                        color: "#FFFFFF",
-                        fontSize: "0.72rem",
-                        fontWeight: 800,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        marginTop: "1px",
-                      }}
-                    >
-                      3
-                    </span>
+                  </li>
+                  <li>
+                    <span>2</span>
                     <div>
-                      <strong style={{ color: "#1C1815" }}>Confirmation d&apos;encaissement &amp; N° de Suivi Officiel</strong>
-                      <div style={{ color: "#716C65", fontSize: "0.78rem", marginTop: "1px" }}>
-                        Dès confirmation de votre paiement, nous vous envoyons votre{" "}
-                        <strong>Tracking Number cliquable</strong> pour suivre votre colis en direct jusqu&apos;à destination.
-                      </div>
+                      <strong>Nous préparons votre devis</strong>
+                      <p>Vous recevez le prix exact et le lien de paiement.</p>
                     </div>
-                  </div>
-                </div>
+                  </li>
+                  <li>
+                    <span>3</span>
+                    <div>
+                      <strong>Vous suivez votre colis</strong>
+                      <p>Votre numéro de suivi arrive dès le paiement confirmé.</p>
+                    </div>
+                  </li>
+                </ol>
               </div>
 
               {/* BOUTON D'ACTION PRINCIPAL EN PILULE */}
@@ -2047,7 +1891,7 @@ function CommandeFormContent() {
                   {submitting
                     ? "Enregistrement..."
                     : option === "sans_fournisseur"
-                    ? "Envoyer ma commande (Estimation du poids par ROUM)"
+                    ? "Envoyer ma commande"
                     : "Créer mon dossier d'expédition"}
                 </button>
               </div>
@@ -2291,21 +2135,180 @@ function CommandeFormContent() {
 
         .ios-input-action-group {
           display: flex;
-          gap: 6px;
+          align-items: center;
+          gap: 8px;
+          min-height: 54px;
+          padding: 4px 4px 4px 16px;
+          border: 1px solid rgba(28, 24, 21, 0.07);
+          border-radius: 9999px;
+          background: #F7F5F0;
+          transition: border-color 0.2s ease, background 0.2s ease;
         }
 
         .ios-btn-inline {
-          height: 46px;
-          padding: 0 16px;
-          background: #F7F5F0;
-          border: 1px solid rgba(28, 24, 21, 0.07);
-          border-radius: 9999px;
-          color: #1C1815;
+          flex-shrink: 0;
           display: inline-flex;
           align-items: center;
           justify-content: center;
+          gap: 6px;
+          height: 44px;
+          padding: 0 16px;
+          border: 0;
+          border-radius: 9999px;
+          background: #EADDCB;
+          color: #3A2A21;
+          font-family: inherit;
+          font-size: 0.88rem;
+          font-weight: 700;
           cursor: pointer;
-          transition: all 0.18s ease;
+          transition: background 0.15s ease;
+        }
+
+        .ios-input-action-group:focus-within {
+          border-color: #A8957C;
+          background: #FFFFFF;
+        }
+
+        .ios-input-action-group .ios-input,
+        .ios-input-action-group .ios-input:focus {
+          flex: 1;
+          min-width: 0;
+          height: 44px;
+          padding: 0;
+          border: 0;
+          box-shadow: none;
+          background: transparent;
+          text-overflow: ellipsis;
+        }
+
+        .ios-link-icon {
+          flex-shrink: 0;
+          color: #8E877E;
+        }
+
+        .ios-field-hint {
+          padding: 0 4px;
+          color: #8E877E;
+          font-size: 0.8rem;
+          line-height: 1.4;
+        }
+
+        .ios-summary {
+          padding: 6px 20px 18px;
+          border: 1px solid #EFE6D9;
+          border-radius: 24px;
+          background: linear-gradient(165deg, #FFFDF9 0%, #FBF3E8 100%);
+        }
+
+        .ios-summary dl {
+          margin: 0;
+        }
+
+        .ios-summary dl > div {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          justify-content: space-between;
+          gap: 2px 14px;
+          padding: 12px 0;
+          border-bottom: 1px solid rgba(58, 42, 33, 0.08);
+        }
+
+        .ios-summary dt {
+          color: #716C65;
+          font-size: 0.9rem;
+        }
+
+        .ios-summary dd {
+          margin: 0 0 0 auto;
+          color: #1C1815;
+          font-size: 0.92rem;
+          font-weight: 700;
+          text-align: right;
+        }
+
+        .ios-summary-total {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px 14px;
+          padding-top: 14px;
+        }
+
+        .ios-summary-total span {
+          color: #1C1815;
+          font-size: 1.02rem;
+          font-weight: 800;
+        }
+
+        .ios-summary-total strong {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 6px 14px 6px 8px;
+          border-radius: 9999px;
+          background: #FFFFFF;
+          box-shadow: 0 6px 14px -10px rgba(58, 42, 33, 0.4);
+          color: #3A2A21;
+          font-size: 0.86rem;
+          font-weight: 700;
+        }
+
+        .ios-steps {
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+
+        .ios-steps li {
+          position: relative;
+          display: flex;
+          gap: 14px;
+          padding-bottom: 20px;
+        }
+
+        .ios-steps li:last-child {
+          padding-bottom: 0;
+        }
+
+        /* Le fil qui relie les étapes, comme sur la page de suivi */
+        .ios-steps li:not(:last-child)::before {
+          content: "";
+          position: absolute;
+          top: 34px;
+          bottom: 0;
+          left: 16px;
+          border-left: 2px dotted #D9CBB8;
+        }
+
+        .ios-steps li > span {
+          flex-shrink: 0;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          background: #EADDCB;
+          color: #3A2A21;
+          font-size: 0.9rem;
+          font-weight: 800;
+        }
+
+        .ios-steps strong {
+          display: block;
+          padding-top: 5px;
+          color: #1C1815;
+          font-size: 0.98rem;
+          font-weight: 800;
+        }
+
+        .ios-steps p {
+          margin: 3px 0 0;
+          color: #716C65;
+          font-size: 0.88rem;
+          line-height: 1.45;
         }
 
         .ios-btn-inline:hover {
@@ -2320,27 +2323,26 @@ function CommandeFormContent() {
         /* Zone d'import de la photo réelle de l'article par l'utilisateur */
         .ios-article-upload-zone {
           width: 100%;
-          min-height: 48px;
-          background: #F7F5F0;
-          border: 1.5px dashed rgba(28, 24, 21, 0.16);
-          border-radius: 16px;
-          color: #716C65;
-          font-size: 0.82rem;
-          font-weight: 600;
+          min-height: 50px;
+          padding: 8px 18px;
+          border: 0;
+          border-radius: 9999px;
+          background: #F3EBDF;
+          color: #3A2A21;
+          font-family: inherit;
+          font-size: 0.92rem;
+          font-weight: 700;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          padding: 8px 14px;
+          gap: 9px;
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: background 0.15s ease;
           text-align: center;
         }
 
         .ios-article-upload-zone:hover {
-          background: #EFECE6;
-          border-color: #1C1815;
-          color: #1C1815;
+          background: #EADDCB;
         }
 
         .ios-article-photo-card {
@@ -2429,68 +2431,51 @@ function CommandeFormContent() {
           display: flex;
           flex-direction: column;
           gap: 12px;
-          background: #F7F5F0;
-          border: 1.5px solid rgba(184, 164, 136, 0.35);
-          border-radius: 22px;
-          padding: 16px;
-          margin-top: 6px;
-          position: relative;
-          transition: all 0.2s ease;
-          box-shadow: 0 6px 20px -4px rgba(28, 24, 21, 0.06);
+          margin-top: 2px;
+          padding: 12px;
+          border: 1px solid #EFE6D9;
+          border-radius: 24px;
+          background: linear-gradient(165deg, #FFFDF9 0%, #FBF3E8 100%);
         }
 
         .ios-product-preview-main {
           display: flex;
-          align-items: flex-start;
-          gap: 16px;
+          align-items: center;
+          gap: 12px;
         }
 
         .ios-product-preview-thumb-wrap {
           position: relative;
-          width: 118px;
-          height: 118px;
           flex-shrink: 0;
-          border-radius: 18px;
+          width: 84px;
+          height: 84px;
           overflow: hidden;
+          border-radius: 16px;
           background: #FFFFFF;
-          border: 1px solid rgba(28, 24, 21, 0.1);
           cursor: zoom-in;
-          box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
-        }
-
-        @media (max-width: 640px) {
-          .ios-product-preview-thumb-wrap {
-            width: 96px;
-            height: 96px;
-            border-radius: 15px;
-          }
-          .ios-product-preview-main {
-            gap: 12px;
-          }
         }
 
         .ios-product-preview-thumb {
           width: 100%;
           height: 100%;
-          object-fit: contain;
+          object-fit: cover;
           display: block;
           background: #FFFFFF;
-          padding: 4px;
         }
 
         .ios-thumb-zoom-hint {
           position: absolute;
-          bottom: 6px;
-          right: 6px;
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background: rgba(28, 24, 21, 0.65);
-          color: #FFFFFF;
+          right: 4px;
+          bottom: 4px;
           display: flex;
           align-items: center;
           justify-content: center;
-          backdrop-filter: blur(4px);
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: #FFFBF4;
+          box-shadow: 0 2px 8px rgba(58, 42, 33, 0.18);
+          color: #3A2A21;
           pointer-events: none;
         }
 
@@ -2499,50 +2484,62 @@ function CommandeFormContent() {
           min-width: 0;
           display: flex;
           flex-direction: column;
-          gap: 6px;
-        }
-
-        .ios-product-preview-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 6px;
-        }
-
-        .ios-preview-top-actions {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          flex-shrink: 0;
+          align-items: flex-start;
+          gap: 3px;
         }
 
         .ios-preview-mini-pill {
           display: inline-flex;
           align-items: center;
-          gap: 4px;
-          background: #FFFFFF;
-          border: 1px solid rgba(28, 24, 21, 0.12);
+          gap: 6px;
+          min-height: 38px;
+          padding: 0 13px;
+          border: 0;
           border-radius: 9999px;
-          padding: 4px 10px;
-          font-size: 0.7rem;
-          font-weight: 600;
-          color: #1C1815;
+          background: #EADDCB;
+          color: #3A2A21;
+          font-family: inherit;
+          font-size: 0.82rem;
+          font-weight: 700;
+          white-space: nowrap;
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: background 0.15s ease, color 0.15s ease;
         }
 
         .ios-preview-mini-pill:hover {
-          background: #EAE6DE;
+          background: #E0D1BB;
         }
 
-        .ios-product-preview-platform {
-          font-size: 0.66rem;
-          font-weight: 800;
-          background: #DCFCE7;
-          color: #166534;
-          padding: 3px 8px;
-          border-radius: 9999px;
-          text-transform: uppercase;
+        .ios-product-preview-source {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          color: #1E7A43;
+          font-size: 0.76rem;
+          font-weight: 700;
+        }
+
+        .ios-product-preview-title.empty {
+          color: #716C65;
+          font-weight: 600;
+        }
+
+        .ios-preview-actions {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: space-between;
+          gap: 6px;
+        }
+
+        .ios-preview-mini-pill.quiet {
+          background: transparent;
+          color: #716C65;
+        }
+
+        .ios-preview-mini-pill.quiet:hover {
+          background: #FBEAEA;
+          color: #A12B2B;
         }
 
         .ios-product-preview-badge {
@@ -2552,34 +2549,14 @@ function CommandeFormContent() {
         }
 
         .ios-product-preview-title {
-          font-size: 0.92rem;
-          font-weight: 700;
           color: #1C1815;
-          line-height: 1.38;
+          font-size: 0.88rem;
+          font-weight: 700;
+          line-height: 1.3;
           display: -webkit-box;
-          -webkit-line-clamp: 3;
+          -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
-        }
-
-        .ios-product-preview-price-row {
-          display: flex;
-          align-items: baseline;
-          flex-wrap: wrap;
-          gap: 6px;
-          margin-top: 2px;
-        }
-
-        .ios-product-preview-price-cny {
-          font-size: 1.02rem;
-          font-weight: 800;
-          color: #6B5844;
-        }
-
-        .ios-product-preview-price-cfa {
-          font-size: 0.76rem;
-          font-weight: 600;
-          color: #716C65;
         }
 
         /* Grille de prix par tranches (MOQ Alibaba / 1688) */
@@ -2666,26 +2643,6 @@ function CommandeFormContent() {
           color: #716C65;
         }
 
-        .ios-preview-remove-btn {
-          width: 28px;
-          height: 28px;
-          border-radius: 50%;
-          border: none;
-          background: #FFFFFF;
-          color: #A39D93;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: all 0.15s ease;
-          flex-shrink: 0;
-        }
-
-        .ios-preview-remove-btn:hover {
-          background: #FEE2E2;
-          color: #DC2626;
-        }
-
         /* Bannière textuelle de l'article détecté par lien */
         .ios-extracted-banner {
           display: flex;
@@ -2719,48 +2676,6 @@ function CommandeFormContent() {
         }
 
         /* Stepper Quantité en pilule */
-        .ios-stepper {
-          display: flex;
-          align-items: center;
-          height: 46px;
-          background: #F7F5F0;
-          border: 1px solid rgba(28, 24, 21, 0.07);
-          border-radius: 9999px;
-          padding: 3px;
-        }
-
-        .ios-stepper-btn {
-          width: 40px;
-          height: 40px;
-          border: none;
-          background: #FFFFFF;
-          border-radius: 9999px;
-          font-size: 1.1rem;
-          font-weight: 600;
-          color: #1C1815;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 1px 3px rgba(28, 24, 21, 0.06);
-          transition: background-color 0.15s ease;
-        }
-
-        .ios-stepper-btn:hover {
-          background: #F4F1EA;
-        }
-
-        .ios-stepper-input {
-          flex: 1;
-          height: 100%;
-          border: none;
-          background: transparent;
-          text-align: center;
-          font-size: 0.95rem;
-          font-weight: 700;
-          outline: none;
-          color: #1C1815;
-        }
 
         .ios-currency-row {
           display: flex;
@@ -2902,19 +2817,19 @@ function CommandeFormContent() {
           display: inline-flex;
           align-items: center;
           gap: 4px;
-          background: #1C1815;
+          background: #EADDCB;
           border: none;
           border-radius: 9999px;
           padding: 5px 10px;
           font-size: 0.72rem;
-          font-weight: 600;
-          color: #FAF8F5;
+          font-weight: 700;
+          color: #3A2A21;
           cursor: pointer;
           transition: transform 0.1s ease, background 0.15s ease;
         }
 
         .ios-open-app-pill:hover {
-          background: #000000;
+          background: #E0D1BB;
         }
 
         .ios-open-app-pill:active {
@@ -2982,11 +2897,12 @@ function CommandeFormContent() {
 
         .ios-submit-btn {
           width: 100%;
-          height: 50px;
-          background: #1C1815;
-          color: #FAF8F5;
-          font-size: 0.96rem;
-          font-weight: 700;
+          min-height: 52px;
+          padding: 8px 20px;
+          background: #EADDCB;
+          color: #3A2A21;
+          font-size: 0.98rem;
+          font-weight: 800;
           border: none;
           border-radius: 9999px;
           cursor: pointer;
@@ -2994,11 +2910,11 @@ function CommandeFormContent() {
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 4px 18px rgba(28, 24, 21, 0.15);
+          box-shadow: none;
         }
 
         .ios-submit-btn:hover {
-          background: #000000;
+          background: #E0D1BB;
           transform: translateY(-1px);
         }
 
@@ -3231,6 +3147,30 @@ function CommandeFormContent() {
         .mono {
           font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         }
+
+        /* Récapitulatif sur téléphone : chaque ligne respire, le total passe en pleine largeur. */
+        @media (max-width: 480px) {
+          .ios-receipt-row {
+            flex-wrap: wrap;
+            gap: 2px 12px;
+          }
+
+          .ios-receipt-row > span:last-child {
+            margin-left: auto;
+            text-align: right;
+          }
+
+          .ios-receipt-row.total {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+          }
+
+          .ios-receipt-row.total > span:last-child {
+            margin-left: 0;
+            text-align: left;
+          }
+        }
       `,
         }}
       />
@@ -3301,6 +3241,32 @@ function CommandeFormContent() {
             {extractedProduct?.title && (
               <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#1C1815", textAlign: "center", maxWidth: "500px" }}>
                 {extractedProduct.title}
+              </div>
+            )}
+            {!payRefParam && (
+              <div className="ios-preview-actions">
+                <button
+                  type="button"
+                  className="ios-preview-mini-pill"
+                  onClick={() => {
+                    setZoomImageUrl(null);
+                    productImageInputRef.current?.click();
+                  }}
+                >
+                  <Camera size={14} />
+                  <span>Changer la photo</span>
+                </button>
+                <button
+                  type="button"
+                  className="ios-preview-mini-pill quiet"
+                  onClick={() => {
+                    setZoomImageUrl(null);
+                    handleRemoveProduct();
+                  }}
+                >
+                  <Trash2 size={14} />
+                  <span>Retirer</span>
+                </button>
               </div>
             )}
           </div>

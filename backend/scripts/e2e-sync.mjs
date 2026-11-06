@@ -469,4 +469,77 @@ await check("un tarif ajouté, modifié ou supprimé apparaît chez le client", 
   assert.equal(await find(), undefined);
 });
 
+const PIXEL =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+await check("une pesée et une photo ajoutées par l'admin apparaissent dans le suivi du client", async () => {
+  const quote = await call("POST", "/api/public/quotes", { body: orderBody(randomUUID()) });
+  assert.equal(quote.status, 201, JSON.stringify(quote.data));
+  const photoRef = quote.data.quote_reference;
+  await call("PATCH", `/api/admin/requests/${photoRef}/quote`, { headers: ADMIN, body: { totalAmountFcfa: 100000 } });
+  const confirmed = await call("POST", `/api/admin/requests/${photoRef}/confirm-tracking`, { headers: ADMIN, body: {} });
+  const photoTracking = confirmed.data.tracking_number;
+  assert.ok(photoTracking, JSON.stringify(confirmed.data));
+
+  const before = await call("GET", `/api/v1/public/tracking/${photoTracking}`);
+  assert.deepEqual(before.data.photos, []);
+  assert.equal(before.data.reception, null);
+
+  const shipmentId = (await call("GET", `/api/admin/shipments/${photoTracking}/photos`, { headers: ADMIN })).data.tracking_number;
+  assert.equal(shipmentId, photoTracking);
+
+  const versionBefore = (await call("GET", "/api/public/sync")).data.versions.shipments;
+  const photoId = randomUUID();
+  const added = await call("POST", `/api/admin/shipments/${photoTracking}/photos`, {
+    headers: ADMIN,
+    body: { id: photoId, data_url: PIXEL },
+  });
+  assert.equal(added.status, 201, JSON.stringify(added.data));
+  // Le même envoi rejoué après une coupure ne crée pas de doublon.
+  await call("POST", `/api/admin/shipments/${photoTracking}/photos`, { headers: ADMIN, body: { id: photoId, data_url: PIXEL } });
+
+  const after = await call("GET", `/api/v1/public/tracking/${photoTracking}`);
+  assert.equal(after.data.photos.length, 1);
+  assert.ok((await call("GET", "/api/public/sync")).data.versions.shipments > versionBefore, "le suivi doit se rafraîchir");
+
+  const image = await fetch(`${API}${after.data.photos[0].url}`);
+  assert.equal(image.status, 200);
+  assert.equal(image.headers.get("content-type"), "image/png");
+  assert.equal((await fetch(`${API}/api/v1/public/tracking/RM-AIR-2610-XXXXXX/photos/${photoId}`)).status, 404);
+
+  const refused = await call("POST", `/api/admin/shipments/${photoTracking}/photos`, {
+    headers: ADMIN,
+    body: { id: randomUUID(), data_url: "data:image/svg+xml;base64,PHN2Zz4=" },
+  });
+  assert.equal(refused.status, 400);
+  assert.equal((await call("POST", `/api/admin/shipments/${photoTracking}/photos`, { body: { id: randomUUID(), data_url: PIXEL } })).status, 401);
+
+  const intake = await call("PATCH", `/api/admin/shipments/${(await shipmentRow(photoTracking)).id}/intake`, {
+    headers: ADMIN,
+    body: { total_weight_kg: 12.5, total_volume_cbm: 0.4, hub_location: "Dépôt Guangzhou" },
+  });
+  assert.ok(intake.status < 300, JSON.stringify(intake.data));
+  const weighed = await call("GET", `/api/v1/public/tracking/${photoTracking}`);
+  assert.equal(weighed.data.reception.weight_kg, 12.5);
+  assert.equal(weighed.data.reception.location, "Dépôt Guangzhou");
+
+  await call("DELETE", `/api/admin/shipments/${photoTracking}/photos/${photoId}`, { headers: ADMIN });
+  assert.deepEqual((await call("GET", `/api/v1/public/tracking/${photoTracking}`)).data.photos, []);
+  assert.equal((await fetch(`${API}${after.data.photos[0].url}`)).status, 404);
+});
+
+await check("un taux de change modifié par l'admin arrive chez le client, un taux invalide est refusé", async () => {
+  const before = (await call("GET", "/api/public/sync")).data.versions.settings;
+  const saved = await call("PUT", "/api/admin/settings", { headers: ADMIN, body: { exchange_rate_rmb: "92.5" } });
+  assert.equal(saved.status, 200, JSON.stringify(saved.data));
+  assert.equal((await call("GET", "/api/public/settings")).data.settings.exchange_rate_rmb, "92.5");
+  assert.ok((await call("GET", "/api/public/sync")).data.versions.settings > before);
+
+  for (const value of ["", "0", "-4", "abc"]) {
+    const refused = await call("PUT", "/api/admin/settings", { headers: ADMIN, body: { exchange_rate_rmb: value } });
+    assert.equal(refused.status, 400, `le taux « ${value} » doit être refusé`);
+  }
+  assert.equal((await call("GET", "/api/public/settings")).data.settings.exchange_rate_rmb, "92.5");
+});
+
 console.log(`\n${passed} vérifications réussies.`);

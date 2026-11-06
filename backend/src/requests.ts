@@ -4,7 +4,7 @@ import { generateReferenceSuffix } from "./shared";
  * Représentation d'un dossier client, partagée par les routes publiques et admin.
  *
  * `customer_requests` est la seule source de vérité. Les informations commerciales qui n'ont pas de
- * colonne dédiée vivent dans `metadata_json`, jamais dans `admin_notes` (texte libre de l'équipe).
+ * colonne dédiée vivent dans `metadata_json`, jamais dans `admin_notes` (texte libre de la gestion).
  */
 
 type Row = Record<string, any>;
@@ -98,7 +98,7 @@ export function toAdminRequest(row: Row, items: Row[] = [], proof?: { has_proof?
   };
 }
 
-/** Vue envoyée au client : liste blanche, sans notes internes ni données d'équipe. */
+/** Vue envoyée au client : liste blanche, sans notes internes. */
 export function toPublicDossier(row: Row, items: Row[] = []) {
   const meta = parseMeta(row);
   return {

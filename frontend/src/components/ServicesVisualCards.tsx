@@ -49,7 +49,7 @@ const SERVICES_DATA: ServiceItem[] = [
     features: [
       "Paiement direct (Wave, Orange Money, Compte Maroc)",
       "Zéro carte bancaire internationale requise",
-      "Pesée vidéo & contrôle des cartons à Guangzhou",
+      "Photos, pesée et contrôle des cartons à Guangzhou",
       "Dédouanement complet inclus jusqu'à destination",
     ],
     metrics: [
@@ -84,7 +84,7 @@ const SERVICES_DATA: ServiceItem[] = [
     title: "Voie Aérienne",
     subtitle: "Chine, Dubaï, France & Maroc direct",
     description:
-      "Vols hebdomadaires pour colis urgents, téléphones et électronique. Pesée vidéo et dédouanement complet inclus au kilo.",
+      "Vols hebdomadaires pour colis urgents, téléphones et électronique. Pesée, photos et dédouanement complet inclus au kilo.",
     image: "/images/services/aerien-hublot.jpg",
     href: "/tariffs?mode=AIR",
     ctaText: "Voir les tarifs aériens",
@@ -92,7 +92,7 @@ const SERVICES_DATA: ServiceItem[] = [
       "Vols réguliers Chine, Dubaï, France & Maroc",
       "Formule Express (4 à 5 j) ou Normale (10 à 12 j)",
       "Dédouanement intégral compris au kilo",
-      "Pesée vidéo certifiée dès réception",
+      "Photos et pesée dès réception",
     ],
     metrics: [
       { label: "Délai express", value: "4 à 5 jours" },
@@ -1017,6 +1017,10 @@ export function ServicesVisualCards() {
             right: 14px !important;
             width: 32px !important;
             height: 32px !important;
+          }
+
+          .services-section-wrapper {
+            margin-bottom: 8px;
           }
 
           .mobile-horizontal-scroll {

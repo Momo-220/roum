@@ -28,10 +28,10 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
 };
 
 const DOSSIER_STATUS_VIEWS: Record<string, { code: string; label: string; description: string }> = {
-  NEW: { code: "DRAFT", label: "Dossier enregistré chez ROUM TRANSIT", description: "Votre dossier est en cours de traitement par notre équipe." },
-  IN_REVIEW: { code: "DRAFT", label: "Dossier en cours de vérification", description: "Notre équipe vérifie votre dossier et votre règlement." },
+  NEW: { code: "DRAFT", label: "Dossier enregistré chez ROUM TRANSIT", description: "Votre dossier est en cours de traitement." },
+  IN_REVIEW: { code: "DRAFT", label: "Dossier en cours de vérification", description: "Nous vérifions votre dossier et votre règlement." },
   QUOTE_SENT: { code: "DRAFT", label: "Devis envoyé", description: "Votre devis est prêt : ouvrez le lien reçu sur WhatsApp pour le régler." },
-  CONVERTED: { code: "DRAFT", label: "Dossier validé", description: "Votre dossier est validé par notre équipe." },
+  CONVERTED: { code: "DRAFT", label: "Dossier validé", description: "Votre dossier est validé." },
   CLOSED: { code: "DRAFT", label: "Dossier clôturé", description: "Ce dossier est clôturé." },
   CANCELLED: { code: "CANCELLED", label: "Dossier annulé", description: "Ce dossier a été annulé." },
 };
@@ -114,6 +114,7 @@ publicRouter.get("/tracking/:trackingNumber", async (c) => {
       s.total_parcels_count,
       s.total_weight_kg,
       s.total_volume_cbm,
+      s.weighed_at,
       s.created_at,
       s.updated_at,
       r.origin_country,
@@ -158,6 +159,8 @@ publicRouter.get("/tracking/:trackingNumber", async (c) => {
       },
       parcels: [],
       timeline: [],
+      photos: [],
+      reception: null,
       whatsapp_support_url: safeWhatsAppUrl(
         supportPhone,
         `Bonjour ROUM TRANSIT, je souhaite des informations sur mon dossier n° ${dossier.reference}.`
@@ -192,6 +195,13 @@ publicRouter.get("/tracking/:trackingNumber", async (c) => {
     ORDER BY parcel_index ASC
   `).bind(shipment.id).all();
 
+  // Photos du colis : seules les adresses partent ici, les images sont servies à part.
+  const { results: photos } = await c.env.DB.prepare(`
+    SELECT id, created_at FROM shipment_photos WHERE shipment_id = ? ORDER BY created_at ASC, id ASC
+  `).bind(shipment.id).all<{ id: string; created_at: string }>();
+
+  const receptionEvent = (timeline as any[]).filter((event) => event.status === "RECEIVED_AT_HUB").pop();
+
   // Lien WhatsApp d'assistance pré-rempli pour le client
   const supportPhone = await resolveSupportPhone(c.env.DB);
   const waMessage = `Bonjour ROUM TRANSIT, je souhaite des informations sur mon colis n° ${normalized} (${shipment.origin_country} -> ${shipment.destination_country}).`;
@@ -222,7 +232,50 @@ publicRouter.get("/tracking/:trackingNumber", async (c) => {
     },
     parcels,
     timeline,
+    photos: photos.map((photo) => ({
+      id: photo.id,
+      taken_at: photo.created_at,
+      url: `/api/v1/public/tracking/${encodeURIComponent(String(shipment.tracking_number))}/photos/${photo.id}`,
+    })),
+    reception: shipment.weighed_at
+      ? {
+          weight_kg: shipment.total_weight_kg,
+          volume_cbm: shipment.total_volume_cbm,
+          weighed_at: shipment.weighed_at,
+          location: receptionEvent?.location || null,
+        }
+      : null,
     whatsapp_support_url: whatsappUrl,
+  });
+});
+
+/**
+ * Photo d'un colis. Elle n'est servie qu'avec le bon numéro de suivi, comme le reste du suivi.
+ */
+publicRouter.get("/tracking/:trackingNumber/photos/:photoId", async (c) => {
+  const rateCheck = checkRateLimit(`tracking-photos:${clientIpOf(c)}`, 240, 60 * 1000);
+  if (!rateCheck.allowed) {
+    c.header("Retry-After", String(rateCheck.retryAfterSec));
+    return c.json({ error: "Trop de requêtes. Veuillez patienter quelques instants." }, 429);
+  }
+
+  const normalized = normalizeTrackingNumber(c.req.param("trackingNumber"));
+  if (!normalized) return c.json({ error: "Photo introuvable." }, 404);
+
+  const photo = await c.env.DB.prepare(`
+    SELECT p.mime_type, p.data
+    FROM shipment_photos p
+    JOIN shipments s ON s.id = p.shipment_id
+    WHERE p.id = ? AND UPPER(s.tracking_number) = UPPER(?)
+  `).bind(c.req.param("photoId"), normalized).first<{ mime_type: string; data: string }>();
+
+  if (!photo) return c.json({ error: "Photo introuvable." }, 404);
+
+  const bytes = Uint8Array.from(atob(photo.data), (char) => char.charCodeAt(0));
+  return c.body(bytes, 200, {
+    "Content-Type": photo.mime_type,
+    "Cache-Control": "public, max-age=86400",
+    "X-Content-Type-Options": "nosniff",
   });
 });
 
@@ -308,6 +361,9 @@ publicRouter.get("/settings", async (c) => {
     "agency_paris_contact",
     "hub_casablanca_address",
     "custom_hubs_json",
+    "exchange_rate_rmb",
+    "exchange_rate_usd",
+    "exchange_rate_eur",
   ]);
 
   for (const s of (settings as any[]) || []) {

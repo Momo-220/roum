@@ -354,7 +354,8 @@ adminRouter.get("/shipments", async (c) => {
       COALESCE(r.destination_city, 'Abidjan') as destination_city,
       COALESCE(sm.name, 'Voie Aérienne Express') as shipping_mode_name,
       COALESCE(sm.type, 'AIR') as shipping_mode_type,
-      s.shipping_mode_id, s.route_id, s.client_id, s.sender_name, s.sender_phone
+      s.shipping_mode_id, s.route_id, s.client_id, s.sender_name, s.sender_phone,
+      (SELECT COUNT(*) FROM shipment_photos sp WHERE sp.shipment_id = s.id) as photos_count
     FROM shipments s
     LEFT JOIN shipment_statuses st ON s.current_status = st.code
     LEFT JOIN clients c ON s.client_id = c.id
@@ -804,6 +805,7 @@ adminRouter.delete("/shipments/:id", async (c) => {
   await c.env.DB.batch([
     c.env.DB.prepare(`DELETE FROM tracking_events WHERE shipment_id = ?`).bind(existing.id),
     c.env.DB.prepare(`DELETE FROM parcels WHERE shipment_id = ?`).bind(existing.id),
+    c.env.DB.prepare(`DELETE FROM shipment_photos WHERE shipment_id = ?`).bind(existing.id),
     c.env.DB.prepare(`DELETE FROM shipments WHERE id = ?`).bind(existing.id),
     c.env.DB.prepare(`
       UPDATE customer_requests
@@ -871,6 +873,94 @@ adminRouter.get("/shipments/:id", async (c) => {
 });
 
 /**
+ * Photos du colis, visibles par le client dans son suivi
+ */
+const MAX_SHIPMENT_PHOTOS = 8;
+const MAX_PHOTO_CHARS = 1_500_000;
+const PHOTO_DATA_URL = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/;
+
+const shipmentPhotoSchema = z.object({
+  id: z.string().uuid("Identifiant de photo invalide"),
+  data_url: z.string().max(MAX_PHOTO_CHARS, "Photo trop lourde"),
+});
+
+async function findShipmentForPhotos(c: { env: Env }, identifier: string) {
+  return c.env.DB.prepare(`
+    SELECT id, tracking_number FROM shipments WHERE id = ? OR UPPER(tracking_number) = UPPER(?) LIMIT 1
+  `).bind(identifier, identifier).first<{ id: string; tracking_number: string }>();
+}
+
+adminRouter.get("/shipments/:id/photos", async (c) => {
+  const shipment = await findShipmentForPhotos(c, c.req.param("id"));
+  if (!shipment) return c.json({ error: "Expédition introuvable." }, 404);
+
+  const { results } = await c.env.DB.prepare(`
+    SELECT id, created_at FROM shipment_photos WHERE shipment_id = ? ORDER BY created_at ASC, id ASC
+  `).bind(shipment.id).all<{ id: string; created_at: string }>();
+
+  return c.json({
+    tracking_number: shipment.tracking_number,
+    photos: results.map((photo) => ({
+      id: photo.id,
+      taken_at: photo.created_at,
+      url: `/api/v1/public/tracking/${encodeURIComponent(shipment.tracking_number)}/photos/${photo.id}`,
+    })),
+  });
+});
+
+adminRouter.post("/shipments/:id/photos", zValidator("json", shipmentPhotoSchema), async (c) => {
+  if (!hasAnyPermission(c, "shipments.status.update", "shipments.edit")) {
+    return c.json({ error: "Permission insuffisante (shipments.edit requise)." }, 403);
+  }
+
+  const shipment = await findShipmentForPhotos(c, c.req.param("id"));
+  if (!shipment) return c.json({ error: "Expédition introuvable." }, 404);
+
+  const data = c.req.valid("json");
+  const match = PHOTO_DATA_URL.exec(data.data_url);
+  if (!match) return c.json({ error: "Format de photo non pris en charge (JPEG, PNG ou WebP)." }, 400);
+
+  const count = await c.env.DB.prepare(`SELECT COUNT(*) as total FROM shipment_photos WHERE shipment_id = ?`)
+    .bind(shipment.id)
+    .first<{ total: number }>();
+  if ((count?.total || 0) >= MAX_SHIPMENT_PHOTOS) {
+    return c.json({ error: `Un colis peut avoir ${MAX_SHIPMENT_PHOTOS} photos au maximum.` }, 409);
+  }
+
+  const [, mimeType, base64] = match;
+  const user = c.get("user");
+
+  // Le même identifiant renvoyé après une coupure réseau n'ajoute pas de seconde photo.
+  await c.env.DB.batch([
+    c.env.DB.prepare(`
+      INSERT OR IGNORE INTO shipment_photos (id, shipment_id, mime_type, size_bytes, data)
+      VALUES (?, ?, ?, ?, ?)
+    `).bind(data.id, shipment.id, mimeType, Math.floor((base64!.length * 3) / 4), base64),
+    auditStatement(c, user, "shipment.photo.add", "shipment", shipment.id, { photo_id: data.id }),
+  ]);
+
+  return c.json({ success: true }, 201);
+});
+
+adminRouter.delete("/shipments/:id/photos/:photoId", async (c) => {
+  if (!hasAnyPermission(c, "shipments.status.update", "shipments.edit")) {
+    return c.json({ error: "Permission insuffisante (shipments.edit requise)." }, 403);
+  }
+
+  const shipment = await findShipmentForPhotos(c, c.req.param("id"));
+  if (!shipment) return c.json({ error: "Expédition introuvable." }, 404);
+
+  const photoId = c.req.param("photoId");
+  const user = c.get("user");
+  await c.env.DB.batch([
+    c.env.DB.prepare(`DELETE FROM shipment_photos WHERE id = ? AND shipment_id = ?`).bind(photoId, shipment.id),
+    auditStatement(c, user, "shipment.photo.delete", "shipment", shipment.id, { photo_id: photoId }),
+  ]);
+
+  return c.json({ success: true });
+});
+
+/**
  * Réception physique et pesée réelle au magasin / hub
  */
 const shipmentIntakeSchema = z.object({
@@ -917,6 +1007,7 @@ adminRouter.patch("/shipments/:id/intake", zValidator("json", shipmentIntakeSche
         total_volume_cbm = COALESCE(?, total_volume_cbm),
         current_status = ?,
         final_price_minor = COALESCE(?, final_price_minor),
+        weighed_at = datetime('now'),
         updated_at = datetime('now')
       WHERE id = ?
     `).bind(
@@ -2387,7 +2478,7 @@ adminRouter.delete("/payments/:id", async (c) => {
 });
 
 /* ==========================================================================
-   10. TÂCHES D'ÉQUIPE (Suivi & relance)
+   10. TÂCHES (Suivi & relance)
    ========================================================================== */
 
 adminRouter.get("/tasks", async (c) => {
@@ -2524,6 +2615,8 @@ adminRouter.get("/settings", async (c) => {
   return c.json({ settings: map });
 });
 
+const EXCHANGE_RATE_KEYS = ["exchange_rate_rmb", "exchange_rate_usd", "exchange_rate_eur"];
+
 adminRouter.put("/settings", zValidator("json", z.record(z.string().max(80), z.string().max(20000))), async (c) => {
   const user = c.get("user");
   if (!user.isSuperAdmin && !checkPermission(c, "settings.manage")) {
@@ -2531,6 +2624,16 @@ adminRouter.put("/settings", zValidator("json", z.record(z.string().max(80), z.s
   }
 
   const data = c.req.valid("json");
+
+  // Un taux vide ou négatif fausserait chaque prix affiché au client.
+  for (const key of EXCHANGE_RATE_KEYS) {
+    if (data[key] === undefined) continue;
+    const rate = Number(data[key]);
+    if (!Number.isFinite(rate) || rate <= 0 || rate > 100_000) {
+      return c.json({ error: "Taux de change invalide : indiquez un nombre supérieur à zéro." }, 400);
+    }
+  }
+
   const statements: D1PreparedStatement[] = [];
 
   for (const [key, value] of Object.entries(data)) {

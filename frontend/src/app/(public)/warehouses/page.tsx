@@ -125,8 +125,8 @@ export default function WarehousesPage() {
           </ul>
 
           <p className="dp-tip">
-            Demandez à votre expéditeur d&apos;inscrire votre nom et votre numéro de téléphone sur le carton : notre
-            équipe vous attribue ainsi le colis dès son entrée au dépôt.
+            Demandez à votre expéditeur d&apos;inscrire votre nom et votre numéro de téléphone sur le carton : nous
+            vous attribuons ainsi le colis dès son entrée au dépôt.
           </p>
         </ScrollReveal>
       </div>

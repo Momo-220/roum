@@ -19,6 +19,7 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { CircularFlag } from "@/components/CircularFlag";
 import { ShippingBox3D } from "@/components/ShippingBox3D";
 import { TrackingJourney } from "@/components/TrackingJourney";
+import { TrackingProof, type TrackingPhoto, type TrackingReception } from "@/components/TrackingProof";
 import { RoumReceiptData, downloadOfficialReceiptPdf, printOfficialReceipt } from "@/utils/receiptPdf";
 
 /** Place chaque statut sur les quatre grandes étapes du trajet. */
@@ -73,6 +74,8 @@ interface TrackingData {
     comment: string | null;
     event_timestamp: string;
   }>;
+  photos?: TrackingPhoto[];
+  reception?: TrackingReception | null;
   whatsapp_support_url: string;
 }
 
@@ -250,6 +253,12 @@ export default function TrackingResultPage() {
                 </div>
               )}
             </dl>
+
+            <TrackingProof
+              photos={data.photos ?? []}
+              reception={data.reception ?? null}
+              formatDate={formatEventDate}
+            />
 
             {timeline.length > 0 && (
               <section className="tk-section">

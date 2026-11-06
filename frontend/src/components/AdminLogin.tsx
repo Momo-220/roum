@@ -13,7 +13,7 @@ interface AdminLoginProps {
   onSubmit: (event: React.FormEvent) => void;
 }
 
-/** Écran de connexion de l'équipe : une photo d'un côté, le formulaire sur fond crème de l'autre. */
+/** Écran de connexion : une photo d'un côté, le formulaire sur fond crème de l'autre. */
 export function AdminLogin({
   email,
   password,
@@ -113,7 +113,7 @@ export function AdminLogin({
             </button>
           </form>
 
-          <p className="al-note">Accès réservé à l&apos;équipe ROUM TRANSIT.</p>
+          <p className="al-note">Accès réservé à la direction de ROUM TRANSIT.</p>
         </div>
       </main>
 

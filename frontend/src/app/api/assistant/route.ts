@@ -52,7 +52,7 @@ export async function POST(req: Request) {
         liveContextText += `- Demandes d'achats et cotations clients reçues : ${context.pendingRequestsCount} dossier(s).\n`;
       }
       if (context.urgentTasksCount !== undefined) {
-        liveContextText += `- Tâches prioritaires d'équipe en cours : ${context.urgentTasksCount}.\n`;
+        liveContextText += `- Tâches prioritaires en cours : ${context.urgentTasksCount}.\n`;
       }
       if (context.activeShipmentsCount !== undefined) {
         liveContextText += `- Expéditions actives en vol ou mer : ${context.activeShipmentsCount} cargaisons.\n`;
