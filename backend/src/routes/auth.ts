@@ -10,6 +10,7 @@ import {
   verifyJwt,
   resolveJwtSecret,
   checkRateLimit,
+  clientIpOf,
   resetRateLimit,
 } from "../crypto";
 import type { Env, UserSession } from "../types";
@@ -26,10 +27,7 @@ const loginSchema = z.object({
  */
 authRouter.post("/login", zValidator("json", loginSchema), async (c) => {
   const { email, password } = c.req.valid("json");
-  const clientIp =
-    c.req.header("CF-Connecting-IP") ||
-    c.req.header("X-Forwarded-For")?.split(",")[0]?.trim() ||
-    "local-ip";
+  const clientIp = clientIpOf(c);
   const normalizedEmail = email.trim().toLowerCase();
   const rateKeyIp = `login:${clientIp}:${normalizedEmail}`;
   const rateKeyAccount = `login:account:${normalizedEmail}`;

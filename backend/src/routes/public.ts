@@ -5,7 +5,7 @@ import {
   normalizeTrackingNumber,
   buildWhatsAppUrl,
 } from "../shared";
-import { checkRateLimit, constantTimeCompare } from "../crypto";
+import { checkClientRateLimit, constantTimeCompare } from "../crypto";
 import {
   newAccessKey,
   newRequestReference,
@@ -35,14 +35,6 @@ const DOSSIER_STATUS_VIEWS: Record<string, { code: string; label: string; descri
   CLOSED: { code: "DRAFT", label: "Dossier clôturé", description: "Ce dossier est clôturé." },
   CANCELLED: { code: "CANCELLED", label: "Dossier annulé", description: "Ce dossier a été annulé." },
 };
-
-function clientIpOf(c: { req: { header: (name: string) => string | undefined } }): string {
-  return (
-    c.req.header("CF-Connecting-IP") ||
-    c.req.header("X-Forwarded-For")?.split(",")[0]?.trim() ||
-    "local-ip"
-  );
-}
 
 /** Numéro WhatsApp réellement configuré par l'administration. */
 async function resolveSupportPhone(db: D1Database): Promise<string> {
@@ -82,8 +74,7 @@ publicRouter.get("/sync", async (c) => {
  * Accès direct et public sans mot de passe requis (avec anti-énumération et sans PII client).
  */
 publicRouter.get("/tracking/:trackingNumber", async (c) => {
-  const clientIp = clientIpOf(c);
-  const rateCheck = checkRateLimit(`tracking:${clientIp}`, 60, 60 * 1000);
+  const rateCheck = checkClientRateLimit(c, "tracking", 60, 60 * 1000);
   if (!rateCheck.allowed) {
     c.header("Retry-After", String(rateCheck.retryAfterSec));
     return c.json(
@@ -253,7 +244,7 @@ publicRouter.get("/tracking/:trackingNumber", async (c) => {
  * Photo d'un colis. Elle n'est servie qu'avec le bon numéro de suivi, comme le reste du suivi.
  */
 publicRouter.get("/tracking/:trackingNumber/photos/:photoId", async (c) => {
-  const rateCheck = checkRateLimit(`tracking-photos:${clientIpOf(c)}`, 240, 60 * 1000);
+  const rateCheck = checkClientRateLimit(c, "tracking-photos", 240, 60 * 1000);
   if (!rateCheck.allowed) {
     c.header("Retry-After", String(rateCheck.retryAfterSec));
     return c.json({ error: "Trop de requêtes. Veuillez patienter quelques instants." }, 429);
@@ -422,7 +413,7 @@ async function dossierResponse(c: { env: Env }, row: any) {
  * et une réponse de succès garantit que le dossier est bien en base.
  */
 publicRouter.post("/quotes", zValidator("json", quoteRequestSchema), async (c) => {
-  const rateCheck = checkRateLimit(`quotes:${clientIpOf(c)}`, 30, 10 * 60 * 1000);
+  const rateCheck = checkClientRateLimit(c, "quotes", 30, 10 * 60 * 1000);
   if (!rateCheck.allowed) {
     c.header("Retry-After", String(rateCheck.retryAfterSec));
     return c.json(
@@ -558,7 +549,7 @@ const DOSSIER_ACCESS_ERROR =
  * 4. Consultation d'un dossier par son propriétaire (lien de paiement `?pay=REF&key=...`).
  */
 publicRouter.get("/requests/:reference", async (c) => {
-  const rateCheck = checkRateLimit(`dossier:${clientIpOf(c)}`, 120, 60 * 1000);
+  const rateCheck = checkClientRateLimit(c, "dossier", 120, 60 * 1000);
   if (!rateCheck.allowed) {
     c.header("Retry-After", String(rateCheck.retryAfterSec));
     return c.json({ error: "Trop de requêtes. Veuillez patienter quelques instants." }, 429);
@@ -590,7 +581,7 @@ const paymentProofSchema = z.object({
  * visible d'un seul coup : l'admin ne voit jamais une preuve incomplète. Un nouvel essai est sans effet.
  */
 publicRouter.post("/requests/:reference/payment-proof", zValidator("json", paymentProofSchema), async (c) => {
-  const rateCheck = checkRateLimit(`proof:${clientIpOf(c)}`, 20, 10 * 60 * 1000);
+  const rateCheck = checkClientRateLimit(c, "proof", 20, 10 * 60 * 1000);
   if (!rateCheck.allowed) {
     c.header("Retry-After", String(rateCheck.retryAfterSec));
     return c.json({ error: "Trop d'envois récents. Veuillez patienter quelques minutes." }, 429);

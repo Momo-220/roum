@@ -245,6 +245,45 @@ export function resetRateLimit(key: string): void {
   rateLimitStore.delete(key);
 }
 
+interface RequestHeaders {
+  req: { header: (name: string) => string | undefined };
+}
+
+/**
+ * Adresse du visiteur. Le site passe par Vercel : pour Cloudflare, CF-Connecting-IP est alors
+ * l'adresse de Vercel, commune à tous les clients. La vraie est la première de X-Forwarded-For.
+ */
+export function clientIpOf(c: RequestHeaders): string {
+  return (
+    c.req.header("X-Forwarded-For")?.split(",")[0]?.trim() ||
+    c.req.header("CF-Connecting-IP") ||
+    "local-ip"
+  );
+}
+
+/** Une connexion peut porter beaucoup de clients (Vercel), mais pas sans limite. */
+const CONNECTION_CAP_FACTOR = 50;
+
+/**
+ * Limite par client, plus un plafond large par connexion : quelqu'un qui appelle l'API
+ * directement peut inventer son X-Forwarded-For, pas sa connexion à Cloudflare.
+ */
+export function checkClientRateLimit(
+  c: RequestHeaders,
+  scope: string,
+  maxAttempts: number,
+  windowMs: number
+): { allowed: boolean; retryAfterSec: number } {
+  const connection = c.req.header("CF-Connecting-IP") || "local-ip";
+  const connectionCheck = checkRateLimit(
+    `${scope}:connexion:${connection}`,
+    maxAttempts * CONNECTION_CAP_FACTOR,
+    windowMs
+  );
+  if (!connectionCheck.allowed) return connectionCheck;
+  return checkRateLimit(`${scope}:${clientIpOf(c)}`, maxAttempts, windowMs);
+}
+
 /**
  * Neutralise les formules tableur (CSV Injection / DDE) et échappe proprement une cellule CSV.
  */

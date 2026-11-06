@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { hashPassword, verifyPassword, signJwt, verifyJwt } from "../src/crypto";
+import {
+  checkClientRateLimit,
+  clientIpOf,
+  hashPassword,
+  signJwt,
+  verifyJwt,
+  verifyPassword,
+} from "../src/crypto";
 
 describe("WebCrypto Password Hashing", () => {
   it("hache et vérifie un mot de passe avec succès", async () => {
@@ -41,5 +48,43 @@ describe("WebCrypto JWT", () => {
 
     const invalidSecretDecoded = await verifyJwt(token, "autre-secret");
     expect(invalidSecretDecoded).toBeNull();
+  });
+});
+
+describe("Limites par visiteur derrière Vercel", () => {
+  const requestFrom = (connection: string, forwardedFor?: string) => ({
+    req: {
+      header: (name: string) =>
+        name === "CF-Connecting-IP" ? connection : name === "X-Forwarded-For" ? forwardedFor : undefined,
+    },
+  });
+  const uniqueScope = (name: string) => `${name}-${Math.random()}`;
+
+  it("lit la vraie adresse du client, pas celle de Vercel", () => {
+    expect(clientIpOf(requestFrom("76.76.21.21", "41.207.1.1, 76.76.21.21"))).toBe("41.207.1.1");
+  });
+
+  it("se rabat sur la connexion quand aucun proxy n'est passé par là", () => {
+    expect(clientIpOf(requestFrom("41.207.1.1"))).toBe("41.207.1.1");
+  });
+
+  it("ne fait pas partager la limite aux clients qui passent par Vercel", () => {
+    const scope = uniqueScope("clients");
+    const first = requestFrom("76.76.21.21", "41.207.1.1, 76.76.21.21");
+    const second = requestFrom("76.76.21.21", "41.207.2.2, 76.76.21.21");
+
+    expect(checkClientRateLimit(first, scope, 2, 60_000).allowed).toBe(true);
+    expect(checkClientRateLimit(first, scope, 2, 60_000).allowed).toBe(true);
+    expect(checkClientRateLimit(first, scope, 2, 60_000).allowed).toBe(false);
+    expect(checkClientRateLimit(second, scope, 2, 60_000).allowed).toBe(true);
+  });
+
+  it("plafonne une connexion qui invente son adresse à chaque requête", () => {
+    const scope = uniqueScope("usurpation");
+    const attempts = Array.from({ length: 60 }, (_, index) =>
+      checkClientRateLimit(requestFrom("203.0.113.9", `10.0.0.${index}`), scope, 1, 60_000).allowed
+    );
+
+    expect(attempts.filter(Boolean)).toHaveLength(50);
   });
 });
