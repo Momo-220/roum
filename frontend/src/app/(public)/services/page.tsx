@@ -1016,7 +1016,6 @@ function ServicesContent() {
           font-size: 0.84rem;
           font-weight: 700;
           text-decoration: none;
-          box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4);
         }
 
         /* RESPONSIVE MOBILE : LUXUEUX, AÉRÉ, BIEN ESPACÉ ET SANS COMPRESSION */

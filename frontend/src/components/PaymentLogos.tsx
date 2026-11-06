@@ -322,7 +322,6 @@ export function WhatsAppLogo({ size = 36 }: { size?: number }) {
         alignItems: "center",
         justifyContent: "center",
         flexShrink: 0,
-        filter: "drop-shadow(0 2px 6px rgba(37, 211, 102, 0.35))",
       }}
     >
       <img

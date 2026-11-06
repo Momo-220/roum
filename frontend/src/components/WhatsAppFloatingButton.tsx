@@ -35,8 +35,7 @@ export function WhatsAppFloatingButton() {
           border: none;
           outline: none;
           text-decoration: none;
-          filter: drop-shadow(0 6px 16px rgba(37, 211, 102, 0.45));
-          transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s ease;
+          transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .whatsapp-icon-svg {
@@ -47,7 +46,6 @@ export function WhatsAppFloatingButton() {
 
         .whatsapp-floating-btn:hover {
           transform: scale(1.1);
-          filter: drop-shadow(0 8px 22px rgba(37, 211, 102, 0.6));
         }
 
         @media (max-width: 480px) {

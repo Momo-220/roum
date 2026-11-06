@@ -2176,12 +2176,11 @@ select.input-clean option {
   text-decoration: none;
   cursor: pointer;
   touch-action: manipulation;
-  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
 .wa-pill:hover {
-  border-color: rgba(37, 211, 102, 0.55);
-  box-shadow: 0 10px 20px -12px rgba(37, 211, 102, 0.55);
+  border-color: rgba(107, 88, 68, 0.34);
   transform: translateY(-1px);
 }
 
