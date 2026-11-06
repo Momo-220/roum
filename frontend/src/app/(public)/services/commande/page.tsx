@@ -2573,7 +2573,7 @@ function CommandeFormContent() {
         .ios-product-preview-price-cny {
           font-size: 1.02rem;
           font-weight: 800;
-          color: #1E4D5B;
+          color: #6B5844;
         }
 
         .ios-product-preview-price-cfa {
@@ -3188,8 +3188,9 @@ function CommandeFormContent() {
         .ios-btn-primary {
           width: 100%;
           height: 48px;
-          background: #1E4D5B;
-          color: #FFFFFF;
+          border: 1px solid #DCCDB6;
+          background: #FFFBF4;
+          color: #3A2A21;
           font-size: 0.92rem;
           font-weight: 600;
           border-radius: 9999px;
@@ -3203,7 +3204,7 @@ function CommandeFormContent() {
         }
 
         .ios-btn-primary:hover {
-          background: #163B46;
+          background: #F3EBDF;
         }
 
         .ios-btn-secondary {

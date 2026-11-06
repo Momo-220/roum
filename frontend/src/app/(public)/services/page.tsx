@@ -426,7 +426,7 @@ function ServicesContent() {
         }
 
         .services-badge-category .dot {
-          color: #1E4D5B;
+          color: #6B5844;
         }
 
         .services-title {
@@ -887,7 +887,7 @@ function ServicesContent() {
           font-family: var(--c-font-mono);
           font-size: 0.68rem;
           font-weight: 700;
-          color: #1E4D5B;
+          color: #6B5844;
           letter-spacing: 0.08em;
           text-transform: uppercase;
           margin-bottom: 8px;

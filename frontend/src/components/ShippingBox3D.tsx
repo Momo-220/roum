@@ -128,11 +128,11 @@ export function ShippingBox3D({ code, className }: ShippingBox3DProps) {
         ))}
       </g>
 
-      <rect x="52" y="288" width="256" height="40" rx="9" fill="#E4EDED" />
-      <text x="64" y="304" fontSize="7" fontWeight="700" letterSpacing="0.7" fill="#1E4D5B" fontFamily="var(--c-font-sans)">
+      <rect x="52" y="288" width="256" height="40" rx="9" fill="#F3EBDF" />
+      <text x="64" y="304" fontSize="7" fontWeight="700" letterSpacing="0.7" fill="#6B5844" fontFamily="var(--c-font-sans)">
         DOUANE INCLUSE
       </text>
-      <text x="64" y="319" fontSize="11" fontWeight="800" fill="#1E4D5B" fontFamily="var(--c-font-sans)">
+      <text x="64" y="319" fontSize="11" fontWeight="800" fill="#6B5844" fontFamily="var(--c-font-sans)">
         Livré jusqu&apos;à destination
       </text>
     </svg>

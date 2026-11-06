@@ -328,7 +328,7 @@ export default function TrackingPage() {
                 <defs>
                   <linearGradient id="hSnakeGradOfficial" x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stopColor="#140D09" stopOpacity="0.85" />
-                    <stop offset="50%" stopColor="#1E4D5B" stopOpacity="0.95" />
+                    <stop offset="50%" stopColor="#6B5844" stopOpacity="0.95" />
                     <stop offset="100%" stopColor="#8C6D58" stopOpacity="1" />
                   </linearGradient>
                 </defs>

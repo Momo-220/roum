@@ -71,6 +71,7 @@ import {
   RotateCcw,
   Menu,
 } from "lucide-react";
+import { AdminLogin } from "@/components/AdminLogin";
 import RouteGlobe from "@/components/RouteGlobe";
 import { CircularFlag } from "@/components/CircularFlag";
 import { BillsIcon } from "@/components/icons/BillsIcon";
@@ -327,8 +328,8 @@ function renderPaymentMethodBadge(method: string = "") {
           padding: "4px 10px",
           borderRadius: "9999px",
           background: "#F6F0E6",
-          border: "1px solid rgba(30, 77, 91, 0.28)",
-          color: "#1E4D5B",
+          border: "1px solid rgba(107, 88, 68, 0.28)",
+          color: "#6B5844",
           fontSize: "0.74rem",
           fontWeight: "700",
           lineHeight: 1,
@@ -751,7 +752,6 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   // Onglet actif
   const [activeTab, setActiveTab] = useState<
@@ -2923,297 +2923,18 @@ export default function AdminPage() {
     if (saved) setEditingTask(null);
   };
 
-  // ÉCRAN 1 : CONNEXION SOBRE & ÉPURÉE (SANS ANIMATION)
+  // ÉCRAN 1 : CONNEXION DE L'ÉQUIPE
   if (!token || !user) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "36px 20px",
-          background: "radial-gradient(ellipse at 50% 12%, #FFFFFF 0%, #FAF8F5 50%, #F3EFEA 100%)",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: "420px",
-            width: "100%",
-            background: "#FFFFFF",
-            borderRadius: "26px",
-            border: "1px solid rgba(28, 25, 23, 0.08)",
-            boxShadow: "0 24px 48px -12px rgba(28, 25, 23, 0.08), 0 2px 6px rgba(28, 25, 23, 0.02)",
-            padding: "38px 34px 34px 34px",
-            position: "relative",
-            zIndex: 1,
-          }}
-        >
-          <div style={{ textAlign: "center", marginBottom: "26px" }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
-              <img
-                src="/images/roum-logo-tight.png"
-                alt="Logo Officiel Roum Transit"
-                style={{
-                  height: "72px",
-                  width: "auto",
-                  maxWidth: "230px",
-                  objectFit: "contain",
-                  display: "block",
-                }}
-              />
-            </div>
-            <h1
-              style={{
-                fontSize: "1.38rem",
-                fontWeight: "800",
-                color: "#1C1917",
-                margin: "0 0 5px 0",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              Espace de Gestion
-            </h1>
-            <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", margin: 0, fontWeight: "500", lineHeight: 1.45 }}>
-              Supervision globale des expéditions & trésorerie
-            </p>
-          </div>
-
-          {loginError && (
-            <div
-              style={{
-                padding: "10px 14px",
-                background: "#FEF2F2",
-                border: "1px solid rgba(239, 68, 68, 0.25)",
-                borderRadius: "10px",
-                color: "#DC2626",
-                fontSize: "0.8rem",
-                fontWeight: "600",
-                marginBottom: "18px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
-            >
-              <AlertCircle size={15} style={{ flexShrink: 0 }} />
-              <span>{loginError}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleLogin} style={{ display: "grid", gap: "16px" }}>
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.78rem",
-                  color: "#374151",
-                  fontWeight: "700",
-                  marginBottom: "7px",
-                  letterSpacing: "0.01em",
-                }}
-              >
-                Identifiant / Email
-              </label>
-              <div style={{ position: "relative" }}>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="votre@email.com"
-                  style={{
-                    width: "100%",
-                    height: "46px",
-                    padding: "0 14px 0 42px",
-                    borderRadius: "12px",
-                    border: "1px solid rgba(28, 25, 23, 0.12)",
-                    background: "#FAF9F7",
-                    fontSize: "0.9rem",
-                    color: "var(--text-main)",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    transition: "all 0.18s ease",
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = "#1C1917";
-                    e.currentTarget.style.background = "#FFFFFF";
-                    e.currentTarget.style.boxShadow = "0 0 0 3px rgba(28, 25, 23, 0.06)";
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(28, 25, 23, 0.12)";
-                    e.currentTarget.style.background = "#FAF9F7";
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
-                />
-                <Mail
-                  size={16}
-                  color="#6B7280"
-                  style={{
-                    position: "absolute",
-                    left: "14px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    pointerEvents: "none",
-                  }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.78rem",
-                  color: "#374151",
-                  fontWeight: "700",
-                  marginBottom: "7px",
-                  letterSpacing: "0.01em",
-                }}
-              >
-                Mot de Passe
-              </label>
-              <div style={{ position: "relative" }}>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  style={{
-                    width: "100%",
-                    height: "46px",
-                    padding: "0 42px 0 42px",
-                    borderRadius: "12px",
-                    border: "1px solid rgba(28, 25, 23, 0.12)",
-                    background: "#FAF9F7",
-                    fontSize: "0.9rem",
-                    color: "var(--text-main)",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    transition: "all 0.18s ease",
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = "#1C1917";
-                    e.currentTarget.style.background = "#FFFFFF";
-                    e.currentTarget.style.boxShadow = "0 0 0 3px rgba(28, 25, 23, 0.06)";
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(28, 25, 23, 0.12)";
-                    e.currentTarget.style.background = "#FAF9F7";
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
-                />
-                <Lock
-                  size={16}
-                  color="#6B7280"
-                  style={{
-                    position: "absolute",
-                    left: "14px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    pointerEvents: "none",
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: "absolute",
-                    right: "10px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    background: "transparent",
-                    border: "none",
-                    padding: "6px",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "var(--text-muted)",
-                    borderRadius: "6px",
-                  }}
-                  title={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loginLoading}
-              style={{
-                width: "100%",
-                height: "48px",
-                borderRadius: "12px",
-                border: "none",
-                background: "#1C1917",
-                color: "#FFFFFF",
-                fontWeight: "800",
-                fontSize: "0.92rem",
-                letterSpacing: "0.01em",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                cursor: loginLoading ? "not-allowed" : "pointer",
-                marginTop: "8px",
-                boxShadow: "0 2px 10px rgba(28, 25, 23, 0.16)",
-                opacity: loginLoading ? 0.75 : 1,
-                transition: "all 0.16s ease",
-              }}
-              onMouseEnter={(e) => {
-                if (!loginLoading) {
-                  e.currentTarget.style.background = "#000000";
-                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(28, 25, 23, 0.24)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!loginLoading) {
-                  e.currentTarget.style.background = "#1C1917";
-                  e.currentTarget.style.boxShadow = "0 2px 10px rgba(28, 25, 23, 0.16)";
-                }
-              }}
-            >
-              {loginLoading ? (
-                <span>Connexion en cours...</span>
-              ) : (
-                <>
-                  <span>Accéder à l&apos;Espace de Gestion</span>
-                  <ArrowRight size={16} strokeWidth={2.4} />
-                </>
-              )}
-            </button>
-          </form>
-        </div>
-
-        <div
-          style={{
-            marginTop: "24px",
-            fontSize: "0.72rem",
-            color: "var(--text-dim)",
-            textAlign: "center",
-            display: "flex",
-            flexDirection: "column",
-            gap: "4px",
-            position: "relative",
-            zIndex: 1,
-          }}
-        >
-          <div style={{ fontWeight: "700", color: "var(--text-secondary)", letterSpacing: "0.02em" }}>
-            ROUM TRANSIT INTERNATIONAL
-          </div>
-          <div style={{ fontSize: "0.69rem", color: "var(--text-dim)" }}>
-            Abidjan · Guangzhou · Yiwu · Dubaï · Casablanca
-          </div>
-          <div style={{ fontSize: "0.68rem", color: "var(--text-dim)", marginTop: "2px" }}>
-            © 2026 Roum Transit. Système d&apos;exploitation logistique officiel.
-          </div>
-        </div>
-      </div>
+      <AdminLogin
+        email={email}
+        password={password}
+        error={loginError}
+        loading={loginLoading}
+        onEmailChange={setEmail}
+        onPasswordChange={setPassword}
+        onSubmit={handleLogin}
+      />
     );
   }
 
@@ -4878,9 +4599,9 @@ export default function AdminPage() {
                             </span>
                           </div>
                           <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "4px", minWidth: "16px" }}>
-                            <div style={{ flex: 1, height: "1px", borderTop: "1px dashed rgba(30, 77, 91, 0.35)" }} />
+                            <div style={{ flex: 1, height: "1px", borderTop: "1px dashed rgba(107, 88, 68, 0.35)" }} />
                             <span style={{ color: "var(--brown-light)", fontSize: "0.75rem", lineHeight: 1 }}>→</span>
-                            <div style={{ flex: 1, height: "1px", borderTop: "1px dashed rgba(30, 77, 91, 0.35)" }} />
+                            <div style={{ flex: 1, height: "1px", borderTop: "1px dashed rgba(107, 88, 68, 0.35)" }} />
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", minWidth: 0 }}>
                             <CircularFlag countryName={activeShipment.destination_country || "Afrique"} size={16} />
@@ -5383,9 +5104,9 @@ export default function AdminPage() {
                   borderRadius: "9999px",
                   fontSize: "0.78rem",
                   fontWeight: requestCategoryFilter === "OPTION_2" ? 700 : 500,
-                  background: requestCategoryFilter === "OPTION_2" ? "#1E4D5B" : "#F6F0E6",
-                  color: requestCategoryFilter === "OPTION_2" ? "#FFFFFF" : "#1E4D5B",
-                  border: "1px solid rgba(30, 77, 91, 0.25)",
+                  background: requestCategoryFilter === "OPTION_2" ? "#6B5844" : "#F6F0E6",
+                  color: requestCategoryFilter === "OPTION_2" ? "#FFFFFF" : "#6B5844",
+                  border: "1px solid rgba(107, 88, 68, 0.25)",
                   cursor: "pointer",
                   display: "inline-flex",
                   alignItems: "center",
@@ -5671,7 +5392,7 @@ export default function AdminPage() {
                                 case "IN_REVIEW":
                                   return { bg: "#F5F3FF", color: "#6D28D9", border: "rgba(139, 92, 246, 0.28)", stroke: "%236D28D9" };
                                 case "QUOTE_SENT":
-                                  return { bg: "#F6F0E6", color: "#1E4D5B", border: "rgba(184, 164, 136, 0.28)", stroke: "%231E4D5B" };
+                                  return { bg: "#F6F0E6", color: "#6B5844", border: "rgba(184, 164, 136, 0.28)", stroke: "%236B5844" };
                                 case "CONVERTED":
                                   return { bg: "#ECFDF5", color: "#047857", border: "rgba(16, 185, 129, 0.28)", stroke: "%23047857" };
                                 case "CANCELLED":
@@ -5838,7 +5559,7 @@ export default function AdminPage() {
                     <span style={{ fontSize: "0.74rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                       Volume Yuans à Régler
                     </span>
-                    <span style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#F6F0E6", display: "flex", alignItems: "center", justifyContent: "center", color: "#1E4D5B" }}>
+                    <span style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#F6F0E6", display: "flex", alignItems: "center", justifyContent: "center", color: "#6B5844" }}>
                       <Coins size={16} />
                     </span>
                   </div>
@@ -5846,7 +5567,7 @@ export default function AdminPage() {
                     ¥ {totalRmbToPay.toLocaleString("fr-FR")}
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "#6B7280", marginTop: "4px" }}>
-                    Équivalent estimé : <strong style={{ color: "#1E4D5B" }}>{estimatedCfaTotal.toLocaleString("fr-FR")} FCFA</strong>
+                    Équivalent estimé : <strong style={{ color: "#6B5844" }}>{estimatedCfaTotal.toLocaleString("fr-FR")} FCFA</strong>
                   </div>
                 </div>
 
@@ -5903,7 +5624,7 @@ export default function AdminPage() {
                     </div>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "#F6F0E6", padding: "3px 8px", borderRadius: "9999px", border: "1px solid #FFEDD5" }}>
                       <OrangeMoneyLogo size={16} />
-                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#1E4D5B" }}>Orange</span>
+                      <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#6B5844" }}>Orange</span>
                     </div>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "#F0FDF4", padding: "3px 8px", borderRadius: "9999px", border: "1px solid #BBF7D0" }}>
                       <CompteMarocLogo size={16} />
@@ -5975,7 +5696,7 @@ export default function AdminPage() {
                         fontSize: "0.76rem",
                         fontWeight: supplierPaymentFilter === "IN_REVIEW" ? 700 : 500,
                         background: supplierPaymentFilter === "IN_REVIEW" ? "#F6F0E6" : "#F3F4F6",
-                        color: supplierPaymentFilter === "IN_REVIEW" ? "#1E4D5B" : "#4B5563",
+                        color: supplierPaymentFilter === "IN_REVIEW" ? "#6B5844" : "#4B5563",
                         border: supplierPaymentFilter === "IN_REVIEW" ? "1px solid #E3D4BF" : "none",
                         cursor: "pointer",
                       }}
@@ -6063,7 +5784,7 @@ export default function AdminPage() {
                                     style={{
                                       background: "#F6F0E6",
                                       border: "1px solid #FFEDD5",
-                                      color: "#1E4D5B",
+                                      color: "#6B5844",
                                       fontWeight: 800,
                                       fontSize: "0.78rem",
                                       cursor: "pointer",
@@ -6120,10 +5841,10 @@ export default function AdminPage() {
                                   borderRadius: "12px",
                                 }}
                               >
-                                <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#163B46", fontFamily: "var(--c-font-display)" }}>
+                                <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#3A2A21", fontFamily: "var(--c-font-display)" }}>
                                   ¥ {rmbAmountVal}
                                 </div>
-                                <div style={{ fontSize: "0.72rem", color: "#1E4D5B", fontWeight: 600, marginTop: "2px" }}>
+                                <div style={{ fontSize: "0.72rem", color: "#6B5844", fontWeight: 600, marginTop: "2px" }}>
                                   ~ {cfaEquivalent.toLocaleString("fr-FR")} FCFA
                                 </div>
                               </div>
@@ -7565,7 +7286,7 @@ export default function AdminPage() {
                           const isPending = Boolean(t._isPendingEdit || pendingTariffEdits[t.id]);
 
                           return (
-                            <tr key={t.id} className="table-row-clean" style={isPending ? { background: "rgba(30, 77, 91, 0.04)" } : undefined}>
+                            <tr key={t.id} className="table-row-clean" style={isPending ? { background: "rgba(107, 88, 68, 0.04)" } : undefined}>
                               <td>
                                 <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                                   <CircularFlag countryName={t.origin_country} size={18} />
@@ -7890,7 +7611,7 @@ export default function AdminPage() {
                             <td style={{ color: "var(--brown-dark)", fontWeight: "800", fontSize: "0.79rem" }} className="tabular-nums">
                               {p.tracking_number || "—"}
                             </td>
-                            <td style={{ fontWeight: "800", color: "#1E4D5B" }} className="tabular-nums">
+                            <td style={{ fontWeight: "800", color: "#6B5844" }} className="tabular-nums">
                               {formatCurrencyPrice(p.amount_minor, p.currency || "FCFA")}
                             </td>
                             <td>
@@ -9404,7 +9125,7 @@ export default function AdminPage() {
               </div>
               <div style={{ textAlign: "right" }}>
                 <span style={{ color: "var(--text-muted)", fontSize: "0.72rem", display: "block" }}>Statut actuel</span>
-                <span style={{ color: "#2F6B78", fontWeight: "700" }}>
+                <span style={{ color: "#8A7660", fontWeight: "700" }}>
                   {formatShipmentStatus(showStatusModal.current_status, showStatusModal.status_label)}
                 </span>
               </div>
@@ -9966,7 +9687,7 @@ export default function AdminPage() {
                     </div>
                     <div>
                       <span style={{ color: "var(--text-muted)", display: "block", fontSize: "0.7rem" }}>Prix unitaire usine</span>
-                      <strong style={{ color: "#1E4D5B", fontSize: "0.86rem" }}>
+                      <strong style={{ color: "#6B5844", fontSize: "0.86rem" }}>
                         {showRequestDetailModal.unit_price
                           ? `${Number(showRequestDetailModal.unit_price).toLocaleString("fr-FR")} ${showRequestDetailModal.unit_price_currency || "USD"}`
                           : "Chiffré par ROUM"}
@@ -10757,7 +10478,7 @@ export default function AdminPage() {
               </div>
               <div>
                 <span style={{ color: "var(--text-muted)", display: "block" }}>Règlement :</span>
-                <strong style={{ color: showShipmentDetailModal.payment_status === "PAID" ? "var(--state-success-text)" : "#1E4D5B" }}>
+                <strong style={{ color: showShipmentDetailModal.payment_status === "PAID" ? "var(--state-success-text)" : "#6B5844" }}>
                   {showShipmentDetailModal.payment_status === "PAID" ? "Intégralement Réglé" : showShipmentDetailModal.payment_status === "PARTIAL" ? "Acompte Versé" : "En Attente de Règlement"}
                 </strong>
               </div>

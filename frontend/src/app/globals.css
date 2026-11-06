@@ -789,7 +789,7 @@ select.input-clean option {
 .hub-card-active {
   background: #FFFFFF;
   border-color: var(--brown-dark);
-  box-shadow: 0 4px 14px rgba(22, 59, 70, 0.08);
+  box-shadow: 0 4px 14px rgba(58, 42, 33, 0.08);
 }
 
 .active-row-highlight {
@@ -1106,7 +1106,7 @@ select.input-clean option {
 
 .select-pill-clean:focus {
   border-color: var(--brown-dark);
-  box-shadow: 0 0 0 3px rgba(30, 77, 91, 0.12);
+  box-shadow: 0 0 0 3px rgba(107, 88, 68, 0.12);
 }
 
 /* Custom Status Badge Select in Tables */
@@ -1134,7 +1134,7 @@ select.input-clean option {
 }
 
 .status-select-pill:focus {
-  box-shadow: 0 0 0 2px rgba(30, 77, 91, 0.22);
+  box-shadow: 0 0 0 2px rgba(107, 88, 68, 0.22);
 }
 
 .btn-icon-clean {
@@ -1533,7 +1533,7 @@ select.input-clean option {
   --c-text-light: #8C7D75;     /* Métadonnées & sous-titres Linea */
   --c-text-dim: #B8ABA3;       /* Gris discret Linea (#b8aba3) */
 
-  --c-accent: #1E4D5B;         /* Bleu pétrole, sobre, posé à côté du beige du logo */
+  --c-accent: #6B5844;         /* Taupe chaud pour les petits titres ; les surfaces restent crème blanc */
   --c-accent-green: #25D366;   /* Vert WhatsApp */
   --c-border: #EEE5DC;         /* Filet fin élégant Linea (#eee5dc) */
   --c-border-subtle: #E8DFD5;
@@ -1544,8 +1544,8 @@ select.input-clean option {
   --c-badge-green-bg: #DCFCE7;
   --c-badge-green-text: #166534;
 
-  --c-btn-primary-bg: #1E4D5B;
-  --c-btn-primary-text: #FFFFFF;
+  --c-btn-primary-bg: #FFFBF4;
+  --c-btn-primary-text: #3A2A21;
   --c-btn-secondary-bg: #FFFFFF;
   --c-btn-secondary-border: #D6D3D1;
   --c-btn-secondary-text: #140D09;
@@ -1638,16 +1638,16 @@ select.input-clean option {
   font-size: 0.86rem;
   padding: 10px 18px;
   border-radius: 9999px;
-  border: 1px solid var(--c-btn-primary-bg);
+  border: 1px solid #DCCDB6;
   cursor: pointer;
   transition: all 0.15s ease;
   text-decoration: none;
 }
 
 .client-portal .client-btn-primary:hover {
-  background-color: #163B46;
-  border-color: #163B46;
-  color: #FFFFFF;
+  background-color: #F3EBDF;
+  border-color: #DCCDB6;
+  color: #3A2A21;
 }
 
 .client-portal .client-btn-secondary {
@@ -2021,10 +2021,10 @@ select.input-clean option {
   gap: 9px;
   min-height: 48px;
   padding: 7px 20px 7px 9px;
-  border: 1px solid rgba(30, 77, 91, 0.18);
+  border: 1px solid rgba(107, 88, 68, 0.18);
   border-radius: 9999px;
   background: #FFFFFF;
-  box-shadow: 0 8px 18px -12px rgba(22, 59, 70, 0.45);
+  box-shadow: 0 8px 18px -12px rgba(58, 42, 33, 0.45);
   color: #3A2A21 !important;
   font-size: 0.95rem;
   font-weight: 700;

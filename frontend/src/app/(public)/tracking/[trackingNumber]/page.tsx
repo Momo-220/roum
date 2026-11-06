@@ -12,17 +12,14 @@ import {
   Copy,
   Download,
   MapPin,
-  Plane,
   Printer,
   RefreshCw,
-  Ship,
 } from "lucide-react";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { CircularFlag } from "@/components/CircularFlag";
 import { ShippingBox3D } from "@/components/ShippingBox3D";
+import { TrackingJourney } from "@/components/TrackingJourney";
 import { RoumReceiptData, downloadOfficialReceiptPdf, printOfficialReceipt } from "@/utils/receiptPdf";
-
-const STAGES = ["Pris en charge", "En route", "Arrivé", "Livré"];
 
 /** Place chaque statut sur les quatre grandes étapes du trajet. */
 function stageOf(code: string): number {
@@ -230,30 +227,7 @@ export default function TrackingResultPage() {
                 </span>
               </div>
 
-              {!isCancelled && (
-                <>
-                  <div className="tk-progress">
-                    <div className="tk-progress-fill" style={{ width: `${(stage / 3) * 100}%` }} />
-                    {STAGES.map((label, index) => (
-                      <i
-                        key={label}
-                        className={index <= stage ? "tk-stop done" : "tk-stop"}
-                        style={{ left: `${(index / 3) * 100}%` }}
-                      />
-                    ))}
-                    <span className="tk-progress-icon" style={{ left: `${(stage / 3) * 100}%` }}>
-                      {isSea ? <Ship size={17} /> : <Plane size={17} />}
-                    </span>
-                  </div>
-                  <ol className="tk-stages">
-                    {STAGES.map((label, index) => (
-                      <li key={label} className={index <= stage ? "done" : ""}>
-                        {label}
-                      </li>
-                    ))}
-                  </ol>
-                </>
-              )}
+              {!isCancelled && <TrackingJourney stage={stage} isSea={isSea} />}
             </section>
 
             <dl className="tk-facts">
@@ -340,8 +314,8 @@ export default function TrackingResultPage() {
           --tk-muted: #7D6E64;
           --tk-faint: #A99A90;
           --tk-line: #EADFD3;
-          --tk-accent: #1E4D5B;
-          --tk-accent-deep: #163B46;
+          --tk-accent: #6B5844;
+          --tk-accent-deep: #3A2A21;
           --tk-tint: #F3EBDF;
           padding: 26px 20px 30px;
           color: var(--tk-ink);
@@ -462,7 +436,7 @@ export default function TrackingResultPage() {
           padding: 6px 13px;
           border-radius: 9999px;
           background: #EFE6D9;
-          color: #1E4D5B;
+          color: #6B5844;
           font-size: 0.86rem;
           font-weight: 700;
         }
@@ -480,6 +454,10 @@ export default function TrackingResultPage() {
 
         .tk-route {
           margin-bottom: 34px;
+          padding: 24px 26px 20px;
+          border: 1px solid #EFE6D9;
+          border-radius: 30px;
+          background: linear-gradient(180deg, #FFFDF9 0%, #FBF3E8 100%);
         }
 
         .tk-route-ends {
@@ -500,83 +478,6 @@ export default function TrackingResultPage() {
 
         .tk-route-ends span:last-child {
           text-align: right;
-        }
-
-        .tk-progress {
-          position: relative;
-          height: 6px;
-          margin: 0 18px;
-          border-radius: 9999px;
-          background: var(--tk-line);
-        }
-
-        .tk-stop {
-          position: absolute;
-          top: 50%;
-          width: 12px;
-          height: 12px;
-          border: 2px solid #FAF5F0;
-          border-radius: 50%;
-          background: #D9CFC2;
-          box-sizing: border-box;
-          transform: translate(-50%, -50%);
-        }
-
-        .tk-stop.done {
-          background: var(--tk-accent);
-        }
-
-        .tk-progress-fill {
-          position: absolute;
-          inset: 0 auto 0 0;
-          border-radius: 9999px;
-          background: linear-gradient(90deg, #8FB3B6, var(--tk-accent));
-          transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .tk-progress-icon {
-          position: absolute;
-          z-index: 1;
-          top: 50%;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          background: var(--tk-accent);
-          box-shadow: 0 6px 14px -4px rgba(30, 77, 91, 0.6);
-          color: #FFFFFF;
-          transform: translate(-50%, -50%);
-          transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .tk-stages {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          margin: 20px 0 0;
-          padding: 0;
-          list-style: none;
-        }
-
-        .tk-stages li {
-          color: var(--tk-faint);
-          font-size: 0.82rem;
-          font-weight: 600;
-          text-align: center;
-        }
-
-        .tk-stages li:first-child {
-          text-align: left;
-        }
-
-        .tk-stages li:last-child {
-          text-align: right;
-        }
-
-        .tk-stages li.done {
-          color: var(--tk-accent);
-          font-weight: 700;
         }
 
         .tk-facts {
@@ -652,7 +553,7 @@ export default function TrackingResultPage() {
 
         .tk-timeline li.latest::before {
           background: var(--tk-accent);
-          box-shadow: 0 0 0 5px rgba(30, 77, 91, 0.14);
+          box-shadow: 0 0 0 5px rgba(107, 88, 68, 0.14);
         }
 
         .tk-timeline-head {
@@ -736,11 +637,11 @@ export default function TrackingResultPage() {
           gap: 10px;
           min-height: 52px;
           padding: 0 26px;
-          border: 0;
+          border: 1px solid #DCCDB6;
           border-radius: 9999px;
-          background: var(--tk-accent);
-          box-shadow: 0 12px 24px -12px rgba(30, 77, 91, 0.65);
-          color: #FFFFFF;
+          background: #FFFBF4;
+          box-shadow: 0 12px 24px -16px rgba(107, 88, 68, 0.6);
+          color: var(--tk-ink);
           font-size: 0.97rem;
           font-weight: 700;
           text-decoration: none;
@@ -749,7 +650,7 @@ export default function TrackingResultPage() {
         }
 
         .tk-cta:hover {
-          background: var(--tk-accent-deep);
+          background: #F3EBDF;
           transform: translateY(-1px);
         }
 
@@ -788,6 +689,11 @@ export default function TrackingResultPage() {
           .tk-box {
             max-width: 330px;
             margin: 0 auto;
+          }
+
+          .tk-route {
+            padding: 20px 16px 14px;
+            border-radius: 26px;
           }
 
           .tk-route-ends span {

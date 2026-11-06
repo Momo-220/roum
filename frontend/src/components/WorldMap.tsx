@@ -53,9 +53,9 @@ const HUBS: Hub[] = [
 const MAP_WIDTH = 800;
 const MAP_HEIGHT = 400;
 
-// Couleurs de la marque : beige du logo et bleu pétrole, sur la carte couleur sable.
-const TAIL_RGB = [150, 186, 190];
-const HEAD_RGB = [30, 77, 91];
+// Couleurs de la marque : beige du logo et taupe, sur la carte couleur sable.
+const TAIL_RGB = [216, 200, 176];
+const HEAD_RGB = [107, 88, 68];
 const INK = "rgba(74, 60, 46, 0.92)";
 const HALO = "rgba(250, 245, 240, 0.9)";
 
@@ -137,7 +137,7 @@ export function WorldMap({ dots = DEFAULT_DOTS, className = "" }: WorldMapProps)
       ctx.setLineDash([0.1, 5.4 * stroke]);
       ctx.lineDashOffset = -now * 4;
       ctx.lineWidth = 1.15 * stroke;
-      ctx.strokeStyle = "rgba(47, 107, 120, 0.4)";
+      ctx.strokeStyle = "rgba(138, 118, 96, 0.4)";
       for (const route of routes) {
         ctx.beginPath();
         ctx.moveTo(route.start.x, route.start.y);
@@ -174,9 +174,9 @@ export function WorldMap({ dots = DEFAULT_DOTS, className = "" }: WorldMapProps)
             const tip = pointAt(route, head);
             const radius = 10 * stroke;
             const glow = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, radius);
-            glow.addColorStop(0, `rgba(47, 107, 120, ${0.55 * fade})`);
-            glow.addColorStop(0.45, `rgba(47, 107, 120, ${0.16 * fade})`);
-            glow.addColorStop(1, "rgba(47, 107, 120, 0)");
+            glow.addColorStop(0, `rgba(138, 118, 96, ${0.55 * fade})`);
+            glow.addColorStop(0.45, `rgba(138, 118, 96, ${0.16 * fade})`);
+            glow.addColorStop(1, "rgba(138, 118, 96, 0)");
             ctx.fillStyle = glow;
             ctx.beginPath();
             ctx.arc(tip.x, tip.y, radius, 0, Math.PI * 2);
@@ -191,7 +191,7 @@ export function WorldMap({ dots = DEFAULT_DOTS, className = "" }: WorldMapProps)
             const landed = (phase - FLIGHT) / 1.15;
             if (landed < 1) {
               const eased = 1 - Math.pow(1 - landed, 3);
-              ctx.strokeStyle = `rgba(30, 77, 91, ${Math.pow(1 - landed, 2) * 0.6})`;
+              ctx.strokeStyle = `rgba(107, 88, 68, ${Math.pow(1 - landed, 2) * 0.6})`;
               ctx.lineWidth = 1.1 * stroke;
               ctx.beginPath();
               ctx.arc(route.end.x, route.end.y, (3 + eased * 15) * stroke, 0, Math.PI * 2);
@@ -210,12 +210,12 @@ export function WorldMap({ dots = DEFAULT_DOTS, className = "" }: WorldMapProps)
         const point = project(hub.lat, hub.lng);
         const radius = (hub.main ? 3.1 : hub.arrival ? 2 : 2.4) * stroke;
 
-        ctx.fillStyle = hub.arrival ? "rgba(30, 77, 91, 0.14)" : "rgba(47, 107, 120, 0.14)";
+        ctx.fillStyle = hub.arrival ? "rgba(107, 88, 68, 0.14)" : "rgba(138, 118, 96, 0.14)";
         ctx.beginPath();
         ctx.arc(point.x, point.y, radius * 2.5, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = hub.arrival ? "#1E4D5B" : "#1E4D5B";
+        ctx.fillStyle = hub.arrival ? "#6B5844" : "#6B5844";
         ctx.strokeStyle = "#FAF5F0";
         ctx.lineWidth = 1 * stroke;
         ctx.beginPath();

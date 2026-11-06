@@ -39,3 +39,6 @@ ECC/
 
 # Sauvegardes locales de la base
 .db-backups/
+
+# Accès personnels, à garder sur cet ordinateur
+*.local.md

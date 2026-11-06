@@ -724,8 +724,8 @@ export default function TariffsPage() {
           --tz-muted: #7D6E64;
           --tz-faint: #A99A90;
           --tz-line: #EADFD3;
-          --tz-accent: #1E4D5B;
-          --tz-accent-deep: #163B46;
+          --tz-accent: #6B5844;
+          --tz-accent-deep: #3A2A21;
           --tz-tint: #F3EBDF;
           --tz-sand: #EFE6D9;
           color: var(--tz-ink);
@@ -823,8 +823,8 @@ export default function TariffsPage() {
         }
 
         .tz-tab.active {
-          background: var(--tz-accent);
-          color: #FFFFFF;
+          background: #EADDCB;
+          color: var(--tz-ink);
           font-weight: 700;
         }
 
@@ -906,14 +906,15 @@ export default function TariffsPage() {
           top: 28px;
           padding: 30px;
           border-radius: 28px;
-          background: linear-gradient(165deg, #245B6A 0%, #163B46 100%);
-          box-shadow: 0 22px 44px -26px rgba(22, 59, 70, 0.7);
-          color: #FFFFFF;
+          border: 1px solid #EFE6D9;
+          background: linear-gradient(165deg, #FFFDF9 0%, #FBF3E8 100%);
+          box-shadow: 0 22px 44px -30px rgba(58, 42, 33, 0.45);
+          color: var(--tz-ink);
           min-width: 0;
         }
 
         .tz-ticket-label {
-          color: #EADDCB;
+          color: var(--tz-accent);
           font-size: 0.9rem;
           font-weight: 700;
         }
@@ -924,7 +925,7 @@ export default function TariffsPage() {
           align-items: baseline;
           gap: 2px 8px;
           margin-top: 6px;
-          color: #FFFFFF;
+          color: var(--tz-ink);
           font-family: var(--c-font-display);
           font-size: clamp(2.5rem, 5vw, 3.4rem);
           font-weight: 800;
@@ -933,14 +934,14 @@ export default function TariffsPage() {
         }
 
         .tz-ticket-price span {
-          color: #EADDCB;
+          color: var(--tz-accent);
           font-size: 1.1rem;
           letter-spacing: 0;
         }
 
         .tz-ticket-note {
           margin: 8px 0 22px;
-          color: rgba(255, 255, 255, 0.78);
+          color: var(--tz-muted);
           font-size: 0.9rem;
         }
 
@@ -954,12 +955,12 @@ export default function TariffsPage() {
           align-items: baseline;
           gap: 14px;
           padding: 11px 0;
-          border-top: 1px solid rgba(255, 255, 255, 0.16);
+          border-top: 1px solid rgba(58, 42, 33, 0.1);
         }
 
         .tz-ticket-facts dt {
           flex-shrink: 0;
-          color: rgba(255, 255, 255, 0.72);
+          color: var(--tz-muted);
           font-size: 0.87rem;
         }
 
@@ -970,7 +971,7 @@ export default function TariffsPage() {
           justify-content: flex-end;
           gap: 5px;
           margin: 0;
-          color: #FFFFFF;
+          color: var(--tz-ink);
           font-size: 0.9rem;
           font-weight: 700;
           text-align: right;
@@ -995,8 +996,8 @@ export default function TariffsPage() {
           padding: 0 14px;
           border: 0;
           border-radius: 9999px;
-          background: rgba(255, 255, 255, 0.12);
-          color: #FFFFFF;
+          background: #F3EBDF;
+          color: var(--tz-ink);
           font-size: 0.88rem;
           font-weight: 700;
           white-space: nowrap;
@@ -1007,7 +1008,7 @@ export default function TariffsPage() {
 
         .tz-ticket-links button:hover,
         .tz-ticket-links a:hover {
-          background: rgba(255, 255, 255, 0.22);
+          background: #EADDCB;
         }
 
         .tz-send {
@@ -1020,7 +1021,7 @@ export default function TariffsPage() {
           padding: 0 20px;
           border-radius: 9999px;
           background: #EADDCB;
-          color: #163B46;
+          color: var(--tz-ink);
           font-size: 0.97rem;
           font-weight: 800;
           text-decoration: none;
@@ -1028,7 +1029,7 @@ export default function TariffsPage() {
         }
 
         .tz-send:hover {
-          background: #F3EBDF;
+          background: #E0D1BB;
           transform: translateY(-1px);
         }
 

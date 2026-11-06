@@ -199,7 +199,7 @@ export function GaugeControl({ label, value, min, max, step, unit, ticks, onChan
           border: 0;
           border-radius: 50%;
           background: #EFE6D9;
-          color: #163B46;
+          color: #3A2A21;
           cursor: pointer;
           touch-action: manipulation;
           user-select: none;
@@ -215,7 +215,7 @@ export function GaugeControl({ label, value, min, max, step, unit, ticks, onChan
         }
 
         .gauge-btn:focus-visible {
-          outline: 2px solid #1E4D5B;
+          outline: 2px solid #6B5844;
           outline-offset: 2px;
         }
 
@@ -244,7 +244,7 @@ export function GaugeControl({ label, value, min, max, step, unit, ticks, onChan
           height: 10px;
           border-radius: 9999px;
           background:
-            linear-gradient(90deg, #8FB3B6, #1E4D5B) 0 0 / var(--fill) 100% no-repeat,
+            linear-gradient(90deg, #EADDCB, #A8957C) 0 0 / var(--fill) 100% no-repeat,
             #EDE3D8;
         }
 
@@ -257,17 +257,17 @@ export function GaugeControl({ label, value, min, max, step, unit, ticks, onChan
         .gauge-range::-moz-range-progress {
           height: 10px;
           border-radius: 9999px;
-          background: linear-gradient(90deg, #8FB3B6, #1E4D5B);
+          background: linear-gradient(90deg, #EADDCB, #A8957C);
         }
 
         .gauge-range::-webkit-slider-thumb {
           width: 30px;
           height: 30px;
           margin-top: -10px;
-          border: 3px solid #1E4D5B;
+          border: 3px solid #8A7660;
           border-radius: 50%;
           background: #FFFFFF;
-          box-shadow: 0 4px 12px rgba(22, 59, 70, 0.28);
+          box-shadow: 0 4px 12px rgba(58, 42, 33, 0.28);
           transition: transform 0.15s ease;
           -webkit-appearance: none;
           appearance: none;
@@ -276,10 +276,10 @@ export function GaugeControl({ label, value, min, max, step, unit, ticks, onChan
         .gauge-range::-moz-range-thumb {
           width: 24px;
           height: 24px;
-          border: 3px solid #1E4D5B;
+          border: 3px solid #8A7660;
           border-radius: 50%;
           background: #FFFFFF;
-          box-shadow: 0 4px 12px rgba(22, 59, 70, 0.28);
+          box-shadow: 0 4px 12px rgba(58, 42, 33, 0.28);
         }
 
         .gauge-range:active::-webkit-slider-thumb {
@@ -287,7 +287,7 @@ export function GaugeControl({ label, value, min, max, step, unit, ticks, onChan
         }
 
         .gauge-range:focus-visible::-webkit-slider-thumb {
-          box-shadow: 0 0 0 5px rgba(30, 77, 91, 0.18);
+          box-shadow: 0 0 0 5px rgba(107, 88, 68, 0.18);
         }
 
         .gauge-ticks {
@@ -314,7 +314,7 @@ export function GaugeControl({ label, value, min, max, step, unit, ticks, onChan
 
         .gauge-tick:hover,
         .gauge-tick.active {
-          color: #1E4D5B;
+          color: #6B5844;
         }
       `,
         }}

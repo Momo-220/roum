@@ -30,13 +30,13 @@ export interface PdfLink {
 
 const FONT_RESOURCES: Record<FontName, string> = { regular: "/F1", bold: "/F2", mono: "/F3" };
 
-/** Couleurs de la marque dans les PDF : bleu pétrole, beige du logo et encre chaude. */
+/** Couleurs de la marque dans les PDF : brun kraft, beige du logo et encre chaude. */
 export const PDF_COLORS = {
   ink: "#3A2A21",
   muted: "#857667",
   line: "#E8DECF",
-  accent: "#1E4D5B",
-  accentTint: "#E4EDED",
+  accent: "#7A5A38",
+  accentTint: "#F3EBDF",
   beige: "#EADDCB",
   whatsapp: "#25D366",
 };

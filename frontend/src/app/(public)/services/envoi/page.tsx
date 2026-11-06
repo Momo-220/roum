@@ -484,9 +484,9 @@ export default function SendParcelPage() {
         }
 
         .ev-choice.active {
-          border-color: var(--c-accent);
-          background: var(--c-accent);
-          color: #FFFFFF;
+          border-color: #EADDCB;
+          background: #EADDCB;
+          color: #3A2A21;
           font-weight: 700;
         }
 
@@ -515,7 +515,7 @@ export default function SendParcelPage() {
         .ev-field input:focus,
         .ev-field select:focus {
           border-color: var(--c-accent);
-          box-shadow: 0 0 0 3px rgba(30, 77, 91, 0.14);
+          box-shadow: 0 0 0 3px rgba(107, 88, 68, 0.14);
         }
 
         .ev-field input::placeholder {
@@ -536,11 +536,11 @@ export default function SendParcelPage() {
           width: 100%;
           min-height: 56px;
           margin-top: 26px;
-          border: 0;
+          border: 1px solid #DCCDB6;
           border-radius: 9999px;
-          background: var(--c-accent);
-          box-shadow: 0 14px 26px -14px rgba(22, 59, 70, 0.75);
-          color: #FFFFFF;
+          background: #FFFBF4;
+          box-shadow: 0 14px 26px -16px rgba(58, 42, 33, 0.5);
+          color: #3A2A21;
           font-family: inherit;
           font-size: 1.03rem;
           font-weight: 800;
@@ -550,7 +550,7 @@ export default function SendParcelPage() {
         }
 
         .ev-submit:hover {
-          background: #163B46;
+          background: #F3EBDF;
           transform: translateY(-1px);
         }
 
@@ -579,8 +579,8 @@ export default function SendParcelPage() {
           height: 62px;
           margin-bottom: 20px;
           border-radius: 50%;
-          background: var(--c-accent);
-          color: #FFFFFF;
+          background: #EADDCB;
+          color: #3A2A21;
         }
 
         .ev-reference {
@@ -592,8 +592,8 @@ export default function SendParcelPage() {
           padding: 0 20px;
           border: 0;
           border-radius: 9999px;
-          background: #E4EDED;
-          color: var(--c-accent);
+          background: #F3EBDF;
+          color: #3A2A21;
           font-family: var(--c-font-mono);
           font-size: 1rem;
           font-weight: 700;
@@ -632,12 +632,13 @@ export default function SendParcelPage() {
         }
 
         .ev-pill-accent {
-          background: var(--c-accent);
-          color: #FFFFFF;
+          border: 1px solid #DCCDB6;
+          background: #FFFBF4;
+          color: #3A2A21;
         }
 
         .ev-pill-accent:hover {
-          background: #163B46;
+          background: #F3EBDF;
         }
       `,
         }}

@@ -201,8 +201,8 @@ export default function HomePage() {
         }
 
         .hero-search-submit {
-          background-color: var(--c-accent);
-          color: var(--c-bg);
+          background-color: #EFE6D9;
+          color: #3A2A21;
           border: none;
           border-radius: 9999px;
           padding: 8px 18px;
