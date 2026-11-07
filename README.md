@@ -97,6 +97,7 @@ Le compte `user-superadmin-01` créé par les migrations n'a aucun mot de passe 
 
 - Définissez `ADMIN_ACCESS_KEY` (32 caractères minimum) dans `frontend/.env.local` et chez l'hébergeur du site. Sans cette clé, l'espace reste fermé pour tout le monde.
 - Le gérant ouvre une fois `/acces/<clé>` sur chaque appareil, puis se connecte avec son compte.
+- Il change son e-mail de connexion et son mot de passe dans Paramètres, avec son mot de passe actuel.
 - Cette porte cache l'interface. Les données restent protégées par l'API, qui exige le compte du gérant à chaque requête.
 
 ## Sécurité

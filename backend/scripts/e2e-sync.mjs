@@ -542,4 +542,48 @@ await check("un taux de change modifié par l'admin arrive chez le client, un ta
   assert.equal((await call("GET", "/api/public/settings")).data.settings.exchange_rate_rmb, "92.5");
 });
 
+await check("le gérant change son e-mail : protections, connexion et synchronisation", async () => {
+  const suffix = randomUUID().slice(0, 8);
+  const password = `Essai-${randomUUID()}`;
+  const email = `gerant-${suffix}@example.com`;
+  const otherEmail = `autre-${suffix}@example.com`;
+  const newEmail = `nouveau-${suffix}@example.com`;
+
+  const { roles } = (await call("GET", "/api/admin/roles", { headers: ADMIN })).data;
+  const account = { password, full_name: "Gérant Test", role_id: roles[0].id };
+  for (const address of [email, otherEmail]) {
+    const created = await call("POST", "/api/admin/users", { headers: ADMIN, body: { ...account, email: address } });
+    assert.ok(created.status < 300, JSON.stringify(created.data));
+  }
+
+  const login = (address, secret = password) =>
+    call("POST", "/api/auth/login", { body: { email: address, password: secret } });
+  const { token } = (await login(email)).data;
+  assert.ok(token);
+  const session = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+  const change = (body, headers = session) => call("POST", "/api/auth/change-email", { headers, body });
+
+  assert.equal((await change({ newEmail, currentPassword: password }, JSON_HEADERS)).status, 401);
+  assert.equal((await change({ newEmail, currentPassword: "mauvais" })).status, 400);
+  assert.equal((await change({ newEmail: "pas-un-email", currentPassword: password })).status, 400);
+  assert.equal((await change({ newEmail: email.toUpperCase(), currentPassword: password })).status, 400);
+  assert.equal((await change({ newEmail: otherEmail.toUpperCase(), currentPassword: password })).status, 409);
+  assert.equal((await call("GET", "/api/auth/me", { headers: session })).data.user.email, email);
+
+  const before = (await versions("/api/admin/sync")).account;
+  const changed = await change({ newEmail: `  ${newEmail.toUpperCase()} `, currentPassword: password });
+  assert.equal(changed.status, 200, JSON.stringify(changed.data));
+  assert.equal(changed.data.email, newEmail);
+
+  assert.equal((await call("GET", "/api/auth/me", { headers: session })).data.user.email, newEmail);
+  assert.equal((await versions("/api/admin/sync")).account, before + 1);
+  assert.equal((await call("GET", "/api/public/sync")).data.versions.account, undefined);
+
+  assert.equal((await login(email)).status, 401);
+  assert.equal((await login(newEmail)).status, 200);
+
+  const { logs } = (await call("GET", "/api/admin/audit-logs", { headers: ADMIN })).data;
+  assert.ok(logs.some((log) => log.action === "auth.change_email"));
+});
+
 console.log(`\n${passed} vérifications réussies.`);

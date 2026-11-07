@@ -818,6 +818,35 @@ export default function AdminPage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showPasswordSuccess, setShowPasswordSuccess] = useState(false);
 
+  // Changement de l'e-mail de connexion : l'écran ne change qu'après confirmation du serveur.
+  const [emailForm, setEmailForm] = useState({ newEmail: "", confirmEmail: "", currentPassword: "" });
+  const [isChangingEmail, setIsChangingEmail] = useState(false);
+
+  const handleChangeEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const newEmail = emailForm.newEmail.trim().toLowerCase();
+    if (newEmail !== emailForm.confirmEmail.trim().toLowerCase()) {
+      triggerToast("Les deux adresses e-mail saisies ne sont pas identiques.", "Confirmation incorrecte", "error");
+      return;
+    }
+
+    setIsChangingEmail(true);
+    try {
+      const data = await apiRequest<{ email: string }>("/api/auth/change-email", {
+        method: "POST",
+        token,
+        body: { newEmail, currentPassword: emailForm.currentPassword },
+      });
+      setUser((curr) => (curr ? { ...curr, email: data.email } : curr));
+      setEmailForm({ newEmail: "", confirmEmail: "", currentPassword: "" });
+      triggerToast("Utilisez cette adresse à votre prochaine connexion.", "E-mail modifié");
+    } catch (err: any) {
+      triggerToast(err.message || "Erreur de connexion au serveur.", "Échec modification", "error");
+    } finally {
+      setIsChangingEmail(false);
+    }
+  };
+
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passwordForm.currentPassword) {
@@ -973,7 +1002,6 @@ export default function AdminPage() {
               roleName: cleanRole,
               avatarUrl: parsed.avatarUrl || baseUser.avatarUrl,
               phone: parsed.phone || baseUser.phone,
-              email: parsed.email || baseUser.email,
             };
           });
           const savedAvatar = localStorage.getItem("roum_ceo_avatar_photo") || parsed.avatarUrl || "";
@@ -1024,7 +1052,6 @@ export default function AdminPage() {
       fullName: profileForm.fullName.trim() || "Madame Marouba",
       roleName: profileForm.roleName.trim() || "CEO",
       phone: profileForm.phone,
-      email: profileForm.email,
       avatarUrl: finalAvatar,
     };
 
@@ -1781,7 +1808,7 @@ export default function AdminPage() {
 
     return {
       userId: rawUser?.userId || savedProfile?.userId || "user-ceo-marouba",
-      email: savedProfile?.email || rawUser?.email || "ceo@roumtransit.com",
+      email: rawUser?.email || savedProfile?.email || "ceo@roumtransit.com",
       fullName,
       roleId: rawUser?.roleId || "CEO",
       roleName,
@@ -1907,6 +1934,11 @@ export default function AdminPage() {
             return { ...open, ...fresh, payment_receipt_url: fresh.payment_receipt_url || open.payment_receipt_url };
           });
         })
+      );
+    }
+    if (has("account")) {
+      tasks.push(
+        apiRequest<{ user: any }>("/api/auth/me", { token }).then((d) => setUser(normalizeCeoUser(d.user)))
       );
     }
     if (has("clients")) {
@@ -8110,6 +8142,119 @@ export default function AdminPage() {
               </div>
             </div>
 
+            {/* CARTE : E-MAIL DE CONNEXION DE LA DIRECTION */}
+            <div className="card-clean" style={{ padding: "26px", borderRadius: "20px", background: "#FFFFFF", border: "1px solid var(--border-light)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px", borderBottom: "1px solid var(--border-light)", paddingBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div
+                    style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "12px",
+                      background: "rgba(28, 25, 23, 0.08)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--brown-dark)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Mail size={20} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: "1.15rem", fontWeight: "800", color: "var(--brown-dark)", margin: "0 0 3px 0" }}>
+                      E-mail de connexion
+                    </h3>
+                    <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: 0 }}>
+                      Adresse actuelle : <strong>{user?.email}</strong>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <form onSubmit={handleChangeEmail} style={{ maxWidth: "720px", display: "grid", gap: "16px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "5px", fontWeight: "600" }}>
+                      Nouvelle adresse e-mail
+                    </label>
+                    <input
+                      type="email"
+                      value={emailForm.newEmail}
+                      onChange={(e) => setEmailForm({ ...emailForm, newEmail: e.target.value })}
+                      className="input-clean"
+                      placeholder="nouvelle@adresse.com"
+                      autoComplete="email"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "5px", fontWeight: "600" }}>
+                      Confirmer la nouvelle adresse
+                    </label>
+                    <input
+                      type="email"
+                      value={emailForm.confirmEmail}
+                      onChange={(e) => setEmailForm({ ...emailForm, confirmEmail: e.target.value })}
+                      className="input-clean"
+                      placeholder="nouvelle@adresse.com"
+                      autoComplete="off"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "5px", fontWeight: "600" }}>
+                      Mot de passe actuel
+                    </label>
+                    <input
+                      type="password"
+                      value={emailForm.currentPassword}
+                      onChange={(e) => setEmailForm({ ...emailForm, currentPassword: e.target.value })}
+                      className="input-clean"
+                      placeholder="••••••••••••"
+                      autoComplete="current-password"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginTop: "6px" }}>
+                  <div style={{ fontSize: "0.76rem", color: "var(--text-muted)" }}>
+                    Vérifiez bien l&apos;adresse : c&apos;est elle qui servira à vous connecter.
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isChangingEmail}
+                    className="btn btn-primary"
+                    style={{
+                      borderRadius: "9999px",
+                      padding: "8px 20px",
+                      fontSize: "0.82rem",
+                      fontWeight: "700",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "7px",
+                      cursor: isChangingEmail ? "not-allowed" : "pointer",
+                      opacity: isChangingEmail ? 0.7 : 1,
+                    }}
+                  >
+                    {isChangingEmail ? (
+                      <>
+                        <RefreshCw size={14} className="animate-spin" />
+                        <span>Modification en cours...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mail size={15} />
+                        <span>Changer l&apos;e-mail</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+
             {/* CARTE 4 : SÉCURITÉ & MODIFICATION DU MOT DE PASSE DE DIRECTION */}
             <div className="card-clean" style={{ padding: "26px", borderRadius: "20px", background: "#FFFFFF", border: "1px solid var(--border-light)" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px", borderBottom: "1px solid var(--border-light)", paddingBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
@@ -12111,15 +12256,12 @@ export default function AdminPage() {
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.76rem", fontWeight: "700", color: "var(--text-secondary)", marginBottom: "4px" }}>
-                      Email Professionnel
+                      E-mail de connexion
                     </label>
-                    <input
-                      type="email"
-                      value={profileForm.email}
-                      onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                      className="input-clean"
-                      placeholder="ceo@roumtransit.com"
-                    />
+                    <input type="email" value={user?.email || profileForm.email} className="input-clean" readOnly />
+                    <span style={{ display: "block", marginTop: "4px", fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                      Se change dans Paramètres.
+                    </span>
                   </div>
                 </div>
               </div>

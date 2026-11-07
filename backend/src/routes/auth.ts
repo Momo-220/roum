@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
@@ -155,9 +155,12 @@ authRouter.get("/me", async (c) => {
 
   // Session locale de développement (uniquement hors production)
   if (token === "roum_local_admin_session" && c.env.ENVIRONMENT !== "production") {
+    const account = await c.env.DB.prepare(`
+      SELECT email FROM users WHERE role_id = ? LIMIT 1
+    `).bind(SUPER_ADMIN_ROLE_ID).first<{ email: string }>();
     const devSession: UserSession = {
       userId: "user-superadmin-01",
-      email: "ceo@roumtransit.com",
+      email: account?.email ?? "ceo@roumtransit.com",
       fullName: "Madame Marouba",
       roleId: SUPER_ADMIN_ROLE_ID,
       roleName: "CEO",
@@ -235,6 +238,29 @@ authRouter.post("/logout", (c) => {
   return c.json({ success: true });
 });
 
+const SESSION_ERROR = "Session expirée ou invalide. Veuillez vous reconnecter.";
+
+/** Compte de la session en cours, ou null si elle est absente, expirée ou invalide. */
+async function sessionUserId(c: Context<{ Bindings: Env }>): Promise<string | null> {
+  const authHeader = c.req.header("Authorization");
+  const token =
+    authHeader && authHeader.startsWith("Bearer ")
+      ? authHeader.substring(7)
+      : getCookie(c, "roum_session");
+  if (!token) return null;
+
+  if (token === "roum_local_admin_session" && c.env.ENVIRONMENT !== "production") {
+    const ceo = await c.env.DB.prepare(`
+      SELECT id FROM users WHERE role_id = ? OR LOWER(email) = 'ceo@roumtransit.com' LIMIT 1
+    `).bind(SUPER_ADMIN_ROLE_ID).first<{ id: string }>();
+    return ceo?.id ?? null;
+  }
+
+  const payload = await verifyJwt<{ sub: string; exp: number }>(token, resolveJwtSecret(c.env));
+  if (!payload || !payload.sub || Date.now() > payload.exp) return null;
+  return payload.sub;
+}
+
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Le mot de passe actuel est requis"),
   newPassword: z.string().min(8, "Le nouveau mot de passe doit comporter au moins 8 caractères").max(256),
@@ -245,35 +271,9 @@ const changePasswordSchema = z.object({
  */
 authRouter.post("/change-password", zValidator("json", changePasswordSchema), async (c) => {
   const { currentPassword, newPassword } = c.req.valid("json");
-  const authHeader = c.req.header("Authorization");
-  const cookieToken = getCookie(c, "roum_session");
-  const token =
-    authHeader && authHeader.startsWith("Bearer ")
-      ? authHeader.substring(7)
-      : cookieToken;
-
-  if (!token) {
-    return c.json({ error: "Session non authentifiée. Veuillez vous reconnecter." }, 401);
-  }
-
-  let targetUserId = "";
-
-  if (token === "roum_local_admin_session" && c.env.ENVIRONMENT !== "production") {
-    const ceo = await c.env.DB.prepare(`
-      SELECT id FROM users WHERE role_id = ? OR LOWER(email) = 'ceo@roumtransit.com' LIMIT 1
-    `).bind(SUPER_ADMIN_ROLE_ID).first<{ id: string }>();
-    if (ceo) {
-      targetUserId = ceo.id;
-    } else {
-      return c.json({ success: true, message: "Mot de passe mis à jour avec succès (Session Développeur)." });
-    }
-  } else {
-    const jwtSecret = resolveJwtSecret(c.env);
-    const payload = await verifyJwt<{ sub: string; exp: number }>(token, jwtSecret);
-    if (!payload || !payload.sub || Date.now() > payload.exp) {
-      return c.json({ error: "Session expirée ou invalide. Veuillez vous reconnecter." }, 401);
-    }
-    targetUserId = payload.sub;
+  const targetUserId = await sessionUserId(c);
+  if (!targetUserId) {
+    return c.json({ error: SESSION_ERROR }, 401);
   }
 
   const user = await c.env.DB.prepare(`
@@ -313,5 +313,77 @@ authRouter.post("/change-password", zValidator("json", changePasswordSchema), as
   return c.json({
     success: true,
     message: "Votre mot de passe a été modifié avec succès.",
+  });
+});
+
+const changeEmailSchema = z.object({
+  newEmail: z.string().trim().toLowerCase().email("Adresse e-mail invalide").max(160),
+  currentPassword: z.string().min(1, "Le mot de passe actuel est requis").max(256),
+});
+
+/**
+ * 5. Modification de l'e-mail de connexion (POST /change-email)
+ * Les sessions suivent le compte par son identifiant : elles restent ouvertes après le changement.
+ */
+authRouter.post("/change-email", zValidator("json", changeEmailSchema), async (c) => {
+  const { newEmail, currentPassword } = c.req.valid("json");
+  const userId = await sessionUserId(c);
+  if (!userId) {
+    return c.json({ error: SESSION_ERROR }, 401);
+  }
+
+  const rateCheck = checkRateLimit(`change-email:${userId}`, 10, 15 * 60 * 1000);
+  if (!rateCheck.allowed) {
+    c.header("Retry-After", String(rateCheck.retryAfterSec));
+    return c.json({ error: "Trop de tentatives. Veuillez patienter quelques minutes." }, 429);
+  }
+
+  const user = await c.env.DB.prepare(`
+    SELECT id, email, password_hash FROM users WHERE id = ?
+  `).bind(userId).first<{ id: string; email: string; password_hash: string }>();
+
+  if (!user) {
+    return c.json({ error: "Utilisateur introuvable." }, 404);
+  }
+
+  if (!(await verifyPassword(currentPassword, user.password_hash))) {
+    return c.json({ error: "Le mot de passe actuel saisi est incorrect." }, 400);
+  }
+
+  if (newEmail === user.email.toLowerCase()) {
+    return c.json({ error: "C'est déjà votre adresse e-mail." }, 400);
+  }
+
+  const emailTaken = () => c.json({ error: "Cette adresse e-mail est déjà utilisée." }, 409);
+
+  const existing = await c.env.DB.prepare(`
+    SELECT id FROM users WHERE email = ? AND id <> ?
+  `).bind(newEmail, userId).first();
+  if (existing) return emailTaken();
+
+  try {
+    await c.env.DB.batch([
+      c.env.DB.prepare(`
+        UPDATE users SET email = ?, updated_at = datetime('now') WHERE id = ?
+      `).bind(newEmail, userId),
+      c.env.DB.prepare(`
+        INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, details_json)
+        VALUES (?, ?, 'auth.change_email', 'user', ?, ?)
+      `).bind(
+        crypto.randomUUID(),
+        userId,
+        userId,
+        JSON.stringify({ old_email: user.email, new_email: newEmail })
+      ),
+    ]);
+  } catch (err) {
+    if (String(err).includes("UNIQUE")) return emailTaken();
+    throw err;
+  }
+
+  return c.json({
+    success: true,
+    email: newEmail,
+    message: "Votre adresse e-mail a été modifiée avec succès.",
   });
 });
