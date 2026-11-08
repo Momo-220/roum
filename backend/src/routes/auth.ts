@@ -11,7 +11,6 @@ import {
   resolveJwtSecret,
   checkRateLimit,
   clientIpOf,
-  resetRateLimit,
 } from "../crypto";
 import type { Env, UserSession } from "../types";
 
@@ -22,6 +21,44 @@ const loginSchema = z.object({
   password: z.string().min(1, "Mot de passe requis").max(256),
 });
 
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+/** Échecs permis en 15 minutes : par visiteur sur un compte, puis pour le compte tous visiteurs confondus. */
+const LOGIN_LIMITS = { visitor: 5, account: 20 };
+
+/** Secondes à attendre si l'un des compteurs a atteint sa limite, sinon 0. */
+async function loginWaitSeconds(db: D1Database, limits: Array<[string, number]>): Promise<number> {
+  const now = Date.now();
+  const { results } = await db
+    .prepare(`SELECT key, failures, reset_at FROM login_attempts WHERE key IN (?, ?)`)
+    .bind(...limits.map(([key]) => key))
+    .all<{ key: string; failures: number; reset_at: number }>();
+
+  let wait = 0;
+  for (const row of results) {
+    const max = limits.find(([key]) => key === row.key)?.[1] ?? Infinity;
+    if (row.reset_at > now && row.failures >= max) {
+      wait = Math.max(wait, Math.ceil((row.reset_at - now) / 1000));
+    }
+  }
+  return wait;
+}
+
+async function recordLoginFailure(db: D1Database, keys: string[]): Promise<void> {
+  const now = Date.now();
+  await db.batch([
+    ...keys.map((key) =>
+      db.prepare(`
+        INSERT INTO login_attempts (key, failures, reset_at) VALUES (?, 1, ?)
+        ON CONFLICT(key) DO UPDATE SET
+          failures = CASE WHEN login_attempts.reset_at <= ? THEN 1 ELSE login_attempts.failures + 1 END,
+          reset_at = CASE WHEN login_attempts.reset_at <= ? THEN excluded.reset_at ELSE login_attempts.reset_at END
+      `).bind(key, now + LOGIN_WINDOW_MS, now, now)
+    ),
+    // Les compteurs expirés depuis longtemps ne servent plus à rien.
+    db.prepare(`DELETE FROM login_attempts WHERE reset_at <= ?`).bind(now - LOGIN_WINDOW_MS),
+  ]);
+}
+
 /**
  * 1. Connexion (Login) protégée contre le bruteforce
  */
@@ -29,18 +66,18 @@ authRouter.post("/login", zValidator("json", loginSchema), async (c) => {
   const { email, password } = c.req.valid("json");
   const clientIp = clientIpOf(c);
   const normalizedEmail = email.trim().toLowerCase();
-  const rateKeyIp = `login:${clientIp}:${normalizedEmail}`;
-  const rateKeyAccount = `login:account:${normalizedEmail}`;
+  const limits: Array<[string, number]> = [
+    [`visitor:${clientIp}:${normalizedEmail}`, LOGIN_LIMITS.visitor],
+    [`account:${normalizedEmail}`, LOGIN_LIMITS.account],
+  ];
+  const attemptKeys = limits.map(([key]) => key);
 
-  // Protection Anti-Bruteforce double : max 5 essais par IP ET max 10 essais par compte sur 15 minutes
-  const rateCheckIp = checkRateLimit(rateKeyIp, 5, 15 * 60 * 1000);
-  const rateCheckAccount = checkRateLimit(rateKeyAccount, 10, 15 * 60 * 1000);
-  if (!rateCheckIp.allowed || !rateCheckAccount.allowed) {
-    const retrySec = Math.max(rateCheckIp.retryAfterSec, rateCheckAccount.retryAfterSec);
-    c.header("Retry-After", String(retrySec));
+  const waitSec = await loginWaitSeconds(c.env.DB, limits);
+  if (waitSec > 0) {
+    c.header("Retry-After", String(waitSec));
     return c.json(
       {
-        error: `Trop de tentatives de connexion. Veuillez patienter ${Math.ceil(retrySec / 60)} minute(s) avant de réessayer.`,
+        error: `Trop de tentatives de connexion. Veuillez patienter ${Math.ceil(waitSec / 60)} minute(s) avant de réessayer.`,
       },
       429
     );
@@ -70,17 +107,18 @@ authRouter.post("/login", zValidator("json", loginSchema), async (c) => {
   }>();
 
   if (!user || user.is_active !== 1 || user.role_is_active !== 1) {
+    await recordLoginFailure(c.env.DB, attemptKeys);
     return c.json({ error: "Identifiants invalides ou compte inactif." }, 401);
   }
 
   const isValidPassword = await verifyPassword(password, user.password_hash);
   if (!isValidPassword) {
+    await recordLoginFailure(c.env.DB, attemptKeys);
     return c.json({ error: "Identifiants invalides ou compte inactif." }, 401);
   }
 
-  // Réinitialise le compteur d'échecs après authentification réussie
-  resetRateLimit(rateKeyIp);
-  resetRateLimit(rateKeyAccount);
+  // Une connexion réussie efface les échecs de ce visiteur et de ce compte.
+  await c.env.DB.prepare(`DELETE FROM login_attempts WHERE key IN (?, ?)`).bind(...attemptKeys).run();
 
   const isSuperAdmin = user.role_id === SUPER_ADMIN_ROLE_ID;
 

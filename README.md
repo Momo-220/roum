@@ -93,12 +93,12 @@ Le compte `user-superadmin-01` créé par les migrations n'a aucun mot de passe 
 
 ## Accès à l'espace de gestion
 
-`/admin` n'existe pas pour le public : sans le cookie déposé par le lien secret, il répond 404 comme n'importe quelle adresse inconnue (`frontend/src/proxy.ts`).
+`/admin` affiche directement la page de connexion, sans lien secret à ouvrir (`frontend/src/proxy.ts`). Les anciens liens `/acces/<clé>` y mènent aussi.
 
-- Définissez `ADMIN_ACCESS_KEY` (32 caractères minimum) dans `frontend/.env.local` et chez l'hébergeur du site. Sans cette clé, l'espace reste fermé pour tout le monde.
-- Le gérant ouvre une fois `/acces/<clé>` sur chaque appareil, puis se connecte avec son compte.
-- Il change son e-mail de connexion et son mot de passe dans Paramètres, avec son mot de passe actuel.
-- Cette porte cache l'interface. Les données restent protégées par l'API, qui exige le compte du gérant à chaque requête.
+- Les données restent protégées par l'API, qui exige le compte du gérant à chaque requête.
+- Après 5 mots de passe faux en 15 minutes, le visiteur est bloqué ; après 20, le compte l'est pour tous. Ces compteurs sont gardés en base (`login_attempts`), donc communs à tous les serveurs de l'API.
+- Le gérant change son e-mail de connexion et son mot de passe dans Paramètres, avec son mot de passe actuel.
+- La page n'est pas indexée par les moteurs de recherche (`X-Robots-Tag: noindex`).
 
 ## Sécurité
 

@@ -586,4 +586,34 @@ await check("le gérant change son e-mail : protections, connexion et synchronis
   assert.ok(logs.some((log) => log.action === "auth.change_email"));
 });
 
+await check("la connexion bloque les essais répétés et repart à zéro après un succès", async () => {
+  const suffix = randomUUID().slice(0, 8);
+  const password = `Essai-${randomUUID()}`;
+  const { roles } = (await call("GET", "/api/admin/roles", { headers: ADMIN })).data;
+  const create = (email) =>
+    call("POST", "/api/admin/users", {
+      headers: ADMIN,
+      body: { email, password, full_name: "Gérant Test", role_id: roles[0].id },
+    });
+  const login = (email, secret) => call("POST", "/api/auth/login", { body: { email, password: secret } });
+
+  const blocked = `bloque-${suffix}@example.com`;
+  assert.ok((await create(blocked)).status < 300);
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    assert.equal((await login(blocked, "mauvais")).status, 401);
+  }
+  assert.equal((await login(blocked, "mauvais")).status, 429);
+  assert.equal((await login(blocked, password)).status, 429, "même le bon mot de passe attend la fin du blocage");
+
+  const forgiven = `pardonne-${suffix}@example.com`;
+  assert.ok((await create(forgiven)).status < 300);
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    assert.equal((await login(forgiven, "mauvais")).status, 401);
+  }
+  assert.equal((await login(forgiven, password)).status, 200);
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    assert.equal((await login(forgiven, "mauvais")).status, 401, "le succès a remis le compteur à zéro");
+  }
+});
+
 console.log(`\n${passed} vérifications réussies.`);
