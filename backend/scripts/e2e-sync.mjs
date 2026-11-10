@@ -650,4 +650,38 @@ await check("la photo de profil est gardée en base et suit le compte sur chaque
   assert.equal((await call("GET", "/api/auth/me", { headers: session })).data.user.avatarUrl, null);
 });
 
+await check("les textes et images du site modifiés par l'admin arrivent chez le client", async () => {
+  const before = (await call("GET", "/api/public/sync")).data.versions.settings;
+  const title = `Titre d'essai ${randomUUID().slice(0, 6)}`;
+  const saved = await call("PUT", "/api/admin/settings", { headers: ADMIN, body: { site_home_title_1: title } });
+  assert.equal(saved.status, 200, JSON.stringify(saved.data));
+  assert.equal((await call("GET", "/api/public/settings")).data.settings.site_home_title_1, title);
+  assert.ok((await call("GET", "/api/public/sync")).data.versions.settings > before);
+
+  const photo = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+  assert.equal((await call("PUT", "/api/admin/site-images/achat", { body: { dataUrl: photo } })).status, 401);
+  assert.equal(
+    (await call("PUT", "/api/admin/site-images/achat", { headers: ADMIN, body: { dataUrl: "data:text/html;base64,PHA+" } })).status,
+    400
+  );
+  assert.equal((await call("PUT", "/api/admin/site-images/../x", { headers: ADMIN, body: { dataUrl: photo } })).status >= 400, true);
+
+  const uploaded = await call("PUT", "/api/admin/site-images/achat", { headers: ADMIN, body: { dataUrl: photo } });
+  assert.equal(uploaded.status, 200, JSON.stringify(uploaded.data));
+  const version = (await call("GET", "/api/public/settings")).data.settings.site_image_achat;
+  assert.equal(version, uploaded.data.version);
+
+  const image = await fetch(`${API}/api/public/site-images/achat?v=${version}`);
+  assert.equal(image.status, 200);
+  assert.equal(image.headers.get("content-type"), "image/png");
+  assert.ok(image.headers.get("cache-control").includes("immutable"));
+  assert.equal((await image.arrayBuffer()).byteLength, 70);
+
+  assert.equal((await call("DELETE", "/api/admin/site-images/achat", { headers: ADMIN })).status, 200);
+  assert.equal((await call("GET", "/api/public/settings")).data.settings.site_image_achat, undefined);
+  assert.equal((await fetch(`${API}/api/public/site-images/achat`)).status, 404);
+
+  await call("PUT", "/api/admin/settings", { headers: ADMIN, body: { site_home_title_1: "" } });
+});
+
 console.log(`\n${passed} vérifications réussies.`);

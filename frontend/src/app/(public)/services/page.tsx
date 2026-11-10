@@ -17,6 +17,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { ScrollReveal } from "@/components/ScrollReveal";
+import { hasSiteText, siteImage, siteLines, siteText } from "@/shared/siteContent";
 import { CircularFlag } from "@/components/CircularFlag";
 import {
   findTariff,
@@ -168,7 +169,16 @@ function ServicesContent() {
       name: "Dépôt de Dubaï",
       address: settings.warehouse_dubai_address,
       contact: settings.warehouse_dubai_contact,
-      mark: "ROUM / [VOTRE-NOM] / [VOTRE-VILLE] / AIR-DXB",
+      mark: siteText(settings, "warehouses_ae_mark"),
+    },
+    {
+      key: "casablanca",
+      label: "Casablanca",
+      flag: "ma",
+      name: "Dépôt de Casablanca",
+      address: settings.hub_casablanca_address,
+      contact: settings.hub_casablanca_contact,
+      mark: siteText(settings, "warehouses_ma_mark"),
     },
     {
       key: "paris",
@@ -177,7 +187,7 @@ function ServicesContent() {
       name: "Point de collecte Île-de-France",
       address: settings.agency_paris_address,
       contact: settings.agency_paris_contact,
-      mark: "ROUM / [VOTRE-NOM] / [VOTRE-VILLE] / AIR-PARIS",
+      mark: siteText(settings, "warehouses_fr_mark"),
     },
   ].filter((w) => w.address?.trim());
   const warehouse = warehouses.find((w) => w.key === activeWarehouse) ?? warehouses[0];
@@ -193,13 +203,10 @@ function ServicesContent() {
           <header className="services-header">
             <div className="services-badge-category">
               <span className="dot">●</span>
-              <span>01 / CATALOGUE LOGISTIQUE OFFICIEL</span>
+              <span>{siteText(settings, "services_kicker")}</span>
             </div>
-            <h1 className="services-title">Nos Voies & Services d&apos;Acheminement.</h1>
-            <p className="services-desc">
-              Règlement de vos usines chinoises en Yuans, fret maritime et fret aérien direct.
-              <strong> Dédouanement 100% inclus</strong> jusqu&apos;à votre destination finale.
-            </p>
+            <h1 className="services-title">{siteText(settings, "services_title")}</h1>
+            <p className="services-desc">{siteText(settings, "services_text")}</p>
           </header>
 
           {/* ========================================================
@@ -208,65 +215,65 @@ function ServicesContent() {
           <div className="bento-grid">
             <ServiceCard
               className="card-alibaba"
-              image="/images/services/achat.jpg"
+              image={siteImage(settings, "achat")}
               imageAlt="Cartons ouverts vus de dessus"
               index="01"
-              tag="Achats en Chine"
-              title="Centrale d'Achat"
-              text="Payez en FCFA par Wave ou Orange Money, sans carte internationale. Nous réglons votre usine."
+              tag={siteText(settings, "services_achat_tag")}
+              title={siteText(settings, "services_achat_title")}
+              text={siteText(settings, "services_achat_text")}
               from={{ label: "Vous payez", value: "FCFA" }}
               through="24 h"
               to={{ label: "L'usine reçoit", value: "Yuans" }}
-              chips={["Sans fournisseur : on trouve l'usine", "Avec fournisseur : on paie votre proforma"]}
+              chips={siteLines(settings, "services_achat_chips")}
               href="/services/commande"
-              cta="Lancer une commande"
+              cta={siteText(settings, "services_achat_cta")}
             />
 
             <ServiceCard
               className="card-aerien"
-              image="/images/services/aerien-hublot.jpg"
+              image={siteImage(settings, "aerien")}
               imageAlt="Aile d'avion vue par le hublot, au-dessus des nuages"
               imagePosition="50% 22%"
               index="02"
-              tag="Par les airs"
-              title="Voie Aérienne"
-              text="Plis urgents, téléphones et colis réguliers, au départ de quatre pays."
+              tag={siteText(settings, "services_aerien_tag")}
+              title={siteText(settings, "services_aerien_title")}
+              text={siteText(settings, "services_aerien_text")}
               from={{ label: "Depuis", value: "4 pays" }}
               through={`${offers.express?.delay || "4 à 5"} jours`}
               to={{ label: "Vers", value: "L'Afrique" }}
               highlight={offers.express ? `Dès ${offers.express.price} FCFA / kg` : undefined}
-              chips={["Douane incluse", "Photos et pesée"]}
+              chips={siteLines(settings, "services_aerien_chips")}
               href="/tariffs?mode=AIR"
-              cta="Voir les tarifs"
+              cta={siteText(settings, "services_aerien_cta")}
             />
 
             <ServiceCard
               className="card-maritime"
-              image="/images/services/maritime-ciel.jpg"
+              image={siteImage(settings, "maritime")}
               imageAlt="Navire chargé de conteneurs vu du ciel, sur une mer bleu profond"
               imagePosition="60% 0%"
               index="03"
-              tag="Par la mer"
-              title="Voie Maritime"
-              text="Groupage au m³ ou conteneur complet, depuis Guangzhou, Ningbo et Yiwu."
+              tag={siteText(settings, "services_maritime_tag")}
+              title={siteText(settings, "services_maritime_title")}
+              text={siteText(settings, "services_maritime_text")}
               from={{ label: "Depuis", value: "Chine" }}
               through={`${offers.sea?.delay || "35 à 45"} jours`}
               to={{ label: "Vers", value: "L'Afrique" }}
               highlight={`Dès ${offers.sea?.price || "300 000"} FCFA / m³`}
-              chips={["Douane incluse", "Scellés et suivi"]}
+              chips={siteLines(settings, "services_maritime_chips")}
               href="/tariffs?mode=SEA"
-              cta="Voir les tarifs"
+              cta={siteText(settings, "services_maritime_cta")}
             />
 
             <ServiceCard
               className="card-international"
-              image="/images/services/international_points.jpg"
+              image={siteImage(settings, "comptoirs")}
               imageAlt="Ville vue d'en haut au coucher du soleil"
               imagePosition="60% 40%"
               index="04"
-              tag="Nos comptoirs"
-              title="Comptoirs Internationaux"
-              text="Déposez votre colis près de chez vous : il part directement vers l'Afrique."
+              tag={siteText(settings, "services_comptoirs_tag")}
+              title={siteText(settings, "services_comptoirs_title")}
+              text={siteText(settings, "services_comptoirs_text")}
               from={{
                 label: "Depuis",
                 value: (
@@ -279,13 +286,18 @@ function ServicesContent() {
               }}
               through="3 pays"
               to={{ label: "Vers", value: "L'Afrique" }}
-              chips={[
-                "Dubaï : high-tech",
-                offers.france ? `Paris : dès ${offers.france.price} FCFA / kg` : "Paris et Île-de-France",
-                "Casablanca : 5 capitales",
-              ]}
+              chips={
+                // Sans texte personnalisé, la pastille de Paris affiche le prix réel de la grille.
+                hasSiteText(settings, "services_comptoirs_chips")
+                  ? siteLines(settings, "services_comptoirs_chips")
+                  : [
+                      "Dubaï : high-tech",
+                      offers.france ? `Paris : dès ${offers.france.price} FCFA / kg` : "Paris et Île-de-France",
+                      "Casablanca : 5 capitales",
+                    ]
+              }
               href="/tariffs"
-              cta="Voir les tarifs"
+              cta={siteText(settings, "services_comptoirs_cta")}
             />
           </div>
 
@@ -296,8 +308,8 @@ function ServicesContent() {
             <div className="shipping-pass-block">
               <div className="pass-tabs-header">
                 <div className="pass-header-info">
-                  <span className="pass-label">Vos adresses de réception</span>
-                  <h3 className="pass-headline">Nos dépôts &amp; le marquage des cartons</h3>
+                  <span className="pass-label">{siteText(settings, "services_depots_label")}</span>
+                  <h3 className="pass-headline">{siteText(settings, "services_depots_title")}</h3>
                 </div>
 
                 {/* Sélecteur d'entrepôt en capsule */}

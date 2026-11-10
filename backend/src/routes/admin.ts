@@ -2725,3 +2725,61 @@ adminRouter.get("/exports/shipments.csv", async (c) => {
   });
 });
 
+// ============================================================================
+// Images du site (cartes des services) : remplacées par la direction depuis l'admin
+// ============================================================================
+
+const SITE_IMAGE_KEY = /^[a-z0-9_]{1,40}$/;
+/** Une ligne D1 ne dépasse pas 2 Mo : l'image compressée doit rester en dessous. */
+const MAX_SITE_IMAGE_CHARS = 1_800_000;
+const siteImageSchema = z.object({
+  dataUrl: z
+    .string()
+    .max(MAX_SITE_IMAGE_CHARS, "Image trop lourde")
+    .regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/, "Image invalide"),
+});
+
+adminRouter.put("/site-images/:key", zValidator("json", siteImageSchema), async (c) => {
+  const user = c.get("user");
+  if (!user.isSuperAdmin && !checkPermission(c, "settings.manage")) {
+    return c.json({ error: "Permission insuffisante (settings.manage requise)." }, 403);
+  }
+  const key = c.req.param("key");
+  if (!SITE_IMAGE_KEY.test(key)) return c.json({ error: "Image inconnue." }, 400);
+
+  const { dataUrl } = c.req.valid("json");
+  const comma = dataUrl.indexOf(",");
+  const mimeType = dataUrl.slice(5, dataUrl.indexOf(";"));
+  const version = String(Date.now());
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(`
+      INSERT INTO site_images (key, mime_type, data, updated_at) VALUES (?, ?, ?, datetime('now'))
+      ON CONFLICT(key) DO UPDATE SET mime_type = excluded.mime_type, data = excluded.data, updated_at = excluded.updated_at
+    `).bind(key, mimeType, dataUrl.slice(comma + 1)),
+    c.env.DB.prepare(`
+      INSERT INTO business_settings (key, value, updated_by_user_id, updated_at)
+      VALUES (?, ?, ?, datetime('now'))
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_by_user_id = excluded.updated_by_user_id, updated_at = excluded.updated_at
+    `).bind(`site_image_${key}`, version, user.userId),
+  ]);
+
+  return c.json({ success: true, key, version });
+});
+
+adminRouter.delete("/site-images/:key", async (c) => {
+  const user = c.get("user");
+  if (!user.isSuperAdmin && !checkPermission(c, "settings.manage")) {
+    return c.json({ error: "Permission insuffisante (settings.manage requise)." }, 403);
+  }
+  const key = c.req.param("key");
+  if (!SITE_IMAGE_KEY.test(key)) return c.json({ error: "Image inconnue." }, 400);
+
+  // L'image d'origine du site reprend sa place.
+  await c.env.DB.batch([
+    c.env.DB.prepare(`DELETE FROM site_images WHERE key = ?`).bind(key),
+    c.env.DB.prepare(`DELETE FROM business_settings WHERE key = ?`).bind(`site_image_${key}`),
+  ]);
+
+  return c.json({ success: true, key });
+});

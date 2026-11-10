@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { normalizeTrackingNumber } from "@/shared";
 import { ScrollReveal } from "@/components/ScrollReveal";
+import { usePublicCatalog } from "@/shared/usePublicCatalog";
+import { siteText } from "@/shared/siteContent";
 
 const TRACKING_STEPS = [
   { step: "01", label: "Demande reçue", desc: "Enregistrée", isHigh: false },
@@ -20,6 +22,7 @@ const TRACKING_STEPS = [
 
 export default function TrackingPage() {
   const router = useRouter();
+  const { settings } = usePublicCatalog();
   const [trackingInput, setTrackingInput] = useState("");
   const [trackingError, setTrackingError] = useState("");
 
@@ -208,7 +211,7 @@ export default function TrackingPage() {
           <div style={{ textAlign: "center", marginBottom: "32px" }}>
             <div className="client-eyebrow" style={{ justifyContent: "center", marginBottom: "12px" }}>
               <span style={{ color: "var(--c-accent)" }}>●</span>
-              <span>TRAÇABILITÉ EN DIRECT & BORDEREAU</span>
+              <span>{siteText(settings, "tracking_kicker")}</span>
             </div>
 
             <h1
@@ -221,11 +224,11 @@ export default function TrackingPage() {
                 margin: "0 0 10px 0",
               }}
             >
-              Suivre mon Colis en Temps Réel
+              {siteText(settings, "tracking_title")}
             </h1>
 
             <p style={{ fontSize: "1.02rem", color: "var(--c-text-muted)", margin: 0, lineHeight: 1.55 }}>
-              Entrez le numéro inscrit sur votre bordereau pour visualiser sa progression officielle.
+              {siteText(settings, "tracking_text")}
             </p>
           </div>
 

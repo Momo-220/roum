@@ -11,6 +11,7 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { getAdminDestinations, getSupportPhoneDigits, saveClientRequest } from "@/shared";
 import { newUuid } from "@/shared/api";
 import { usePublicCatalog } from "@/shared/usePublicCatalog";
+import { siteText } from "@/shared/siteContent";
 import { getPaymentPageUrl } from "@/shared/whatsapp";
 import {
   buildClientReceiptWhatsAppUrl,
@@ -205,8 +206,8 @@ function SendParcelForm() {
           <ArrowLeft size={16} />
           <span>Tarifs</span>
         </Link>
-        <h1>Envoyer un colis</h1>
-        <p>Pesez votre colis, remplissez ce formulaire : nous vous envoyons votre devis sur WhatsApp.</p>
+        <h1>{siteText(settings, "envoi_title")}</h1>
+        <p>{siteText(settings, "envoi_text")}</p>
       </header>
 
       <section className="ev-block">

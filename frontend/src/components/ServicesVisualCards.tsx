@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { getStartingOffers, type OfficialTariff } from "@/shared";
 import { usePublicCatalog } from "@/shared/usePublicCatalog";
+import { siteImage, siteLines, siteText } from "@/shared/siteContent";
 import Link from "next/link";
 import { ArrowDownRight, ArrowRight, X } from "lucide-react";
 
@@ -25,87 +26,68 @@ interface ServiceItem {
   metrics: { label: string; value: string }[];
 }
 
-const SERVICES_DATA: ServiceItem[] = [
-  {
-    id: "achats",
-    badge: "ALIBABA, 1688 & TAOBAO",
-    title: "Centrale d'Achat",
-    subtitle: "Paiement en Yuans (RMB) par Mobile Money",
-    description:
-      "Commandez sur Alibaba et 1688 en réglant en FCFA par Mobile Money. Nous payons votre usine en Yuans sous 24h avec contrôle colis inclus.",
-    image: "/images/services/achat.jpg",
-    href: "/services?tab=alibaba",
-    ctaText: "Accéder à la Centrale d'Achat",
-    options: [
-      {
-        tag: "Option 1 · Sans fournisseur",
-        desc: "Sourcing produit & négociation directe en usine.",
-      },
-      {
-        tag: "Option 2 · Avec fournisseur",
-        desc: "Règlement de votre proforma en Yuans sous 24h.",
-      },
-    ],
-    features: [
-      "Paiement direct (Wave, Orange Money, Compte Maroc)",
-      "Zéro carte bancaire internationale requise",
-      "Photos, pesée et contrôle des cartons à Guangzhou",
-      "Dédouanement complet inclus jusqu'à destination",
-    ],
-    metrics: [
-      { label: "Paiement client", value: "Mobile Money (FCFA)" },
-      { label: "Règlement usine", value: "Yuans (RMB)" },
-    ],
-  },
-  {
-    id: "maritime",
-    badge: "BATEAU · DÈS 300 000 FCFA / M³",
-    title: "Voie Maritime",
-    subtitle: "Groupage CBM & Conteneurs FCL",
-    description:
-      "Acheminement maritime économique au m³ depuis la Chine. Dédouanement 100% compris jusqu'à destination finale.",
-    image: "/images/services/maritime-ciel.jpg",
-    href: "/tariffs?mode=SEA",
-    ctaText: "Voir les tarifs maritimes",
-    features: [
-      "Groupage au m³ sans minimum lourd",
-      "Dédouanement & taxes portuaires inclus",
-      "Départs réguliers chaque semaine",
-      "Scellés de sécurité & suivi en temps réel",
-    ],
-    metrics: [
-      { label: "Délai moyen", value: "35 à 45 jours" },
-      { label: "Tarif groupage", value: "Dès 300 000 F / m³" },
-    ],
-  },
-  {
-    id: "aerien",
-    badge: "AVION · EXPRESS 4 À 5 JOURS",
-    title: "Voie Aérienne",
-    subtitle: "Chine, Dubaï, France & Maroc direct",
-    description:
-      "Vols hebdomadaires pour colis urgents, téléphones et électronique. Pesée, photos et dédouanement complet inclus au kilo.",
-    image: "/images/services/aerien-hublot.jpg",
-    href: "/tariffs?mode=AIR",
-    ctaText: "Voir les tarifs aériens",
-    features: [
-      "Vols réguliers Chine, Dubaï, France & Maroc",
-      "Formule Express (4 à 5 j) ou Normale (10 à 12 j)",
-      "Dédouanement intégral compris au kilo",
-      "Photos et pesée dès réception",
-    ],
-    metrics: [
-      { label: "Délai express", value: "4 à 5 jours" },
-      { label: "Tarif indicatif", value: "Dès 10 000 F / kg" },
-    ],
-  },
-];
+/** Textes et images modifiables dans l'admin (Contenu du site) ; liens et chiffres restent fixes. */
+function buildServices(settings: Record<string, string>): ServiceItem[] {
+  const text = (key: string) => siteText(settings, key);
+  const lines = (key: string) => siteLines(settings, key);
+  return [
+    {
+      id: "achats",
+      badge: text("home_card_achats_badge"),
+      title: text("home_card_achats_title"),
+      subtitle: text("home_card_achats_subtitle"),
+      description: text("home_card_achats_description"),
+      image: siteImage(settings, "achat"),
+      href: "/services?tab=alibaba",
+      ctaText: text("home_card_achats_cta"),
+      options: [
+        { tag: text("home_card_achats_option_1_tag"), desc: text("home_card_achats_option_1_text") },
+        { tag: text("home_card_achats_option_2_tag"), desc: text("home_card_achats_option_2_text") },
+      ],
+      features: lines("home_card_achats_features"),
+      metrics: [
+        { label: "Paiement client", value: "Mobile Money (FCFA)" },
+        { label: "Règlement usine", value: "Yuans (RMB)" },
+      ],
+    },
+    {
+      id: "maritime",
+      badge: "BATEAU · DÈS 300 000 FCFA / M³",
+      title: text("home_card_maritime_title"),
+      subtitle: text("home_card_maritime_subtitle"),
+      description: text("home_card_maritime_description"),
+      image: siteImage(settings, "maritime"),
+      href: "/tariffs?mode=SEA",
+      ctaText: text("home_card_maritime_cta"),
+      features: lines("home_card_maritime_features"),
+      metrics: [
+        { label: "Délai moyen", value: "35 à 45 jours" },
+        { label: "Tarif groupage", value: "Dès 300 000 F / m³" },
+      ],
+    },
+    {
+      id: "aerien",
+      badge: "AVION · EXPRESS 4 À 5 JOURS",
+      title: text("home_card_aerien_title"),
+      subtitle: text("home_card_aerien_subtitle"),
+      description: text("home_card_aerien_description"),
+      image: siteImage(settings, "aerien"),
+      href: "/tariffs?mode=AIR",
+      ctaText: text("home_card_aerien_cta"),
+      features: lines("home_card_aerien_features"),
+      metrics: [
+        { label: "Délai express", value: "4 à 5 jours" },
+        { label: "Tarif indicatif", value: "Dès 10 000 F / kg" },
+      ],
+    },
+  ];
+}
 
 /** Les prix et délais affichés suivent la grille tarifaire réelle. */
-function withLiveOffers(tariffs: OfficialTariff[]): ServiceItem[] {
+function withLiveOffers(services: ServiceItem[], tariffs: OfficialTariff[]): ServiceItem[] {
   const offers = getStartingOffers(tariffs);
 
-  return SERVICES_DATA.map((service) => {
+  return services.map((service) => {
     if (service.id === "maritime" && offers.sea) {
       return {
         ...service,
@@ -139,8 +121,8 @@ function withLiveOffers(tariffs: OfficialTariff[]): ServiceItem[] {
 }
 
 export function ServicesVisualCards() {
-  const { tariffs } = usePublicCatalog();
-  const services = useMemo(() => withLiveOffers(tariffs), [tariffs]);
+  const { tariffs, settings } = usePublicCatalog();
+  const services = useMemo(() => withLiveOffers(buildServices(settings), tariffs), [settings, tariffs]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
@@ -195,15 +177,9 @@ export function ServicesVisualCards() {
     <section className="services-section-wrapper">
       {/* En-tête de section éditorial épuré */}
       <div className="services-header">
-        <div className="services-eyebrow">
-          01 / NOS VOIES DE TRANSPORT OFFICIELLES
-        </div>
-        <h2 className="services-heading">
-          Choisissez votre mode d&apos;acheminement direct vers l&apos;Afrique.
-        </h2>
-        <p className="services-subtext">
-          Touchez un service pour dérouler ses détails, délais et garanties.
-        </p>
+        <div className="services-eyebrow">{siteText(settings, "home_services_kicker")}</div>
+        <h2 className="services-heading">{siteText(settings, "home_services_title")}</h2>
+        <p className="services-subtext">{siteText(settings, "home_services_text")}</p>
       </div>
 
       {/* ========================================================

@@ -73,6 +73,7 @@ import {
 } from "lucide-react";
 import { AdminLogin } from "@/components/AdminLogin";
 import { AssistantWorkspace } from "@/components/AssistantWorkspace";
+import { SiteContentEditor } from "@/components/SiteContentEditor";
 import { ExchangeRatesCard } from "@/components/ExchangeRatesCard";
 import { ShipmentPhotosManager } from "@/components/ShipmentPhotosManager";
 import RouteGlobe from "@/components/RouteGlobe";
@@ -755,6 +756,7 @@ export default function AdminPage() {
     | "finances"
     | "tasks"
     | "settings"
+    | "content"
   >("dashboard");
 
   // Données : uniquement ce que la base renvoie. Rien n'est conservé ni inventé dans le navigateur.
@@ -3010,6 +3012,7 @@ export default function AdminPage() {
     { id: "shipments", label: "Expéditions & Colis", icon: Package },
     { id: "clients", label: "Clients", icon: Users },
     { id: "tariffs", label: "Tarifs & Grilles", icon: DollarSign },
+    { id: "content", label: "Contenu du site", icon: FileText },
     { id: "finances", label: "Finances & Paiements", icon: HandCoins },
     { id: "tasks", label: "Tâches", icon: CheckSquare, badge: stats?.pending_tasks },
   ];
@@ -3487,6 +3490,7 @@ export default function AdminPage() {
               {activeTab === "finances" && "Paiements & Encaissements"}
               {activeTab === "tasks" && "Tâches Opérationnelles"}
               {activeTab === "settings" && "Paramètres & Audit"}
+              {activeTab === "content" && "Contenu du site"}
             </h2>
             <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", marginTop: "4px" }}>
               {activeTab === "assistant"
@@ -7344,6 +7348,35 @@ export default function AdminPage() {
         })()}
 
         {/* 8. PARAMÈTRES & AUDIT */}
+        {activeTab === "content" && (
+          <SiteContentEditor
+            settings={companySettings}
+            token={token}
+            notify={triggerToast}
+            onSave={async (changes) => {
+              const saved = await adminCall(
+                "/settings",
+                { method: "PUT", body: changes },
+                {
+                  scopes: [],
+                  success: "Textes enregistrés : vos clients les voient déjà.",
+                  successTitle: "Contenu du site",
+                }
+              );
+              if (saved) setCompanySettings((prev) => ({ ...prev, ...changes }));
+              return Boolean(saved);
+            }}
+            onImageSaved={(settingKey, version) =>
+              setCompanySettings((prev) => {
+                const next = { ...prev };
+                if (version) next[settingKey] = version;
+                else delete next[settingKey];
+                return next;
+              })
+            }
+          />
+        )}
+
         {activeTab === "settings" && (
           <div key="settings" className="animate-fade-in" style={{ display: "grid", gap: "24px", maxWidth: "1280px", margin: "0 auto", width: "100%" }}>
             {/* TAUX DE CHANGE : ILS S'APPLIQUENT AUSSITÔT AUX PRIX AFFICHÉS AUX CLIENTS */}
@@ -7604,6 +7637,40 @@ export default function AdminPage() {
                         type="text"
                         value={companySettings.agency_paris_contact || ""}
                         onChange={(e) => setCompanySettings({ ...companySettings, agency_paris_contact: e.target.value })}
+                        className="input-clean"
+                        style={{ fontSize: "0.82rem" }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dépôt Casablanca */}
+                <div style={{ padding: "12px 6px 20px 6px", borderBottom: "1px solid var(--border-light)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
+                    <CircularFlag countryCode="MA" size={16} />
+                    <strong style={{ fontSize: "0.88rem", color: "var(--brown-dark)" }}>Dépôt Casablanca (Maroc)</strong>
+                  </div>
+                  <div style={{ display: "grid", gap: "10px" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: 600 }}>
+                        Adresse Dépôt Casablanca
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={companySettings.hub_casablanca_address || ""}
+                        onChange={(e) => setCompanySettings({ ...companySettings, hub_casablanca_address: e.target.value })}
+                        className="input-clean"
+                        style={{ fontSize: "0.82rem" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.74rem", color: "var(--text-secondary)", marginBottom: "3px", fontWeight: 600 }}>
+                        Contact Dépôt Casablanca
+                      </label>
+                      <input
+                        type="text"
+                        value={companySettings.hub_casablanca_contact || ""}
+                        onChange={(e) => setCompanySettings({ ...companySettings, hub_casablanca_contact: e.target.value })}
                         className="input-clean"
                         style={{ fontSize: "0.82rem" }}
                       />

@@ -270,6 +270,22 @@ publicRouter.get("/tracking/:trackingNumber/photos/:photoId", async (c) => {
   });
 });
 
+/** Image du site remplacée par la direction. L'adresse porte sa version : elle se garde en cache. */
+publicRouter.get("/site-images/:key", async (c) => {
+  const image = await c.env.DB.prepare(`
+    SELECT mime_type, data FROM site_images WHERE key = ?
+  `).bind(c.req.param("key")).first<{ mime_type: string; data: string }>();
+
+  if (!image) return c.json({ error: "Image introuvable." }, 404);
+
+  const bytes = Uint8Array.from(atob(image.data), (char) => char.charCodeAt(0));
+  return c.body(bytes, 200, {
+    "Content-Type": image.mime_type,
+    "Cache-Control": c.req.query("v") ? "public, max-age=31536000, immutable" : "public, max-age=300",
+    "X-Content-Type-Options": "nosniff",
+  });
+});
+
 /**
  * 2. Consultation des tarifs et routes actifs pour le simulateur client
  */
@@ -351,6 +367,7 @@ publicRouter.get("/settings", async (c) => {
     "agency_paris_address",
     "agency_paris_contact",
     "hub_casablanca_address",
+    "hub_casablanca_contact",
     "custom_hubs_json",
     "exchange_rate_rmb",
     "exchange_rate_usd",
@@ -358,7 +375,8 @@ publicRouter.get("/settings", async (c) => {
   ]);
 
   for (const s of (settings as any[]) || []) {
-    if (allowedKeys.has(s.key)) {
+    // Les textes et images du site (`site_…`) sont faits pour être lus par les clients.
+    if (allowedKeys.has(s.key) || s.key.startsWith("site_")) {
       publicMap[s.key] = s.value;
     }
   }

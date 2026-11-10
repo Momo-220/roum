@@ -14,9 +14,12 @@ import { normalizeTrackingNumber } from "@/shared";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { WorldMap } from "@/components/WorldMap";
 import { ServicesVisualCards } from "@/components/ServicesVisualCards";
+import { usePublicCatalog } from "@/shared/usePublicCatalog";
+import { siteText } from "@/shared/siteContent";
 
 export default function HomePage() {
   const router = useRouter();
+  const { settings } = usePublicCatalog();
 
   // Suivi rapide de colis
   const [trackingInput, setTrackingInput] = useState("");
@@ -44,8 +47,8 @@ export default function HomePage() {
           {/* Titre Majeur Garanti sur 2 Lignes Équilibrées */}
           <div className="hero-title-container">
             <h1 className="hero-headline-two-lines">
-              <span className="hero-line">Transport maritime &amp; aérien</span>
-              <span className="hero-line">direct vers l&apos;Afrique.</span>
+              <span className="hero-line">{siteText(settings, "home_title_1")}</span>
+              <span className="hero-line">{siteText(settings, "home_title_2")}</span>
             </h1>
           </div>
 
@@ -65,7 +68,7 @@ export default function HomePage() {
                   setTrackingInput(e.target.value);
                   if (trackingError) setTrackingError("");
                 }}
-                placeholder="Votre numéro de suivi"
+                placeholder={siteText(settings, "home_search_placeholder")}
                 className="hero-search-input"
               />
               <button type="submit" className="hero-search-submit">

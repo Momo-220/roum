@@ -1,6 +1,7 @@
 "use client";
 
 import { usePublicCatalog } from "@/shared/usePublicCatalog";
+import { siteText } from "@/shared/siteContent";
 import { getSupportPhoneDigits } from "@/shared";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -477,9 +478,9 @@ export default function TariffsPage() {
       <div className="tz-container">
         <ScrollReveal>
           <header className="tz-header">
-            <span className="tz-eyebrow">Tarifs</span>
-            <h1 className="tz-title">Combien coûte votre envoi&nbsp;?</h1>
-            <p className="tz-lead">Choisissez votre trajet, réglez le poids, et le prix s&apos;affiche. Douane comprise.</p>
+            <span className="tz-eyebrow">{siteText(settings, "tariffs_kicker")}</span>
+            <h1 className="tz-title">{siteText(settings, "tariffs_title")}</h1>
+            <p className="tz-lead">{siteText(settings, "tariffs_text")}</p>
           </header>
 
           <div className="tz-layout">

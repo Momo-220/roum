@@ -6,6 +6,7 @@ import { CircularFlag } from "@/components/CircularFlag";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { getCustomHubs, getSupportPhoneDigits } from "@/shared";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { siteText } from "@/shared/siteContent";
 import { usePublicCatalog } from "@/shared/usePublicCatalog";
 
 export default function WarehousesPage() {
@@ -32,7 +33,7 @@ export default function WarehousesPage() {
       country: "Chine",
       city: "Guangzhou",
       countryCode: "CN",
-      description: "Pour vos commandes sur 1688, Taobao ou auprès d'usines en Chine.",
+      description: siteText(settings, "warehouses_cn_text"),
       shippingMark: settings.warehouse_china_shipping_mark || "ROUM TRANSIT / [Votre Nom]",
       addressToCopy: withContact(settings.warehouse_china_address, settings.warehouse_china_contact),
     },
@@ -41,8 +42,8 @@ export default function WarehousesPage() {
       country: "Émirats",
       city: "Dubaï",
       countryCode: "AE",
-      description: "Pour vos achats de parfumerie, cosmétiques, téléphones et électronique à Deira.",
-      shippingMark: "ROUM TRANSIT DUBAI / [Votre Nom]",
+      description: siteText(settings, "warehouses_ae_text"),
+      shippingMark: siteText(settings, "warehouses_ae_mark"),
       addressToCopy: withContact(settings.warehouse_dubai_address, settings.warehouse_dubai_contact),
     },
     {
@@ -50,17 +51,17 @@ export default function WarehousesPage() {
       country: "Maroc",
       city: "Casablanca",
       countryCode: "MA",
-      description: "Pour vos marchandises au Maroc, avec un départ express.",
-      shippingMark: "ROUM TRANSIT MAROC / [Votre Nom]",
-      addressToCopy: withContact(settings.hub_casablanca_address),
+      description: siteText(settings, "warehouses_ma_text"),
+      shippingMark: siteText(settings, "warehouses_ma_mark"),
+      addressToCopy: withContact(settings.hub_casablanca_address, settings.hub_casablanca_contact),
     },
     {
       id: "fr",
       country: "France",
       city: "Paris",
       countryCode: "FR",
-      description: "Pour vos colis personnels, produits de beauté et plis administratifs.",
-      shippingMark: "ROUM TRANSIT PARIS / [Votre Nom]",
+      description: siteText(settings, "warehouses_fr_text"),
+      shippingMark: siteText(settings, "warehouses_fr_mark"),
       addressToCopy: withContact(settings.agency_paris_address, settings.agency_paris_contact),
     },
     ...getCustomHubs(settings).map((hub) => ({
@@ -94,16 +95,13 @@ export default function WarehousesPage() {
       <div className="dp-container">
         <ScrollReveal>
           <header className="dp-head">
-            <h1>Nos dépôts</h1>
-            <p>
-              Copiez l&apos;adresse du pays où vous achetez et donnez-la à votre fournisseur, avec le marquage à
-              inscrire sur le carton.
-            </p>
+            <h1>{siteText(settings, "warehouses_title")}</h1>
+            <p>{siteText(settings, "warehouses_text")}</p>
           </header>
 
           {warehouses.length === 0 && (
             <div className="dp-empty">
-              <p>Écrivez-nous sur WhatsApp : nous vous donnons l&apos;adresse du dépôt qui correspond à votre achat.</p>
+              <p>{siteText(settings, "warehouses_empty")}</p>
               <WhatsAppButton
                 href={`https://wa.me/${getSupportPhoneDigits(settings)}?text=${encodeURIComponent(
                   "Bonjour ROUM TRANSIT, je souhaite l'adresse de votre dépôt."
@@ -141,10 +139,7 @@ export default function WarehousesPage() {
             ))}
           </ul>
 
-          <p className="dp-tip">
-            Demandez à votre expéditeur d&apos;inscrire votre nom et votre numéro de téléphone sur le carton : nous
-            vous attribuons ainsi le colis dès son entrée au dépôt.
-          </p>
+          <p className="dp-tip">{siteText(settings, "warehouses_tip")}</p>
         </ScrollReveal>
       </div>
 
