@@ -70,10 +70,12 @@ import {
   TrendingUp,
   RotateCcw,
   Menu,
+  Store,
 } from "lucide-react";
 import { AdminLogin } from "@/components/AdminLogin";
 import { AssistantWorkspace } from "@/components/AssistantWorkspace";
 import { SiteContentEditor } from "@/components/SiteContentEditor";
+import { ShopAdmin } from "@/components/shop/ShopAdmin";
 import { ExchangeRatesCard } from "@/components/ExchangeRatesCard";
 import { ShipmentPhotosManager } from "@/components/ShipmentPhotosManager";
 import RouteGlobe from "@/components/RouteGlobe";
@@ -757,6 +759,7 @@ export default function AdminPage() {
     | "tasks"
     | "settings"
     | "content"
+    | "shop"
   >("dashboard");
 
   // Données : uniquement ce que la base renvoie. Rien n'est conservé ni inventé dans le navigateur.
@@ -1015,6 +1018,9 @@ export default function AdminPage() {
   };
 
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  // Roum Boutique : la version recharge l'onglet, le compteur affiche les commandes à traiter.
+  const [shopVersion, setShopVersion] = useState(0);
+  const [shopPending, setShopPending] = useState(0);
 
   /**
    * Avant, la photo restait dans le navigateur. Si la base n'en a pas encore, on y envoie
@@ -1955,6 +1961,14 @@ export default function AdminPage() {
             return { ...open, ...fresh, payment_receipt_url: fresh.payment_receipt_url || open.payment_receipt_url };
           });
         })
+      );
+    }
+    if (has("shop_catalog") || has("shop_orders")) {
+      setShopVersion((v) => v + 1);
+      tasks.push(
+        loadScope<{ counts: Record<string, number> }>("shop", "/shop/orders?status=PROOF_SENT", (d) =>
+          setShopPending((d.counts?.PROOF_SENT || 0) + (d.counts?.CONFIRMED || 0))
+        )
       );
     }
     if (has("account")) {
@@ -3012,6 +3026,7 @@ export default function AdminPage() {
     { id: "shipments", label: "Expéditions & Colis", icon: Package },
     { id: "clients", label: "Clients", icon: Users },
     { id: "tariffs", label: "Tarifs & Grilles", icon: DollarSign },
+    { id: "shop", label: "Boutique", icon: Store, badge: shopPending || undefined },
     { id: "content", label: "Contenu du site", icon: FileText },
     { id: "finances", label: "Finances & Paiements", icon: HandCoins },
     { id: "tasks", label: "Tâches", icon: CheckSquare, badge: stats?.pending_tasks },
@@ -3491,6 +3506,7 @@ export default function AdminPage() {
               {activeTab === "tasks" && "Tâches Opérationnelles"}
               {activeTab === "settings" && "Paramètres & Audit"}
               {activeTab === "content" && "Contenu du site"}
+              {activeTab === "shop" && "Roum Boutique"}
             </h2>
             <p style={{ color: "var(--text-muted)", fontSize: "0.82rem", marginTop: "4px" }}>
               {activeTab === "assistant"
@@ -7348,6 +7364,8 @@ export default function AdminPage() {
         })()}
 
         {/* 8. PARAMÈTRES & AUDIT */}
+        {activeTab === "shop" && <ShopAdmin token={token} notify={triggerToast} version={shopVersion} />}
+
         {activeTab === "content" && (
           <SiteContentEditor
             settings={companySettings}
