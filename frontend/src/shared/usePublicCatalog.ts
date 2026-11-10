@@ -17,6 +17,8 @@ interface PublicCatalog {
   tariffs: OfficialTariff[];
   settings: Record<string, string>;
   syncStatus: SyncStatus;
+  /** Augmente à chaque changement du catalogue de Roum Boutique : la boutique recharge alors ses articles. */
+  shopVersion: number;
 }
 
 const PublicCatalogContext = createContext<PublicCatalog | null>(null);
@@ -29,6 +31,7 @@ const PublicCatalogContext = createContext<PublicCatalog | null>(null);
 export function PublicCatalogProvider({ children }: { children: ReactNode }) {
   const [tariffs, setTariffs] = useState<OfficialTariff[]>(DEFAULT_OFFICIAL_TARIFFS);
   const [settings, setSettings] = useState<Record<string, string>>(DEFAULT_COMPANY_SETTINGS);
+  const [shopVersion, setShopVersion] = useState(0);
 
   useEffect(() => {
     setTariffs(getLiveTariffs());
@@ -37,7 +40,8 @@ export function PublicCatalogProvider({ children }: { children: ReactNode }) {
 
   const { status } = useLiveSync({
     endpoint: "/api/v1/public/sync",
-    scopes: ["tariffs", "settings"],
+    // Une seule surveillance pour tout le site : la boutique y lit aussi les changements de son catalogue.
+    scopes: ["tariffs", "settings", "shop_catalog"],
     onChange: async (changed) => {
       try {
         if (changed.includes("tariffs")) {
@@ -46,6 +50,7 @@ export function PublicCatalogProvider({ children }: { children: ReactNode }) {
           setTariffs(mapped);
           cachePublicCatalog({ tariffs: mapped });
         }
+        if (changed.includes("shop_catalog")) setShopVersion((v) => v + 1);
         if (changed.includes("settings")) {
           const data = await apiRequest<{ settings: Record<string, string> }>("/api/v1/public/settings");
           cachePublicCatalog({ settings: data.settings || {} });
@@ -58,7 +63,10 @@ export function PublicCatalogProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const value = useMemo(() => ({ tariffs, settings, syncStatus: status }), [tariffs, settings, status]);
+  const value = useMemo(
+    () => ({ tariffs, settings, syncStatus: status, shopVersion }),
+    [tariffs, settings, status, shopVersion]
+  );
   return createElement(PublicCatalogContext.Provider, { value }, children);
 }
 

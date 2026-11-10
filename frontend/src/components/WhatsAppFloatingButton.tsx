@@ -4,15 +4,18 @@ import { getSupportPhoneDigits } from "@/shared";
 import { WhatsAppGlyph } from "@/components/WhatsAppButton";
 import { usePublicCatalog } from "@/shared/usePublicCatalog";
 
-export function WhatsAppFloatingButton() {
+export function WhatsAppFloatingButton({
+  message = "Bonjour ROUM TRANSIT, je souhaite des informations.",
+  label = "Contacter Roum Transit sur WhatsApp",
+}: { message?: string; label?: string } = {}) {
   const { settings } = usePublicCatalog();
 
   return (
     <a
-      href={`https://wa.me/${getSupportPhoneDigits(settings)}?text=Bonjour%20ROUM%20TRANSIT%2C%20je%20souhaite%20des%20informations.`}
+      href={`https://wa.me/${getSupportPhoneDigits(settings)}?text=${encodeURIComponent(message)}`}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="Contacter Roum Transit sur WhatsApp"
+      aria-label={label}
       className="whatsapp-floating-btn"
       title="Discuter sur WhatsApp"
     >

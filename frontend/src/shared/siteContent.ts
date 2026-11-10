@@ -266,6 +266,27 @@ export const SITE_SECTIONS: SiteSection[] = [
       },
     ],
   },
+  {
+    id: "boutique",
+    title: "Roum Boutique",
+    fields: [
+      { key: "boutique_kicker", label: "Petit titre", fallback: "Roum Boutique" },
+      { key: "boutique_title", label: "Titre", fallback: "Chaussures, sacs & vêtements" },
+      {
+        key: "boutique_text",
+        label: "Introduction",
+        fallback: "Choisissez votre taille et votre couleur, payez par Wave ou Orange Money, et suivez votre livraison.",
+        long: true,
+      },
+      { key: "boutique_empty", label: "Aucun article en vente", fallback: "Les nouveaux articles arrivent bientôt." },
+      {
+        key: "boutique_payment_text",
+        label: "Paiement · consigne",
+        fallback: "Payez le total sur l'un de ces comptes, puis envoyez la capture de votre paiement ci-dessous.",
+        long: true,
+      },
+    ],
+  },
 ];
 
 export const SITE_IMAGES: SiteImageField[] = [

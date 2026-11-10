@@ -948,7 +948,13 @@ shopAdminRouter.get("/orders", async (c) => {
 
   c.header("Cache-Control", "no-store");
   return c.json({
-    orders: orders.map((o) => ({ id: o.id, ...toPublicOrder(o, itemsByOrder.get(o.id) || []), proofMime: o.proof_mime })),
+    // La clé permet à la gérante d'envoyer au client le lien de sa commande.
+    orders: orders.map((o) => ({
+      id: o.id,
+      ...toPublicOrder(o, itemsByOrder.get(o.id) || []),
+      accessKey: o.access_key,
+      proofMime: o.proof_mime,
+    })),
     counts: Object.fromEntries(counts.map((r) => [r.status, r.count])),
     revenueFcfa: counts
       .filter((r) => r.status === "CONFIRMED" || r.status === "SHIPPED" || r.status === "DELIVERED")
