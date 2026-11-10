@@ -320,7 +320,8 @@ async function deliveryOptionsFor(
     options.push({
       id: `transit:${modeId}`,
       method: "TRANSIT",
-      label: `Roum Transit · ${quote.label}`,
+      // Les noms de la grille portent des émojis (✈️, ⚡) : on les retire du libellé de livraison.
+      label: `Roum Transit · ${quote.label.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, "").replace(/\s+/g, " ").trim()}`,
       delay: quote.daysMax ? `${quote.daysMin || quote.daysMax} à ${quote.daysMax} jours` : "",
       priceFcfa: quote.price,
     });
