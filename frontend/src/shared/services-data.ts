@@ -778,40 +778,18 @@ export async function submitClientPaymentProof(
 }
 
 /**
- * Coordonnées de paiement et paramètres officiels synchronisés avec l'Admin
+ * Paramètres de secours, tant que le serveur n'a pas répondu. Rien d'inventé :
+ * les adresses et les comptes de paiement viennent uniquement de la base.
  */
 export const DEFAULT_COMPANY_SETTINGS: Record<string, string> = {
   exchange_rate_rmb: "88",
   exchange_rate_usd: "610",
   exchange_rate_eur: "656",
-  company_name: "ROUM TRANSIT INTERNATIONAL SARL",
+  company_name: "ROUM TRANSIT",
   company_headquarters: "Abidjan, Côte d'Ivoire",
-  company_email: "contact@roumtransit.com",
   whatsapp_official_number: "+225 01 53 63 85 69",
   whatsapp_support: "+225 01 53 63 85 69",
-  phone_secondary: "+225 07 48 29 11 00",
-
-  // Adresses de réception
-  warehouse_china_address: "Entrepôt Central Baiyun, Guangzhou, Guangdong, Chine",
-  warehouse_china_contact: "+86 138 0000 0000 (WhatsApp Chine)",
-  warehouse_china_shipping_mark: "ROUM TRANSIT / [Votre Nom]",
-  warehouse_dubai_address: "Al Sabkha Road, Deira Wholesale Market, Dubaï, Émirats Arabes Unis",
-  warehouse_dubai_contact: "+971 50 892 4110 (WhatsApp Dubaï)",
-  agency_paris_address: "Plateforme Cargo Roissy CDG / Dépôt Île-de-France, France",
-  agency_paris_contact: "+33 6 52 90 14 30 (Liaison Paris)",
-  hub_casablanca_address: "Zone Industrielle Ain Sebaa, Casablanca, Maroc",
-
-  // Moyens de paiement & Comptes officiels configurés par l'administration (Wave, Orange Money, Maroc UNIQUEMENT)
-  payment_wave_ci: "+225 01 53 63 85 69",
-  payment_wave_name: "ROUM TRANSIT SARL",
-  payment_wave_merchant: "wave.me/roumtransit",
-  payment_orange_money_ci: "#144*389278# / +225 07 48 29 11 00",
-  payment_orange_name: "ROUM TRANSIT INTERNATIONAL",
-  payment_morocco_bank: "CIH Bank / Attijariwafa Bank Casablanca",
-  payment_morocco_holder: "ROUM TRANSIT MAROC",
-  payment_morocco_rib: "230 780 0001234567890123 45",
-  payment_morocco_whatsapp: "Casablanca Maarif · WhatsApp : +212 6 00 00 00 00",
-  payment_cash_desks: "Guichets Espèces : Agence Abidjan & Magasin Guangzhou",
+  // Adresses des dépôts et comptes de paiement : uniquement ceux saisis par la direction.
   payment_receipt_terms: "Tout règlement donne lieu à un reçu officiel numéroté pour retrait de vos colis.",
 };
 

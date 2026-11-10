@@ -15,4 +15,6 @@ export interface UserSession {
   hubLocation: string | null;
   permissions: string[];
   allowedStatuses: string[];
+  /** Photo de profil en data URL, gardée en base. */
+  avatarUrl?: string | null;
 }

@@ -88,7 +88,7 @@ authRouter.post("/login", zValidator("json", loginSchema), async (c) => {
   // Recherche de l'utilisateur actif
   const user = await c.env.DB.prepare(`
     SELECT 
-      u.id, u.email, u.password_hash, u.full_name, u.role_id, u.hub_location, u.is_active,
+      u.id, u.email, u.password_hash, u.full_name, u.role_id, u.hub_location, u.is_active, u.avatar_data,
       r.name as role_name, r.is_system as role_is_system, r.is_active as role_is_active
     FROM users u
     JOIN roles r ON u.role_id = r.id
@@ -101,6 +101,7 @@ authRouter.post("/login", zValidator("json", loginSchema), async (c) => {
     role_id: string;
     hub_location: string | null;
     is_active: number;
+    avatar_data: string | null;
     role_name: string;
     role_is_system: number;
     role_is_active: number;
@@ -167,6 +168,7 @@ authRouter.post("/login", zValidator("json", loginSchema), async (c) => {
     hubLocation: user.hub_location,
     permissions,
     allowedStatuses,
+    avatarUrl: user.avatar_data ?? null,
   };
 
   return c.json({
@@ -194,8 +196,8 @@ authRouter.get("/me", async (c) => {
   // Session locale de développement (uniquement hors production)
   if (token === "roum_local_admin_session" && c.env.ENVIRONMENT !== "production") {
     const account = await c.env.DB.prepare(`
-      SELECT email FROM users WHERE role_id = ? LIMIT 1
-    `).bind(SUPER_ADMIN_ROLE_ID).first<{ email: string }>();
+      SELECT email, avatar_data FROM users WHERE role_id = ? LIMIT 1
+    `).bind(SUPER_ADMIN_ROLE_ID).first<{ email: string; avatar_data: string | null }>();
     const devSession: UserSession = {
       userId: "user-superadmin-01",
       email: account?.email ?? "ceo@roumtransit.com",
@@ -206,6 +208,7 @@ authRouter.get("/me", async (c) => {
       hubLocation: "Abidjan / Bamako",
       permissions: ["*"],
       allowedStatuses: ["*"],
+      avatarUrl: account?.avatar_data ?? null,
     };
     return c.json({ user: devSession });
   }
@@ -220,7 +223,7 @@ authRouter.get("/me", async (c) => {
   // Re-lecture en base de données en temps réel
   const user = await c.env.DB.prepare(`
     SELECT 
-      u.id, u.email, u.full_name, u.role_id, u.hub_location, u.is_active,
+      u.id, u.email, u.full_name, u.role_id, u.hub_location, u.is_active, u.avatar_data,
       r.name as role_name, r.is_active as role_is_active
     FROM users u
     JOIN roles r ON u.role_id = r.id
@@ -232,6 +235,7 @@ authRouter.get("/me", async (c) => {
     role_id: string;
     hub_location: string | null;
     is_active: number;
+    avatar_data: string | null;
     role_name: string;
     role_is_active: number;
   }>();
@@ -263,6 +267,7 @@ authRouter.get("/me", async (c) => {
     hubLocation: user.hub_location,
     permissions,
     allowedStatuses,
+    avatarUrl: user.avatar_data ?? null,
   };
 
   return c.json({ user: session });
@@ -424,4 +429,33 @@ authRouter.post("/change-email", zValidator("json", changeEmailSchema), async (c
     email: newEmail,
     message: "Votre adresse e-mail a été modifiée avec succès.",
   });
+});
+
+/** Une photo de profil compressée pèse quelques dizaines de Ko : cette limite laisse une large marge. */
+const MAX_AVATAR_CHARS = 700_000;
+
+const avatarSchema = z.object({
+  avatar: z
+    .string()
+    .max(MAX_AVATAR_CHARS, "Photo trop lourde")
+    .regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/, "Photo invalide")
+    .nullable(),
+});
+
+/**
+ * 6. Photo de profil (PUT /avatar), gardée en base pour la retrouver sur chaque appareil.
+ * `null` retire la photo.
+ */
+authRouter.put("/avatar", zValidator("json", avatarSchema), async (c) => {
+  const { avatar } = c.req.valid("json");
+  const userId = await sessionUserId(c);
+  if (!userId) {
+    return c.json({ error: SESSION_ERROR }, 401);
+  }
+
+  await c.env.DB.prepare(`
+    UPDATE users SET avatar_data = ?, updated_at = datetime('now') WHERE id = ?
+  `).bind(avatar, userId).run();
+
+  return c.json({ success: true, avatarUrl: avatar });
 });

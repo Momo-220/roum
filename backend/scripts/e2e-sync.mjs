@@ -616,4 +616,38 @@ await check("la connexion bloque les essais répétés et repart à zéro après
   }
 });
 
+await check("la photo de profil est gardée en base et suit le compte sur chaque appareil", async () => {
+  const suffix = randomUUID().slice(0, 8);
+  const password = `Essai-${randomUUID()}`;
+  const email = `photo-${suffix}@example.com`;
+  const { roles } = (await call("GET", "/api/admin/roles", { headers: ADMIN })).data;
+  const created = await call("POST", "/api/admin/users", {
+    headers: ADMIN,
+    body: { email, password, full_name: "Gérant Photo", role_id: roles[0].id },
+  });
+  assert.ok(created.status < 300, JSON.stringify(created.data));
+
+  const login = await call("POST", "/api/auth/login", { body: { email, password } });
+  assert.equal(login.data.user.avatarUrl, null);
+  const session = { Authorization: `Bearer ${login.data.token}`, "Content-Type": "application/json" };
+  const put = (avatar, headers = session) => call("PUT", "/api/auth/avatar", { headers, body: { avatar } });
+  const photo = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+  assert.equal((await put(photo, JSON_HEADERS)).status, 401);
+  assert.equal((await put("data:text/html;base64,PHNjcmlwdD4=")).status, 400);
+  assert.equal((await put("pas-une-photo")).status, 400);
+
+  const before = (await versions("/api/admin/sync")).account;
+  assert.equal((await put(photo)).status, 200);
+  assert.ok((await versions("/api/admin/sync")).account > before, "les autres appareils sont prévenus");
+
+  // Un autre appareil : nouvelle connexion, même photo.
+  const other = await call("POST", "/api/auth/login", { body: { email, password } });
+  assert.equal(other.data.user.avatarUrl, photo);
+  assert.equal((await call("GET", "/api/auth/me", { headers: session })).data.user.avatarUrl, photo);
+
+  assert.equal((await put(null)).status, 200);
+  assert.equal((await call("GET", "/api/auth/me", { headers: session })).data.user.avatarUrl, null);
+});
+
 console.log(`\n${passed} vérifications réussies.`);

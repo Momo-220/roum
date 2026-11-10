@@ -28,18 +28,7 @@ import { GaugeControl } from "@/components/GaugeControl";
 import { newUuid } from "@/shared/api";
 import { useLiveSync } from "@/shared/useLiveSync";
 import { usePublicCatalog } from "@/shared/usePublicCatalog";
-import {
-  saveClientRequest,
-  fetchClientDossier,
-  submitClientPaymentProof,
-  getAdminDestinationsDetailed,
-  findTariff,
-  OfficialTariff,
-  getTrackingPageUrl,
-  decodeHtmlEntitiesText,
-  convertToFcfa,
-  getExchangeRates,
-} from "@/shared";
+import { saveClientRequest, fetchClientDossier, submitClientPaymentProof, getAdminDestinationsDetailed, findTariff, OfficialTariff, getTrackingPageUrl, decodeHtmlEntitiesText, convertToFcfa, getExchangeRates, getSupportPhoneDigits } from "@/shared";
 import {
   WaveLogo,
   OrangeMoneyLogo,
@@ -1265,6 +1254,20 @@ function CommandeFormContent() {
               <div className="ios-section">
                 <div className="ios-section-caption">1. Choisissez votre moyen de paiement officiel</div>
                 <div className="ios-payment-list">
+                  {activePaymentMethods.length === 0 && (
+                    <div style={{ display: "grid", gap: "12px" }}>
+                      <p className="ios-field-hint" style={{ margin: 0 }}>
+                        Les comptes de paiement ne sont pas encore affichés en ligne. Écrivez-nous sur WhatsApp :
+                        nous vous donnons le bon compte pour régler ce dossier.
+                      </p>
+                      <WhatsAppButton
+                        href={`https://wa.me/${getSupportPhoneDigits(settings)}?text=${encodeURIComponent(
+                          `Bonjour ROUM TRANSIT, je souhaite régler le dossier ${payDossier.reference}.`
+                        )}`}
+                        label="Demander le compte de paiement"
+                      />
+                    </div>
+                  )}
                   {activePaymentMethods.map((pm) => {
                     const isSelected = selectedPayMethod === pm.id;
                     const isBankRib = pm.id === "morocco";

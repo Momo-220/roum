@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Copy, Check } from "lucide-react";
 import { CircularFlag } from "@/components/CircularFlag";
 import { ScrollReveal } from "@/components/ScrollReveal";
-import { getCustomHubs } from "@/shared";
+import { getCustomHubs, getSupportPhoneDigits } from "@/shared";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { usePublicCatalog } from "@/shared/usePublicCatalog";
 
 export default function WarehousesPage() {
@@ -19,7 +20,10 @@ export default function WarehousesPage() {
     }
   };
 
-  const withContact = (address: string, contact?: string) => (contact ? `${address} — ${contact}` : address);
+  const withContact = (address?: string, contact?: string) => {
+    if (!address?.trim()) return "";
+    return contact?.trim() ? `${address} — ${contact}` : address;
+  };
 
   // Adresses et marquages viennent de la base : l'administration les modifie sans toucher au site.
   const warehouses = [
@@ -48,7 +52,7 @@ export default function WarehousesPage() {
       countryCode: "MA",
       description: "Pour vos marchandises au Maroc, avec un départ express.",
       shippingMark: "ROUM TRANSIT MAROC / [Votre Nom]",
-      addressToCopy: settings.hub_casablanca_address,
+      addressToCopy: withContact(settings.hub_casablanca_address),
     },
     {
       id: "fr",
@@ -68,7 +72,8 @@ export default function WarehousesPage() {
       shippingMark: String(hub.shipping_mark || "ROUM TRANSIT / [Votre Nom]"),
       addressToCopy: withContact(String(hub.address || ""), hub.contact ? String(hub.contact) : undefined),
     })),
-  ];
+    // Un dépôt n'apparaît qu'une fois son adresse saisie par la direction.
+  ].filter((wh) => wh.addressToCopy);
 
   const copyButton = (key: string, text: string, label: string, ghost = false) => {
     const copied = copiedKey === key;
@@ -95,6 +100,18 @@ export default function WarehousesPage() {
               inscrire sur le carton.
             </p>
           </header>
+
+          {warehouses.length === 0 && (
+            <div className="dp-empty">
+              <p>Écrivez-nous sur WhatsApp : nous vous donnons l&apos;adresse du dépôt qui correspond à votre achat.</p>
+              <WhatsAppButton
+                href={`https://wa.me/${getSupportPhoneDigits(settings)}?text=${encodeURIComponent(
+                  "Bonjour ROUM TRANSIT, je souhaite l'adresse de votre dépôt."
+                )}`}
+                label="Demander l'adresse"
+              />
+            </div>
+          )}
 
           <ul className="dp-list">
             {warehouses.map((wh) => (
@@ -294,6 +311,21 @@ export default function WarehousesPage() {
           border-color: transparent;
           background: #E6F4EA;
           color: #1E7A43;
+        }
+
+        .dp-empty {
+          display: grid;
+          justify-items: start;
+          gap: 14px;
+          padding: 24px 0;
+          border-top: 1px solid #EADFD3;
+        }
+
+        .dp-empty p {
+          margin: 0;
+          color: #524B43;
+          font-size: 1rem;
+          line-height: 1.5;
         }
 
         .dp-tip {

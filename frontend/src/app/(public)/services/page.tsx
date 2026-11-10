@@ -123,7 +123,7 @@ function ServicesContent() {
   const offers = getStartingOffers(tariffs);
 
   // Entrepôt actif dans la section Shipping Mark
-  const [activeWarehouse, setActiveWarehouse] = useState<"guangzhou" | "yiwu" | "dubai" | "paris">("guangzhou");
+  const [activeWarehouse, setActiveWarehouse] = useState("guangzhou");
   const [copiedAddr, setCopiedAddr] = useState(false);
   const [copiedMark, setCopiedMark] = useState(false);
 
@@ -150,37 +150,38 @@ function ServicesContent() {
     }
   };
 
-  // Données des entrepôts
-  const WAREHOUSES = {
-    guangzhou: {
-      city: "Guangzhou (Chine)",
-      name: "Magasin Central Guangzhou Baiyun",
-      chinese: settings.warehouse_china_address,
-      contact: `Contact Réception : ${settings.warehouse_china_contact}`,
-      mark: settings.warehouse_china_shipping_mark,
+  // Adresses saisies par la direction dans l'admin : un dépôt sans adresse n'est pas proposé.
+  const warehouses = [
+    {
+      key: "guangzhou",
+      label: "Guangzhou",
+      flag: "cn",
+      name: "Dépôt de Guangzhou",
+      address: settings.warehouse_china_address,
+      contact: settings.warehouse_china_contact,
+      mark: settings.warehouse_china_shipping_mark || "ROUM TRANSIT / [Votre Nom]",
     },
-    yiwu: {
-      city: "Yiwu (Chine)",
-      name: "Entrepôt Yiwu International Trade City",
-      chinese: "浙江省金华市义乌市稠江街道长春小区 (ROUM TRANSIT)",
-      contact: "Contact Réception : +86 139 1111 2222 · Dépôt Yiwu",
-      mark: settings.warehouse_china_shipping_mark,
-    },
-    dubai: {
-      city: "Dubaï (Émirats Arabes Unis)",
-      name: "Comptoir Dubaï Deira Creek",
-      chinese: settings.warehouse_dubai_address,
-      contact: `Contact Dubaï : ${settings.warehouse_dubai_contact}`,
+    {
+      key: "dubai",
+      label: "Dubaï",
+      flag: "ae",
+      name: "Dépôt de Dubaï",
+      address: settings.warehouse_dubai_address,
+      contact: settings.warehouse_dubai_contact,
       mark: "ROUM / [VOTRE-NOM] / [VOTRE-VILLE] / AIR-DXB",
     },
-    paris: {
-      city: "Paris (France)",
-      name: "Point Collecte Île-de-France",
-      chinese: settings.agency_paris_address,
-      contact: `Permanence France : ${settings.agency_paris_contact}`,
+    {
+      key: "paris",
+      label: "Paris",
+      flag: "fr",
+      name: "Point de collecte Île-de-France",
+      address: settings.agency_paris_address,
+      contact: settings.agency_paris_contact,
       mark: "ROUM / [VOTRE-NOM] / [VOTRE-VILLE] / AIR-PARIS",
     },
-  };
+  ].filter((w) => w.address?.trim());
+  const warehouse = warehouses.find((w) => w.key === activeWarehouse) ?? warehouses[0];
+  const warehouseContact = warehouse?.contact?.trim() ? `Contact : ${warehouse.contact}` : "";
 
   return (
     <div className="services-page-root">
@@ -291,96 +292,79 @@ function ServicesContent() {
           {/* ========================================================
               SECTION DÉPÔTS : ADRESSE ET MARQUAGE DES CARTONS
              ======================================================== */}
-          <div className="shipping-pass-block">
-            <div className="pass-tabs-header">
-              <div className="pass-header-info">
-                <span className="pass-label">Vos adresses de réception</span>
-                <h3 className="pass-headline">Nos dépôts &amp; le marquage des cartons</h3>
+          {warehouse && (
+            <div className="shipping-pass-block">
+              <div className="pass-tabs-header">
+                <div className="pass-header-info">
+                  <span className="pass-label">Vos adresses de réception</span>
+                  <h3 className="pass-headline">Nos dépôts &amp; le marquage des cartons</h3>
+                </div>
+
+                {/* Sélecteur d'entrepôt en capsule */}
+                <div className="pass-warehouse-capsules">
+                  {warehouses.map((w) => (
+                    <button
+                      key={w.key}
+                      type="button"
+                      onClick={() => setActiveWarehouse(w.key)}
+                      className={`pass-capsule-btn ${warehouse.key === w.key ? "active" : ""}`}
+                      style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                    >
+                      <CircularFlag code={w.flag} size={14} />
+                      <span>{w.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Sélecteur d'entrepôt en capsule */}
-              <div className="pass-warehouse-capsules">
-                {(["guangzhou", "yiwu", "dubai", "paris"] as const).map((key) => (
+              <div className="pass-body-grid">
+                {/* Côté Gauche : Adresse pour le fournisseur */}
+                <div className="pass-details-col">
+                  <div className="pass-tag-title">{warehouse.name}</div>
+                  <div className="pass-chinese-address">
+                    {warehouse.address}
+                  </div>
+                  <div className="pass-contact-note">
+                    {warehouseContact}
+                  </div>
                   <button
-                    key={key}
                     type="button"
-                    onClick={() => setActiveWarehouse(key)}
-                    className={`pass-capsule-btn ${activeWarehouse === key ? "active" : ""}`}
-                    style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                    onClick={() =>
+                      copyToClipboard(
+                        `${warehouse.address}\n${warehouseContact}`,
+                        true
+                      )
+                    }
+                    className="pass-copy-btn"
                   >
-                    {key === "guangzhou" ? (
-                      <>
-                        <CircularFlag code="cn" size={14} />
-                        <span>Guangzhou</span>
-                      </>
-                    ) : key === "yiwu" ? (
-                      <>
-                        <CircularFlag code="cn" size={14} />
-                        <span>Yiwu</span>
-                      </>
-                    ) : key === "dubai" ? (
-                      <>
-                        <CircularFlag code="ae" size={14} />
-                        <span>Dubaï</span>
-                      </>
-                    ) : (
-                      <>
-                        <CircularFlag code="fr" size={14} />
-                        <span>Paris</span>
-                      </>
-                    )}
+                    {copiedAddr ? <Check size={14} color="#166534" /> : <Copy size={14} />}
+                    <span>{copiedAddr ? "Adresse copiée" : "Copier l'adresse"}</span>
                   </button>
-                ))}
+                </div>
+
+                {/* Côté Droit : Modèle de Shipping Mark */}
+                <div className="pass-mark-col">
+                  <div className="pass-mark-header">
+                    <span>À inscrire sur chaque carton</span>
+                  </div>
+                  <div className="pass-mark-box">
+                    <code>{warehouse.mark}</code>
+                  </div>
+                  <p className="pass-mark-hint">
+                    Donnez ce marquage à votre fournisseur : nous reconnaissons votre colis dès son arrivée.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(warehouse.mark, false)}
+                    className="pass-copy-btn-secondary"
+                  >
+                    {copiedMark ? <Check size={14} color="#166534" /> : <Copy size={14} />}
+                    <span>{copiedMark ? "Marquage copié" : "Copier le marquage"}</span>
+                  </button>
+                </div>
               </div>
             </div>
-
-            <div className="pass-body-grid">
-              {/* Côté Gauche : Adresse pour le fournisseur */}
-              <div className="pass-details-col">
-                <div className="pass-tag-title">{WAREHOUSES[activeWarehouse].name}</div>
-                <div className="pass-chinese-address">
-                  {WAREHOUSES[activeWarehouse].chinese}
-                </div>
-                <div className="pass-contact-note">
-                  {WAREHOUSES[activeWarehouse].contact}
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    copyToClipboard(
-                      `${WAREHOUSES[activeWarehouse].chinese}\n${WAREHOUSES[activeWarehouse].contact}`,
-                      true
-                    )
-                  }
-                  className="pass-copy-btn"
-                >
-                  {copiedAddr ? <Check size={14} color="#166534" /> : <Copy size={14} />}
-                  <span>{copiedAddr ? "Adresse copiée" : "Copier l'adresse"}</span>
-                </button>
-              </div>
-
-              {/* Côté Droit : Modèle de Shipping Mark */}
-              <div className="pass-mark-col">
-                <div className="pass-mark-header">
-                  <span>À inscrire sur chaque carton</span>
-                </div>
-                <div className="pass-mark-box">
-                  <code>{WAREHOUSES[activeWarehouse].mark}</code>
-                </div>
-                <p className="pass-mark-hint">
-                  Donnez ce marquage à votre fournisseur : nous reconnaissons votre colis dès son arrivée.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(WAREHOUSES[activeWarehouse].mark, false)}
-                  className="pass-copy-btn-secondary"
-                >
-                  {copiedMark ? <Check size={14} color="#166534" /> : <Copy size={14} />}
-                  <span>{copiedMark ? "Marquage copié" : "Copier le marquage"}</span>
-                </button>
-              </div>
-            </div>
-          </div>
+          )}
         </ScrollReveal>
       </div>
 

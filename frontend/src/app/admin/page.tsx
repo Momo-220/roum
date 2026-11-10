@@ -721,33 +721,11 @@ function IOSTypingMessage({
   );
 }
 
+// Les coordonnées, adresses et comptes de paiement sont saisis par la direction dans Paramètres :
+// aucune valeur inventée ne doit pouvoir partir chez un client.
 const DEFAULT_COMPANY_SETTINGS: Record<string, string> = {
-  company_name: "ROUM TRANSIT INTERNATIONAL SARL",
-  company_headquarters: "Abidjan, Bingerville, Carrefour Safari, Résidence Roum",
-  company_email: "contact@roumtransit.com",
-  company_billing_email: "facturation@roumtransit.com",
+  company_name: "ROUM TRANSIT",
   whatsapp_official_number: "+225 01 53 63 85 69",
-  phone_secondary: "+225 07 48 29 11 00",
-
-  // Entrepôts mondiaux & adresses de livraison
-  warehouse_china_address: "No. 88 Huanshi Dong Road, Yuexiu District, Guangzhou, Guangdong, Chine (Code: 510000)",
-  warehouse_china_shipping_mark: "ROUM-CAN-[VOTRE_NOM]-[CODE_PAYS]",
-  warehouse_china_contact: "+86 138 2449 8812 (WhatsApp Entrepôt Guangzhou)",
-  warehouse_dubai_address: "Al Sabkha Road, Deira, Office 304, Dubaï, Émirats Arabes Unis",
-  warehouse_dubai_contact: "+971 50 892 4110 (WhatsApp Entrepôt Dubaï)",
-  agency_paris_address: "14 Rue de la Logistique, 93290 Tremblay-en-France / Roissy CDG",
-  agency_paris_contact: "+33 6 52 90 14 30 (Liaison Paris)",
-
-  // Moyens de paiement officiels (Wave, Orange Money, Maroc UNIQUEMENT)
-  payment_wave_ci: "+225 01 53 63 85 69",
-  payment_wave_name: "ROUM TRANSIT SARL",
-  payment_wave_merchant: "wave.me/roumtransit",
-  payment_orange_money_ci: "#144*389278# / +225 07 48 29 11 00",
-  payment_orange_name: "ROUM TRANSIT INTERNATIONAL",
-  payment_morocco_bank: "CIH Bank / Attijariwafa Bank Casablanca",
-  payment_morocco_holder: "ROUM TRANSIT MAROC",
-  payment_morocco_rib: "230 780 0001234567890123 45",
-  payment_morocco_whatsapp: "Casablanca Maarif · WhatsApp : +212 6 00 00 00 00",
 };
 
 /** Jeton de session locale : n'existe que pendant le développement, jamais dans le site en ligne. */
@@ -1034,9 +1012,51 @@ export default function AdminPage() {
     setShowProfileModal(true);
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  /**
+   * Avant, la photo restait dans le navigateur. Si la base n'en a pas encore, on y envoie
+   * celle de cet appareil une seule fois ; ensuite, la base fait foi sur tous les appareils.
+   */
+  const adoptLocalAvatar = async (jwtToken: string, serverUser: any) => {
+    if (typeof window === "undefined" || !serverUser) return;
+    let localAvatar = "";
+    try {
+      localAvatar =
+        localStorage.getItem("roum_ceo_avatar_photo") ||
+        JSON.parse(localStorage.getItem("roum_profile_data") || "{}").avatarUrl ||
+        "";
+    } catch {}
+    if (!localAvatar) return;
+    try {
+      if (!serverUser.avatarUrl && localAvatar.startsWith("data:image/")) {
+        await apiRequest("/api/auth/avatar", { method: "PUT", token: jwtToken, body: { avatar: localAvatar } });
+        setUser((curr) => (curr ? { ...curr, avatarUrl: localAvatar } : curr));
+      }
+      localStorage.removeItem("roum_ceo_avatar_photo");
+      const saved = JSON.parse(localStorage.getItem("roum_profile_data") || "{}");
+      delete saved.avatarUrl;
+      localStorage.setItem("roum_profile_data", JSON.stringify(saved));
+    } catch {
+      // La photo reste dans le navigateur : nouvel essai à la prochaine ouverture.
+    }
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    const finalAvatar = profileForm.avatarUrl || user?.avatarUrl || null;
+    // « Retirer la photo » vide le champ : on n'y remet pas l'ancienne.
+    const finalAvatar = profileForm.avatarUrl || null;
+    if (finalAvatar !== (user?.avatarUrl || null)) {
+      setIsSavingProfile(true);
+      try {
+        await apiRequest("/api/auth/avatar", { method: "PUT", token, body: { avatar: finalAvatar } });
+      } catch (err: any) {
+        triggerToast(err.message || "La photo n'a pas pu être enregistrée.", "Photo de profil", "error");
+        return;
+      } finally {
+        setIsSavingProfile(false);
+      }
+    }
     const updatedUser: UserSession = {
       ...(user || {
         userId: "user-ceo-marouba",
@@ -1057,12 +1077,10 @@ export default function AdminPage() {
 
     setUser(updatedUser);
     if (typeof window !== "undefined") {
-      localStorage.setItem("roum_profile_data", JSON.stringify(updatedUser));
-      if (finalAvatar) {
-        localStorage.setItem("roum_ceo_avatar_photo", finalAvatar);
-      } else {
-        localStorage.removeItem("roum_ceo_avatar_photo");
-      }
+      // La photo vit en base ; le navigateur ne garde que le nom et le téléphone.
+      const { avatarUrl: _avatar, ...localProfile } = updatedUser;
+      localStorage.setItem("roum_profile_data", JSON.stringify(localProfile));
+      localStorage.removeItem("roum_ceo_avatar_photo");
     }
     triggerToast("Votre profil et photo ont été mis à jour avec succès !", "Profil Direction");
     setShowProfileModal(false);
@@ -1800,11 +1818,10 @@ export default function AdminPage() {
         ? "CEO"
         : rawRole;
 
-    const resolvedAvatar =
-      savedAvatar ||
-      savedProfile?.avatarUrl ||
-      rawUser?.avatarUrl ||
-      undefined;
+    // En ligne, la photo vient de la base ; hors ligne, de la dernière copie de cet appareil.
+    const resolvedAvatar = rawUser
+      ? rawUser.avatarUrl || undefined
+      : savedAvatar || savedProfile?.avatarUrl || undefined;
 
     return {
       userId: rawUser?.userId || savedProfile?.userId || "user-ceo-marouba",
@@ -1826,6 +1843,7 @@ export default function AdminPage() {
       const data = await apiRequest<{ user: any }>("/api/auth/me", { token: jwtToken });
       setToken(jwtToken);
       setUser(normalizeCeoUser(data.user));
+      void adoptLocalAvatar(jwtToken, data.user);
     } catch (err) {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
         clearSession();
@@ -1854,6 +1872,7 @@ export default function AdminPage() {
       setPassword("");
       setToken(data.token);
       setUser(normalizeCeoUser(data.user));
+      void adoptLocalAvatar(data.token, data.user);
     } catch (err: any) {
       setLoginError(err?.message || "Connexion impossible.");
     } finally {
@@ -7385,7 +7404,7 @@ export default function AdminPage() {
                     value={companySettings.company_headquarters || ""}
                     onChange={(e) => setCompanySettings({ ...companySettings, company_headquarters: e.target.value })}
                     className="input-clean"
-                    placeholder="Abidjan, Bingerville, Carrefour Safari, Résidence Roum"
+                    placeholder="Quartier, ville, pays"
                   />
                 </div>
                 <div>
@@ -7409,7 +7428,7 @@ export default function AdminPage() {
                     value={companySettings.phone_secondary || ""}
                     onChange={(e) => setCompanySettings({ ...companySettings, phone_secondary: e.target.value })}
                     className="input-clean"
-                    placeholder="+225 07 48 29 11 00"
+                    placeholder="+225 XX XX XX XX XX"
                   />
                 </div>
                 <div>
@@ -7421,7 +7440,7 @@ export default function AdminPage() {
                     value={companySettings.company_email || ""}
                     onChange={(e) => setCompanySettings({ ...companySettings, company_email: e.target.value })}
                     className="input-clean"
-                    placeholder="contact@roumtransit.com"
+                    placeholder="contact@exemple.com"
                   />
                 </div>
                 <div>
@@ -7433,7 +7452,7 @@ export default function AdminPage() {
                     value={companySettings.company_billing_email || ""}
                     onChange={(e) => setCompanySettings({ ...companySettings, company_billing_email: e.target.value })}
                     className="input-clean"
-                    placeholder="facturation@roumtransit.com"
+                    placeholder="facturation@exemple.com"
                   />
                 </div>
               </div>
@@ -7791,7 +7810,7 @@ export default function AdminPage() {
                             value={companySettings.payment_wave_ci || ""}
                             onChange={(e) => setCompanySettings({ ...companySettings, payment_wave_ci: e.target.value })}
                             className="input-clean"
-                            placeholder="+225 01 53 63 85 69"
+                            placeholder="+225 XX XX XX XX XX"
                             style={{
                               background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
@@ -7806,7 +7825,7 @@ export default function AdminPage() {
                             value={companySettings.payment_wave_name || ""}
                             onChange={(e) => setCompanySettings({ ...companySettings, payment_wave_name: e.target.value })}
                             className="input-clean"
-                            placeholder="ROUM TRANSIT SARL"
+                            placeholder="Nom du titulaire"
                             style={{
                               background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
@@ -7821,7 +7840,7 @@ export default function AdminPage() {
                             value={companySettings.payment_wave_merchant || ""}
                             onChange={(e) => setCompanySettings({ ...companySettings, payment_wave_merchant: e.target.value })}
                             className="input-clean"
-                            placeholder="wave.me/roumtransit"
+                            placeholder="Lien marchand Wave (facultatif)"
                             style={{
                               background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
@@ -7929,7 +7948,7 @@ export default function AdminPage() {
                             value={companySettings.payment_orange_money_ci || ""}
                             onChange={(e) => setCompanySettings({ ...companySettings, payment_orange_money_ci: e.target.value })}
                             className="input-clean"
-                            placeholder="#144*389278# / +225 07 48 29 11 00"
+                            placeholder="+225 XX XX XX XX XX"
                             style={{
                               background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
@@ -7944,7 +7963,7 @@ export default function AdminPage() {
                             value={companySettings.payment_orange_name || ""}
                             onChange={(e) => setCompanySettings({ ...companySettings, payment_orange_name: e.target.value })}
                             className="input-clean"
-                            placeholder="ROUM TRANSIT INTERNATIONAL"
+                            placeholder="Nom du titulaire"
                             style={{
                               background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
@@ -8052,7 +8071,7 @@ export default function AdminPage() {
                             value={companySettings.payment_morocco_bank || ""}
                             onChange={(e) => setCompanySettings({ ...companySettings, payment_morocco_bank: e.target.value })}
                             className="input-clean"
-                            placeholder="CIH Bank / Attijariwafa Bank"
+                            placeholder="Nom de la banque"
                             style={{
                               background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
@@ -8067,7 +8086,7 @@ export default function AdminPage() {
                             value={companySettings.payment_morocco_holder || ""}
                             onChange={(e) => setCompanySettings({ ...companySettings, payment_morocco_holder: e.target.value })}
                             className="input-clean"
-                            placeholder="ROUM TRANSIT MAROC"
+                            placeholder="Nom du titulaire"
                             style={{
                               background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
@@ -8082,7 +8101,7 @@ export default function AdminPage() {
                             value={companySettings.payment_morocco_rib || ""}
                             onChange={(e) => setCompanySettings({ ...companySettings, payment_morocco_rib: e.target.value })}
                             className="input-clean"
-                            placeholder="230 780 0001234567890123 45"
+                            placeholder="RIB à 24 chiffres"
                             style={{
                               background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
@@ -8097,7 +8116,7 @@ export default function AdminPage() {
                             value={companySettings.payment_morocco_whatsapp || ""}
                             onChange={(e) => setCompanySettings({ ...companySettings, payment_morocco_whatsapp: e.target.value })}
                             className="input-clean"
-                            placeholder="Casablanca Maarif · WhatsApp : +212 6 00 00 00 00"
+                            placeholder="Ville, agence et WhatsApp"
                             style={{
                               background: "#FFFFFF",
                               cursor: isEditing ? "text" : "default",
@@ -12289,6 +12308,7 @@ export default function AdminPage() {
                 </button>
                 <button
                   type="submit"
+                  disabled={isSavingProfile}
                   className="btn btn-primary"
                   style={{
                     padding: "9px 24px",
@@ -12301,7 +12321,7 @@ export default function AdminPage() {
                   }}
                 >
                   <Check size={15} />
-                  Enregistrer mon Profil
+                  {isSavingProfile ? "Enregistrement..." : "Enregistrer mon Profil"}
                 </button>
               </div>
             </form>
