@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { healthRouter } from "./routes/health";
 import { publicRouter } from "./routes/public";
+import { shopPublicRouter } from "./routes/shop";
 import { authRouter } from "./routes/auth";
 import { adminRouter } from "./routes/admin";
 import type { Env } from "./types";
@@ -49,6 +50,10 @@ app.route("/", healthRouter);
 // Routes publiques (suivi direct, tarifs, devis)
 app.route("/api/public", publicRouter);
 app.route("/api/v1/public", publicRouter);
+
+// Roum Boutique : catalogue, livraison, commandes et preuves de paiement
+app.route("/api/public/shop", shopPublicRouter);
+app.route("/api/v1/public/shop", shopPublicRouter);
 
 // Routes d'authentification
 app.route("/api/auth", authRouter);

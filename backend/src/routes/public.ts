@@ -62,7 +62,7 @@ function safeWhatsAppUrl(phone: string, message: string): string {
  */
 publicRouter.get("/sync", async (c) => {
   const { results } = await c.env.DB.prepare(`
-    SELECT scope, version FROM sync_versions WHERE scope IN ('tariffs', 'settings', 'requests', 'shipments')
+    SELECT scope, version FROM sync_versions WHERE scope IN ('tariffs', 'settings', 'requests', 'shipments', 'shop_catalog')
   `).all<{ scope: string; version: number }>();
 
   c.header("Cache-Control", "no-store");

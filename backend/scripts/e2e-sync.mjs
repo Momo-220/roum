@@ -684,4 +684,145 @@ await check("les textes et images du site modifiés par l'admin arrivent chez le
   await call("PUT", "/api/admin/settings", { headers: ADMIN, body: { site_home_title_1: "" } });
 });
 
+await check("Roum Boutique : article, stock par taille, commande, preuve, confirmation et annulation", async () => {
+  const shop = (path, init = {}) => call(init.method || "GET", `/api/admin/shop${path}`, { headers: ADMIN, body: init.body });
+  const suffix = randomUUID().slice(0, 6);
+  const syncBefore = (await call("GET", "/api/public/sync")).data.versions.shop_catalog;
+
+  // La gérante crée une catégorie, une zone de livraison et une paire de chaussures en 38 et 39.
+  const category = await shop("/categories", { method: "POST", body: { name: `Chaussures ${suffix}` } });
+  assert.equal(category.status, 201, JSON.stringify(category.data));
+  const zone = await shop("/zones", {
+    method: "POST",
+    body: { name: "Abidjan", country: "Côte d'Ivoire", priceFcfa: 2000, delay: "24 h" },
+  });
+  assert.equal(zone.status, 201, JSON.stringify(zone.data));
+
+  const productBody = {
+    name: `Escarpin ${suffix}`,
+    description: "Cuir verni",
+    categoryId: category.data.id,
+    priceFcfa: 25000,
+    promoPriceFcfa: 20000,
+    originCountry: "Chine",
+    weightKg: 1.5,
+    variants: [
+      { color: "Noir", size: "38", stock: 2 },
+      { color: "Noir", size: "39", stock: 0 },
+    ],
+  };
+  assert.equal((await shop("/products", { method: "POST", body: { ...productBody, promoPriceFcfa: 30000 } })).status, 400);
+  const product = await shop("/products", { method: "POST", body: productBody });
+  assert.equal(product.status, 201, JSON.stringify(product.data));
+  const photo = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+  const image = await shop(`/products/${product.data.id}/images`, { method: "POST", body: { dataUrl: photo } });
+  assert.equal(image.status, 201, JSON.stringify(image.data));
+
+  // Le client voit l'article, son prix promo, ses pointures et le stock.
+  assert.ok((await call("GET", "/api/public/sync")).data.versions.shop_catalog > syncBefore);
+  const catalog = (await call("GET", "/api/public/shop/catalog")).data;
+  const listed = catalog.products.find((p) => p.id === product.data.id);
+  assert.ok(listed, "l'article est en vente");
+  assert.equal(listed.promoPriceFcfa, 20000);
+  assert.ok(catalog.countries.includes("Côte d'Ivoire"));
+  const size38 = listed.variants.find((v) => v.size === "38");
+  const size39 = listed.variants.find((v) => v.size === "39");
+  assert.equal(size38.stock, 2);
+  assert.equal((await fetch(`${API}/api/public/shop/images/${listed.images[0]}`)).status, 200);
+
+  // Livraison : la zone de la boutique, puis Roum Transit si la grille dessert le trajet.
+  const options = (
+    await call("POST", "/api/public/shop/delivery-options", {
+      body: { items: [{ variantId: size38.id, quantity: 1 }], country: "Côte d'Ivoire", city: "Abidjan" },
+    })
+  ).data.options;
+  const boutique = options.find((o) => o.method === "BOUTIQUE");
+  assert.equal(boutique.priceFcfa, 2000);
+  const transit = options.find((o) => o.method === "TRANSIT");
+  if (transit) assert.ok(transit.priceFcfa > 0, "Roum Transit calcule un prix au poids");
+
+  const order = (overrides = {}) => ({
+    idempotencyKey: `shop-${randomUUID()}`,
+    customer: { name: "Cliente Test", phone: "+225 07 00 00 00 00", country: "Côte d'Ivoire", city: "Abidjan" },
+    items: [{ variantId: size38.id, quantity: 1 }],
+    deliveryOptionId: boutique.id,
+    ...overrides,
+  });
+
+  // Une pointure en rupture est refusée, sans rien retirer du stock.
+  assert.equal(
+    (await call("POST", "/api/public/shop/orders", { body: order({ items: [{ variantId: size39.id, quantity: 1 }] }) })).status,
+    409
+  );
+  assert.equal(
+    (await call("POST", "/api/public/shop/orders", { body: order({ items: [{ variantId: size38.id, quantity: 3 }] }) })).status,
+    409
+  );
+
+  const body = order();
+  const created = await call("POST", "/api/public/shop/orders", { body });
+  assert.equal(created.status, 201, JSON.stringify(created.data));
+  assert.equal(created.data.totalFcfa, 22000, "prix promo + livraison");
+  const replay = await call("POST", "/api/public/shop/orders", { body });
+  assert.equal(replay.data.reference, created.data.reference, "renvoyer la même commande ne la double pas");
+
+  const stockAfter = (await call("GET", "/api/public/shop/catalog")).data.products
+    .find((p) => p.id === product.data.id).variants.find((v) => v.id === size38.id).stock;
+  assert.equal(stockAfter, 1, "le stock baisse à la commande");
+
+  const { reference, accessKey } = created.data;
+  assert.equal((await call("GET", `/api/public/shop/orders/${reference}`)).status, 404, "sans clé, la commande reste privée");
+  const view = (await call("GET", `/api/public/shop/orders/${reference}?key=${accessKey}`)).data.order;
+  assert.equal(view.status, "AWAITING_PAYMENT");
+  assert.equal(view.items[0].size, "38");
+
+  // Le client envoie sa preuve, la gérante la voit et confirme.
+  const proof = await call("POST", `/api/public/shop/orders/${reference}/proof`, {
+    body: { key: accessKey, paymentMethod: "wave", dataUrl: photo },
+  });
+  assert.equal(proof.status, 200, JSON.stringify(proof.data));
+  const orders = (await shop("/orders")).data.orders;
+  const adminOrder = orders.find((o) => o.reference === reference);
+  assert.equal(adminOrder.status, "PROOF_SENT");
+  assert.equal((await fetch(`${API}/api/admin/shop/orders/${adminOrder.id}/proof`, { headers: ADMIN })).status, 200);
+
+  assert.equal((await shop(`/orders/${adminOrder.id}/status`, { method: "POST", body: { status: "DELIVERED" } })).status, 409);
+  assert.equal((await shop(`/orders/${adminOrder.id}/status`, { method: "POST", body: { status: "CONFIRMED" } })).status, 200);
+  assert.equal(
+    (await shop(`/orders/${adminOrder.id}/status`, { method: "POST", body: { status: "SHIPPED", trackingNumber: "RB-TEST-1" } })).status,
+    200
+  );
+  const shipped = (await call("GET", `/api/public/shop/orders/${reference}?key=${accessKey}`)).data.order;
+  assert.equal(shipped.status, "SHIPPED");
+  assert.equal(shipped.trackingNumber, "RB-TEST-1");
+
+  // Une autre commande annulée rend son article au stock.
+  const second = await call("POST", "/api/public/shop/orders", { body: order() });
+  assert.equal(second.status, 201, JSON.stringify(second.data));
+  const secondId = (await shop("/orders")).data.orders.find((o) => o.reference === second.data.reference).id;
+  const stockOf = async () =>
+    (await call("GET", "/api/public/shop/catalog")).data.products
+      .find((p) => p.id === product.data.id).variants.find((v) => v.id === size38.id).stock;
+  assert.equal(await stockOf(), 0);
+  assert.equal((await shop(`/orders/${secondId}/status`, { method: "POST", body: { status: "CANCELLED", reason: "Essai" } })).status, 200);
+  assert.equal(await stockOf(), 1, "l'annulation rend le stock");
+  assert.equal((await shop(`/orders/${secondId}/status`, { method: "POST", body: { status: "CANCELLED" } })).status, 409);
+  assert.equal(await stockOf(), 1, "annuler deux fois ne rend pas le stock deux fois");
+
+  // La gérante change le stock à la main ; la promo arrêtée disparaît chez le client.
+  assert.equal((await shop(`/products/${product.data.id}`, { method: "PUT", body: { ...productBody, promoPriceFcfa: null, variants: [{ color: "Noir", size: "38", stock: 7 }] } })).status, 200);
+  const updated = (await call("GET", "/api/public/shop/catalog")).data.products.find((p) => p.id === product.data.id);
+  assert.equal(updated.promoPriceFcfa, null);
+  assert.equal(updated.variants.length, 1, "la pointure 39 retirée n'est plus proposée");
+  assert.equal(updated.variants[0].stock, 7);
+
+  // Un client ne peut pas toucher à l'admin de la boutique.
+  assert.equal((await call("GET", "/api/admin/shop/orders")).status, 401);
+
+  await shop(`/products/${product.data.id}`, { method: "DELETE" });
+  await shop(`/zones/${zone.data.id}`, { method: "DELETE" });
+  await shop(`/categories/${category.data.id}`, { method: "DELETE" });
+  assert.equal((await call("GET", "/api/public/shop/catalog")).data.products.some((p) => p.id === product.data.id), false);
+});
+
 console.log(`\n${passed} vérifications réussies.`);

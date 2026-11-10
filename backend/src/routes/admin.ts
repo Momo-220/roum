@@ -24,6 +24,7 @@ import {
   toAdminRequest,
 } from "../requests";
 import type { Env, UserSession } from "../types";
+import { shopAdminRouter } from "./shop";
 
 export const adminRouter = new Hono<{ Bindings: Env; Variables: { user: UserSession } }>();
 
@@ -2783,3 +2784,6 @@ adminRouter.delete("/site-images/:key", async (c) => {
 
   return c.json({ success: true, key });
 });
+
+// Roum Boutique : articles, stock, livraison et commandes (session vérifiée plus haut)
+adminRouter.route("/shop", shopAdminRouter);
