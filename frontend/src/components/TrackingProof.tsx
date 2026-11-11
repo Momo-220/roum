@@ -173,10 +173,6 @@ export function TrackingProof({ photos, reception, formatDate }: TrackingProofPr
           transition: transform 0.3s ease;
         }
 
-        .tp-grid button:hover img {
-          transform: scale(1.04);
-        }
-
         .tp-viewer {
           position: fixed;
           inset: 0;

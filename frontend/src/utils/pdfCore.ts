@@ -356,6 +356,8 @@ export function assemblePdf(
   images: Record<string, PdfImage | undefined>,
   shadings: Record<string, Shading>,
   links: PdfLink[],
+  /** Format de la page en points : A4 par défaut, plus étroit pour un ticket de caisse. */
+  page: { width: number; height: number } = { width: 595, height: 842 },
 ): Uint8Array {
   const chunks: Array<string | Uint8Array> = [];
   const offsets: number[] = [];
@@ -398,7 +400,7 @@ export function assemblePdf(
   addObject(1, ["<< /Type /Catalog /Pages 2 0 R >>"]);
   addObject(2, ["<< /Type /Pages /Kids [3 0 R] /Count 1 >>"]);
   addObject(3, [
-    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 8 0 R /Annots [${annots}] /Resources << ` +
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${round(page.width)} ${round(page.height)}] /Contents 8 0 R /Annots [${annots}] /Resources << ` +
       `/Font << /F1 4 0 R /F2 5 0 R /F3 6 0 R >> /ExtGState 7 0 R /Shading << ${shadingEntries} >> /XObject << ${xObjects} >> >> >>`,
   ]);
   addObject(4, ["<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"]);

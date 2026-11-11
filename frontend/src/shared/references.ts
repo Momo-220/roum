@@ -116,3 +116,22 @@ export function normalizeTrackingNumber(input: string): string | null {
 
   return null;
 }
+
+/** Numéro d'une commande Roum Boutique : RB-AAMM-XXXXXX. */
+export const SHOP_REFERENCE_REGEX = /^RB-\d{4}-[A-Z0-9]{6}$/;
+
+export function isShopReference(value: string): boolean {
+  return typeof value === "string" && SHOP_REFERENCE_REGEX.test(value.trim().toUpperCase());
+}
+
+/** Même tolérance que pour les colis : " rb 2611 k8p9q2 " -> "RB-2611-K8P9Q2". */
+export function normalizeShopReference(input: string): string | null {
+  if (!input || typeof input !== "string") return null;
+  const match = /^RB(\d{4})([A-Z0-9]{6})$/.exec(input.trim().toUpperCase().replace(/[^A-Z0-9]/g, ""));
+  return match ? `RB-${match[1]}-${match[2]}` : null;
+}
+
+/** Ce que la page Suivi accepte : un colis Roum Transit ou une commande Roum Boutique. */
+export function normalizeTrackingInput(input: string): string | null {
+  return normalizeTrackingNumber(input) ?? normalizeShopReference(input);
+}

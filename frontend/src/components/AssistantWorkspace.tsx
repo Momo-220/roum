@@ -277,7 +277,6 @@ export function AssistantWorkspace({
 
         .aw-stats button:hover {
           border-color: #DCCDB6;
-          transform: translateY(-1px);
         }
 
         .aw-stat-icon {

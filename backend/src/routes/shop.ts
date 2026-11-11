@@ -68,6 +68,7 @@ interface ProductRow {
   weight_kg: number | null;
   is_active: number;
   position: number;
+  created_at: string;
 }
 
 interface VariantRow {
@@ -133,6 +134,7 @@ function toPublicProduct(p: ProductRow, variants: VariantRow[], imageIds: string
     originCountry: p.origin_country,
     images: imageIds,
     variants: variants.map((v) => ({ id: v.id, color: v.color, size: v.size, stock: Math.max(0, v.stock) })),
+    createdAt: p.created_at,
   };
 }
 
@@ -592,6 +594,48 @@ shopPublicRouter.get("/orders/:reference", async (c) => {
   return c.json({ order: toPublicOrder(order, items) });
 });
 
+const SHOP_REFERENCE = /^RB-\d{4}-[A-Z0-9]{6}$/;
+
+/**
+ * Suivi public d'une commande, comme un colis Roum Transit : le numéro suffit.
+ * Ni nom, ni téléphone, ni adresse, ni montant : ceux-là restent derrière le lien de la commande.
+ */
+shopPublicRouter.get("/track/:reference", async (c) => {
+  const rateCheck = checkClientRateLimit(c, "shop-track", 60, 60 * 1000);
+  if (!rateCheck.allowed) {
+    c.header("Retry-After", String(rateCheck.retryAfterSec));
+    return c.json({ error: "Trop de requêtes. Veuillez patienter quelques instants." }, 429);
+  }
+  const reference = c.req.param("reference").trim().toUpperCase();
+  const notFound = { error: "Aucune commande Roum Boutique ne porte ce numéro. Vérifiez-le puis réessayez." };
+  if (!SHOP_REFERENCE.test(reference)) return c.json(notFound, 404);
+  const order = await c.env.DB.prepare(
+    `SELECT id, reference, status, delivery_method, delivery_label, tracking_number, created_at, updated_at
+       FROM shop_orders WHERE reference = ?`
+  )
+    .bind(reference)
+    .first<Pick<OrderRow, "id" | "reference" | "status" | "delivery_method" | "delivery_label" | "tracking_number" | "created_at" | "updated_at">>();
+  if (!order) return c.json(notFound, 404);
+  const { results: items } = await c.env.DB.prepare(
+    `SELECT product_name, color, size, quantity FROM shop_order_items WHERE order_id = ? ORDER BY rowid`
+  )
+    .bind(order.id)
+    .all<{ product_name: string; color: string; size: string; quantity: number }>();
+  c.header("Cache-Control", "no-store");
+  return c.json({
+    order: {
+      reference: order.reference,
+      status: order.status,
+      statusLabel: STATUS_LABELS[order.status],
+      delivery: { method: order.delivery_method, label: order.delivery_label },
+      trackingNumber: order.tracking_number,
+      createdAt: order.created_at,
+      updatedAt: order.updated_at,
+      items: items.map((item) => ({ productName: item.product_name, color: item.color, size: item.size, quantity: item.quantity })),
+    },
+  });
+});
+
 const proofSchema = z.object({
   key: z.string().min(8).max(80),
   paymentMethod: z.string().trim().min(2).max(40),
@@ -827,6 +871,15 @@ shopAdminRouter.put("/products/:id", zValidator("json", productSchema), async (c
   return c.json({ success: true });
 });
 
+/** Mettre en vente ou masquer un article sans renvoyer son stock (qui peut bouger pendant ce temps). */
+shopAdminRouter.post("/products/:id/visibility", zValidator("json", z.object({ isActive: z.boolean() })), async (c) => {
+  const result = await c.env.DB.prepare(`UPDATE shop_products SET is_active = ?, updated_at = datetime('now') WHERE id = ?`)
+    .bind(c.req.valid("json").isActive ? 1 : 0, c.req.param("id"))
+    .run();
+  if (!result.meta.changes) return c.json({ error: "Article introuvable." }, 404);
+  return c.json({ success: true });
+});
+
 shopAdminRouter.delete("/products/:id", async (c) => {
   // Les commandes gardent le nom et le prix de l'article : la suppression ne les touche pas.
   await c.env.DB.prepare(`DELETE FROM shop_products WHERE id = ?`).bind(c.req.param("id")).run();
@@ -955,6 +1008,7 @@ shopAdminRouter.get("/orders", async (c) => {
       ...toPublicOrder(o, itemsByOrder.get(o.id) || []),
       accessKey: o.access_key,
       proofMime: o.proof_mime,
+      proofSentAt: o.proof_sent_at,
     })),
     counts: Object.fromEntries(counts.map((r) => [r.status, r.count])),
     revenueFcfa: counts

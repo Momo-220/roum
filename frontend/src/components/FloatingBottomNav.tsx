@@ -8,13 +8,25 @@ import {
   Search,
   Calculator,
   MapPin,
+  type LucideIcon,
 } from "lucide-react";
 
-export function FloatingBottomNav() {
-  const pathname = usePathname();
+export interface BottomNavItem {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  href: string;
+  isActive: boolean;
+  /** Petit compteur à côté du libellé (panier). */
+  badge?: number;
+}
 
-  const navItems = [
-    { id: "home", label: "Accueil", icon: Home, href: "/", isActive: pathname === "/" },
+/** Barre flottante du bas. Roum Boutique lui passe ses propres liens. */
+export function FloatingBottomNav({ items }: { items?: BottomNavItem[] } = {}) {
+  const pathname = usePathname() ?? "";
+
+  const navItems: BottomNavItem[] = items ?? [
+    { id: "home", label: "Accueil", icon: Home, href: "/transit", isActive: pathname === "/transit" },
     { id: "services", label: "Services", icon: Layers, href: "/services", isActive: pathname.startsWith("/services") },
     { id: "tracking", label: "Suivi", icon: Search, href: "/tracking", isActive: pathname.startsWith("/tracking") },
     { id: "tariffs", label: "Tarifs", icon: Calculator, href: "/tariffs", isActive: pathname.startsWith("/tariffs") },
@@ -94,6 +106,11 @@ export function FloatingBottomNav() {
                 style={{ flexShrink: 0 }}
               />
               <span style={{ lineHeight: 1, whiteSpace: "nowrap" }}>{item.label}</span>
+              {item.badge ? (
+                <span className="roum-nav-badge" aria-label={`${item.badge} article(s)`}>
+                  {item.badge > 99 ? "99+" : item.badge}
+                </span>
+              ) : null}
             </Link>
           );
         })}
@@ -102,6 +119,22 @@ export function FloatingBottomNav() {
       <style
         dangerouslySetInnerHTML={{
           __html: `
+        .roum-nav-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 17px;
+          height: 17px;
+          padding: 0 5px;
+          border-radius: 9999px;
+          background: #3A2A21;
+          color: #FFFBF4;
+          font-size: 0.62rem;
+          font-weight: 800;
+          line-height: 1;
+          box-sizing: border-box;
+        }
+
         @media (max-width: 380px) {
           .roum-floating-nav {
             height: 40px !important;

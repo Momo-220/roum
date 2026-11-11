@@ -1031,7 +1031,6 @@ export default function TariffsPage() {
 
         .tz-send:hover {
           background: #E0D1BB;
-          transform: translateY(-1px);
         }
 
         .tz-send:active {

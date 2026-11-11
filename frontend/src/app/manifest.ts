@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 /** Le logo affiché quand le site est ajouté à l'écran d'accueil d'un téléphone. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "ROUM TRANSIT",
-    short_name: "Roum Transit",
+    name: "ROUM — Transit & Boutique",
+    short_name: "Roum",
     start_url: "/",
     display: "standalone",
     background_color: "#FAF5F0",

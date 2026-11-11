@@ -358,9 +358,7 @@ a {
 }
 
 .ios-metric-card:hover {
-  transform: translateY(-2px);
   border-color: rgba(28, 25, 23, 0.16);
-  box-shadow: 0 10px 26px -6px rgba(0, 0, 0, 0.07), 0 2px 6px rgba(0, 0, 0, 0.02);
 }
 
 .metric-card-header {
@@ -435,13 +433,6 @@ a {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   flex-shrink: 0;
   transition: all 0.18s ease;
-}
-
-.ios-metric-card:hover .metric-icon-box {
-  background: var(--brown-dark);
-  color: #FFFFFF;
-  border-color: var(--brown-dark);
-  box-shadow: 0 3px 8px rgba(28, 25, 23, 0.18);
 }
 
 .ios-trend-pill {
@@ -782,8 +773,6 @@ select.input-clean option {
 .hub-card:hover {
   background: var(--bg-subtle);
   border-color: var(--border-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .hub-card-active {
@@ -1050,8 +1039,6 @@ select.input-clean option {
 
 .task-card-item:hover {
   border-color: #D1D5DB;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-  transform: translateY(-1px);
 }
 
 .modal-dialog-viewport {
@@ -1156,7 +1143,6 @@ select.input-clean option {
 .btn-icon-clean:hover {
   background: #F3F4F6;
   border-color: var(--border-hover);
-  transform: translateY(-1px);
 }
 
 /* Luxury Flyer Pricing Cards */
@@ -1169,11 +1155,6 @@ select.input-clean option {
   position: relative;
   overflow: hidden;
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.pricing-flyer-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.1) !important;
 }
 
 /* Responsive Main Admin Viewport */
@@ -1218,8 +1199,6 @@ select.input-clean option {
 
 .executive-prompt-card:hover {
   border-color: rgba(28, 25, 23, 0.35) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08) !important;
 }
 
 .executive-prompt-card:hover .prompt-card-btn {
@@ -1349,8 +1328,6 @@ select.input-clean option {
 
 .roum-btn-primary:hover {
   background-color: #000000;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08), 0 8px 18px -4px rgba(17, 24, 39, 0.22);
 }
 
 .roum-btn-primary:active {
@@ -1384,7 +1361,6 @@ select.input-clean option {
 .roum-btn-secondary:hover {
   border-color: #9CA3AF;
   background-color: #F9FAFB;
-  transform: translateY(-1px);
 }
 
 .roum-btn-secondary:active {
@@ -1403,8 +1379,6 @@ select.input-clean option {
 
 .roum-cadran:hover {
   border-color: #CBD5E1;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04), 0 14px 32px -10px rgba(0, 0, 0, 0.08);
 }
 
 /* Pastille & Sceau en Superposition (Chevauchement d'arête) */
@@ -1469,11 +1443,6 @@ select.input-clean option {
   border-radius: 14px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03), 0 12px 30px -8px rgba(0, 0, 0, 0.08);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.roum-bordereau-superpose:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04), 0 16px 36px -10px rgba(0, 0, 0, 0.11);
 }
 
 /* Marquage Pochoir (Stencil Shipping Mark) */
@@ -1756,10 +1725,6 @@ select.input-clean option {
   margin-left: 6px !important;
   flex-shrink: 0 !important;
   transition: transform 0.18s ease !important;
-}
-
-.bento-cta-pill:hover svg {
-  transform: translateX(5px) !important;
 }
 
 /* ============================================================
@@ -2181,7 +2146,6 @@ select.input-clean option {
 
 .wa-pill:hover {
   border-color: rgba(107, 88, 68, 0.34);
-  transform: translateY(-1px);
 }
 
 .wa-pill:active {
@@ -2191,4 +2155,13 @@ select.input-clean option {
 .wa-pill-block {
   display: flex;
   width: 100%;
+}
+
+/* Logo « Roum boutique » : le « Roum » du logo d'origine et « boutique » au pinceau (Kaushan Script). */
+.rb-logo { display: inline-flex; flex-direction: column; align-items: center; line-height: 1; }
+.rb-logo-top { display: block; width: 100%; aspect-ratio: 801 / 268; overflow: hidden; }
+.rb-logo-top img { display: block; width: 100%; height: auto; }
+.rb-logo-word {
+  margin-top: -0.18em; color: #141010; white-space: nowrap;
+  font-family: 'Kaushan Script', 'Brush Script MT', cursive; font-weight: 400; letter-spacing: 0.01em;
 }

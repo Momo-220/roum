@@ -21,6 +21,8 @@ export interface ShopProduct {
   originCountry: string;
   images: string[];
   variants: ShopVariant[];
+  /** Date d'ajout (UTC « AAAA-MM-JJ HH:MM:SS ») : sert au badge « Nouveau » et au tri. */
+  createdAt?: string;
 }
 
 export interface ShopCategory {
@@ -182,6 +184,15 @@ export function managerOrderMessage(order: ShopOrder, pageUrl: string) {
   const hello = `Bonjour ${name},`;
   switch (order.status) {
     case "AWAITING_PAYMENT":
+      if (order.proofSent) {
+        return lines(
+          hello,
+          `Votre preuve de paiement pour la commande ${order.reference} n'a pas pu être validée.`,
+          `Merci de vérifier le montant (${formatFcfa(order.totalFcfa)}) et d'envoyer une nouvelle capture sur votre page :`,
+          pageUrl,
+          SHOP_NAME
+        );
+      }
       return lines(
         hello,
         `Merci pour votre commande ${order.reference} : ${formatFcfa(order.totalFcfa)}.`,
@@ -230,3 +241,55 @@ export const stepIndex = (status: ShopOrderStatus) => ORDER_STEPS.findIndex((s) 
 
 /** Un numéro Roum Transit ouvre la page de suivi du colis. */
 export const isTransitTrackingNumber = (value: string | null) => Boolean(value && /^RM-(AIR|SEA)-/i.test(value));
+
+// ---------- Présentation ----------
+
+/** Nuancier des couleurs courantes : une pastille plutôt qu'un mot. Une couleur inconnue garde son nom seul. */
+const SWATCHES: Array<[RegExp, string]> = [
+  [/noir|black/i, "#1B1411"],
+  [/blanc|white|ivoire/i, "#FFFFFF"],
+  [/cr[eè]me|ecru|écru/i, "#F3EADB"],
+  [/beige|nude/i, "#E2CDB0"],
+  [/sable|sand/i, "#D8C3A0"],
+  [/camel/i, "#C19A6B"],
+  [/cognac|caramel/i, "#9A5B2E"],
+  [/marron|brun|chocolat|brown/i, "#6B4423"],
+  [/taupe/i, "#8B7B6B"],
+  [/terracotta|brique|rouille/i, "#B9654B"],
+  [/bordeaux|prune/i, "#6D1A2A"],
+  [/rouge|red/i, "#B3261E"],
+  [/rose|pink/i, "#E3AEB2"],
+  [/orange/i, "#D9822B"],
+  [/jaune|moutarde|yellow/i, "#D9B23F"],
+  [/kaki|olive/i, "#7A7346"],
+  [/vert|green/i, "#3F6B4F"],
+  [/bleu marine|marine|navy/i, "#1F2A44"],
+  [/bleu|blue|jean/i, "#3E5C8A"],
+  [/violet|mauve|lilas/i, "#7A5C8E"],
+  [/gris|gray|grey/i, "#9A9590"],
+  [/argent|silver/i, "#C8C8C8"],
+  [/dor[ée]|or\b|gold/i, "#C9A646"],
+];
+
+export function colorSwatch(name: string): string | null {
+  for (const [pattern, hex] of SWATCHES) if (pattern.test(name)) return hex;
+  return null;
+}
+
+const NEW_FOR_DAYS = 21;
+
+export function isNewProduct(p: Pick<ShopProduct, "createdAt">): boolean {
+  if (!p.createdAt) return false;
+  const date = new Date(p.createdAt.includes("T") ? p.createdAt : `${p.createdAt.replace(" ", "T")}Z`);
+  return !Number.isNaN(date.getTime()) && Date.now() - date.getTime() < NEW_FOR_DAYS * 86_400_000;
+}
+
+/** « 36 – 40 », « S – L » ou « Taille unique » : la plage des tailles en vente. */
+export function sizeRange(p: Pick<ShopProduct, "variants">): string {
+  const sizes = [...new Set(p.variants.map((v) => v.size).filter(Boolean))];
+  if (sizes.length === 0) return "";
+  if (sizes.length === 1) return sizes[0];
+  return `${sizes[0]} – ${sizes[sizes.length - 1]}`;
+}
+
+export const productColors = (p: Pick<ShopProduct, "variants">) => [...new Set(p.variants.map((v) => v.color).filter(Boolean))];

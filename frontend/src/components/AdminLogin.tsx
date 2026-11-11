@@ -314,7 +314,6 @@ export function AdminLogin({
 
         .al-submit:hover {
           background: #E0D1BB;
-          transform: translateY(-1px);
         }
 
         .al-submit:active {

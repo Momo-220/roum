@@ -2925,7 +2925,6 @@ function CommandeFormContent() {
 
         .ios-submit-btn:hover {
           background: #E0D1BB;
-          transform: translateY(-1px);
         }
 
         .ios-submit-btn:active {

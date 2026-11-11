@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { apiRequest } from "@/shared/api";
 import { useLiveSync } from "@/shared/useLiveSync";
 import Link from "next/link";
@@ -21,6 +21,8 @@ import { ShippingBox3D } from "@/components/ShippingBox3D";
 import { TrackingJourney } from "@/components/TrackingJourney";
 import { TrackingProof, type TrackingPhoto, type TrackingReception } from "@/components/TrackingProof";
 import { RoumReceiptData, downloadOfficialReceiptPdf, printOfficialReceipt } from "@/utils/receiptPdf";
+import { ShopOrderTracking } from "@/components/shop/ShopOrderTracking";
+import { isShopReference } from "@/shared";
 
 /** Place chaque statut sur les quatre grandes étapes du trajet. */
 function stageOf(code: string): number {
@@ -79,9 +81,28 @@ interface TrackingData {
   whatsapp_support_url: string;
 }
 
+/**
+ * Même page pour un colis Roum Transit (RM-…) et une commande Roum Boutique (RB-…).
+ * Ouverte depuis la boutique (/boutique/suivi/…), elle reste dans la boutique.
+ */
 export default function TrackingResultPage() {
   const params = useParams();
-  const trackingNumber = params?.trackingNumber as string;
+  const trackingNumber = String(params?.trackingNumber ?? "");
+  const base = usePathname()?.startsWith("/boutique") ? "/boutique/suivi" : "/tracking";
+
+  return (
+    <>
+      {isShopReference(trackingNumber) ? (
+        <ShopOrderTracking reference={trackingNumber.toUpperCase()} base={base} />
+      ) : (
+        <ShipmentTracking trackingNumber={trackingNumber} base={base} />
+      )}
+      <style dangerouslySetInnerHTML={{ __html: TRACKING_STYLES }} />
+    </>
+  );
+}
+
+function ShipmentTracking({ trackingNumber, base }: { trackingNumber: string; base: string }) {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +120,7 @@ export default function TrackingResultPage() {
       try {
         const json = await apiRequest<any>(`/api/v1/public/tracking/${encodeURIComponent(trackingNumber)}`);
         if (json.redirect_tracking_number) {
-          router.replace(`/tracking/${encodeURIComponent(json.redirect_tracking_number)}`);
+          router.replace(`${base}/${encodeURIComponent(json.redirect_tracking_number)}`);
           return true;
         }
         setData(json);
@@ -116,7 +137,7 @@ export default function TrackingResultPage() {
         if (!silent) setLoading(false);
       }
     },
-    [trackingNumber, router],
+    [trackingNumber, router, base],
   );
 
   useEffect(() => {
@@ -171,7 +192,7 @@ export default function TrackingResultPage() {
   return (
     <div className="tk-root">
       <div className="tk-container">
-        <Link href="/tracking" className="tk-back">
+        <Link href={base} className="tk-back">
           <ArrowLeft size={16} />
           <span>Suivre un autre colis</span>
         </Link>
@@ -188,7 +209,7 @@ export default function TrackingResultPage() {
             <AlertCircle size={32} />
             <h1>Colis introuvable</h1>
             <p>{error}</p>
-            <Link href="/tracking" className="tk-cta">
+            <Link href={base} className="tk-cta">
               Vérifier le numéro
             </Link>
           </div>
@@ -314,10 +335,11 @@ export default function TrackingResultPage() {
           </>
         )}
       </div>
+    </div>
+  );
+}
 
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
+const TRACKING_STYLES = `
         .tk-root {
           --tk-ink: #3A2A21;
           --tk-muted: #7D6E64;
@@ -660,7 +682,6 @@ export default function TrackingResultPage() {
 
         .tk-cta:hover {
           background: #F3EBDF;
-          transform: translateY(-1px);
         }
 
         .tk-cta:active {
@@ -718,9 +739,4 @@ export default function TrackingResultPage() {
             flex: 1 1 0;
           }
         }
-      `,
-        }}
-      />
-    </div>
-  );
-}
+      `;

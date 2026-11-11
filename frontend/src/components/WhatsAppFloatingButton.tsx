@@ -47,10 +47,6 @@ export function WhatsAppFloatingButton({
           display: block;
         }
 
-        .whatsapp-floating-btn:hover {
-          transform: scale(1.1);
-        }
-
         @media (max-width: 480px) {
           .whatsapp-floating-btn {
             width: 48px;

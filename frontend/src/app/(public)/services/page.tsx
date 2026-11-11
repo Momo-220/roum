@@ -465,11 +465,6 @@ function ServicesContent() {
           transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
         }
 
-        .bento-card:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 18px 40px -10px rgba(20, 13, 9, 0.26);
-        }
-
         .bento-card-bg {
           position: absolute;
           inset: 0;
@@ -478,10 +473,6 @@ function ServicesContent() {
           object-fit: cover;
           z-index: 1;
           transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .bento-card:hover .bento-card-bg {
-          transform: scale(1.04);
         }
 
         /* La photo respire en haut : seul le bas s'assombrit, là où se trouve le texte. */

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Search } from "lucide-react";
-import { normalizeTrackingNumber } from "@/shared";
+import { normalizeTrackingInput } from "@/shared";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { usePublicCatalog } from "@/shared/usePublicCatalog";
 import { siteText } from "@/shared/siteContent";
@@ -20,9 +20,22 @@ const TRACKING_STEPS = [
   { step: "09", label: "Colis livré", desc: "Remis au client", isHigh: false },
 ];
 
+/** La même frise, avec les étapes d'une commande Roum Boutique. */
+const SHOP_TRACKING_STEPS = [
+  { step: "01", label: "Commande reçue", desc: "Stock réservé", isHigh: false },
+  { step: "02", label: "Paiement envoyé", desc: "Preuve reçue", isHigh: true },
+  { step: "03", label: "Paiement confirmé", desc: "En préparation", isHigh: false },
+  { step: "04", label: "Expédiée", desc: "En route", isHigh: true },
+  { step: "05", label: "Livrée", desc: "Remise au client", isHigh: false },
+];
+
 export default function TrackingPage() {
   const router = useRouter();
   const { settings } = usePublicCatalog();
+  // Ouverte depuis la boutique, la page reste dans la boutique.
+  const inShop = usePathname()?.startsWith("/boutique") ?? false;
+  const base = inShop ? "/boutique/suivi" : "/tracking";
+  const steps = inShop ? SHOP_TRACKING_STEPS : TRACKING_STEPS;
   const [trackingInput, setTrackingInput] = useState("");
   const [trackingError, setTrackingError] = useState("");
 
@@ -36,13 +49,17 @@ export default function TrackingPage() {
     e.preventDefault();
     setTrackingError("");
 
-    const normalized = normalizeTrackingNumber(trackingInput);
+    const normalized = normalizeTrackingInput(trackingInput);
     if (!normalized) {
-      setTrackingError("Veuillez entrer un numéro de colis valide (Ex : RM-AIR-2610-K8P9Q2).");
+      setTrackingError(
+        inShop
+          ? "Numéro invalide (Ex : RB-2611-K8P9Q2 ou RM-AIR-2610-K8P9Q2)."
+          : "Veuillez entrer un numéro de colis valide (Ex : RM-AIR-2610-K8P9Q2)."
+      );
       return;
     }
 
-    router.push(`/tracking/${normalized}`);
+    router.push(`${base}/${normalized}`);
   };
 
   // 1. Calcul de la courbe de Bézier serpent cambrée
@@ -51,7 +68,7 @@ export default function TrackingPage() {
     const containerRect = containerRef.current.getBoundingClientRect();
     const points: { x: number; y: number }[] = [];
 
-    for (let i = 1; i <= TRACKING_STEPS.length; i++) {
+    for (let i = 1; i <= steps.length; i++) {
       const circle = document.getElementById(`step-circle-${i}`);
       if (circle) {
         const r = circle.getBoundingClientRect();
@@ -120,7 +137,7 @@ export default function TrackingPage() {
     const distances = nodeDistancesRef.current;
 
     // Réinitialisation des classes
-    for (let i = 1; i <= TRACKING_STEPS.length; i++) {
+    for (let i = 1; i <= steps.length; i++) {
       const circleEl = document.getElementById(`step-circle-${i}`);
       const metaEl = document.getElementById(`step-meta-${i}`);
       if (circleEl) circleEl.classList.remove("active");
@@ -211,7 +228,7 @@ export default function TrackingPage() {
           <div style={{ textAlign: "center", marginBottom: "32px" }}>
             <div className="client-eyebrow" style={{ justifyContent: "center", marginBottom: "12px" }}>
               <span style={{ color: "var(--c-accent)" }}>●</span>
-              <span>{siteText(settings, "tracking_kicker")}</span>
+              <span>{siteText(settings, inShop ? "boutique_tracking_kicker" : "tracking_kicker")}</span>
             </div>
 
             <h1
@@ -224,11 +241,11 @@ export default function TrackingPage() {
                 margin: "0 0 10px 0",
               }}
             >
-              {siteText(settings, "tracking_title")}
+              {siteText(settings, inShop ? "boutique_tracking_title" : "tracking_title")}
             </h1>
 
             <p style={{ fontSize: "1.02rem", color: "var(--c-text-muted)", margin: 0, lineHeight: 1.55 }}>
-              {siteText(settings, "tracking_text")}
+              {siteText(settings, inShop ? "boutique_tracking_text" : "tracking_text")}
             </p>
           </div>
 
@@ -255,7 +272,7 @@ export default function TrackingPage() {
                 setTrackingInput(e.target.value);
                 if (trackingError) setTrackingError("");
               }}
-              placeholder="Numéro de bordereau (Ex : RM-AIR-2610-K8P9Q2)"
+              placeholder={inShop ? "Ex : RB-2611-K8P9Q2" : "Numéro de bordereau (Ex : RM-AIR-2610-K8P9Q2)"}
               style={{
                 flex: 1,
                 border: "none",
@@ -359,7 +376,7 @@ export default function TrackingPage() {
                   boxSizing: "border-box",
                 }}
               >
-                {TRACKING_STEPS.map((item, idx) => {
+                {steps.map((item, idx) => {
                   const stepNum = idx + 1;
                   return (
                     <div

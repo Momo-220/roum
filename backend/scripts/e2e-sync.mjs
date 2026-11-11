@@ -730,6 +730,16 @@ await check("Roum Boutique : article, stock par taille, commande, preuve, confir
   assert.equal(size38.stock, 2);
   assert.equal((await fetch(`${API}/api/public/shop/images/${listed.images[0]}`)).status, 200);
 
+  // Masquer puis remettre en vente un article ne touche pas à son stock.
+  assert.equal((await shop(`/products/${product.data.id}/visibility`, { method: "POST", body: { isActive: false } })).status, 200);
+  assert.ok(
+    !(await call("GET", "/api/public/shop/catalog")).data.products.some((p) => p.id === product.data.id),
+    "un article masqué n'est plus en vente"
+  );
+  assert.equal((await shop(`/products/${product.data.id}/visibility`, { method: "POST", body: { isActive: true } })).status, 200);
+  const shownAgain = (await call("GET", "/api/public/shop/catalog")).data.products.find((p) => p.id === product.data.id);
+  assert.equal(shownAgain?.variants.find((v) => v.size === "38")?.stock, 2, "le stock est intact");
+
   // Livraison : la zone de la boutique, puis Roum Transit si la grille dessert le trajet.
   const options = (
     await call("POST", "/api/public/shop/delivery-options", {
@@ -783,6 +793,7 @@ await check("Roum Boutique : article, stock par taille, commande, preuve, confir
   assert.equal(proof.status, 200, JSON.stringify(proof.data));
   const orders = (await shop("/orders")).data.orders;
   const adminOrder = orders.find((o) => o.reference === reference);
+  assert.ok(adminOrder.proofSentAt, "l'admin voit quand la preuve est arrivée");
   assert.equal(adminOrder.status, "PROOF_SENT");
   assert.equal((await fetch(`${API}/api/admin/shop/orders/${adminOrder.id}/proof`, { headers: ADMIN })).status, 200);
 
@@ -795,6 +806,20 @@ await check("Roum Boutique : article, stock par taille, commande, preuve, confir
   const shipped = (await call("GET", `/api/public/shop/orders/${reference}?key=${accessKey}`)).data.order;
   assert.equal(shipped.status, "SHIPPED");
   assert.equal(shipped.trackingNumber, "RB-TEST-1");
+
+  // La page Suivi lit la commande avec son seul numéro, sans aucune donnée personnelle.
+  const tracked = await call("GET", `/api/v1/public/shop/track/${reference.toLowerCase()}`);
+  assert.equal(tracked.status, 200);
+  assert.equal(tracked.data.order.reference, reference);
+  assert.equal(tracked.data.order.status, "SHIPPED");
+  assert.equal(tracked.data.order.trackingNumber, "RB-TEST-1");
+  assert.equal(tracked.data.order.items[0].quantity, 1);
+  for (const secret of ["customer", "accessKey", "access_key", "totalFcfa", "itemsFcfa", "cancelReason"]) {
+    assert.equal(secret in tracked.data.order, false, `le suivi public ne montre pas ${secret}`);
+  }
+  assert.equal(JSON.stringify(tracked.data).includes(accessKey), false);
+  assert.equal((await call("GET", "/api/v1/public/shop/track/RB-0000-ZZZZZZ")).status, 404);
+  assert.equal((await call("GET", "/api/v1/public/shop/track/n-importe-quoi")).status, 404);
 
   // Une autre commande annulée rend son article au stock.
   const second = await call("POST", "/api/public/shop/orders", { body: order() });

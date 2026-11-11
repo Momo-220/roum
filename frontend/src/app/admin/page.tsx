@@ -10465,11 +10465,9 @@ export default function AdminPage() {
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.borderColor = "var(--brown-light)";
-                        e.currentTarget.style.transform = "translateY(-1px)";
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.borderColor = "var(--border-light)";
-                        e.currentTarget.style.transform = "none";
                       }}
                     >
                       <CircularFlag countryCode={tmpl.countryCode} size={14} />

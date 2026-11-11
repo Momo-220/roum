@@ -123,7 +123,11 @@ export function SiteContentEditor({ settings, token, onSave, onImageSaved, notif
             const busy = busyImage === image.key;
             return (
               <div key={image.key} className="sce-image">
-                <img src={siteImage(settings, image.key)} alt={image.label} />
+                {siteImage(settings, image.key) ? (
+                  <img src={siteImage(settings, image.key)} alt={image.label} />
+                ) : (
+                  <span className="sce-image-empty">Aucune image</span>
+                )}
                 <strong>{image.label}</strong>
                 <div className="sce-image-actions">
                   <input
@@ -235,6 +239,7 @@ export function SiteContentEditor({ settings, token, onSave, onImageSaved, notif
         .sce-images { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 14px; }
         .sce-image { display: grid; gap: 8px; align-content: start; }
         .sce-image img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 14px; background: #F3EBDF; }
+        .sce-image-empty { display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 4 / 3; border-radius: 14px; background: #F3EBDF; color: #8C7D75; font-size: 0.86rem; font-weight: 600; }
         .sce-image strong { font-size: 0.86rem; color: var(--brown-dark); }
         .sce-image-actions { display: flex; flex-wrap: wrap; gap: 6px; }
         .sce-pill {

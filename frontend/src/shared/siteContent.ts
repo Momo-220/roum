@@ -38,6 +38,36 @@ const card = (prefix: string, name: string, fields: Array<[string, string, strin
 
 export const SITE_SECTIONS: SiteSection[] = [
   {
+    id: "vitrine",
+    title: "Page d'accueil Roum (Transit et Boutique)",
+    hint: "La première page du site : le visiteur choisit Roum Transit ou Roum Boutique.",
+    fields: [
+      { key: "vitrine_kicker", label: "Petit titre", fallback: "BIENVENUE CHEZ ROUM" },
+      { key: "vitrine_title", label: "Titre", fallback: "Expédier ou acheter ?" },
+      {
+        key: "vitrine_text",
+        label: "Introduction",
+        fallback: "Faites venir vos marchandises avec Roum Transit, ou achetez chaussures, sacs et vêtements chez Roum Boutique.",
+        long: true,
+      },
+      {
+        key: "vitrine_transit_text",
+        label: "Carte Transit · texte",
+        fallback: "Achats en Chine, fret aérien et maritime, livraison jusqu'à destination.",
+        long: true,
+      },
+      { key: "vitrine_transit_cta", label: "Carte Transit · bouton", fallback: "Entrer chez Roum Transit" },
+      {
+        key: "vitrine_boutique_text",
+        label: "Carte Boutique · texte",
+        fallback: "Chaussures, sacs et vêtements. Paiement Wave ou Orange Money, livraison suivie.",
+        long: true,
+      },
+      { key: "vitrine_boutique_cta", label: "Carte Boutique · bouton", fallback: "Voir la boutique" },
+      { key: "vitrine_tracking", label: "Suivi · phrase", fallback: "Déjà client ? Suivez votre colis ou votre commande." },
+    ],
+  },
+  {
     id: "home",
     title: "Accueil",
     fields: [
@@ -278,6 +308,21 @@ export const SITE_SECTIONS: SiteSection[] = [
         fallback: "Choisissez votre taille et votre couleur, payez par Wave ou Orange Money, et suivez votre livraison.",
         long: true,
       },
+      { key: "boutique_cta", label: "Bouton de l'en-tête", fallback: "Découvrir la collection" },
+      {
+        key: "boutique_highlights",
+        label: "Points forts (un par ligne, 3 au plus)",
+        fallback: "Paiement Wave ou Orange Money\nLivraison suivie jusqu'à chez vous\nStock réel, taille par taille",
+        list: true,
+      },
+      { key: "boutique_collection_title", label: "Titre de la collection", fallback: "La collection" },
+      { key: "boutique_steps_title", label: "Commander · titre", fallback: "Commander, simplement" },
+      {
+        key: "boutique_steps",
+        label: "Commander · étapes (une par ligne)",
+        fallback: "Choisissez votre taille et votre couleur\nPayez, puis envoyez la capture du paiement\nSuivez votre commande jusqu'à la livraison",
+        list: true,
+      },
       { key: "boutique_empty", label: "Aucun article en vente", fallback: "Les nouveaux articles arrivent bientôt." },
       {
         key: "boutique_payment_text",
@@ -285,11 +330,23 @@ export const SITE_SECTIONS: SiteSection[] = [
         fallback: "Payez le total sur l'un de ces comptes, puis envoyez la capture de votre paiement ci-dessous.",
         long: true,
       },
+      { key: "boutique_tracking_kicker", label: "Suivi · petit titre", fallback: "SUIVI DE COMMANDE" },
+      { key: "boutique_tracking_title", label: "Suivi · titre", fallback: "Suivre ma commande" },
+      {
+        key: "boutique_tracking_text",
+        label: "Suivi · texte",
+        fallback: "Entrez le numéro reçu après votre commande, ou celui de votre colis Roum Transit.",
+        long: true,
+      },
+      { key: "boutique_footer", label: "Pied de page", fallback: "Paiement Wave, Orange Money ou compte Maroc · Livraison suivie" },
     ],
   },
 ];
 
 export const SITE_IMAGES: SiteImageField[] = [
+  { key: "boutique_hero", label: "Boutique · grande image (sinon : photos des derniers articles)", fallback: "" },
+  { key: "vitrine_transit", label: "Accueil · carte Transit", fallback: "/images/services/aerien-hublot.jpg" },
+  { key: "vitrine_boutique", label: "Accueil · carte Boutique (sinon : photo du premier article)", fallback: "" },
   { key: "achat", label: "Achat en Chine", fallback: "/images/services/achat.jpg" },
   { key: "aerien", label: "Voie aérienne", fallback: "/images/services/aerien-hublot.jpg" },
   { key: "maritime", label: "Voie maritime", fallback: "/images/services/maritime-ciel.jpg" },

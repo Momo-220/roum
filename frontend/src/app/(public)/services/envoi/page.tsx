@@ -552,7 +552,6 @@ export default function SendParcelPage() {
 
         .ev-submit:hover {
           background: #F3EBDF;
-          transform: translateY(-1px);
         }
 
         .ev-submit:active {

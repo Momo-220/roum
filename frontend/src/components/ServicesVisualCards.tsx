@@ -210,7 +210,7 @@ export function ServicesVisualCards() {
                   alt={service.title}
                   className="service-card-bg-image"
                   style={{
-                    transform: isExpanded ? "scale(1.04)" : isHovered ? "scale(1.03)" : "scale(1.0)",
+                    transform: isExpanded ? "scale(1.04)" : "scale(1.0)",
                   }}
                 />
 
@@ -739,7 +739,6 @@ export function ServicesVisualCards() {
 
         .service-close-button:hover {
           background-color: rgba(255, 255, 255, 0.38);
-          transform: scale(1.08);
         }
 
         /* Bas de carte par défaut : STRICTEMENT EN BAS AVEC MARGIN-TOP AUTO */
@@ -825,7 +824,6 @@ export function ServicesVisualCards() {
         .service-action-badge.is-hovered {
           background-color: #FFFFFF;
           color: #140D09;
-          transform: scale(1.08);
         }
 
         /* Corps Étendu */
@@ -961,7 +959,6 @@ export function ServicesVisualCards() {
         }
 
         .service-cta-button:hover {
-          transform: translateX(3px);
           background-color: #FAF5F0;
         }
 

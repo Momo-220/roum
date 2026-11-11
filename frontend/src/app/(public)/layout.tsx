@@ -33,7 +33,7 @@ export default function PublicLayout({
           }}
         >
           <Link
-            href="/"
+            href="/transit"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -106,6 +106,9 @@ export default function PublicLayout({
               </Link>
               <Link href="/tracking" style={{ textDecoration: "none", color: "inherit" }}>
                 Suivi Colis
+              </Link>
+              <Link href="/boutique" style={{ textDecoration: "none", color: "inherit" }}>
+                Roum Boutique
               </Link>
             </div>
           </div>

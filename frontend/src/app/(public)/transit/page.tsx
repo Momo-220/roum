@@ -10,7 +10,7 @@ import {
   Scale,
   MapPin,
 } from "lucide-react";
-import { normalizeTrackingNumber } from "@/shared";
+import { normalizeTrackingInput } from "@/shared";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { WorldMap } from "@/components/WorldMap";
 import { ServicesVisualCards } from "@/components/ServicesVisualCards";
@@ -28,7 +28,7 @@ export default function HomePage() {
   const handleTrackingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setTrackingError("");
-    const normalized = normalizeTrackingNumber(trackingInput);
+    const normalized = normalizeTrackingInput(trackingInput);
     if (!normalized) {
       setTrackingError("Numéro de colis invalide (Ex : RM-AIR-2610-K8P9Q2).");
       return;
@@ -219,7 +219,6 @@ export default function HomePage() {
 
         .hero-search-submit:hover {
           opacity: 0.92;
-          transform: translateY(-1px);
         }
 
         /* Desktop Spacing */
