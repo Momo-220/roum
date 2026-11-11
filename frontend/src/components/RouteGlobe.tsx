@@ -25,6 +25,8 @@ import { CircularFlag } from "@/components/CircularFlag";
 // Types des transactions logistiques
 export interface TransactionRoute {
   id: string;
+  /** Rang du colis parmi ceux du même trajet : chacun a sa propre courbe, 100 colis = 100 lignes. */
+  lane?: number;
   tracking_number: string;
   client_name?: string;
   origin_name: string;
@@ -150,304 +152,95 @@ function isRouteSelected(route: TransactionRoute, targetId: string | null | unde
   return rId === t || rTrack === t || t.includes(rTrack) || rTrack.includes(t);
 }
 
-// Hubs connus pour mapping automatique
-const KNOWN_HUBS: Record<string, { lon: number; lat: number; country: string; name: string }> = {
-  Guangzhou: { lon: 113.26, lat: 23.13, country: "Chine", name: "Guangzhou" },
-  Yiwu: { lon: 120.07, lat: 29.30, country: "Chine", name: "Yiwu" },
-  Dubaï: { lon: 55.27, lat: 25.20, country: "Émirats", name: "Dubaï" },
-  Dubai: { lon: 55.27, lat: 25.20, country: "Émirats", name: "Dubaï" },
-  Casablanca: { lon: -7.59, lat: 33.57, country: "Maroc", name: "Casablanca" },
-  Paris: { lon: 2.35, lat: 48.85, country: "France", name: "Paris" },
-  Abidjan: { lon: -4.01, lat: 5.36, country: "Côte d'Ivoire", name: "Abidjan" },
+// Coordonnées des villes et pays du réseau : chaque colis est posé sur son vrai trajet.
+type Place = { lon: number; lat: number; country: string; name: string };
+
+const CITY_POINTS: Record<string, Place> = {
+  guangzhou: { lon: 113.26, lat: 23.13, country: "Chine", name: "Guangzhou" },
+  canton: { lon: 113.26, lat: 23.13, country: "Chine", name: "Guangzhou" },
+  yiwu: { lon: 120.07, lat: 29.3, country: "Chine", name: "Yiwu" },
+  shenzhen: { lon: 114.06, lat: 22.54, country: "Chine", name: "Shenzhen" },
+  shanghai: { lon: 121.47, lat: 31.23, country: "Chine", name: "Shanghai" },
+  dubai: { lon: 55.27, lat: 25.2, country: "Émirats", name: "Dubaï" },
+  casablanca: { lon: -7.59, lat: 33.57, country: "Maroc", name: "Casablanca" },
+  paris: { lon: 2.35, lat: 48.85, country: "France", name: "Paris" },
+  istanbul: { lon: 28.98, lat: 41.01, country: "Turquie", name: "Istanbul" },
+  abidjan: { lon: -4.01, lat: 5.36, country: "Côte d'Ivoire", name: "Abidjan" },
+  yamoussoukro: { lon: -5.28, lat: 6.82, country: "Côte d'Ivoire", name: "Yamoussoukro" },
+  bouake: { lon: -5.03, lat: 7.69, country: "Côte d'Ivoire", name: "Bouaké" },
+  "san-pedro": { lon: -6.64, lat: 4.75, country: "Côte d'Ivoire", name: "San-Pédro" },
+  bamako: { lon: -8.0, lat: 12.64, country: "Mali", name: "Bamako" },
+  dakar: { lon: -17.47, lat: 14.71, country: "Sénégal", name: "Dakar" },
+  conakry: { lon: -13.68, lat: 9.54, country: "Guinée", name: "Conakry" },
+  lome: { lon: 1.22, lat: 6.13, country: "Togo", name: "Lomé" },
+  cotonou: { lon: 2.42, lat: 6.37, country: "Bénin", name: "Cotonou" },
+  douala: { lon: 9.77, lat: 4.05, country: "Cameroun", name: "Douala" },
+  yaounde: { lon: 11.5, lat: 3.87, country: "Cameroun", name: "Yaoundé" },
+  ouagadougou: { lon: -1.52, lat: 12.37, country: "Burkina Faso", name: "Ouagadougou" },
+  libreville: { lon: 9.45, lat: 0.39, country: "Gabon", name: "Libreville" },
+  niamey: { lon: 2.11, lat: 13.51, country: "Niger", name: "Niamey" },
+  accra: { lon: -0.19, lat: 5.6, country: "Ghana", name: "Accra" },
+  lagos: { lon: 3.38, lat: 6.52, country: "Nigeria", name: "Lagos" },
+  kinshasa: { lon: 15.27, lat: -4.44, country: "RD Congo", name: "Kinshasa" },
+  brazzaville: { lon: 15.28, lat: -4.27, country: "Congo", name: "Brazzaville" },
+  "pointe-noire": { lon: 11.86, lat: -4.78, country: "Congo", name: "Pointe-Noire" },
+  ndjamena: { lon: 15.04, lat: 12.13, country: "Tchad", name: "N'Djaména" },
+  nouakchott: { lon: -15.98, lat: 18.09, country: "Mauritanie", name: "Nouakchott" },
+  freetown: { lon: -13.23, lat: 8.47, country: "Sierra Leone", name: "Freetown" },
+  monrovia: { lon: -10.8, lat: 6.3, country: "Liberia", name: "Monrovia" },
 };
 
-const KNOWN_DESTS: Record<string, { lon: number; lat: number; country: string; name: string }> = {
-  Bamako: { lon: -8.00, lat: 12.64, country: "Mali", name: "Bamako" },
-  Abidjan: { lon: -4.01, lat: 5.36, country: "Côte d'Ivoire", name: "Abidjan" },
-  Dakar: { lon: -17.47, lat: 14.71, country: "Sénégal", name: "Dakar" },
-  Conakry: { lon: -13.68, lat: 9.54, country: "Guinée", name: "Conakry" },
-  Lomé: { lon: 1.22, lat: 6.13, country: "Togo", name: "Lomé" },
-  Lome: { lon: 1.22, lat: 6.13, country: "Togo", name: "Lomé" },
-  Cotonou: { lon: 2.42, lat: 6.37, country: "Bénin", name: "Cotonou" },
-  Douala: { lon: 9.77, lat: 4.05, country: "Cameroun", name: "Douala" },
-  Ouagadougou: { lon: -1.52, lat: 12.37, country: "Burkina Faso", name: "Ouagadougou" },
-  Libreville: { lon: 9.45, lat: 0.39, country: "Gabon", name: "Libreville" },
-  Paris: { lon: 2.35, lat: 48.85, country: "France", name: "Paris" },
+// Faute de ville connue, le pays (sa ville principale).
+const COUNTRY_POINTS: Record<string, Place> = {
+  chine: CITY_POINTS.guangzhou,
+  china: CITY_POINTS.guangzhou,
+  emirats: CITY_POINTS.dubai,
+  "emirats arabes unis": CITY_POINTS.dubai,
+  uae: CITY_POINTS.dubai,
+  maroc: CITY_POINTS.casablanca,
+  france: CITY_POINTS.paris,
+  turquie: CITY_POINTS.istanbul,
+  "cote d'ivoire": CITY_POINTS.abidjan,
+  "cote divoire": CITY_POINTS.abidjan,
+  mali: CITY_POINTS.bamako,
+  senegal: CITY_POINTS.dakar,
+  guinee: CITY_POINTS.conakry,
+  togo: CITY_POINTS.lome,
+  benin: CITY_POINTS.cotonou,
+  cameroun: CITY_POINTS.douala,
+  "burkina faso": CITY_POINTS.ouagadougou,
+  burkina: CITY_POINTS.ouagadougou,
+  gabon: CITY_POINTS.libreville,
+  niger: CITY_POINTS.niamey,
+  ghana: CITY_POINTS.accra,
+  nigeria: CITY_POINTS.lagos,
+  "rd congo": CITY_POINTS.kinshasa,
+  rdc: CITY_POINTS.kinshasa,
+  congo: CITY_POINTS.brazzaville,
+  tchad: CITY_POINTS.ndjamena,
+  mauritanie: CITY_POINTS.nouakchott,
+  "sierra leone": CITY_POINTS.freetown,
+  liberia: CITY_POINTS.monrovia,
 };
 
-// 15 Transactions de référence synchronisées avec la console
-const DEFAULT_FALLBACK_ROUTES: TransactionRoute[] = [
-  {
-    id: "tx-1",
-    tracking_number: "RM-AIR-2610-K8P9Q2",
-    client_name: "Aminata Diallo",
-    origin_name: "Guangzhou",
-    origin_country: "Chine",
-    origin_lon: 113.26,
-    origin_lat: 23.13,
-    dest_name: "Bamako",
-    dest_country: "Mali",
-    dest_lon: -8.00,
-    dest_lat: 12.64,
-    status_category: "IN_TRANSIT",
-    status_label: "En vol Guangzhou → Bamako",
-    mode: "AIR",
-    weight_kg: 18.5,
-    volume_cbm: 0.12,
-  },
-  {
-    id: "tx-2",
-    tracking_number: "RM-SEA-2610-M4V7W1",
-    client_name: "Ibrahim Traoré",
-    origin_name: "Yiwu",
-    origin_country: "Chine",
-    origin_lon: 120.07,
-    origin_lat: 29.30,
-    dest_name: "Abidjan",
-    dest_country: "Côte d'Ivoire",
-    dest_lon: -4.01,
-    dest_lat: 5.36,
-    status_category: "IN_TRANSIT",
-    status_label: "En mer (Conteneur LCL)",
-    mode: "SEA",
-    weight_kg: 420.0,
-    volume_cbm: 2.8,
-  },
-  {
-    id: "tx-3",
-    tracking_number: "RM-AIR-2610-R3T9Y5",
-    client_name: "Khadija Diop",
-    origin_name: "Dubaï",
-    origin_country: "Émirats",
-    origin_lon: 55.27,
-    origin_lat: 25.20,
-    dest_name: "Dakar",
-    dest_country: "Sénégal",
-    dest_lon: -17.47,
-    dest_lat: 14.71,
-    status_category: "IN_TRANSIT",
-    status_label: "En vol Dubaï → Dakar",
-    mode: "AIR",
-    weight_kg: 34.0,
-    volume_cbm: 0.25,
-  },
-  {
-    id: "tx-4",
-    tracking_number: "RM-AIR-2610-P7L2M8",
-    client_name: "Boubacar Cissé",
-    origin_name: "Casablanca",
-    origin_country: "Maroc",
-    origin_lon: -7.59,
-    origin_lat: 33.57,
-    dest_name: "Conakry",
-    dest_country: "Guinée",
-    dest_lon: -13.68,
-    dest_lat: 9.54,
-    status_category: "IN_TRANSIT",
-    status_label: "En transit Casablanca → Conakry",
-    mode: "AIR",
-    weight_kg: 28.0,
-    volume_cbm: 0.18,
-  },
-  {
-    id: "tx-5",
-    tracking_number: "RM-AIR-2610-Q9HLSS",
-    client_name: "Oumar Sidibé",
-    origin_name: "Guangzhou",
-    origin_country: "Chine",
-    origin_lon: 113.26,
-    origin_lat: 23.13,
-    dest_name: "Bamako",
-    dest_country: "Mali",
-    dest_lon: -8.00,
-    dest_lat: 12.64,
-    status_category: "IN_TRANSIT",
-    status_label: "En cours d'acheminement",
-    mode: "AIR",
-    weight_kg: 14.5,
-    volume_cbm: 0.09,
-  },
-  {
-    id: "tx-6",
-    tracking_number: "RM-SEA-2610-C5D6E7",
-    client_name: "Fanta Coulibaly",
-    origin_name: "Yiwu",
-    origin_country: "Chine",
-    origin_lon: 120.07,
-    origin_lat: 29.30,
-    dest_name: "Lomé",
-    dest_country: "Togo",
-    dest_lon: 1.22,
-    dest_lat: 6.13,
-    status_category: "IN_TRANSIT",
-    status_label: "En mer (Conteneur LCL)",
-    mode: "SEA",
-    weight_kg: 310.0,
-    volume_cbm: 2.1,
-  },
-  {
-    id: "tx-7",
-    tracking_number: "RM-AIR-2610-W2X3Y4",
-    client_name: "Mamadou Camara",
-    origin_name: "Dubaï",
-    origin_country: "Émirats",
-    origin_lon: 55.27,
-    origin_lat: 25.20,
-    dest_name: "Bamako",
-    dest_country: "Mali",
-    dest_lon: -8.00,
-    dest_lat: 12.64,
-    status_category: "IN_TRANSIT",
-    status_label: "En vol Dubaï → Bamako",
-    mode: "AIR",
-    weight_kg: 25.0,
-    volume_cbm: 0.16,
-  },
-  {
-    id: "tx-8",
-    tracking_number: "RM-AIR-2610-B1C2D3",
-    client_name: "Moussa Konaté",
-    origin_name: "Guangzhou",
-    origin_country: "Chine",
-    origin_lon: 113.26,
-    origin_lat: 23.13,
-    dest_name: "Bamako",
-    dest_country: "Mali",
-    dest_lon: -8.00,
-    dest_lat: 12.64,
-    status_category: "DELIVERED",
-    status_label: "Livré en boutique Bamako",
-    mode: "AIR",
-    weight_kg: 22.0,
-    volume_cbm: 0.15,
-  },
-  {
-    id: "tx-9",
-    tracking_number: "RM-SEA-2610-E5F6G7",
-    client_name: "Awa Sanogo",
-    origin_name: "Casablanca",
-    origin_country: "Maroc",
-    origin_lon: -7.59,
-    origin_lat: 33.57,
-    dest_name: "Bamako",
-    dest_country: "Mali",
-    dest_lon: -8.00,
-    dest_lat: 12.64,
-    status_category: "DELIVERED",
-    status_label: "Livré en agence Bamako",
-    mode: "SEA",
-    weight_kg: 180.0,
-    volume_cbm: 1.4,
-  },
-  {
-    id: "tx-10",
-    tracking_number: "RM-AIR-2610-Y9Z1A2",
-    client_name: "Seydou Keita",
-    origin_name: "Dubaï",
-    origin_country: "Émirats",
-    origin_lon: 55.27,
-    origin_lat: 25.20,
-    dest_name: "Abidjan",
-    dest_country: "Côte d'Ivoire",
-    dest_lon: -4.01,
-    dest_lat: 5.36,
-    status_category: "DELIVERED",
-    status_label: "Livré à Abidjan",
-    mode: "AIR",
-    weight_kg: 45.0,
-    volume_cbm: 0.32,
-  },
-  {
-    id: "tx-11",
-    tracking_number: "RM-AIR-2610-J4K5L6",
-    client_name: "Fatoumata Bamba",
-    origin_name: "Casablanca",
-    origin_country: "Maroc",
-    origin_lon: -7.59,
-    origin_lat: 33.57,
-    dest_name: "Dakar",
-    dest_country: "Sénégal",
-    dest_lon: -17.47,
-    dest_lat: 14.71,
-    status_category: "DELIVERED",
-    status_label: "Livré à Dakar",
-    mode: "AIR",
-    weight_kg: 16.5,
-    volume_cbm: 0.1,
-  },
-  {
-    id: "tx-12",
-    tracking_number: "RM-SEA-2610-N7P8Q9",
-    client_name: "Cheick Oumar",
-    origin_name: "Guangzhou",
-    origin_country: "Chine",
-    origin_lon: 113.26,
-    origin_lat: 23.13,
-    dest_name: "Conakry",
-    dest_country: "Guinée",
-    dest_lon: -13.68,
-    dest_lat: 9.54,
-    status_category: "DELIVERED",
-    status_label: "Livré à Conakry",
-    mode: "SEA",
-    weight_kg: 290.0,
-    volume_cbm: 1.95,
-  },
-  {
-    id: "tx-13",
-    tracking_number: "RM-AIR-2610-U1V2W3",
-    client_name: "Marie-Claire Kouassi",
-    origin_name: "Paris",
-    origin_country: "France",
-    origin_lon: 2.35,
-    origin_lat: 48.86,
-    dest_name: "Abidjan",
-    dest_country: "Côte d'Ivoire",
-    dest_lon: -4.01,
-    dest_lat: 5.36,
-    status_category: "IN_TRANSIT",
-    status_label: "En vol Paris → Abidjan",
-    mode: "AIR",
-    weight_kg: 8.0,
-    volume_cbm: 0.05,
-  },
-  {
-    id: "tx-14",
-    tracking_number: "RM-AIR-2610-D8E9F1",
-    client_name: "Bakary Dembélé",
-    origin_name: "Guangzhou",
-    origin_country: "Chine",
-    origin_lon: 113.26,
-    origin_lat: 23.13,
-    dest_name: "Bamako",
-    dest_country: "Mali",
-    dest_lon: -8.00,
-    dest_lat: 12.64,
-    status_category: "PREPARATION",
-    status_label: "Reçu au magasin de Guangzhou",
-    mode: "AIR",
-    weight_kg: 12.0,
-    volume_cbm: 0.08,
-  },
-  {
-    id: "tx-15",
-    tracking_number: "RM-SEA-2610-S4T5U6",
-    client_name: "Salif Traoré",
-    origin_name: "Yiwu",
-    origin_country: "Chine",
-    origin_lon: 120.07,
-    origin_lat: 29.30,
-    dest_name: "Abidjan",
-    dest_country: "Côte d'Ivoire",
-    dest_lon: -4.01,
-    dest_lat: 5.36,
-    status_category: "PREPARATION",
-    status_label: "Empotage conteneur à Yiwu",
-    mode: "SEA",
-    weight_kg: 250.0,
-    volume_cbm: 1.8,
-  },
-];
+const normalizePlace = (value: unknown) =>
+  String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\u2019/g, "'")
+    .trim()
+    .toLowerCase();
+
+/** La ville si on la connaît, sinon le pays ; `null` si aucun des deux : un colis n'est jamais posé au hasard. */
+function placeOf(city: unknown, country: unknown): Place | null {
+  const c = normalizePlace(city).replace(/\s+/g, "-");
+  if (c && CITY_POINTS[c]) return CITY_POINTS[c];
+  const k = normalizePlace(country);
+  if (k && COUNTRY_POINTS[k]) return COUNTRY_POINTS[k];
+  const partial = Object.entries(COUNTRY_POINTS).find(([name]) => k && (k.includes(name) || name.includes(k)));
+  return partial ? partial[1] : null;
+}
+
 
 export function RouteGlobe({
   shipments,
@@ -499,35 +292,17 @@ export function RouteGlobe({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isExpanded, handleToggleExpand]);
 
-  // Synchronisation dynamique des expéditions
+  // Un flux par colis réellement enregistré et non annulé : rien d'inventé quand il n'y en a pas.
   const routesData = useMemo<TransactionRoute[]>(() => {
     const list = shipments || [];
-    if (list.length === 0) {
-      return DEFAULT_FALLBACK_ROUTES;
-    }
-
-    return list.map((s: any, idx: number) => {
-      let origin = KNOWN_HUBS.Guangzhou;
-      const origStr = (s.origin_hub || s.origin_city || s.origin_country || "").toLowerCase();
-      if (origStr.includes("yiwu")) origin = KNOWN_HUBS.Yiwu;
-      else if (origStr.includes("duba") || origStr.includes("dxb")) origin = KNOWN_HUBS["Dubaï"];
-      else if (origStr.includes("casa") || origStr.includes("maroc")) origin = KNOWN_HUBS.Casablanca;
-      else if (origStr.includes("paris") || origStr.includes("france")) origin = KNOWN_HUBS.Paris;
-      else if (origStr.includes("abidjan") || origStr.includes("ivoire")) origin = KNOWN_HUBS.Abidjan;
-
-      let dest = KNOWN_DESTS.Bamako;
-      const destStr = (s.destination_city || s.destination_country || "").toLowerCase();
-      if (destStr.includes("abidjan") || destStr.includes("ivoire")) dest = KNOWN_DESTS.Abidjan;
-      else if (destStr.includes("dakar") || destStr.includes("senegal") || destStr.includes("sénégal")) dest = KNOWN_DESTS.Dakar;
-      else if (destStr.includes("conakry") || destStr.includes("guinee") || destStr.includes("guinée")) dest = KNOWN_DESTS.Conakry;
-      else if (destStr.includes("lome") || destStr.includes("lomé") || destStr.includes("togo")) dest = KNOWN_DESTS["Lomé"];
-      else if (destStr.includes("cotonou") || destStr.includes("benin") || destStr.includes("bénin")) dest = KNOWN_DESTS.Cotonou;
-      else if (destStr.includes("douala") || destStr.includes("cameroun")) dest = KNOWN_DESTS.Douala;
-      else if (destStr.includes("ouaga") || destStr.includes("burkina")) dest = KNOWN_DESTS.Ouagadougou;
-      else if (destStr.includes("libreville") || destStr.includes("gabon")) dest = KNOWN_DESTS.Libreville;
-      else if (destStr.includes("paris") || destStr.includes("france")) dest = KNOWN_DESTS.Paris;
+    const built = list.flatMap((s: any, idx: number): TransactionRoute[] => {
+      const origin = placeOf(s.origin_hub || s.origin_city, s.origin_country);
+      const dest = placeOf(s.destination_city || s.client_city, s.destination_country || s.client_country);
+      if (!origin || !dest) return [];
 
       const rawStatus = (s.current_status || s.status || s.status_code || "").toUpperCase();
+      // Un colis annulé ne voyage plus : il ne trace aucun flux.
+      if (rawStatus === "CANCELLED" || rawStatus.includes("ANNUL")) return [];
       let category: "IN_TRANSIT" | "DELIVERED" | "PREPARATION" = "IN_TRANSIT";
       if (rawStatus === "DELIVERED" || rawStatus.includes("LIVR")) {
         category = "DELIVERED";
@@ -540,14 +315,13 @@ export function RouteGlobe({
         rawStatus.includes("PREPAR")
       ) {
         category = "PREPARATION";
-      } else {
-        category = "IN_TRANSIT";
       }
 
-      return {
+      const modeName = `${s.shipping_mode || ""} ${s.shipping_mode_name || ""} ${s.tracking_number || ""}`.toUpperCase();
+      const route: TransactionRoute = {
         id: String(s.id || `sh-${idx}`),
-        tracking_number: String(s.tracking_number || `RM-${idx}`),
-        client_name: s.client_name || s.client?.full_name || "Client Partenaire",
+        tracking_number: String(s.tracking_number || ""),
+        client_name: s.client_name || s.client?.full_name || s.sender_name || "",
         origin_name: origin.name,
         origin_country: origin.country,
         origin_lon: origin.lon,
@@ -559,16 +333,21 @@ export function RouteGlobe({
         status_category: category,
         status_label:
           s.status_label ||
-          (category === "IN_TRANSIT"
-            ? "En cours d'acheminement"
-            : category === "DELIVERED"
-            ? "Livré au destinataire"
-            : "Réceptionné en agence"),
-        mode: s.shipping_mode === "SEA" || (s.shipping_mode_name || "").includes("Maritime") ? "SEA" : "AIR",
-        weight_kg: Number(s.chargeable_weight_kg || s.weight_kg || s.total_weight_kg || 15),
-        volume_cbm: Number(s.volume_cbm || s.total_volume_cbm || 0.1),
+          (category === "IN_TRANSIT" ? "En cours d'acheminement" : category === "DELIVERED" ? "Livré au destinataire" : "Réceptionné en agence"),
+        mode: modeName.includes("SEA") || modeName.includes("MARI") || modeName.includes("BATEAU") ? "SEA" : "AIR",
+        weight_kg: Number(s.chargeable_weight_kg || s.weight_kg || s.total_weight_kg || 0) || undefined,
+        volume_cbm: Number(s.volume_cbm || s.total_volume_cbm || 0) || undefined,
       };
+      return [route];
     });
+    // Les colis d'un même trajet s'étagent au lieu de se cacher les uns derrière les autres.
+    const lanes = new Map<string, number>();
+    for (const route of built) {
+      const key = `${route.origin_name}>${route.dest_name}`;
+      route.lane = lanes.get(key) ?? 0;
+      lanes.set(key, route.lane + 1);
+    }
+    return built;
   }, [shipments]);
 
   const visibleRoutes = useMemo(() => {
@@ -889,7 +668,7 @@ export function RouteGlobe({
           Math.max(-1, Math.min(1, H[0] * V[0] + H[1] * V[1] + H[2] * V[2]))
         );
         // Légère variation orbitale par index pour que 2 colis sur la même ligne ne se superposent pas
-        const height = 0.06 + ang * 0.12 + (index % 3) * 0.02;
+        const height = 0.06 + ang * 0.12 + ((route.lane ?? index) % 12) * 0.03;
 
         const pts: { x: number; y: number; z: number }[] = [];
         for (let k = 0; k <= 48; k++) {
@@ -1132,7 +911,7 @@ export function RouteGlobe({
 
           // C. Test le long de l'arc 3D du flux
           const ang = Math.acos(Math.max(-1, Math.min(1, H[0] * V[0] + H[1] * V[1] + H[2] * V[2])));
-          const height = 0.06 + ang * 0.12 + (i % 3) * 0.02;
+          const height = 0.06 + ang * 0.12 + ((route.lane ?? i) % 12) * 0.03;
 
           for (let k = 0; k <= 24; k++) {
             const u = k / 24;
@@ -1441,6 +1220,31 @@ export function RouteGlobe({
             touchAction: "none",
           }}
         />
+
+        {routesData.length === 0 && (
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: "22px",
+              transform: "translateX(-50%)",
+              maxWidth: "calc(100% - 32px)",
+              padding: "10px 16px",
+              borderRadius: "9999px",
+              background: "rgba(255, 255, 255, 0.95)",
+              border: "1px solid var(--border-light)",
+              boxShadow: "0 4px 14px rgba(59, 34, 24, 0.08)",
+              color: "var(--text-secondary)",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              textAlign: "center",
+              pointerEvents: "none",
+              zIndex: 5,
+            }}
+          >
+            Aucun colis pour l&apos;instant : chaque envoi enregistré apparaîtra ici, sur son vrai trajet.
+          </div>
+        )}
 
         {/* Info-bulle interactive */}
         {hoveredRoute && (
